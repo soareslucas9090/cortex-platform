@@ -11,7 +11,6 @@ urlpatterns = [
     path('api/schema/redoc/', SpectacularRedocView.as_view(url_name='schema'), name='redoc'),
     path('admin/', admin.site.urls),
     path('auth/', include('Auth.urls')),
-    path('usuarios/', include('Usuarios.urls')),
-    path('estrutura_organizacional/', include('EstruturaOrganizacional.urls')),
-    path('perfis/', include('Perfis.urls')),
+    # Adicione as rotas do seu projeto aqui:
+    # path('meuapp/', include('MeuApp.urls')),
 ] + debug_toolbar_urls()

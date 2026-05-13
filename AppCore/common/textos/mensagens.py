@@ -1,8 +1,8 @@
-USUARIO_INATIVO_OU_SUSPENSO = "Usuário inativo ou suspenso."
-USUARIO_SEM_PERFIL_CADASTRADO = "Você não possui um perfil de %s cadastrado."
-PERFIL_INATIVO_OU_SUSPENSO = "Perfil inativo ou suspenso."
-RESPONSE_TENTE_NOVAMENTE = "Algo não está certo... Tente novamente!"
-RESPONSE_ALGO_QUE_MANDOU_ESTA_ERRADO = "Parece que algo que você mandou está errado... Tente novamente, por favor."
-RESPONSE_VOCE_NAO_PODE_FAZER_ISSO = "Por algum motivo parece que você não pode fazer isso."
-RESPONSE_VOCE_NAO_PODE_FAZER_ISSO = "Agora eu mandei mal... Tente novamente."
-RESPONSE_ALGUM_DADO_NAO_FOI_ENCONTRADO = "Infelizmente algum dado não foi encontrado."
+USUARIO_INATIVO_OU_SUSPENSO = 'Usuário inativo ou suspenso.'
+USUARIO_SEM_PERFIL_CADASTRADO = 'Você não possui um perfil de %s cadastrado.'
+PERFIL_INATIVO_OU_SUSPENSO = 'Perfil inativo ou suspenso.'
+RESPONSE_TENTE_NOVAMENTE = 'Algo não está certo... Tente novamente!'
+RESPONSE_ALGO_QUE_MANDOU_ESTA_ERRADO = 'Parece que algo que você mandou está errado... Tente novamente, por favor.'
+RESPONSE_VOCE_NAO_PODE_FAZER_ISSO = 'Por algum motivo parece que você não pode fazer isso.'
+RESPONSE_ALGUM_DADO_NAO_FOI_ENCONTRADO = 'Infelizmente algum dado não foi encontrado.'
+RESPONSE_ERRO_INTERNO_SERVIDOR = 'Ocorreu um erro interno no servidor. Tente novamente mais tarde.'

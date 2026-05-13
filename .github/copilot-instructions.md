@@ -1,6 +1,6 @@
 # Instruções para AI Coding Agents - Base DRF App
 
-> **Última atualização:** 2 de dezembro de 2025
+> **Última atualização:** 13 de maio de 2026
 
 ATUALIZE O ARQUIVO .github/copilot-instructions.md sempre que houver mudanças significativas na estrutura, arquitetura ou convenções do projeto.
 
@@ -148,28 +148,109 @@ class Produto(ModelHelperMixin, ModelBusinessMixin, BasicModel):
     # produto.helper.deletar_codigos_expirados()
 ```
 
-## Models e Managers
+## Modelos de Usuário Base
 
-### Model Base
+### AbstractBaseAppUser
 
-**Sempre herde de `BasicModel`** para obter:
+Use `AppCore.basics.models.user_model.AbstractBaseAppUser` como base para qualquer model de usuário:
 
-- `created_at`, `updated_at` (timestamps automáticos)
-- `history` (auditoria via django-simple-history)
-- Manager customizado que lança `NotFoundException` ao invés de `DoesNotExist`
+- Campos: `email` (USERNAME_FIELD padrão), `nome`, `ativo`, `is_admin`, `is_staff`, `created_at`, `updated_at`, `history`
+- Propriedade `is_active` delega para `ativo` (compatível com Django auth)
+- Usa `BaseManagerUser` (BaseUserManager + BaseManager)
+
+```python
+from AppCore.basics.models.user_model import AbstractBaseAppUser
+from AppCore.basics.models.models import BaseManagerUser
+
+class MeuManager(BaseManagerUser):
+    def create_user(self, email, password=None, **extra_fields):
+        email = self.normalize_email(email)
+        user = self.model(email=email, **extra_fields)
+        user.set_password(password)
+        user.save()
+        return user
+
+    def create_superuser(self, email, password, **extra_fields):
+        extra_fields.setdefault('is_admin', True)
+        extra_fields.setdefault('is_staff', True)
+        extra_fields.setdefault('is_superuser', True)
+        return self.create_user(email, password, **extra_fields)
+
+class Usuario(AbstractBaseAppUser):
+    objects = MeuManager()
+    # Para login por CPF: sobrescreva USERNAME_FIELD = 'cpf' e adicione o campo
+```
+
+Defina no `settings.py`: `AUTH_USER_MODEL = 'meuapp.Usuario'`
+
+### Model Base (não-usuário)
+
+**Sempre herde de `BasicModel`** para obter timestamps e histórico:
 
 ```python
 from AppCore.basics.models.models import BasicModel
 
 class MinhaModel(BasicModel):
-    # Seus campos aqui
     pass
 ```
 
 ### Custom Managers
 
-- Crie managers customizados para User models (UsuarioManager) herdando de `BaseManagerUser` (combina `BaseUserManager` e `BaseManager`)
-- Todos os managers devem herdar de `BaseManager` para lançar `NotFoundException` e filtrat por `ativo=True` por padrão
+- User models: herde de `BaseManagerUser` (combina `BaseUserManager` e `BaseManager`)
+- Todos os managers herdam de `BaseManager`: lançam `NotFoundException` e filtram `ativo=True` por padrão no `.filter()` _(`.all()` não é sobrescrito — comportamento intencional)_
+
+## Autenticação
+
+### Sistema de Auth Genérico (AppCore)
+
+O AppCore fornece uma hierarquia de serializers de login extensíveis:
+
+```
+AppCore/basics/auth/
+├── serializers.py   BaseLoginSerializer, BaseTypedLoginSerializer
+├── views.py         BaseLoginView, AtualizarTokenView, VerificarTokenView
+├── urls.py          urlpatterns genéricos
+└── social/
+    ├── adapters.py    JWTSocialAccountAdapter (allauth)
+    ├── views.py       GoogleLoginView
+    ├── serializers.py SocialTokenInputSerializer
+    └── urls.py
+```
+
+### Auth/ Thin App (ponto de customização do projeto)
+
+**Não modifique o AppCore** — customize em `Auth/auth/serializers.py`:
+
+```python
+# Login simples com dados do domínio
+class LoginSerializer(BaseLoginSerializer):
+    def get_extra_payload(self, user):
+        return {'nome': user.nome, 'is_admin': user.is_admin}
+
+# Login com tipo de usuário (ex: motorista vs empresa)
+class LoginSerializer(BaseTypedLoginSerializer):
+    tipo_choices = ['motorista', 'empresa']
+
+    def _validate_user_tipo(self, user, tipo):
+        if tipo == 'motorista' and not hasattr(user, 'motorista'):
+            raise AuthenticationFailed('Usuário não é motorista.')
+
+# Login por CPF
+class LoginSerializer(BaseLoginSerializer):
+    username_field = 'cpf'
+```
+
+### Configuração necessária no `settings.py`
+
+O `SIMPLE_JWT['SIGNING_KEY']` é configurado automaticamente com `SECRET_KEY` como fallback.
+Em produção, defina `SIMPLE_JWT_SIGNING_KEY` no `.env`.
+
+Endpoints disponíveis após configurar:
+
+- `POST /auth/token_jwt/` — login
+- `POST /auth/token_jwt/refresh/` — renovar token
+- `POST /auth/token_jwt/verify/` — verificar token
+- `POST /auth/social/google/` — login com Google (requer allauth configurado)
 
 ## Serializers - Padrão de Montagem
 
@@ -180,7 +261,6 @@ class MinhaModel(BasicModel):
    - Defina `write_only=True` em campos sensíveis
    - Implemente validações customizadas em `validate_<field>()` e `validate()`
 2. **Validações de senha**:
-
    - Mínimo 8 caracteres
    - Pelo menos 1 maiúscula, 1 minúscula, 1 número, 1 caractere especial
    - Use regex para validar: `r'[A-Z]'`, `r'[a-z]'`, `r'\d'`, e caracteres especiais
@@ -206,27 +286,34 @@ class CriarContaSerializer(serializers.Serializer):
 
 **Use as views base de `AppCore.basics.views.basic_views`:**
 
-### BasicPostAPIView
+### Tabela de Views Disponíveis
 
-- Para operações POST
-- Override `do_action_post(self, serializer, request)`
-- Define `mensagem_sucesso` (mensagem padrão de sucesso)
-- Retorna dict com `mensagem` e `status_code` (opcional)
-- **Transaction automática**: Operação roda dentro de `transaction.atomic()` com savepoint
+| View                   | Método | Hook a implementar                             | Objeto disponível |
+| ---------------------- | ------ | ---------------------------------------------- | ----------------- |
+| `BasicPostAPIView`     | POST   | `do_action_post(serializer_data, request)`     | —                 |
+| `BasicGetAPIView`      | GET    | `validate_get(request, ...)` _(opcional)_      | —                 |
+| `BasicRetrieveAPIView` | GET    | `validate_retrieve(request, ...)` _(opcional)_ | `self.object`     |
+| `BasicPutAPIView`      | PUT    | `do_action_put(serializer_data, request)`      | `self.object`     |
+| `BasicPatchAPIView`    | PATCH  | `do_action_patch(serializer_data, request)`    | `self.object`     |
+| `BasicDeleteAPIView`   | DELETE | `do_action_delete(request)`                    | `self.object`     |
+
+**Todos os hooks de escrita** (POST, PUT, PATCH, DELETE) rodam dentro de `transaction.atomic()` com savepoint automático.
+
+**Retorno dos hooks de escrita**: dict opcional com `mensagem` e/ou `status_code` para customizar a resposta.
+
+### Exemplo
 
 ```python
 from AppCore.basics.views.basic_views import BasicPostAPIView
 
 class CriarProdutoView(BasicPostAPIView):
     serializer_class = CriarProdutoSerializer
-    mensagem_sucesso = "Produto criado com sucesso."
+    mensagem_sucesso = 'Produto criado com sucesso.'
 
-    def do_action_post(self, serializer, request):
-        dados = serializer.validated_data
-        ProdutoBusiness().criar_produto(**dados)
-        # Retorno opcional para customizar resposta
-        return {
-            'mensagem': 'Mensagem customizada',
+    def do_action_post(self, serializer_data, request):  # ← parâmetro é serializer_data, não serializer
+        ProdutoBusiness().criar_produto(**serializer_data)
+        return {                                          # retorno é opcional
+            'mensagem': 'Produto criado!',
             'status_code': status.HTTP_201_CREATED
         }
 ```
@@ -241,14 +328,17 @@ As views básicas **capturam automaticamente** e retornam HTTP adequado:
 - `NotFoundException` → 404 Not Found
 - `SystemErrorException` → 500 Internal Server Error
 
-## Permissions - Padrão ⚠️ FUTURO
+## Permissions - Padrão
 
-**Sistema de permissões precisa ser padronizado.** Por enquanto, use:
+Use os mixins de `AppCore.basics.mixins.mixins`:
 
-- `AllowAnyMixin` (de `AppCore.basics.mixins.mixins`) para endpoints públicos
-- `IsOwnerOrAdminPermission` para endpoints que exigem ser dono ou admin
-  - Verifica: `is_superuser` OU perfil tipo `PERFIL_TIPO_ADMIN` ativo OU é o dono do recurso
-  - Requer método `obter_usuario_dono(obj)` na view
+- `AllowAnyMixin` — endpoints públicos (sem autenticação)
+- `IsOwnerOrAdminMixin` — dono do recurso ou admin
+  - Usa `getattr(user, 'is_admin', False)` — campo `is_admin` é opcional no model
+  - Requer implementar `obter_usuario_dono(obj)` na view
+- `IsAdminMixin` — apenas superusuários ou `is_admin=True`
+
+Permissões padrão do DRF: `IsAuthenticated` (configurado no REST_FRAMEWORK).
 
 ## Exceções Customizadas
 
@@ -330,11 +420,18 @@ cd NomeApp
 ## Stack Técnica
 
 - **Django 5.2.7** + **DRF 3.16.1**
-- **Auth**: SimpleJWT (tokens com 30min/7dias de validade)
+- **Auth**: SimpleJWT (tokens 30min/7 dias) + django-allauth 65.9.0 (login social)
 - **Database**: PostgreSQL (dev usa SQLite)
 - **Docs API**: drf-spectacular (Swagger/ReDoc em `/api/schema/swagger/`)
 - **Auditoria**: django-simple-history (histórico automático em models)
 - **Email**: SMTP (padrão Gmail, configurável via env)
+
+## Segurança (comportamentos obrigatórios)
+
+- **`except Exception` genérico** nunca deve retornar `str(err)` ao cliente (OWASP A03). Sempre use `RESPONSE_ERRO_INTERNO_SERVIDOR` e logue o erro com `logging.getLogger`.
+- **`SECRET_KEY`** nunca deve ter valor hardcoded. O `ImproperlyConfigured` é lançado em produção (`DEBUG=False`) se a chave for o valor default.
+- **CORS**: `CORS_ALLOW_ALL_ORIGINS = False` por padrão. Configure via env `CORS_ALLOW_ALL_ORIGINS=True` apenas em dev.
+- **`is_admin`**: sempre acesse com `getattr(user, 'is_admin', False)` em código genérico, pois o campo é opcional dependendo do model de usuário do projeto.
 
 ## Paginação
 

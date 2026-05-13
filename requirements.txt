@@ -5,12 +5,14 @@ charset-normalizer==3.4.3
 click==8.3.0
 colorama==0.4.6
 Django==5.2.7
+django-allauth==65.9.0
 django-cors-headers==4.9.0
 django-debug-toolbar==6.0.0
 django-filter==25.1
 django-simple-history==3.10.1
 djangorestframework==3.16.1
 djangorestframework_simplejwt==5.5.1
+dj-rest-auth==7.0.1
 drf-spectacular==0.28.0
 drf-spectacular-sidecar==2025.10.1
 gunicorn==23.0.0

@@ -1,6 +1,7 @@
 import os
 from pathlib import Path
 
+from django.core.exceptions import ImproperlyConfigured
 from dotenv import load_dotenv
 
 from .rest_framework_settings import *
@@ -11,12 +12,20 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 load_dotenv()
 
-SECRET_KEY = os.environ.get(
-    'DJANGO_SECRET_KEY',
-    '1234567890qwertyuiopasdfghjklzxcvbnm!@#$%^&*()QWERTYUIOPASDFGHJKLZXCVBNM',
-)
+_DEFAULT_SECRET_KEY = 'TROQUE-ESTA-CHAVE-NO-ENV-ANTES-DE-SUBIR-PARA-PRODUCAO'
 
-DEBUG = os.environ.get('DJANGO_DEBUG', 'False') == 'True'
+SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', _DEFAULT_SECRET_KEY)
+
+DEBUG = os.environ.get('DJANGO_DEBUG', 'True') == 'True'
+
+if not DEBUG and SECRET_KEY == _DEFAULT_SECRET_KEY:
+    raise ImproperlyConfigured(
+        'SECRET_KEY não configurada. Defina DJANGO_SECRET_KEY no arquivo .env antes de rodar em produção.'
+    )
+
+# Signing key do Simple JWT — usa SECRET_KEY como fallback seguro em dev.
+# Configure SIMPLE_JWT_SIGNING_KEY no .env em produção para uma chave dedicada.
+SIMPLE_JWT['SIGNING_KEY'] = os.environ.get('SIMPLE_JWT_SIGNING_KEY', SECRET_KEY)  # noqa: F821
 
 ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', '*').split(',')
 
@@ -29,9 +38,16 @@ CORS_ORIGIN_WHITELIST = [origin for origin in cors_origins.split(',') if origin]
 internal_ips = os.environ.get('INTERNAL_IPS', '')
 INTERNAL_IPS = [ip for ip in internal_ips.split(',') if ip]
 
-CORS_ALLOW_ALL_ORIGINS = True
+CORS_ALLOW_ALL_ORIGINS = os.environ.get('CORS_ALLOW_ALL_ORIGINS', 'False') == 'True'
 
-CORS_ALLOW_METHODS = ['*']
+CORS_ALLOW_METHODS = [
+    'DELETE',
+    'GET',
+    'OPTIONS',
+    'PATCH',
+    'POST',
+    'PUT',
+]
 
 DATABASES = {
     'default': {
@@ -71,46 +87,22 @@ DEFAULT_ROOT_APPS = [
     'drf_spectacular',
     'drf_spectacular_sidecar',
     'simple_history',
+    # Allauth (descomente quando configurar o login social)
+    # 'django.contrib.sites',
+    # 'allauth',
+    # 'allauth.account',
+    # 'allauth.socialaccount',
+    # 'allauth.socialaccount.providers.google',
 ]
 
 AUTH_APPS = [
-    'Auth.auth'
+    'Auth.auth',
 ]
 
-USERS_APPS = [
-    ################## - Módulo Usuarios - ##################
-    'Usuarios.usuario',
-    'Usuarios.conta',
-    'Usuarios.usuario_setor',
-    ##########################################################
-    
-    ################## - Módulo Perfis - ###################
-    'Perfis.aluno',
-    'Perfis.servidor',
-    'Perfis.terceirizado',
-    'Perfis.estagiario',
-    ##########################################################
-]
+# Adicione os apps do seu projeto aqui
+PROJECT_APPS: list = []
 
-ESTRUTURA_APPS = [
-    ########### - Módulo EstruturaOrganizacional - ###########
-    'EstruturaOrganizacional.campus',
-    'EstruturaOrganizacional.cargo',
-    'EstruturaOrganizacional.setor',
-    'EstruturaOrganizacional.atividade',
-    'EstruturaOrganizacional.funcao',
-    'EstruturaOrganizacional.empresa',
-    'EstruturaOrganizacional.curso',
-    ##########################################################
-]
-
-VINCULOS_APPS = [
-    ################## - Módulo Vinculos - ###################
-    'Vinculos.matricula',
-    ##########################################################
-]
-
-INSTALLED_APPS = DEFAULT_ROOT_APPS + AUTH_APPS + USERS_APPS + ESTRUTURA_APPS + VINCULOS_APPS
+INSTALLED_APPS = DEFAULT_ROOT_APPS + AUTH_APPS + PROJECT_APPS
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
@@ -126,10 +118,31 @@ MIDDLEWARE = [
     'debug_toolbar.middleware.DebugToolbarMiddleware',
 ]
 
-AUTH_USER_MODEL = 'usuarios.Usuario'
-ACCOUNT_AUTHENTICATION_METHOD = 'email'
-ACCOUNT_USER_MODEL_USERNAME_FIELD = None
-ACCOUNT_EMAIL_REQUIRED = True
+AUTH_USER_MODEL = 'auth_app.Usuario'
+# ^⁠---⁠ Substitua pelo seu modelo de usuário customizado antes de rodar a primeira migration.
+# Padrão usado pelo Auth/ genérico. Exemplo:
+#   AUTH_USER_MODEL = 'meuapp.MeuUsuario'
+#
+# O modelo deve herdar de AppCore.basics.models.user_model.AbstractBaseAppUser
+# (ou diretamente de django.contrib.auth.models.AbstractBaseUser).
+
+# Configurações do django-allauth (descomente para ativar login social)
+# SITE_ID = 1
+# ACCOUNT_AUTHENTICATION_METHOD = 'email'
+# ACCOUNT_USER_MODEL_USERNAME_FIELD = None
+# ACCOUNT_EMAIL_REQUIRED = True
+# ACCOUNT_EMAIL_VERIFICATION = 'none'
+# SOCIALACCOUNT_PROVIDERS = {
+#     'google': {
+#         'SCOPE': ['profile', 'email'],
+#         'AUTH_PARAMS': {'access_type': 'online'},
+#         'APP': {
+#             'client_id': os.environ.get('GOOGLE_CLIENT_ID', ''),
+#             'secret': os.environ.get('GOOGLE_CLIENT_SECRET', ''),
+#             'key': '',
+#         },
+#     }
+# }
 
 DEBUG_TOOLBAR_PANELS = [
     'debug_toolbar.panels.history.HistoryPanel',

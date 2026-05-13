@@ -10,7 +10,7 @@ from AppCore.core.exceptions.exceptions import (
 
 from AppCore.common.textos.mensagens import (
     RESPONSE_TENTE_NOVAMENTE, RESPONSE_ALGO_QUE_MANDOU_ESTA_ERRADO, RESPONSE_VOCE_NAO_PODE_FAZER_ISSO,
-    RESPONSE_VOCE_NAO_PODE_FAZER_ISSO, RESPONSE_ALGUM_DADO_NAO_FOI_ENCONTRADO
+    RESPONSE_ALGUM_DADO_NAO_FOI_ENCONTRADO, RESPONSE_ERRO_INTERNO_SERVIDOR
 )
 
 
@@ -38,12 +38,14 @@ def handle_exceptions(func):
             )
         except SystemErrorException as err:
             return Response(
-                {'status': 'error', 'detail': str(err) or RESPONSE_VOCE_NAO_PODE_FAZER_ISSO}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                {'status': 'error', 'detail': str(err) or RESPONSE_ERRO_INTERNO_SERVIDOR}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
         except Exception as err:
-            print(str(err))
+            # Nunca expor detalhes de exceções inesperadas ao cliente (OWASP A03)
+            import logging
+            logging.getLogger(__name__).exception('Erro inesperado na view: %s', err)
             return Response(
-                {'status': 'error', 'detail': str(err)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                {'status': 'error', 'detail': RESPONSE_ERRO_INTERNO_SERVIDOR}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
     return wrapper

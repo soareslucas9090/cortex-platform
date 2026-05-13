@@ -20,18 +20,14 @@ REST_FRAMEWORK = {
     ],
 }
 
-signing_key = os.environ.get(
-    'SIMPLE_JWT_SIGNING_KEY',
-    '1234567890qwertyuiopasdfghjklzxcvbnm!@#$%^&*()QWERTYUIOPASDFGHJKLZXCVBNM'
-)
-
 SIMPLE_JWT = {
     'ACCESS_TOKEN_LIFETIME': timedelta(minutes=30),
     'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
     'BLACKLIST_AFTER_ROTATION': False,
-    'SIGNING_KEY': signing_key,
+    # SIGNING_KEY é definido em settings.py após SECRET_KEY para evitar import circular.
+    # O valor aqui é sobrescrito pelo update() em settings.py.
     'AUTH_HEADER_TYPES': ('Bearer',),
-    # Serializer customizado para login via CPF com dados do usuário
+    # Serializer de login do projeto — altere para customizar payload e login por tipo:
     'TOKEN_OBTAIN_SERIALIZER': 'Auth.auth.serializers.LoginSerializer',
     'TOKEN_REFRESH_SERIALIZER': 'rest_framework_simplejwt.serializers.TokenRefreshSerializer',
     'TOKEN_VERIFY_SERIALIZER': 'rest_framework_simplejwt.serializers.TokenVerifySerializer',

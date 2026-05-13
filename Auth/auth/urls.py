@@ -1,9 +1,6 @@
 from django.urls import path
-from .views import (
-    LoginView,
-    AtualizarTokenView,
-    VerificarTokenView,
-)
+
+from Auth.auth.views import LoginView, AtualizarTokenView, VerificarTokenView
 
 app_name = 'token-jwt'
 
