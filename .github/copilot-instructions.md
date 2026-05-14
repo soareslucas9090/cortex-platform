@@ -374,7 +374,7 @@ AppNome/
 - **Aspas simples**: SEMPRE use `'texto'` (nunca aspas duplas)
 - **Imports**: Organizados (stdlib → Django → DRF → AppCore → apps locais)
 - **Nomes**:
-  - Módulos principais: PascalCase (`AppCore`, `BaseDRFApp`)
+  - Módulos principais: PascalCase (`AppCore`, `Cortex`)
   - Apps: snake_case minúsculo (`usuarios`, `auth`)
   - Arquivos: snake_case (`business.py`, `helpers.py`)
 - **Nomenclatura em Português**:

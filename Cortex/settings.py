@@ -160,7 +160,7 @@ DEBUG_TOOLBAR_PANELS = [
     'debug_toolbar.panels.profiling.ProfilingPanel',
 ]
 
-ROOT_URLCONF = 'BaseDRFApp.urls'
+ROOT_URLCONF = 'Cortex.urls'
 
 TEMPLATES = [
     {
@@ -178,7 +178,7 @@ TEMPLATES = [
     },
 ]
 
-WSGI_APPLICATION = 'BaseDRFApp.wsgi.application'
+WSGI_APPLICATION = 'Cortex.wsgi.application'
 
 AUTH_PASSWORD_VALIDATORS = [
     {
