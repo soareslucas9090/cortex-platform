@@ -83,7 +83,7 @@ class AbstractBaseAppUser(AbstractBaseUser, PermissionsMixin):
     Fornece os campos mínimos esperados pelo AppCore:
       - email (USERNAME_FIELD padrão — sobrescreva se necessário)
       - nome
-      - ativo (substitui is_active do Django para uso no BaseManager)
+      - ativo (substitui is_active do Django — compatível com auth backends que verificam is_active)
       - is_admin (flag de administrador para IsAdminPermission e IsOwnerOrAdminPermission)
       - is_staff (acesso ao admin do Django)
       - is_superuser (herda de PermissionsMixin)

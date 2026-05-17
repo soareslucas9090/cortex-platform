@@ -12,12 +12,6 @@ class BaseManager(Manager):
             return super().get(*args, **kwargs)
         except self.model.DoesNotExist as e:
             raise NotFoundException(f"{self.model._meta.verbose_name} não encontrado.")
-        
-    def filter(self, *args, **kwargs):
-        # Se o modelo tem campo 'ativo' e não foi passado no filtro, adiciona ativo=True
-        if hasattr(self.model, 'ativo') and 'ativo' not in kwargs:
-            kwargs['ativo'] = True
-        return super().filter(*args, **kwargs)
 
 
 class BaseManagerUser(BaseUserManager, BaseManager):
