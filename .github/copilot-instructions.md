@@ -451,6 +451,71 @@ O projeto usa uma classe de paginação customizada (`AppCore.basics.pagination.
 # /api/usuarios/?paginacao=500 → 100 itens (máximo)
 ```
 
+## Query Params em Endpoints de Listagem
+
+**Princípio obrigatório:** query params apenas reduzem o conjunto de resultados — **nunca expandem o acesso além do que a permissão do usuário já permite**.
+
+### Regras
+
+1. A filtragem por query params é aplicada **após** o escopo de permissão estar estabelecido (URL context + verificação de acesso).
+2. Em endpoints de sub-recursos com `usuario_pk` na URL, o queryset já está restrito ao usuário. Filtros adicionais nunca podem retornar dados de outro usuário.
+3. Valores de query param inválidos (fora do domínio esperado) devem ser **ignorados silenciosamente** — não retornam erro, apenas não filtram.
+
+### Implementação padrão
+
+```python
+def get_queryset(self):
+    # 1. Escopo base — já restrito pela URL ou permissão
+    qs = Modelo.objects.filter(usuario_id=self.kwargs['usuario_pk'])
+
+    # 2. Filtros adicionais via query param — só reduzem o escopo
+    situacao = self.request.query_params.get('situacao')
+    if situacao is not None:
+        try:
+            situacao_int = int(situacao)
+            if situacao_int in SituacaoModelo.values:   # valida domínio
+                qs = qs.filter(situacao=situacao_int)
+        except (ValueError, TypeError):
+            pass  # valor inválido: ignora silenciosamente
+
+    return qs
+```
+
+Para filtros booleanos (ex: `?ativo=true|false`):
+
+```python
+ativo = self.request.query_params.get('ativo')
+if ativo is not None and ativo.lower() in ('true', 'false'):
+    qs = qs.filter(ativo=ativo.lower() == 'true')
+```
+
+### Documentação Swagger obrigatória para query params
+
+Todo query param deve ser declarado em `@extend_schema(parameters=[...])`:
+
+```python
+from drf_spectacular.utils import OpenApiParameter
+from drf_spectacular.types import OpenApiTypes
+
+@extend_schema(
+    parameters=[
+        OpenApiParameter(
+            'situacao', OpenApiTypes.INT, OpenApiParameter.QUERY,
+            required=False,
+            description='Filtra por situação: 1 = Ativa, 2 = Inativa.',
+            enum=[1, 2],
+        ),
+        OpenApiParameter(
+            'paginacao', OpenApiTypes.INT, OpenApiParameter.QUERY,
+            required=False, description='Tamanho da página (1–100, padrão 10).',
+        ),
+    ],
+    ...
+)
+```
+
+A descrição deve mencionar explicitamente que **"query params apenas reduzem o conjunto, nunca expandem o acesso"**.
+
 ## Documentação da API (Swagger/OpenAPI)
 
 **OBRIGATÓRIO**: Toda view deve ter documentação completa usando `drf-spectacular`.
@@ -673,4 +738,4 @@ class UsuarioSetor(BasicModel):
   - `get_serializer_class`
   - `validate`
   - `create`
-  - `update`
+  - `update``
