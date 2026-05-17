@@ -25,6 +25,7 @@ Markdown==3.9
 mypy_extensions==1.1.0
 packaging==25.0
 pathspec==0.12.1
+Pillow==12.2.0
 platformdirs==4.4.0
 pluggy==1.6.0
 psycopg2-binary==2.9.10

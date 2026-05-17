@@ -110,7 +110,9 @@ AUTH_APPS = [
 ]
 
 # Adicione os apps do seu projeto aqui
-PROJECT_APPS: list = []
+PROJECT_APPS = [
+    'identidade',
+]
 
 INSTALLED_APPS = DEFAULT_ROOT_APPS + AUTH_APPS + PROJECT_APPS
 
@@ -128,13 +130,7 @@ MIDDLEWARE = [
     'debug_toolbar.middleware.DebugToolbarMiddleware',
 ]
 
-AUTH_USER_MODEL = 'auth_app.Usuario'
-# ^⁠---⁠ Substitua pelo seu modelo de usuário customizado antes de rodar a primeira migration.
-# Padrão usado pelo Auth/ genérico. Exemplo:
-#   AUTH_USER_MODEL = 'identidade.Usuario'
-#
-# O modelo deve herdar de AppCore.basics.models.user_model.AbstractBaseAppUser
-# (ou diretamente de django.contrib.auth.models.AbstractBaseUser).
+AUTH_USER_MODEL = 'identidade.Usuario'
 
 AUTHENTICATION_BACKENDS = [
     # Backend principal: aceita 'login' como e-mail ou CPF.
