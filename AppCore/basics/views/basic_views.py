@@ -48,7 +48,7 @@ class BasicPostAPIView(GenericAPIView):
                 resultado = self.do_action_post(serializer_data, request) or {}
             except Exception as e:
                 transaction.savepoint_rollback(sid)
-                raise e
+                raise
             transaction.savepoint_commit(sid)
 
         data, status_code = _build_success_response(resultado, self.mensagem_sucesso)
@@ -126,7 +126,7 @@ class BasicDeleteAPIView(GenericAPIView):
                 self.do_action_delete(request)
             except Exception as e:
                 transaction.savepoint_rollback(sid)
-                raise e
+                raise
             transaction.savepoint_commit(sid)
 
         return Response(status=status.HTTP_204_NO_CONTENT)
@@ -166,7 +166,7 @@ class BasicPutAPIView(GenericAPIView):
                 resultado = self.do_action_put(serializer_data, request) or {}
             except Exception as e:
                 transaction.savepoint_rollback(sid)
-                raise e
+                raise
             transaction.savepoint_commit(sid)
 
         data, status_code = _build_success_response(resultado, self.mensagem_sucesso)
@@ -207,7 +207,7 @@ class BasicPatchAPIView(GenericAPIView):
                 resultado = self.do_action_patch(serializer_data, request) or {}
             except Exception as e:
                 transaction.savepoint_rollback(sid)
-                raise e
+                raise
             transaction.savepoint_commit(sid)
 
         data, status_code = _build_success_response(resultado, self.mensagem_sucesso)

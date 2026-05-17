@@ -1,8 +1,12 @@
+import logging
+
 from functools import wraps
 
 from rest_framework import status
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.response import Response
+
+logger = logging.getLogger(__name__)
 
 from AppCore.core.exceptions.exceptions import (
     BusinessRuleException, SystemErrorException, ValidationException, AuthorizationException, NotFoundException
@@ -37,13 +41,14 @@ def handle_exceptions(func):
                 {'status': 'error', 'detail': str(err) or RESPONSE_ALGUM_DADO_NAO_FOI_ENCONTRADO}, status=status.HTTP_404_NOT_FOUND
             )
         except SystemErrorException as err:
+            # SystemErrorException é erro interno — nunca expor a mensagem ao cliente (OWASP A03)
+            logger.exception('Erro interno do sistema na view: %s', err)
             return Response(
-                {'status': 'error', 'detail': str(err) or RESPONSE_ERRO_INTERNO_SERVIDOR}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                {'status': 'error', 'detail': RESPONSE_ERRO_INTERNO_SERVIDOR}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
         except Exception as err:
             # Nunca expor detalhes de exceções inesperadas ao cliente (OWASP A03)
-            import logging
-            logging.getLogger(__name__).exception('Erro inesperado na view: %s', err)
+            logger.exception('Erro inesperado na view: %s', err)
             return Response(
                 {'status': 'error', 'detail': RESPONSE_ERRO_INTERNO_SERVIDOR}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )

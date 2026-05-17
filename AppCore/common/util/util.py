@@ -1,8 +1,11 @@
+import logging
 import re
 
 from django.core.mail import EmailMultiAlternatives
 
 from AppCore.core.exceptions.exceptions import SystemErrorException, ValidationException
+
+logger = logging.getLogger(__name__)
 
 
 def enviar_email_simples(subject, simple_text, from_email, to_emails, html_content):
@@ -18,7 +21,8 @@ def enviar_email_simples(subject, simple_text, from_email, to_emails, html_conte
 
         email.send()
     except Exception as err:
-        raise SystemErrorException(f'Erro ao enviar email: {err}')
+        logger.exception('Erro ao enviar email: %s', err)
+        raise SystemErrorException('Erro ao enviar email.')
 
 
 def normalizar_cpf(cpf: str) -> str:

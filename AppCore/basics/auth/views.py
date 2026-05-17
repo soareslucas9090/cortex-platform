@@ -5,7 +5,7 @@ Herda das views padrão do Simple JWT e adiciona documentação via drf-spectacu
 Projetos devem herdar estas views ou usar diretamente via include das urls.
 """
 
-from drf_spectacular.utils import extend_schema, OpenApiExample
+from drf_spectacular.utils import extend_schema
 from rest_framework import status
 from rest_framework_simplejwt.views import (
     TokenObtainPairView,
@@ -34,8 +34,8 @@ class BaseLoginView(TokenObtainPairView):
         description='''
         Autentica o usuário e retorna os tokens de acesso (access) e renovação (refresh).
 
-        O campo de identificação padrão é definido pelo serializer configurado no projeto.
-        Projetos com ``BaseHybridLoginSerializer`` aceitam ``login`` como e-mail ou CPF.
+        O campo de identificação e o formato da requisição dependem do serializer
+        configurado no projeto (ex: ``login`` com e-mail ou CPF ao usar ``BaseHybridLoginSerializer``).
 
         **Campos adicionais** podem aparecer na resposta dependendo do serializer configurado
         no projeto (ex: nome do usuário, perfis, campus).
@@ -47,23 +47,6 @@ class BaseLoginView(TokenObtainPairView):
             status.HTTP_200_OK: {'description': 'Login bem-sucedido. Retorna access e refresh tokens.'},
             status.HTTP_401_UNAUTHORIZED: {'description': 'Credenciais inválidas.'},
         },
-        examples=[
-            OpenApiExample(
-                'Login com e-mail',
-                value={'login': 'usuario@email.com', 'password': 'Senha@123'},
-                request_only=True,
-            ),
-            OpenApiExample(
-                'Login com CPF (com máscara)',
-                value={'login': '123.456.789-01', 'password': 'Senha@123'},
-                request_only=True,
-            ),
-            OpenApiExample(
-                'Login com CPF (sem máscara)',
-                value={'login': '12345678901', 'password': 'Senha@123'},
-                request_only=True,
-            ),
-        ],
     )
     def post(self, request, *args, **kwargs):
         return super().post(request, *args, **kwargs)
