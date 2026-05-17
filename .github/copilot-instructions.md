@@ -647,3 +647,30 @@ class UsuarioSetor(BasicModel):
 - Usuários são criados por administradores via endpoint específico
 - Suporte a criação individual ou em lote via JSON
 - Não há fluxo de auto-cadastro com envio de email
+
+### Convenção de nomenclatura para métodos e funções
+
+- Não misture inglês e português em nomes de métodos, funções e variáveis do domínio.
+- Prefira nomes em português para métodos e funções implementados no projeto.
+- Use inglês apenas quando isso for exigido por sobrescrita de framework, convenção do Django/DRF/Python ou interface externa.
+
+**Exemplos corretos:**
+
+- `obter_contatos()`
+- `criar_usuario()`
+- `atualizar_dados()`
+
+**Evitar:**
+
+- `get_contatos()`
+- `create_usuario()`
+- `update_dados()`
+
+**Exceções aceitáveis:**
+
+- métodos exigidos por sobrescrita ou convenção, como:
+  - `get_queryset`
+  - `get_serializer_class`
+  - `validate`
+  - `create`
+  - `update`
