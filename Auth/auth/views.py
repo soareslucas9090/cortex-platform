@@ -30,7 +30,23 @@ class LoginView(BaseLoginView):
 
     @extend_schema(
         tags=['Auth'],
-        summary='Login',
+        summary='Login — obter tokens JWT',
+        description='''
+        Autentica o usuário e retorna os tokens de acesso (access) e renovação (refresh).
+
+        O campo ``login`` aceita **e-mail** ou **CPF** (com ou sem máscara).
+
+        **Exemplos de identificador:**
+        - E-mail: `usuario@email.com`
+        - CPF sem máscara: `12345678901`
+        - CPF com máscara: `123.456.789-01`
+
+        **Token de acesso:** válido por 30 minutos.
+        **Token de renovação:** válido por 7 dias.
+
+        Em caso de falha, a resposta é sempre genérica e não revela
+        o motivo específico (usuário inexistente, senha incorreta ou inativo).
+        ''',
         request=LoginInputSerializer,
         responses={
             status.HTTP_200_OK: LoginResponseSerializer,

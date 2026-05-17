@@ -21,6 +21,11 @@ def enviar_email_simples(subject, simple_text, from_email, to_emails, html_conte
         raise SystemErrorException(f'Erro ao enviar email: {err}')
 
 
+def normalizar_cpf(cpf: str) -> str:
+    """Remove formatação do CPF, mantendo apenas os dígitos."""
+    return re.sub(r'\D', '', cpf)
+
+
 def formatar_cpf(cpf):
         """Formata o CPF (XXX.XXX.XXX-XX)."""
         if len(cpf) == 11:

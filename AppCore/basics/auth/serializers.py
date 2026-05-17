@@ -45,9 +45,11 @@ COMO USAR: LOGIN COM TIPO (ex: motorista vs empresa)
             return {'nome': user.nome}
 """
 
+from django.contrib.auth import authenticate as django_authenticate
 from rest_framework import serializers
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from rest_framework_simplejwt.exceptions import AuthenticationFailed
+from rest_framework_simplejwt.settings import api_settings
 
 
 class BaseLoginSerializer(TokenObtainPairSerializer):
@@ -134,3 +136,78 @@ class BaseTypedLoginSerializer(BaseLoginSerializer):
             self._validate_user_tipo(self.user, tipo)
             data['tipo'] = tipo
         return data
+
+
+class BaseHybridLoginSerializer(TokenObtainPairSerializer):
+    """
+    Serializer de login com campo único ``login`` (aceita e-mail ou CPF).
+
+    Substitui o campo padrão do USERNAME_FIELD por um campo único ``login``,
+    e delega a detecção do tipo de identificador ao backend registrado em
+    ``AUTHENTICATION_BACKENDS`` (ex: ``EmailOrCpfBackend``).
+
+    Sobrescreva ``get_extra_payload(user)`` para adicionar dados extras à
+    resposta do login. Os dados serão mesclados ao dict que já contém
+    ``access`` e ``refresh``.
+
+    Requer que ``AUTHENTICATION_BACKENDS`` inclua um backend que aceite
+    o parâmetro ``login`` (ver ``AppCore.basics.auth.backends.EmailOrCpfBackend``).
+
+    Exemplo::
+
+        # Auth/auth/serializers.py
+        from AppCore.basics.auth.serializers import BaseHybridLoginSerializer
+
+        class LoginSerializer(BaseHybridLoginSerializer):
+            def get_extra_payload(self, user):
+                return {'nome': user.nome}
+    """
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Remove o campo padrão do USERNAME_FIELD (ex: email) e adiciona 'login'
+        if self.username_field in self.fields:
+            del self.fields[self.username_field]
+        self.fields['login'] = serializers.CharField(write_only=True)
+
+    def get_extra_payload(self, user) -> dict:
+        """
+        Hook para adicionar dados extras à resposta do login.
+
+        Args:
+            user: Instância do usuário autenticado.
+
+        Returns:
+            dict com os dados extras a serem incluídos na resposta.
+        """
+        return {}
+
+    def validate(self, attrs):
+        login_value = attrs.get('login')
+        password = attrs.get('password')
+        request = self.context.get('request')
+
+        self.user = django_authenticate(
+            request=request,
+            login=login_value,
+            password=password,
+        )
+
+        if not api_settings.USER_AUTHENTICATION_RULE(self.user):
+            raise AuthenticationFailed(
+                self.error_messages['no_active_account'],
+                'no_active_account',
+            )
+
+        refresh = self.get_token(self.user)
+        data = {
+            'refresh': str(refresh),
+            'access': str(refresh.access_token),
+        }
+
+        extra = self.get_extra_payload(self.user)
+        if extra:
+            data.update(extra)
+
+        return data
+

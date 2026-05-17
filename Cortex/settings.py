@@ -121,10 +121,18 @@ MIDDLEWARE = [
 AUTH_USER_MODEL = 'auth_app.Usuario'
 # ^⁠---⁠ Substitua pelo seu modelo de usuário customizado antes de rodar a primeira migration.
 # Padrão usado pelo Auth/ genérico. Exemplo:
-#   AUTH_USER_MODEL = 'meuapp.MeuUsuario'
+#   AUTH_USER_MODEL = 'identidade.Usuario'
 #
 # O modelo deve herdar de AppCore.basics.models.user_model.AbstractBaseAppUser
 # (ou diretamente de django.contrib.auth.models.AbstractBaseUser).
+
+AUTHENTICATION_BACKENDS = [
+    # Backend principal: aceita 'login' como e-mail ou CPF.
+    # Requer que AUTH_USER_MODEL possua os campos 'email' e 'cpf'.
+    'AppCore.basics.auth.backends.EmailOrCpfBackend',
+    # Fallback padrão do Django — mantém login pelo admin e outros fluxos internos.
+    'django.contrib.auth.backends.ModelBackend',
+]
 
 # Configurações do django-allauth (descomente para ativar login social)
 # SITE_ID = 1
