@@ -19,6 +19,38 @@ Implementar código novo ou modificar existente seguindo rigorosamente os padrõ
 2. **Explorar o contexto** — ler os arquivos existentes do app antes de criar qualquer coisa.
 3. **Implementar na ordem correta**: Models → Rules → Helpers → Business → Serializers → Views → URLs.
 4. **Seguir os padrões** descritos nesta skill sem desvios.
+5. **Verificar conformidade** — ao concluir cada arquivo, aplicar o Checklist de Conformidade Obrigatório abaixo.
+
+---
+
+## ⚠️ Checklist de Conformidade Obrigatório
+
+Aplicar a cada arquivo gerado ou modificado **antes de considerar a implementação concluída**. Violações desses itens foram encontradas em código gerado mesmo após as instruções estarem vigentes — não assumir conformidade sem verificar.
+
+### Views
+- [ ] Toda view herda de uma view base do AppCore (`BasicPostAPIView`, `BasicGetAPIView`, `BasicRetrieveAPIView`, `BasicPutAPIView`, `BasicPatchAPIView`, `BasicDeleteAPIView`) — `GenericAPIView` direto é exceção justificada, não o padrão
+- [ ] Nenhum hook `do_action_*` contém queries ORM (`Model.objects.get(...)`, `.filter(...)`, `.create(...)`, etc.) — toda query vai para o Business
+- [ ] `do_action_post` recebe `serializer_data` (dict), não o serializer inteiro
+- [ ] Nenhum hook retorna `Response` diretamente — retorna `dict` opcional ou `None`
+- [ ] Nenhum hook chama `transaction.atomic()` manualmente — já é gerenciado pela view base
+
+### Business
+- [ ] Métodos com `try/except Exception` nunca expõem `str(e)` ao cliente — sempre `SystemErrorException` + `logger.exception(...)`
+- [ ] Nenhuma query ORM está na view — pertence ao Business (ou Helpers, chamados pelo Business)
+
+### Rules
+- [ ] Todos os métodos do domínio estão nomeados em **português**: `pode_*`, `validar_*`, `verificar_*` — **nunca** `can_*`, `check_*`, `is_valid_*`
+- [ ] Nenhum método contém `.save()`, `.create()`, `.delete()` — persistência pertence ao Business
+- [ ] Métodos retornam `True` (sucesso) ou lançam exceção — nunca retornam `False` silenciosamente
+
+### Nomenclatura geral
+- [ ] Todos os métodos do domínio (Business, Rules, Helpers, State) estão em português
+- [ ] Exceções apenas para overrides de framework: `get_queryset`, `get_serializer_class`, `validate`, `create`, `update`
+
+### Estrutura de módulo
+- [ ] O app está dentro do módulo de domínio correto (ex: `Identidade/identidade/`), não na raiz do repositório
+- [ ] `apps.py` usa `name = 'Modulo.app'` (caminho completo)
+- [ ] O módulo tem `__init__.py` e `urls.py` com `app_name`
 
 ---
 

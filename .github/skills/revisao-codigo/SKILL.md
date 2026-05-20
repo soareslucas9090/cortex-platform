@@ -46,6 +46,8 @@ Se nenhum problema for encontrado, confirme que o arquivo está em conformidade.
 - [ ] A view **não contém lógica de negócio** (loops, cálculos, condicionais de domínio).
 - [ ] A view apenas recebe dados, delega ao Business e retorna resposta.
 - [ ] **Toda lógica** está no `business.py`, não na view.
+- [ ] A view **não contém queries ORM diretas** (`Model.objects.get(...)`, `.filter(...)`, `.create(...)`, etc.) — toda query vai para o Business ou Helpers.
+- [ ] A view usa uma **view base do AppCore** (`BasicPostAPIView`, `BasicGetAPIView`, `BasicRetrieveAPIView`, `BasicPutAPIView`, `BasicPatchAPIView`, `BasicDeleteAPIView`) — usar `GenericAPIView` diretamente é exceção justificada, não o padrão.
 
 **Exemplo errado:**
 
@@ -221,11 +223,15 @@ Quando a view herda de `GenericAPIView` diretamente (sem usar `BasicPostAPIView`
 - [ ] **Não é chamada diretamente pela view** — somente pelo Business.
 
 ```python
-# ✅ CORRETO
-def can_desativar(self):
+# ✅ CORRETO — método em português
+def pode_desativar(self):
     if not self.object_instance.ativo:
         self.return_exception('Usuário já está inativo.')
     return True
+
+# ❌ ERRADO — nome em inglês
+def can_desativar(self):
+    ...
 ```
 
 ---
@@ -265,8 +271,9 @@ def can_desativar(self):
 
 ### Nomenclatura
 
-- [ ] Variáveis, funções e métodos do domínio estão em **português**.
-- [ ] Exceções para métodos do framework: `get_queryset`, `get_serializer_class`, `validate`, `create`, `update`.
+- [ ] Variáveis, funções e métodos do domínio estão em **português** — aplica-se a **todas as camadas**: Business, Rules, Helpers e State.
+- [ ] Métodos de Rules usam prefixo em português: `pode_*`, `validar_*`, `verificar_*` — **nunca** `can_*`, `check_*`, `is_*` para lógica de domínio.
+- [ ] Exceções apenas para overrides de framework: `get_queryset`, `get_serializer_class`, `validate`, `create`, `update`.
 - [ ] Módulos e apps: snake_case minúsculo (`usuarios`, `auth`).
 
 **Exemplos:**

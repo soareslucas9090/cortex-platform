@@ -1,6 +1,6 @@
 # Instruções para AI Coding Agents - Base DRF App
 
-> **Última atualização:** 13 de maio de 2026
+> **Última atualização:** 20 de maio de 2026
 
 ATUALIZE O ARQUIVO .github/copilot-instructions.md sempre que houver mudanças significativas na estrutura, arquitetura ou convenções do projeto.
 
@@ -17,6 +17,10 @@ Este projeto segue uma arquitetura modular de 4 camadas bem definidas. **Cada mo
 - **Toda validação de regras** vai no `rules.py`
 - **Toda query/utilitário** vai no `helpers.py`
 - **Toda lógica de estado** vai no `state.py`
+
+> **Proibições absolutas nas views:**
+> - Views **NUNCA** fazem queries ORM diretamente (`Model.objects.get(...)`, `.filter(...)`, `.create(...)`, etc.) — toda query deve ir para o Business
+> - Views **SEMPRE** usam as views base do AppCore (`BasicPostAPIView`, `BasicGetAPIView`, etc.) — usar `GenericAPIView` diretamente é exceção justificada, não a regra
 
 ```python
 # ❌ ERRADO - Lógica na view
