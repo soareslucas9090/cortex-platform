@@ -13,12 +13,12 @@ from AppCore.basics.decorators.decorators import handle_exceptions
 from AppCore.basics.mixins.mixins import IsAdminMixin, IsOwnerOrAdminMixin
 from AppCore.basics.pagination.pagination import PaginacaoCustomizada
 from AppCore.basics.views.basic_views import BasicPostAPIView, BasicPatchAPIView
-from AppCore.core.exceptions.exceptions import AuthorizationException, NotFoundException
+from AppCore.core.exceptions.exceptions import AuthorizationException
 from AppCore.core.permissions.permissions import IsAdminPermission, IsOwnerOrAdminPermission
 
 from .business import UsuarioBusiness
 from .choices import SituacaoMatricula
-from .models import Usuario, Contato, Endereco, Matricula
+from .models import Usuario, Contato, Matricula
 from .serializers import (
     AdicionarMatriculaSerializer,
     AtualizarUsuarioSerializer,
@@ -264,6 +264,7 @@ class DesativarUsuarioView(IsAdminMixin, BasicPostAPIView):
     """POST /identidade/usuarios/{pk}/desativar/"""
     serializer_class = SerializerVazio
     mensagem_sucesso = 'Usuário desativado com sucesso.'
+    queryset = Usuario.objects.all()
 
     @extend_schema(
         tags=['Identidade'],
@@ -286,14 +287,14 @@ class DesativarUsuarioView(IsAdminMixin, BasicPostAPIView):
         return super().post(request, *args, **kwargs)
 
     def do_action_post(self, serializer_data, request):
-        usuario = Usuario.objects.get(pk=self.kwargs['pk'])
-        usuario.business.desativar()
+        self.get_object().business.desativar()
 
 
 class ReativarUsuarioView(IsAdminMixin, BasicPostAPIView):
     """POST /identidade/usuarios/{pk}/reativar/"""
     serializer_class = SerializerVazio
     mensagem_sucesso = 'Usuário reativado com sucesso.'
+    queryset = Usuario.objects.all()
 
     @extend_schema(
         tags=['Identidade'],
@@ -316,8 +317,7 @@ class ReativarUsuarioView(IsAdminMixin, BasicPostAPIView):
         return super().post(request, *args, **kwargs)
 
     def do_action_post(self, serializer_data, request):
-        usuario = Usuario.objects.get(pk=self.kwargs['pk'])
-        usuario.business.reativar()
+        self.get_object().business.reativar()
 
 
 # ===========================================================================
@@ -397,14 +397,16 @@ class ContatosView(IsOwnerOrAdminMixin, GenericAPIView):
     @handle_exceptions
     def post(self, request, *args, **kwargs):
         _verificar_acesso_usuario(request, self.kwargs['usuario_pk'])
-        usuario = Usuario.objects.get(pk=self.kwargs['usuario_pk'])
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
         with transaction.atomic():
             sid = transaction.savepoint()
             try:
-                contato = usuario.business.adicionar_contato(**serializer.validated_data)
+                contato = UsuarioBusiness().adicionar_contato_por_pk(
+                    self.kwargs['usuario_pk'],
+                    **serializer.validated_data,
+                )
             except Exception:
                 transaction.savepoint_rollback(sid)
                 raise
@@ -464,10 +466,6 @@ class EnderecoView(IsOwnerOrAdminMixin, GenericAPIView):
     def obter_usuario_dono(self, obj):
         return obj  # obj é sempre o Usuario nesta view
 
-    def _obter_usuario_com_acesso(self, usuario_pk):
-        _verificar_acesso_usuario(self.request, usuario_pk)
-        return Usuario.objects.get(pk=usuario_pk)
-
     def get_serializer_class(self):
         if self.request.method == 'PUT':
             return EnderecoInputSerializer
@@ -492,10 +490,9 @@ class EnderecoView(IsOwnerOrAdminMixin, GenericAPIView):
     )
     @handle_exceptions
     def get(self, request, *args, **kwargs):
-        usuario = self._obter_usuario_com_acesso(self.kwargs['usuario_pk'])
-        if not hasattr(usuario, 'endereco'):
-            raise NotFoundException('Endereço não cadastrado.')
-        return _resposta_sucesso('Endereço obtido com sucesso.', EnderecoSerializer(usuario.endereco).data)
+        _verificar_acesso_usuario(request, self.kwargs['usuario_pk'])
+        endereco = UsuarioBusiness().obter_endereco_por_pk(self.kwargs['usuario_pk'])
+        return _resposta_sucesso('Endereço obtido com sucesso.', EnderecoSerializer(endereco).data)
 
     @extend_schema(
         tags=['Identidade'],
@@ -516,14 +513,17 @@ class EnderecoView(IsOwnerOrAdminMixin, GenericAPIView):
     )
     @handle_exceptions
     def put(self, request, *args, **kwargs):
-        usuario = self._obter_usuario_com_acesso(self.kwargs['usuario_pk'])
+        _verificar_acesso_usuario(request, self.kwargs['usuario_pk'])
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
         with transaction.atomic():
             sid = transaction.savepoint()
             try:
-                endereco = usuario.business.salvar_endereco(serializer.validated_data)
+                endereco = UsuarioBusiness().salvar_endereco_por_pk(
+                    self.kwargs['usuario_pk'],
+                    serializer.validated_data,
+                )
             except Exception:
                 transaction.savepoint_rollback(sid)
                 raise
@@ -624,14 +624,16 @@ class MatriculasView(GenericAPIView):
     )
     @handle_exceptions
     def post(self, request, *args, **kwargs):
-        usuario = Usuario.objects.get(pk=self.kwargs['usuario_pk'])
         serializer = AdicionarMatriculaSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
         with transaction.atomic():
             sid = transaction.savepoint()
             try:
-                matricula = usuario.business.adicionar_matricula(serializer.validated_data['matricula'])
+                matricula = UsuarioBusiness().adicionar_matricula_por_pk(
+                    self.kwargs['usuario_pk'],
+                    serializer.validated_data['matricula'],
+                )
             except Exception:
                 transaction.savepoint_rollback(sid)
                 raise
@@ -648,6 +650,9 @@ class DesativarMatriculaView(IsAdminMixin, BasicPostAPIView):
     """POST /identidade/usuarios/{usuario_pk}/matriculas/{pk}/desativar/"""
     serializer_class = SerializerVazio
     mensagem_sucesso = 'Matrícula desativada com sucesso.'
+
+    def get_queryset(self):
+        return Matricula.objects.filter(usuario_id=self.kwargs['usuario_pk'])
 
     @extend_schema(
         tags=['Identidade'],
@@ -669,6 +674,4 @@ class DesativarMatriculaView(IsAdminMixin, BasicPostAPIView):
         return super().post(request, *args, **kwargs)
 
     def do_action_post(self, serializer_data, request):
-        usuario = Usuario.objects.get(pk=self.kwargs['usuario_pk'])
-        matricula = Matricula.objects.get(pk=self.kwargs['pk'], usuario=usuario)
-        usuario.business.desativar_matricula(matricula)
+        UsuarioBusiness().desativar_matricula(self.get_object())

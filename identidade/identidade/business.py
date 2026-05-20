@@ -1,7 +1,7 @@
 import logging
 
 from AppCore.core.business.business import ModelInstanceBusiness
-from AppCore.core.exceptions.exceptions import SystemErrorException
+from AppCore.core.exceptions.exceptions import SystemErrorException, NotFoundException
 from AppCore.common.util.util import normalizar_cpf
 
 from .choices import SituacaoMatricula
@@ -75,7 +75,7 @@ class UsuarioBusiness(ModelInstanceBusiness):
     def desativar(self):
         """Desativa o usuário."""
         regras = UsuarioRules(object_instance=self.object_instance)
-        regras.can_desativar()
+        regras.pode_desativar()
         try:
             self.object_instance.ativo = False
             self.object_instance.save(update_fields=['ativo'])
@@ -86,7 +86,7 @@ class UsuarioBusiness(ModelInstanceBusiness):
     def reativar(self):
         """Reativa o usuário."""
         regras = UsuarioRules(object_instance=self.object_instance)
-        regras.can_reativar()
+        regras.pode_reativar()
         try:
             self.object_instance.ativo = True
             self.object_instance.save(update_fields=['ativo'])
@@ -172,3 +172,61 @@ class UsuarioBusiness(ModelInstanceBusiness):
         except Exception as e:
             logger.exception('Erro ao desativar matrícula: %s', e)
             raise SystemErrorException('Não foi possível desativar a matrícula.')
+
+    # ------------------------------------------------------------------
+    # Operações por pk (não dependem de self.object_instance)
+    # Utilizadas pelas views que não dispõem de self.object via BasicView
+    # ------------------------------------------------------------------
+
+    def adicionar_contato_por_pk(self, usuario_pk: int, **dados):
+        """Busca o usuário pelo pk e adiciona um novo contato."""
+        from .models import Usuario, Contato
+        usuario = Usuario.objects.get(pk=usuario_pk)
+        try:
+            return Contato.objects.create(
+                usuario=usuario,
+                email_academico=dados.get('email_academico', ''),
+                email_pessoal=dados.get('email_pessoal', ''),
+                telefone=dados.get('telefone', ''),
+            )
+        except Exception as e:
+            logger.exception('Erro ao adicionar contato: %s', e)
+            raise SystemErrorException('Não foi possível adicionar o contato.')
+
+    def adicionar_matricula_por_pk(self, usuario_pk: int, numero_matricula: str):
+        """Busca o usuário pelo pk e adiciona uma nova matrícula."""
+        from .models import Usuario, Matricula
+        usuario = Usuario.objects.get(pk=usuario_pk)
+        regras = UsuarioRules(object_instance=usuario)
+        regras.matricula_nao_duplicada(numero_matricula)
+        try:
+            return Matricula.objects.create(
+                usuario=usuario,
+                matricula=numero_matricula,
+                situacao=SituacaoMatricula.ATIVA,
+            )
+        except Exception as e:
+            logger.exception('Erro ao adicionar matrícula: %s', e)
+            raise SystemErrorException('Não foi possível adicionar a matrícula.')
+
+    def obter_endereco_por_pk(self, usuario_pk: int):
+        """Retorna o endereço do usuário identificado por pk."""
+        from .models import Usuario
+        usuario = Usuario.objects.get(pk=usuario_pk)
+        if not hasattr(usuario, 'endereco'):
+            raise NotFoundException('Endereço não cadastrado.')
+        return usuario.endereco
+
+    def salvar_endereco_por_pk(self, usuario_pk: int, dados: dict):
+        """Cria ou atualiza o endereço do usuário identificado por pk."""
+        from .models import Usuario, Endereco
+        usuario = Usuario.objects.get(pk=usuario_pk)
+        try:
+            endereco, _ = Endereco.objects.update_or_create(
+                usuario=usuario,
+                defaults=dados,
+            )
+            return endereco
+        except Exception as e:
+            logger.exception('Erro ao salvar endereço: %s', e)
+            raise SystemErrorException('Não foi possível salvar o endereço.')

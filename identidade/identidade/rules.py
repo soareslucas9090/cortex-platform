@@ -35,13 +35,13 @@ class UsuarioRules(ModelInstanceRules):
     # Regras de estado (dependem de self.object_instance)
     # ------------------------------------------------------------------
 
-    def can_desativar(self) -> bool:
+    def pode_desativar(self) -> bool:
         """Verifica se o usuário pode ser desativado."""
         if not self.object_instance.ativo:
             self.return_exception('O usuário já está inativo.')
         return True
 
-    def can_reativar(self) -> bool:
+    def pode_reativar(self) -> bool:
         """Verifica se o usuário pode ser reativado."""
         if self.object_instance.ativo:
             self.return_exception('O usuário já está ativo.')
