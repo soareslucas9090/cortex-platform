@@ -2,8 +2,9 @@ import logging
 
 from functools import wraps
 
+from django.http import Http404
 from rest_framework import status
-from rest_framework.exceptions import PermissionDenied
+from rest_framework.exceptions import PermissionDenied, ValidationError as DRFValidationError
 from rest_framework.response import Response
 
 logger = logging.getLogger(__name__)
@@ -40,6 +41,12 @@ def handle_exceptions(func):
             return Response(
                 {'status': 'error', 'detail': str(err) or RESPONSE_ALGUM_DADO_NAO_FOI_ENCONTRADO}, status=status.HTTP_404_NOT_FOUND
             )
+        except Http404:
+            return Response(
+                {'status': 'error', 'detail': RESPONSE_ALGUM_DADO_NAO_FOI_ENCONTRADO}, status=status.HTTP_404_NOT_FOUND
+            )
+        except DRFValidationError:
+            raise
         except SystemErrorException as err:
             # SystemErrorException é erro interno — nunca expor a mensagem ao cliente (OWASP A03)
             logger.exception('Erro interno do sistema na view: %s', err)

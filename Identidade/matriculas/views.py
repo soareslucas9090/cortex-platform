@@ -61,6 +61,8 @@ class ListarMatriculasView(IsOwnerOrAdminMixin, BasicGetAPIView):
         return obj.usuario
 
     def validate_get(self, request, *args, **kwargs):
+        from Identidade.usuarios.models import Usuario
+        Usuario.objects.get(pk=self.kwargs['usuario_pk'])
         self.verificar_acesso_usuario(request, self.kwargs['usuario_pk'])
 
     def get_queryset(self):
@@ -98,7 +100,7 @@ class AdicionarMatriculaView(IsAdminMixin, BasicPostAPIView):
     serializer_class = AdicionarMatriculaSerializer
     mensagem_sucesso = 'Matrícula adicionada com sucesso.'
 
-    def do_action_post(self, serializer_data, request):
+    def do_action_post(self, serializer_data, request, **kwargs):
         from django.shortcuts import get_object_or_404
         from Identidade.usuarios.models import Usuario
         usuario = get_object_or_404(Usuario, pk=self.kwargs['usuario_pk'])
@@ -134,5 +136,5 @@ class DesativarMatriculaView(IsAdminMixin, BasicPostAPIView):
     def get_queryset(self):
         return Matricula.objects.filter(usuario_id=self.kwargs['usuario_pk'])
 
-    def do_action_post(self, serializer_data, request):
+    def do_action_post(self, serializer_data, request, **kwargs):
         self.get_object().business.desativar()

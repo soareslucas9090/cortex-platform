@@ -36,7 +36,7 @@ class ListarContatosViewTest(APITestCase):
             usuario=self.usuario,
             email_pessoal='pessoal@exemplo.com',
         )
-        self.url = reverse('identidade:usuario-contatos', kwargs={'usuario_pk': self.usuario.pk})
+        self.url = reverse('identidade:contatos', kwargs={'usuario_pk': self.usuario.pk})
 
     def test_admin_lista_contatos_de_qualquer_usuario(self):
         self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token_admin}')

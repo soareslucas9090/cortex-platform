@@ -28,7 +28,14 @@ class EnderecoInputSerializer(serializers.Serializer):
             raise serializers.ValidationError('CEP deve conter exatamente 8 dígitos numéricos (sem hífen).')
         return value
 
+    _SIGLAS_VALIDAS = {
+        'AC', 'AL', 'AP', 'AM', 'BA', 'CE', 'DF', 'ES', 'GO',
+        'MA', 'MT', 'MS', 'MG', 'PA', 'PB', 'PR', 'PE', 'PI',
+        'RJ', 'RN', 'RS', 'RO', 'RR', 'SC', 'SP', 'SE', 'TO',
+    }
+
     def validate_estado(self, value):
-        if len(value.strip()) != 2:
-            raise serializers.ValidationError('Estado deve ser a sigla com 2 letras (ex: CE, SP).')
-        return value.strip().upper()
+        sigla = value.strip().upper()
+        if sigla not in self._SIGLAS_VALIDAS:
+            raise serializers.ValidationError('Estado deve ser uma sigla de estado brasileiro válida (ex: CE, SP).')
+        return sigla

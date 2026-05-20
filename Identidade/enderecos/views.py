@@ -83,7 +83,7 @@ class SalvarEnderecoView(IsOwnerOrAdminMixin, BasicPutAPIView):
         self.check_object_permissions(self.request, usuario)
         return usuario
 
-    def do_action_put(self, serializer_data, request):
+    def do_action_put(self, serializer_data, request, **kwargs):
         endereco = self.object.business.salvar_endereco(serializer_data)
         return {
             'mensagem': self.mensagem_sucesso,

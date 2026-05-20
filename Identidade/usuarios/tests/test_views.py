@@ -263,9 +263,10 @@ class ReativarUsuarioViewTest(APITestCase):
         self.assertEqual(resposta.status_code, status.HTTP_400_BAD_REQUEST)
 
     def test_usuario_comum_nao_pode_reativar(self):
+        # Usuário inativo não consegue autenticar (JWT rejeita is_active=False) → 401
         self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token_usuario}')
         resposta = self.client.post(self.url)
-        self.assertEqual(resposta.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(resposta.status_code, status.HTTP_401_UNAUTHORIZED)
 
     def test_nao_autenticado_retorna_401(self):
         resposta = self.client.post(self.url)

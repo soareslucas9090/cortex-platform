@@ -56,6 +56,8 @@ class ListarContatosView(IsOwnerOrAdminMixin, BasicGetAPIView):
         return obj.usuario
 
     def validate_get(self, request, *args, **kwargs):
+        from Identidade.usuarios.models import Usuario
+        Usuario.objects.get(pk=self.kwargs['usuario_pk'])
         self.verificar_acesso_usuario(request, self.kwargs['usuario_pk'])
 
     def get_queryset(self):
@@ -89,7 +91,7 @@ class AdicionarContatoView(IsOwnerOrAdminMixin, BasicPostAPIView):
     def obter_usuario_dono(self, obj):
         return obj
 
-    def do_action_post(self, serializer_data, request):
+    def do_action_post(self, serializer_data, request, **kwargs):
         from django.shortcuts import get_object_or_404
         from Identidade.usuarios.models import Usuario
         self.verificar_acesso_usuario(request, self.kwargs['usuario_pk'])
@@ -130,7 +132,7 @@ class AtualizarContatoView(IsOwnerOrAdminMixin, BasicPatchAPIView):
     def get_queryset(self):
         return Contato.objects.filter(usuario_id=self.kwargs['usuario_pk'])
 
-    def do_action_patch(self, serializer_data, request):
+    def do_action_patch(self, serializer_data, request, **kwargs):
         self.object.business.atualizar_contato(serializer_data)
         return {
             'mensagem': self.mensagem_sucesso,

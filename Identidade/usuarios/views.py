@@ -164,7 +164,7 @@ class AtualizarUsuarioView(IsOwnerOrAdminMixin, BasicPatchAPIView):
     def obter_usuario_dono(self, obj):
         return obj
 
-    def do_action_patch(self, serializer_data, request):
+    def do_action_patch(self, serializer_data, request, **kwargs):
         self.object.business.atualizar_dados(serializer_data)
         return {
             'mensagem': self.mensagem_sucesso,
@@ -195,7 +195,7 @@ class DesativarUsuarioView(IsAdminMixin, BasicPostAPIView):
     mensagem_sucesso = 'Usuário desativado com sucesso.'
     queryset = Usuario.objects.all()
 
-    def do_action_post(self, serializer_data, request):
+    def do_action_post(self, serializer_data, request, **kwargs):
         self.get_object().business.desativar()
 
 
@@ -222,5 +222,5 @@ class ReativarUsuarioView(IsAdminMixin, BasicPostAPIView):
     mensagem_sucesso = 'Usuário reativado com sucesso.'
     queryset = Usuario.objects.all()
 
-    def do_action_post(self, serializer_data, request):
+    def do_action_post(self, serializer_data, request, **kwargs):
         self.get_object().business.reativar()
