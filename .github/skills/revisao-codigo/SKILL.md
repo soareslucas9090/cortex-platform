@@ -67,6 +67,24 @@ def do_action_post(self, serializer_data, request):
 
 ---
 
+#### Responsabilidade Única e Sobrescritas de Métodos HTTP
+
+- [ ] A view herda de **exatamente UM** `BasicXxxAPIView` — nunca dois ou mais ao mesmo tempo.
+- [ ] A view **NÃO** combina `BasicGetAPIView + BasicPostAPIView` (ou qualquer par) via herança múltipla.
+- [ ] Para um endpoint com múltiplos métodos HTTP na mesma URL, usa-se `roteador_por_metodo(...)` no `urls.py` com views separadas:
+  ```python
+  path('recursos/', roteador_por_metodo(GET=ListarRecursosView, POST=CriarRecursoView))
+  ```
+- [ ] A view **NÃO** sobrescreve métodos HTTP (`get()`, `post()`, `patch()`, `put()`, `delete()`) sem justificativa válida.
+- [ ] Sobrescrita de método HTTP é justificada **apenas** quando:
+  1. A view precisa **retornar dados** (objeto criado/atualizado) na resposta — `_build_success_response` só retorna `{status, mensagem}`, sem `dados`.
+  2. A lógica não se encaixa nos hooks disponíveis (ex: busca não-padrão que não usa `queryset`).
+- [ ] Métodos HTTP que apenas chamam `super()` (ex: `def post(self, ...): return super().post(...)`) **devem ser removidos** — são desnecessários.
+- [ ] `@extend_schema` está na **CLASSE** quando a view usa apenas hooks (`do_action_*`) sem sobrescrever o método HTTP.
+- [ ] `@extend_schema` está no **MÉTODO** sobrescrito quando há sobrescrita justificada do método HTTP.
+
+---
+
 #### Hooks das Views Base (`do_action_*`)
 
 Os hooks `do_action_post`, `do_action_put`, `do_action_patch` e `do_action_delete` têm contratos específicos:
@@ -325,4 +343,4 @@ View → Business → Rules / Helpers / State
 - Padrões completos: [`.github/copilot-instructions.md`](../../copilot-instructions.md)
 - Views base: [`AppCore/basics/views/basic_views.py`](../../../AppCore/basics/views/basic_views.py)
 - Exceções: [`AppCore/core/exceptions/exceptions.py`](../../../AppCore/core/exceptions/exceptions.py)
-- Exemplo de implementação: [`identidade/views.py`](../../../identidade/views.py), [`identidade/business.py`](../../../identidade/business.py)
+- Exemplo de implementação: [`Identidade/identidade/views.py`](../../../Identidade/identidade/views.py), [`Identidade/identidade/business.py`](../../../Identidade/identidade/business.py)

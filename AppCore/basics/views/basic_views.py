@@ -13,10 +13,18 @@ from AppCore.common.textos.mensagens import RESPONSE_ALGUM_DADO_NAO_FOI_ENCONTRA
 
 def _build_success_response(resultado, mensagem_sucesso):
     """Monta o dict de resposta de sucesso com base no retorno do hook da view."""
+    resultado_retorno = {}
     if not resultado:
         resultado = {}
-    mensagem = resultado.get('mensagem') or mensagem_sucesso or 'Sucesso'
-    return {'status': 'success', 'mensagem': mensagem}, resultado.get('status_code', status.HTTP_200_OK)
+
+    resultado_retorno['mensagem'] = resultado.get('mensagem') or mensagem_sucesso or 'Sucesso'
+
+    if 'dados' in resultado:
+        resultado_retorno['dados'] = resultado.get('dados')
+
+    resultado_retorno['status'] = 'success'
+
+    return resultado_retorno, resultado.get('status_code', status.HTTP_200_OK)
 
 
 class BasicPostAPIView(GenericAPIView):
@@ -31,7 +39,7 @@ class BasicPostAPIView(GenericAPIView):
     http_method_names = ['post']
     mensagem_sucesso = ''
 
-    def do_action_post(self, serializer_data, request):
+    def do_action_post(self, serializer_data, request, *args, **kwargs):
         raise SystemErrorException('Este método não foi implementado.')
 
     @handle_exceptions
@@ -45,7 +53,7 @@ class BasicPostAPIView(GenericAPIView):
         with transaction.atomic():
             sid = transaction.savepoint()
             try:
-                resultado = self.do_action_post(serializer_data, request) or {}
+                resultado = self.do_action_post(serializer_data, request, *args, **kwargs) or {}
             except Exception as e:
                 transaction.savepoint_rollback(sid)
                 raise
@@ -110,7 +118,7 @@ class BasicDeleteAPIView(GenericAPIView):
     http_method_names = ['delete']
     mensagem_sucesso = ''
 
-    def do_action_delete(self, request):
+    def do_action_delete(self, request, *args, **kwargs):
         raise SystemErrorException('Este método não foi implementado.')
 
     @handle_exceptions
@@ -123,7 +131,7 @@ class BasicDeleteAPIView(GenericAPIView):
         with transaction.atomic():
             sid = transaction.savepoint()
             try:
-                self.do_action_delete(request)
+                self.do_action_delete(request, *args, **kwargs)
             except Exception as e:
                 transaction.savepoint_rollback(sid)
                 raise
@@ -144,7 +152,7 @@ class BasicPutAPIView(GenericAPIView):
     http_method_names = ['put']
     mensagem_sucesso = ''
 
-    def do_action_put(self, serializer_data, request):
+    def do_action_put(self, serializer_data, request, *args, **kwargs):
         raise SystemErrorException('Este método não foi implementado.')
 
     @handle_exceptions
@@ -163,7 +171,7 @@ class BasicPutAPIView(GenericAPIView):
         with transaction.atomic():
             sid = transaction.savepoint()
             try:
-                resultado = self.do_action_put(serializer_data, request) or {}
+                resultado = self.do_action_put(serializer_data, request, *args, **kwargs) or {}
             except Exception as e:
                 transaction.savepoint_rollback(sid)
                 raise
@@ -185,7 +193,7 @@ class BasicPatchAPIView(GenericAPIView):
     http_method_names = ['patch']
     mensagem_sucesso = ''
 
-    def do_action_patch(self, serializer_data, request):
+    def do_action_patch(self, serializer_data, request, *args, **kwargs):
         raise SystemErrorException('Este método não foi implementado.')
 
     @handle_exceptions
@@ -204,7 +212,7 @@ class BasicPatchAPIView(GenericAPIView):
         with transaction.atomic():
             sid = transaction.savepoint()
             try:
-                resultado = self.do_action_patch(serializer_data, request) or {}
+                resultado = self.do_action_patch(serializer_data, request, *args, **kwargs) or {}
             except Exception as e:
                 transaction.savepoint_rollback(sid)
                 raise
@@ -246,4 +254,33 @@ class BasicRetrieveAPIView(GenericAPIView):
             'dados': serializer.data,
         }
         return Response(data, status=status.HTTP_200_OK)
+
+
+def roteador_por_metodo(**metodo_para_view):
+    """
+    Roteia uma URL para views diferentes dependendo do método HTTP.
+
+    Cada view passada deve herdar de exatamente um BasicXxxAPIView (responsabilidade única).
+    Autenticação e permissões são gerenciadas pelas views individuais.
+
+    Uso em urls.py::
+
+        path('recursos/', roteador_por_metodo(GET=ListarRecursosView, POST=CriarRecursoView))
+        path('recursos/<int:pk>/', roteador_por_metodo(GET=DetalheView, PATCH=AtualizarView))
+    """
+    from django.http import HttpResponseNotAllowed
+
+    metodo_para_view_upper = {k.upper(): v for k, v in metodo_para_view.items()}
+    metodos_permitidos = list(metodo_para_view_upper.keys())
+
+    def dispatcher(request, *args, **kwargs):
+        method = request.method.upper()
+        if method == 'HEAD' and 'GET' in metodo_para_view_upper:
+            method = 'GET'
+        view_class = metodo_para_view_upper.get(method)
+        if view_class:
+            return view_class.as_view()(request, *args, **kwargs)
+        return HttpResponseNotAllowed(metodos_permitidos)
+
+    return dispatcher
 

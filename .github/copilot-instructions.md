@@ -21,7 +21,7 @@ Este projeto segue uma arquitetura modular de 4 camadas bem definidas. **Cada mo
 > **Proibições absolutas nas views:**
 >
 > - Views **NUNCA** fazem queries ORM diretamente (`Model.objects.get(...)`, `.filter(...)`, `.create(...)`, etc.) — toda query deve ir para o Business
-> - Views **SEMPRE** usam as views base do AppCore (`BasicPostAPIView`, `BasicGetAPIView`, etc.) — usar `GenericAPIView` diretamente é exceção justificada, não a regra
+> - Views **SEMPRE** herdam de alguma view base do AppCore (`BasicPostAPIView`, `BasicGetAPIView`, `BasicRetrieveAPIView`, `BasicPutAPIView`, `BasicPatchAPIView`, `BasicDeleteAPIView`) — **`GenericAPIView` nunca deve ser importado ou usado diretamente nos apps do projeto**; Views nunca devem usar herança múltipla a fim de realizar mais de uma função. Uma view tem uma única responsabilidade (ex: listar, criar, atualizar parcialmente, etc.) e herda da view base correspondente.
 > - Views **NUNCA** definem funções soltas no nível do módulo (`def _funcao(...)`) — utilitários genéricos vão em mixins do AppCore (`RespostasMixin`, `IsOwnerOrAdminMixin`, etc.); utilitários exclusivos de um app vão em uma classe base herdada por todas as views do app; toda chamada é feita via `self.*`
 
 ```python
@@ -307,21 +307,93 @@ class CriarContaSerializer(serializers.Serializer):
 
 **Retorno dos hooks de escrita**: dict opcional com `mensagem` e/ou `status_code` para customizar a resposta.
 
-### Exemplo
+### Views com Responsabilidade Única
+
+**Cada view deve herdar de exatamente UM `BasicXxxAPIView`.** Herança múltipla de views base (`BasicGetAPIView + BasicPostAPIView`, etc.) é **proibida**.
+
+Quando um endpoint aceita mais de um método HTTP (ex: `GET` + `POST`), crie **duas views separadas** e combine-as no `urls.py` com `roteador_por_metodo`:
+
+```python
+# urls.py
+from AppCore.basics.views.basic_views import roteador_por_metodo
+
+path('recursos/', roteador_por_metodo(GET=ListarRecursosView, POST=CriarRecursoView))
+path('recursos/<int:pk>/', roteador_por_metodo(GET=DetalheView, PATCH=AtualizarView))
+```
+
+```python
+# views.py — cada view com UMA responsabilidade
+
+# ✅ CORRETO — view de listagem
+@extend_schema(...)  # @extend_schema na CLASSE quando usa apenas hooks
+class ListarSetoresView(IsAdminMixin, BasicGetAPIView):
+    pagination_class = PaginacaoCustomizada
+    serializer_class = SetorSerializer
+    mensagem_sucesso = 'Setores listados com sucesso.'
+
+    def get_queryset(self):
+        return Setor.objects.all()
+
+
+# ✅ CORRETO — view de criação com retorno de dados (sobrescrita justificada)
+class CriarSetorView(IsAdminMixin, RespostasMixin, BasicPostAPIView):
+    serializer_class = CriarSetorSerializer
+
+    @extend_schema(...)  # @extend_schema no MÉTODO quando há sobrescrita justificada
+    @handle_exceptions
+    def post(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        with transaction.atomic():
+            sid = transaction.savepoint()
+            try:
+                setor = SetorBusiness().criar_setor(**serializer.validated_data)
+            except Exception:
+                transaction.savepoint_rollback(sid)
+                raise
+            transaction.savepoint_commit(sid)
+        return self.resposta_sucesso('Setor criado!', SetorSerializer(setor).data, status.HTTP_201_CREATED)
+
+
+# ❌ ERRADO — herança múltipla de BasicXxx views
+class SetoresView(IsAdminMixin, RespostasMixin, BasicGetAPIView, BasicPostAPIView):
+    http_method_names = ['get', 'post']
+    ...
+```
+
+### Quando sobrescrever métodos HTTP (get, post, patch, put, delete)
+
+O objetivo das `BasicXxxAPIViews` é **minimizar código nas views**. Use sempre os hooks (`do_action_post`, `do_action_patch`, etc.) em vez de sobrescrever os métodos HTTP.
+
+**Sobrescritas são justificadas APENAS quando:**
+
+1. A view precisa **retornar dados** (objeto criado/atualizado) na resposta — `_build_success_response` só retorna `{status, mensagem}`, sem `dados`
+2. A lógica não se encaixa nos hooks disponíveis (ex: busca não-padrão que não usa `queryset`)
+
+> ⚠️ Se o usuário não pedir explicitamente para pular esta regra, **não sobrescreva métodos HTTP sem uma dessas justificativas**.
+
+### Posição do `@extend_schema`
+
+- View que usa apenas hooks (sem sobrescrita de método HTTP): `@extend_schema` na **CLASSE**
+- View com sobrescrita justificada: `@extend_schema` no **MÉTODO** sobrescrito
+
+### Exemplo (sem sobrescrita — padrão recomendado)
 
 ```python
 from AppCore.basics.views.basic_views import BasicPostAPIView
 
-class CriarProdutoView(BasicPostAPIView):
-    serializer_class = CriarProdutoSerializer
-    mensagem_sucesso = 'Produto criado com sucesso.'
+@extend_schema(
+    tags=['Produtos'],
+    summary='Desativar produto',
+    ...
+)
+class DesativarProdutoView(IsAdminMixin, BasicPostAPIView):
+    serializer_class = SerializerVazio
+    mensagem_sucesso = 'Produto desativado com sucesso.'
+    queryset = Produto.objects.all()
 
     def do_action_post(self, serializer_data, request):  # ← parâmetro é serializer_data, não serializer
-        ProdutoBusiness().criar_produto(**serializer_data)
-        return {                                          # retorno é opcional
-            'mensagem': 'Produto criado!',
-            'status_code': status.HTTP_201_CREATED
-        }
+        self.get_object().business.desativar()
 ```
 
 ### Tratamento de Exceções
