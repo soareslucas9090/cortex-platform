@@ -22,6 +22,7 @@ Este projeto segue uma arquitetura modular de 4 camadas bem definidas. **Cada mo
 >
 > - Views **NUNCA** fazem queries ORM diretamente (`Model.objects.get(...)`, `.filter(...)`, `.create(...)`, etc.) — toda query deve ir para o Business
 > - Views **SEMPRE** usam as views base do AppCore (`BasicPostAPIView`, `BasicGetAPIView`, etc.) — usar `GenericAPIView` diretamente é exceção justificada, não a regra
+> - Views **NUNCA** definem funções soltas no nível do módulo (`def _funcao(...)`) — utilitários genéricos vão em mixins do AppCore (`RespostasMixin`, `IsOwnerOrAdminMixin`, etc.); utilitários exclusivos de um app vão em uma classe base herdada por todas as views do app; toda chamada é feita via `self.*`
 
 ```python
 # ❌ ERRADO - Lógica na view

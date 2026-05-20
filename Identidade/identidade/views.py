@@ -10,10 +10,9 @@ from drf_spectacular.utils import extend_schema, OpenApiParameter
 from drf_spectacular.types import OpenApiTypes
 
 from AppCore.basics.decorators.decorators import handle_exceptions
-from AppCore.basics.mixins.mixins import IsAdminMixin, IsOwnerOrAdminMixin
+from AppCore.basics.mixins.mixins import IsAdminMixin, IsOwnerOrAdminMixin, RespostasMixin
 from AppCore.basics.pagination.pagination import PaginacaoCustomizada
 from AppCore.basics.views.basic_views import BasicPostAPIView, BasicPatchAPIView
-from AppCore.core.exceptions.exceptions import AuthorizationException
 from AppCore.core.permissions.permissions import IsAdminPermission, IsOwnerOrAdminPermission
 
 from .business import UsuarioBusiness
@@ -35,56 +34,11 @@ from .serializers import (
 logger = logging.getLogger(__name__)
 
 
-# ---------------------------------------------------------------------------
-# Utilitários internos
-# ---------------------------------------------------------------------------
-
-def _verificar_acesso_usuario(request, usuario_pk):
-    """
-    Verifica se o usuário autenticado tem acesso aos dados do usuario_pk.
-
-    Utilizada em endpoints de listagem de sub-recursos (contatos, matrículas),
-    onde has_object_permission não é acionado automaticamente pelo DRF.
-    Os query params de filtragem são aplicados APÓS esta verificação —
-    eles nunca expandem o acesso, apenas reduzem o conjunto de resultados.
-    """
-    if not (
-        request.user.pk == int(usuario_pk)
-        or getattr(request.user, 'is_admin', False)
-        or request.user.is_superuser
-    ):
-        raise AuthorizationException('Você não tem permissão para acessar esses dados.')
-
-
-def _resposta_sucesso(mensagem, dados=None, status_code=status.HTTP_200_OK):
-    data = {'status': 'success', 'mensagem': mensagem}
-    if dados is not None:
-        data['dados'] = dados
-    return Response(data, status=status_code)
-
-
-def _resposta_lista_paginada(view, queryset, mensagem):
-    page = view.paginate_queryset(queryset)
-    if page is not None:
-        serializer = view.get_serializer(page, many=True)
-        paginada = view.get_paginated_response(serializer.data)
-        return Response({
-            'status': 'success',
-            'mensagem': mensagem,
-            'count': paginada.data.get('count'),
-            'next': paginada.data.get('next'),
-            'previous': paginada.data.get('previous'),
-            'dados': paginada.data.get('results'),
-        }, status=status.HTTP_200_OK)
-    serializer = view.get_serializer(queryset, many=True)
-    return Response({'status': 'success', 'mensagem': mensagem, 'dados': serializer.data})
-
-
 # ===========================================================================
 # Usuários
 # ===========================================================================
 
-class UsuariosView(IsAdminMixin, GenericAPIView):
+class UsuariosView(IsAdminMixin, RespostasMixin, GenericAPIView):
     """
     GET  /identidade/usuarios/  — lista paginada de usuários
     POST /identidade/usuarios/  — criar novo usuário
@@ -138,7 +92,7 @@ class UsuariosView(IsAdminMixin, GenericAPIView):
     @handle_exceptions
     def get(self, request, *args, **kwargs):
         queryset = self.filter_queryset(self.get_queryset())
-        return _resposta_lista_paginada(self, queryset, 'Usuários listados com sucesso.')
+        return self.resposta_lista_paginada(queryset, 'Usuários listados com sucesso.')
 
     @extend_schema(
         tags=['Identidade'],
@@ -180,14 +134,14 @@ class UsuariosView(IsAdminMixin, GenericAPIView):
                 raise
             transaction.savepoint_commit(sid)
 
-        return _resposta_sucesso(
+        return self.resposta_sucesso(
             'Usuário criado com sucesso.',
             UsuarioSerializer(usuario).data,
             status.HTTP_201_CREATED,
         )
 
 
-class UsuarioView(IsOwnerOrAdminMixin, GenericAPIView):
+class UsuarioView(IsOwnerOrAdminMixin, RespostasMixin, GenericAPIView):
     """
     GET   /identidade/usuarios/{pk}/  — detalhe do usuário
     PATCH /identidade/usuarios/{pk}/  — atualizar dados básicos
@@ -220,7 +174,7 @@ class UsuarioView(IsOwnerOrAdminMixin, GenericAPIView):
     @handle_exceptions
     def get(self, request, *args, **kwargs):
         usuario = self.get_object()
-        return _resposta_sucesso('Usuário obtido com sucesso.', UsuarioSerializer(usuario).data)
+        return self.resposta_sucesso('Usuário obtido com sucesso.', UsuarioSerializer(usuario).data)
 
     @extend_schema(
         tags=['Identidade'],
@@ -257,7 +211,7 @@ class UsuarioView(IsOwnerOrAdminMixin, GenericAPIView):
             transaction.savepoint_commit(sid)
 
         usuario.refresh_from_db()
-        return _resposta_sucesso('Usuário atualizado com sucesso.', UsuarioSerializer(usuario).data)
+        return self.resposta_sucesso('Usuário atualizado com sucesso.', UsuarioSerializer(usuario).data)
 
 
 class DesativarUsuarioView(IsAdminMixin, BasicPostAPIView):
@@ -324,7 +278,7 @@ class ReativarUsuarioView(IsAdminMixin, BasicPostAPIView):
 # Contatos
 # ===========================================================================
 
-class ContatosView(IsOwnerOrAdminMixin, GenericAPIView):
+class ContatosView(IsOwnerOrAdminMixin, RespostasMixin, GenericAPIView):
     """
     GET  /identidade/usuarios/{usuario_pk}/contatos/  — listar contatos
     POST /identidade/usuarios/{usuario_pk}/contatos/  — adicionar contato
@@ -371,9 +325,9 @@ class ContatosView(IsOwnerOrAdminMixin, GenericAPIView):
     )
     @handle_exceptions
     def get(self, request, *args, **kwargs):
-        _verificar_acesso_usuario(request, self.kwargs['usuario_pk'])
+        self.verificar_acesso_usuario(request, self.kwargs['usuario_pk'])
         queryset = self.filter_queryset(self.get_queryset())
-        return _resposta_lista_paginada(self, queryset, 'Contatos listados com sucesso.')
+        return self.resposta_lista_paginada(queryset, 'Contatos listados com sucesso.')
 
     @extend_schema(
         tags=['Identidade'],
@@ -396,7 +350,7 @@ class ContatosView(IsOwnerOrAdminMixin, GenericAPIView):
     )
     @handle_exceptions
     def post(self, request, *args, **kwargs):
-        _verificar_acesso_usuario(request, self.kwargs['usuario_pk'])
+        self.verificar_acesso_usuario(request, self.kwargs['usuario_pk'])
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
@@ -412,7 +366,7 @@ class ContatosView(IsOwnerOrAdminMixin, GenericAPIView):
                 raise
             transaction.savepoint_commit(sid)
 
-        return _resposta_sucesso(
+        return self.resposta_sucesso(
             'Contato adicionado com sucesso.',
             ContatoSerializer(contato).data,
             status.HTTP_201_CREATED,
@@ -457,7 +411,7 @@ class ContatoView(IsOwnerOrAdminMixin, BasicPatchAPIView):
 # Endereço
 # ===========================================================================
 
-class EnderecoView(IsOwnerOrAdminMixin, GenericAPIView):
+class EnderecoView(IsOwnerOrAdminMixin, RespostasMixin, GenericAPIView):
     """
     GET /identidade/usuarios/{usuario_pk}/endereco/  — obter endereço
     PUT /identidade/usuarios/{usuario_pk}/endereco/  — salvar (cria ou atualiza)
@@ -490,9 +444,9 @@ class EnderecoView(IsOwnerOrAdminMixin, GenericAPIView):
     )
     @handle_exceptions
     def get(self, request, *args, **kwargs):
-        _verificar_acesso_usuario(request, self.kwargs['usuario_pk'])
+        self.verificar_acesso_usuario(request, self.kwargs['usuario_pk'])
         endereco = UsuarioBusiness().obter_endereco_por_pk(self.kwargs['usuario_pk'])
-        return _resposta_sucesso('Endereço obtido com sucesso.', EnderecoSerializer(endereco).data)
+        return self.resposta_sucesso('Endereço obtido com sucesso.', EnderecoSerializer(endereco).data)
 
     @extend_schema(
         tags=['Identidade'],
@@ -513,7 +467,7 @@ class EnderecoView(IsOwnerOrAdminMixin, GenericAPIView):
     )
     @handle_exceptions
     def put(self, request, *args, **kwargs):
-        _verificar_acesso_usuario(request, self.kwargs['usuario_pk'])
+        self.verificar_acesso_usuario(request, self.kwargs['usuario_pk'])
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
@@ -529,14 +483,14 @@ class EnderecoView(IsOwnerOrAdminMixin, GenericAPIView):
                 raise
             transaction.savepoint_commit(sid)
 
-        return _resposta_sucesso('Endereço salvo com sucesso.', EnderecoSerializer(endereco).data)
+        return self.resposta_sucesso('Endereço salvo com sucesso.', EnderecoSerializer(endereco).data)
 
 
 # ===========================================================================
 # Matrículas
 # ===========================================================================
 
-class MatriculasView(GenericAPIView):
+class MatriculasView(IsOwnerOrAdminMixin, RespostasMixin, GenericAPIView):
     """
     GET  /identidade/usuarios/{usuario_pk}/matriculas/  — listar matrículas
     POST /identidade/usuarios/{usuario_pk}/matriculas/  — adicionar matrícula (admin)
@@ -601,9 +555,9 @@ class MatriculasView(GenericAPIView):
     )
     @handle_exceptions
     def get(self, request, *args, **kwargs):
-        _verificar_acesso_usuario(request, self.kwargs['usuario_pk'])
+        self.verificar_acesso_usuario(request, self.kwargs['usuario_pk'])
         queryset = self.filter_queryset(self.get_queryset())
-        return _resposta_lista_paginada(self, queryset, 'Matrículas listadas com sucesso.')
+        return self.resposta_lista_paginada(queryset, 'Matrículas listadas com sucesso.')
 
     @extend_schema(
         tags=['Identidade'],
@@ -639,7 +593,7 @@ class MatriculasView(GenericAPIView):
                 raise
             transaction.savepoint_commit(sid)
 
-        return _resposta_sucesso(
+        return self.resposta_sucesso(
             'Matrícula adicionada com sucesso.',
             MatriculaSerializer(matricula).data,
             status.HTTP_201_CREATED,
