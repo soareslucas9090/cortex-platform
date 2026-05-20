@@ -34,18 +34,18 @@ O login é feito por **CPF** (não e-mail). Usuários são criados por administr
 
 ## Stack Técnica
 
-| Componente       | Versão / Tecnologia                           |
-| ---------------- | --------------------------------------------- |
-| Linguagem        | Python 3.12+                                  |
-| Framework        | Django 5.2.7 + Django REST Framework 3.16.1   |
-| Autenticação     | SimpleJWT 5.5.1 (tokens Bearer)               |
-| Login social     | django-allauth 65.9.0                         |
-| Banco de dados   | PostgreSQL (dev usa SQLite por padrão)         |
-| Documentação API | drf-spectacular 0.28.0 (Swagger / ReDoc)       |
-| Auditoria        | django-simple-history 3.10.1                  |
-| CORS             | django-cors-headers 4.9.0                     |
-| Deploy           | Gunicorn (Linux) / Waitress (Windows)         |
-| Assets estáticos | WhiteNoise 6.11.0                             |
+| Componente       | Versão / Tecnologia                         |
+| ---------------- | ------------------------------------------- |
+| Linguagem        | Python 3.12+                                |
+| Framework        | Django 5.2.7 + Django REST Framework 3.16.1 |
+| Autenticação     | SimpleJWT 5.5.1 (tokens Bearer)             |
+| Login social     | django-allauth 65.9.0                       |
+| Banco de dados   | PostgreSQL (dev usa SQLite por padrão)      |
+| Documentação API | drf-spectacular 0.28.0 (Swagger / ReDoc)    |
+| Auditoria        | django-simple-history 3.10.1                |
+| CORS             | django-cors-headers 4.9.0                   |
+| Deploy           | Gunicorn (Linux) / Waitress (Windows)       |
+| Assets estáticos | WhiteNoise 6.11.0                           |
 
 ---
 
@@ -191,37 +191,37 @@ python manage.py collectstatic
 
 ### Documentação interativa
 
-| URL                    | Descrição                   |
-| ---------------------- | --------------------------- |
-| `/api/schema/swagger/` | Swagger UI                  |
-| `/api/schema/redoc/`   | ReDoc                       |
-| `/api/schema/`         | Schema OpenAPI (JSON/YAML)  |
+| URL                    | Descrição                  |
+| ---------------------- | -------------------------- |
+| `/api/schema/swagger/` | Swagger UI                 |
+| `/api/schema/redoc/`   | ReDoc                      |
+| `/api/schema/`         | Schema OpenAPI (JSON/YAML) |
 
 ### Autenticação
 
-| Método | URL                     | Descrição                        |
-| ------ | ----------------------- | -------------------------------- |
-| POST   | `/auth/token_jwt/`      | Login — obtém access + refresh   |
-| POST   | `/auth/token_jwt/refresh/` | Renova o access token         |
-| POST   | `/auth/token_jwt/verify/`  | Verifica validade do token    |
+| Método | URL                        | Descrição                      |
+| ------ | -------------------------- | ------------------------------ |
+| POST   | `/auth/token_jwt/`         | Login — obtém access + refresh |
+| POST   | `/auth/token_jwt/refresh/` | Renova o access token          |
+| POST   | `/auth/token_jwt/verify/`  | Verifica validade do token     |
 
 ### Identidade — Usuários
 
-| Método | URL                                                | Descrição                     |
-| ------ | -------------------------------------------------- | ----------------------------- |
-| GET    | `/identidade/usuarios/`                            | Listar usuários               |
-| POST   | `/identidade/usuarios/`                            | Criar usuário                 |
-| GET    | `/identidade/usuarios/<pk>/`                       | Detalhar usuário              |
-| PATCH  | `/identidade/usuarios/<pk>/`                       | Atualizar usuário             |
-| POST   | `/identidade/usuarios/<pk>/desativar/`             | Desativar usuário             |
-| POST   | `/identidade/usuarios/<pk>/reativar/`              | Reativar usuário              |
-| GET    | `/identidade/usuarios/<pk>/contatos/`              | Listar contatos               |
-| POST   | `/identidade/usuarios/<pk>/contatos/`              | Adicionar contato             |
-| GET    | `/identidade/usuarios/<pk>/endereco/`              | Obter endereço                |
-| PUT    | `/identidade/usuarios/<pk>/endereco/`              | Criar ou atualizar endereço   |
-| GET    | `/identidade/usuarios/<pk>/matriculas/`            | Listar matrículas             |
-| POST   | `/identidade/usuarios/<pk>/matriculas/`            | Adicionar matrícula           |
-| POST   | `/identidade/usuarios/<pk>/matriculas/<pk>/desativar/` | Desativar matrícula      |
+| Método | URL                                                    | Descrição                   |
+| ------ | ------------------------------------------------------ | --------------------------- |
+| GET    | `/identidade/usuarios/`                                | Listar usuários             |
+| POST   | `/identidade/usuarios/`                                | Criar usuário               |
+| GET    | `/identidade/usuarios/<pk>/`                           | Detalhar usuário            |
+| PATCH  | `/identidade/usuarios/<pk>/`                           | Atualizar usuário           |
+| POST   | `/identidade/usuarios/<pk>/desativar/`                 | Desativar usuário           |
+| POST   | `/identidade/usuarios/<pk>/reativar/`                  | Reativar usuário            |
+| GET    | `/identidade/usuarios/<pk>/contatos/`                  | Listar contatos             |
+| POST   | `/identidade/usuarios/<pk>/contatos/`                  | Adicionar contato           |
+| GET    | `/identidade/usuarios/<pk>/endereco/`                  | Obter endereço              |
+| PUT    | `/identidade/usuarios/<pk>/endereco/`                  | Criar ou atualizar endereço |
+| GET    | `/identidade/usuarios/<pk>/matriculas/`                | Listar matrículas           |
+| POST   | `/identidade/usuarios/<pk>/matriculas/`                | Adicionar matrícula         |
+| POST   | `/identidade/usuarios/<pk>/matriculas/<pk>/desativar/` | Desativar matrícula         |
 
 ---
 
@@ -252,13 +252,13 @@ Cada domínio segue uma arquitetura de 4 camadas. **Views são leves** — nunca
 View  →  Business  →  Rules / Helpers / State
 ```
 
-| Camada       | Arquivo         | Responsabilidade                                      |
-| ------------ | --------------- | ----------------------------------------------------- |
-| **View**     | `views.py`      | Recebe request, valida serializer, delega ao Business |
-| **Business** | `business.py`   | Orquestra operações, coordena Rules e Helpers         |
-| **Rules**    | `rules.py`      | Valida SE uma ação pode ser executada                 |
-| **Helpers**  | `helpers.py`    | Queries reutilizáveis e utilitários                   |
-| **State**    | `state.py`      | Máquina de estados (futuro)                           |
+| Camada       | Arquivo       | Responsabilidade                                      |
+| ------------ | ------------- | ----------------------------------------------------- |
+| **View**     | `views.py`    | Recebe request, valida serializer, delega ao Business |
+| **Business** | `business.py` | Orquestra operações, coordena Rules e Helpers         |
+| **Rules**    | `rules.py`    | Valida SE uma ação pode ser executada                 |
+| **Helpers**  | `helpers.py`  | Queries reutilizáveis e utilitários                   |
+| **State**    | `state.py`    | Máquina de estados (futuro)                           |
 
 As views herdam das views base do `AppCore` (`BasicPostAPIView`, `BasicGetAPIView`, `BasicRetrieveAPIView`, `BasicPutAPIView`, `BasicPatchAPIView`, `BasicDeleteAPIView`), que gerenciam transações, tratamento de exceções e paginação automaticamente.
 
@@ -266,19 +266,19 @@ As views herdam das views base do `AppCore` (`BasicPostAPIView`, `BasicGetAPIVie
 
 O AppCore define exceções semânticas mapeadas para HTTP:
 
-| Exceção                   | HTTP |
-| ------------------------- | ---- |
-| `BusinessRuleException`   | 400  |
-| `ValidationException`     | 400  |
-| `AuthorizationException`  | 403  |
-| `NotFoundException`       | 404  |
-| `SystemErrorException`    | 500  |
+| Exceção                  | HTTP |
+| ------------------------ | ---- |
+| `BusinessRuleException`  | 400  |
+| `ValidationException`    | 400  |
+| `AuthorizationException` | 403  |
+| `NotFoundException`      | 404  |
+| `SystemErrorException`   | 500  |
 
 ---
 
 ## Domínios
 
-### Identidade *(implementado)*
+### Identidade _(implementado)_
 
 Cadastro base da pessoa no sistema.
 
@@ -287,7 +287,7 @@ Cadastro base da pessoa no sistema.
 - `Endereco` — endereço residencial
 - `Matricula` — carteirinha/matrícula institucional
 
-### Organizacional *(em construção)*
+### Organizacional _(em construção)_
 
 Estrutura organizacional da instituição.
 
@@ -296,7 +296,7 @@ Estrutura organizacional da instituição.
 - `Funcao` — função exercida em uma atividade
 - `UsuarioSetor` — vínculo entre usuário e setor (com papel de responsável/monitor)
 
-### PessoasInstitucionais *(planejado)*
+### PessoasInstitucionais _(planejado)_
 
 Perfis institucionais dos usuários.
 
@@ -305,7 +305,7 @@ Perfis institucionais dos usuários.
 - `Terceirizado` — funcionário de empresa terceirizada
 - `Empresa` — empresa ou instituição parceira
 
-### Academico *(planejado)*
+### Academico _(planejado)_
 
 Perfil e vínculos acadêmicos.
 
