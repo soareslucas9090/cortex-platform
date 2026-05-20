@@ -34,9 +34,6 @@ AUTHENTICATION_BACKENDS = [
     'django.contrib.auth.backends.ModelBackend',
 ]
 
-# AUTH_USER_MODEL será definido na Milestone 1 quando identidade.Usuario for criado.
-# AUTH_USER_MODEL = 'identidade.Usuario'
-
 ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', '*').split(',')
 
 csrf_origins = os.environ.get('CSRF_TRUSTED_ORIGINS', '')
@@ -111,7 +108,10 @@ AUTH_APPS = [
 
 # Adicione os apps do seu projeto aqui
 PROJECT_APPS = [
-    'Identidade.identidade',
+    'Identidade.usuarios',
+    'Identidade.contatos',
+    'Identidade.enderecos',
+    'Identidade.matriculas',
     'Organizacional.organizacional',
 ]
 
@@ -131,7 +131,7 @@ MIDDLEWARE = [
     'debug_toolbar.middleware.DebugToolbarMiddleware',
 ]
 
-AUTH_USER_MODEL = 'identidade.Usuario'
+AUTH_USER_MODEL = 'usuarios.Usuario'
 
 AUTHENTICATION_BACKENDS = [
     # Backend principal: aceita 'login' como e-mail ou CPF.

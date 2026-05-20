@@ -1,10 +1,9 @@
 import logging
 
 from AppCore.core.business.business import ModelInstanceBusiness
-from AppCore.core.exceptions.exceptions import SystemErrorException, NotFoundException
+from AppCore.core.exceptions.exceptions import SystemErrorException
 from AppCore.common.util.util import normalizar_cpf
 
-from .choices import SituacaoMatricula
 from .rules import UsuarioRules
 
 logger = logging.getLogger(__name__)
@@ -12,20 +11,17 @@ logger = logging.getLogger(__name__)
 
 class UsuarioBusiness(ModelInstanceBusiness):
     """
-    Camada de negócio do domínio Identidade.
-    Orquestra todas as operações sobre o UsuarioAggregate:
-    Usuario, Contato, Endereco e Matricula.
+    Camada de negócio do domínio Usuários.
+    Orquestra todas as operações sobre o Usuario e seus sub-recursos
+    (Contato, Endereco, Matricula).
     """
 
     # ------------------------------------------------------------------
-    # Criação de usuário (object_instance não necessário)
+    # Operações de criação (sem object_instance)
     # ------------------------------------------------------------------
 
     def criar_usuario(self, cpf: str, nome: str, password: str, **kwargs):
-        """
-        Cria um novo usuário no sistema.
-        Normaliza o CPF, valida formato e unicidade antes de persistir.
-        """
+        """Cria um novo usuário no sistema após validar CPF."""
         from .models import Usuario
         cpf_normalizado = normalizar_cpf(cpf)
         regras = UsuarioRules()
@@ -57,10 +53,7 @@ class UsuarioBusiness(ModelInstanceBusiness):
             raise SystemErrorException('Não foi possível atualizar os dados do usuário.')
 
     def atualizar_cpf(self, novo_cpf: str):
-        """
-        Atualiza o CPF do usuário.
-        Normaliza, valida formato e unicidade (excluindo o próprio usuário).
-        """
+        """Atualiza o CPF do usuário com validação de formato e unicidade."""
         cpf_normalizado = normalizar_cpf(novo_cpf)
         regras = UsuarioRules(object_instance=self.object_instance)
         regras.cpf_formato_valido(cpf_normalizado)
@@ -100,7 +93,7 @@ class UsuarioBusiness(ModelInstanceBusiness):
 
     def adicionar_contato(self, email_academico: str = '', email_pessoal: str = '', telefone: str = ''):
         """Adiciona um novo contato ao usuário."""
-        from .models import Contato
+        from Identidade.contatos.models import Contato
         try:
             return Contato.objects.create(
                 usuario=self.object_instance,
@@ -112,26 +105,13 @@ class UsuarioBusiness(ModelInstanceBusiness):
             logger.exception('Erro ao adicionar contato: %s', e)
             raise SystemErrorException('Não foi possível adicionar o contato.')
 
-    def atualizar_contato(self, contato, dados: dict):
-        """Atualiza os dados de um contato do usuário."""
-        try:
-            for attr, value in dados.items():
-                setattr(contato, attr, value)
-            contato.save()
-        except Exception as e:
-            logger.exception('Erro ao atualizar contato: %s', e)
-            raise SystemErrorException('Não foi possível atualizar o contato.')
-
     # ------------------------------------------------------------------
     # Operações sobre Endereco
     # ------------------------------------------------------------------
 
     def salvar_endereco(self, dados: dict):
-        """
-        Cria ou atualiza o endereço do usuário.
-        Como a relação é 0..1, usa update_or_create para idempotência.
-        """
-        from .models import Endereco
+        """Cria ou atualiza o endereço do usuário (operação idempotente)."""
+        from Identidade.enderecos.models import Endereco
         try:
             endereco, _ = Endereco.objects.update_or_create(
                 usuario=self.object_instance,
@@ -147,12 +127,11 @@ class UsuarioBusiness(ModelInstanceBusiness):
     # ------------------------------------------------------------------
 
     def adicionar_matricula(self, numero_matricula: str):
-        """
-        Adiciona uma nova matrícula ao usuário.
-        Valida que o número não está duplicado antes de persistir.
-        """
-        from .models import Matricula
-        regras = UsuarioRules(object_instance=self.object_instance)
+        """Adiciona uma nova matrícula ao usuário após validar unicidade."""
+        from Identidade.matriculas.models import Matricula
+        from Identidade.matriculas.choices import SituacaoMatricula
+        from Identidade.matriculas.rules import MatriculaRules
+        regras = MatriculaRules(object_instance=self.object_instance)
         regras.matricula_nao_duplicada(numero_matricula)
         try:
             return Matricula.objects.create(
@@ -163,70 +142,3 @@ class UsuarioBusiness(ModelInstanceBusiness):
         except Exception as e:
             logger.exception('Erro ao adicionar matrícula: %s', e)
             raise SystemErrorException('Não foi possível adicionar a matrícula.')
-
-    def desativar_matricula(self, matricula):
-        """Marca uma matrícula do usuário como inativa."""
-        try:
-            matricula.situacao = SituacaoMatricula.INATIVA
-            matricula.save(update_fields=['situacao'])
-        except Exception as e:
-            logger.exception('Erro ao desativar matrícula: %s', e)
-            raise SystemErrorException('Não foi possível desativar a matrícula.')
-
-    # ------------------------------------------------------------------
-    # Operações por pk (não dependem de self.object_instance)
-    # Utilizadas pelas views que não dispõem de self.object via BasicView
-    # ------------------------------------------------------------------
-
-    def adicionar_contato_por_pk(self, usuario_pk: int, **dados):
-        """Busca o usuário pelo pk e adiciona um novo contato."""
-        from .models import Usuario, Contato
-        usuario = Usuario.objects.get(pk=usuario_pk)
-        try:
-            return Contato.objects.create(
-                usuario=usuario,
-                email_academico=dados.get('email_academico', ''),
-                email_pessoal=dados.get('email_pessoal', ''),
-                telefone=dados.get('telefone', ''),
-            )
-        except Exception as e:
-            logger.exception('Erro ao adicionar contato: %s', e)
-            raise SystemErrorException('Não foi possível adicionar o contato.')
-
-    def adicionar_matricula_por_pk(self, usuario_pk: int, numero_matricula: str):
-        """Busca o usuário pelo pk e adiciona uma nova matrícula."""
-        from .models import Usuario, Matricula
-        usuario = Usuario.objects.get(pk=usuario_pk)
-        regras = UsuarioRules(object_instance=usuario)
-        regras.matricula_nao_duplicada(numero_matricula)
-        try:
-            return Matricula.objects.create(
-                usuario=usuario,
-                matricula=numero_matricula,
-                situacao=SituacaoMatricula.ATIVA,
-            )
-        except Exception as e:
-            logger.exception('Erro ao adicionar matrícula: %s', e)
-            raise SystemErrorException('Não foi possível adicionar a matrícula.')
-
-    def obter_endereco_por_pk(self, usuario_pk: int):
-        """Retorna o endereço do usuário identificado por pk."""
-        from .models import Usuario
-        usuario = Usuario.objects.get(pk=usuario_pk)
-        if not hasattr(usuario, 'endereco'):
-            raise NotFoundException('Endereço não cadastrado.')
-        return usuario.endereco
-
-    def salvar_endereco_por_pk(self, usuario_pk: int, dados: dict):
-        """Cria ou atualiza o endereço do usuário identificado por pk."""
-        from .models import Usuario, Endereco
-        usuario = Usuario.objects.get(pk=usuario_pk)
-        try:
-            endereco, _ = Endereco.objects.update_or_create(
-                usuario=usuario,
-                defaults=dados,
-            )
-            return endereco
-        except Exception as e:
-            logger.exception('Erro ao salvar endereço: %s', e)
-            raise SystemErrorException('Não foi possível salvar o endereço.')
