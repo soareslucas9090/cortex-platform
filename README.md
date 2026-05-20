@@ -4,6 +4,17 @@ Sistema backend para gestão institucional/acadêmica, construído com Django + 
 
 ---
 
+## Architecture Highlights
+
+- Monólito modular organizado por domínios de negócio
+- Arquitetura em camadas: View → Business → Rules → Helpers
+- Framework interno reutilizável (AppCore)
+- Autenticação JWT com login por CPF
+- Documentação OpenAPI com Swagger/ReDoc
+- Estrutura escalável preparada para integrações institucionais
+
+---
+
 ## Sumário
 
 - [Visão Geral](#visão-geral)
@@ -16,6 +27,7 @@ Sistema backend para gestão institucional/acadêmica, construído com Django + 
 - [Autenticação](#autenticação)
 - [Arquitetura em Camadas](#arquitetura-em-camadas)
 - [Domínios](#domínios)
+- [Decisões Técnicas](#decisões-técnicas)
 
 ---
 
@@ -312,3 +324,17 @@ Perfil e vínculos acadêmicos.
 - `Aluno` — aluno matriculado
 - `Estagiario` — estagiário com vínculo em empresa
 - `Curso` — curso ao qual o aluno pertence
+
+## Decisões Técnicas
+
+### Por que domínios modulares?
+
+Cada contexto de negócio (Identidade, Organizacional, Acadêmico) cresce de forma independente. Novos domínios são adicionados sem tocar no código existente — sem acoplamento entre contextos, sem efeitos colaterais inesperados.
+
+### Por que arquitetura em camadas?
+
+Views que fazem queries ORM diretamente são um passivo de manutenção. Separar View, Business, Rules e Helpers garante que cada arquivo tenha uma única responsabilidade, facilita testes e torna o comportamento do sistema previsível.
+
+### Por que login por CPF?
+
+O sistema é institucional e fechado — usuários são criados por administradores, não por auto-cadastro. O CPF é o identificador único institucional já consolidado nesse contexto, tornando e-mail irrelevante como chave de autenticação.
