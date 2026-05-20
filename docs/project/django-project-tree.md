@@ -23,19 +23,20 @@ Este artefato não representa uma estrutura imutável, mas sim a **árvore inici
 Exemplos:
 
 - Domínio: `Organizacional`
-- App Django: `organizacional`
+- app Django: `organizacional`
 
-### Estrutura por domínio
+### Estrutura física por domínio
 
-Cada app de domínio deve concentrar sua própria implementação de:
+Cada domínio deve possuir um **módulo de domínio** próprio, preparado para agrupar apps relacionados daquele contexto de negócio.
 
-- models
-- business
-- rules
-- helpers
-- serializers
-- views
-- urls
+Dentro desse módulo, os apps Django ficam organizados com nomes técnicos em minúsculo.
+
+Exemplo:
+
+```text name=estrutura-dominio-exemplo.txt
+Organizacional/
+└── organizacional/
+```
 
 ### Princípio arquitetural
 
@@ -52,8 +53,10 @@ novo_cortex/
 │   │   └── ADR-001-modularizacao-por-dominio.md
 │   ├── diagrams/
 │   │   └── 02-bounded-contexts.md
+│   ├── planning/
 │   └── project/
-│       └── django-project-tree.md
+│       ├── django-project-tree.md
+│       └── implementation-checklist.md
 │
 ├── AppCore/
 │   ├── __init__.py
@@ -80,52 +83,60 @@ novo_cortex/
 │   ├── urls.py
 │   └── wsgi.py
 │
-├── identidade/
+├── Identidade/
 │   ├── __init__.py
-│   ├── apps.py
-│   ├── business.py
-│   ├── helpers.py
-│   ├── models.py
-│   ├── rules.py
-│   ├── serializers.py
-│   ├── urls.py
-│   └── views.py
+│   └── identidade/
+│       ├── __init__.py
+│       ├── apps.py
+│       ├── business.py
+│       ├── helpers.py
+│       ├── models.py
+│       ├── rules.py
+│       ├── serializers.py
+│       ├── urls.py
+│       └── views.py
 │
-├── organizacional/
+├── Organizacional/
 │   ├── __init__.py
-│   ├── apps.py
-│   ├── business.py
-│   ├── choices.py
-│   ├── helpers.py
-│   ├── models.py
-│   ├── rules.py
-│   ├── serializers.py
-│   ├── urls.py
-│   └── views.py
+│   └── organizacional/
+│       ├── __init__.py
+│       ├── apps.py
+│       ├── business.py
+│       ├── choices.py
+│       ├── helpers.py
+│       ├── models.py
+│       ├── rules.py
+│       ├── serializers.py
+│       ├── urls.py
+│       └── views.py
 │
-├── pessoas_institucionais/
+├── PessoasInstitucionais/
 │   ├── __init__.py
-│   ├── apps.py
-│   ├── business.py
-│   ├── choices.py
-│   ├── helpers.py
-│   ├── models.py
-│   ├── rules.py
-│   ├── serializers.py
-│   ├── urls.py
-│   └── views.py
+│   └── pessoas_institucionais/
+│       ├── __init__.py
+│       ├── apps.py
+│       ├── business.py
+│       ├── choices.py
+│       ├── helpers.py
+│       ├── models.py
+│       ├── rules.py
+│       ├── serializers.py
+│       ├── urls.py
+│       └── views.py
 │
-├── academico/
+├── Academico/
 │   ├── __init__.py
-│   ├── apps.py
-│   ├── business.py
-│   ├── choices.py
-│   ├── helpers.py
-│   ├── models.py
-│   ├── rules.py
-│   ├── serializers.py
-│   ├── urls.py
-│   └── views.py
+│   └── academico/
+│       ├── __init__.py
+│       ├── apps.py
+│       ├── business.py
+│       ├── choices.py
+│       ├── helpers.py
+│       ├── models.py
+│       ├── rules.py
+│       ├── serializers.py
+│       ├── urls.py
+│       └── views.py
 │
 ├── manage.py
 ├── db.sqlite3
@@ -143,8 +154,9 @@ Diretório responsável pela documentação viva do projeto.
 #### Subpastas
 
 - `docs/decisions/`: ADRs e decisões arquiteturais
-- `docs/diagrams/`: visão de domínio, DER, agregados e outros artefatos conceituais
-- `docs/project/`: estrutura do projeto, checklists e guias práticos de implementação
+- `docs/diagrams/`: visão de domínio, ERD, agregados e outros artefatos conceituais
+- `docs/planning/`: planos e artefatos operacionais temporários de implementação
+- `docs/project/`: estrutura do projeto, checklist e guias práticos de execução
 
 ---
 
@@ -196,11 +208,21 @@ Responsável por:
 
 ---
 
-## Apps de domínio
+## Módulos de domínio
 
-## `identidade/`
+O projeto é organizado em **módulos de domínio**, e cada módulo pode abrigar um ou mais apps relacionados daquele contexto de negócio.
+
+Mesmo quando houver apenas um app inicialmente, a estrutura deve ser preparada para crescimento futuro.
+
+---
+
+## `Identidade/`
 
 Domínio: `Identidade`
+
+### App atual
+
+- `identidade`
 
 ### Responsabilidade
 
@@ -215,13 +237,17 @@ Cadastro base da pessoa no sistema.
 
 ### Observações
 
-Esse app deve ser criado primeiro, pois sustenta os demais domínios.
+Esse módulo deve ser criado primeiro, pois sustenta os demais domínios.
 
 ---
 
-## `organizacional/`
+## `Organizacional/`
 
 Domínio: `Organizacional`
+
+### App atual
+
+- `organizacional`
 
 ### Responsabilidade
 
@@ -242,9 +268,13 @@ Estrutura institucional e vínculo de usuários com setores.
 
 ---
 
-## `pessoas_institucionais/`
+## `PessoasInstitucionais/`
 
 Domínio: `PessoasInstitucionais`
+
+### App atual
+
+- `pessoas_institucionais`
 
 ### Responsabilidade
 
@@ -264,9 +294,13 @@ Perfis institucionais formais vinculados ao usuário.
 
 ---
 
-## `academico/`
+## `Academico/`
 
 Domínio: `Academico`
+
+### App atual
+
+- `academico`
 
 ### Responsabilidade
 
@@ -310,16 +344,16 @@ Arquivos opcionais:
 
 ## Sugestão de inclusão em `INSTALLED_APPS`
 
-Quando os apps forem criados, a tendência é que entrem em `PROJECT_APPS` no `settings.py`.
+Quando os apps forem criados, a tendência é que entrem em `PROJECT_APPS` no `settings.py` com o caminho Python completo do app dentro do módulo de domínio.
 
 Exemplo conceitual:
 
 ```python name=project_apps_example.py
 PROJECT_APPS = [
-    'identidade',
-    'organizacional',
-    'pessoas_institucionais',
-    'academico',
+    'Identidade.identidade',
+    'Organizacional.organizacional',
+    'PessoasInstitucionais.pessoas_institucionais',
+    'Academico.academico',
 ]
 ```
 
@@ -339,41 +373,38 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('auth/', include('Auth.urls')),
 
-    path('identidade/', include('identidade.urls')),
-    path('organizacional/', include('organizacional.urls')),
-    path('pessoas-institucionais/', include('pessoas_institucionais.urls')),
-    path('academico/', include('academico.urls')),
+    path('identidade/', include('Identidade.identidade.urls')),
+    path('organizacional/', include('Organizacional.organizacional.urls')),
+    path('pessoas-institucionais/', include('PessoasInstitucionais.pessoas_institucionais.urls')),
+    path('academico/', include('Academico.academico.urls')),
 ] + debug_toolbar_urls()
 ```
 
-Observação:
-Os prefixes finais podem ser ajustados depois, mas a recomendação inicial é refletir o domínio de forma clara.
-
 ---
 
-## Ordem recomendada de criação física dos apps
+## Ordem recomendada de criação física dos módulos/apps
 
-### 1. `identidade`
+### 1. `Identidade/identidade`
 
 Motivo:
 
 - define `Usuario`, base para o restante do sistema
 
-### 2. `organizacional`
+### 2. `Organizacional/organizacional`
 
 Motivo:
 
 - estrutura setores, funções e vínculos
 - modela responsabilidade de setor e monitoria
 
-### 3. `pessoas_institucionais`
+### 3. `PessoasInstitucionais/pessoas_institucionais`
 
 Motivo:
 
 - especializa servidor e terceirizado
 - introduz cargo e empresa
 
-### 4. `academico`
+### 4. `Academico/academico`
 
 Motivo:
 
@@ -386,8 +417,8 @@ Motivo:
 
 Esta árvore inicial foi pensada para o estágio atual do sistema. Conforme o Cortex evoluir, será possível:
 
-- adicionar novos apps de domínio;
-- criar submódulos mais especializados;
+- adicionar novos apps dentro dos módulos de domínio já existentes;
+- criar novos módulos de domínio quando necessário;
 - introduzir `state.py` em domínios que demandem máquina de estados;
 - extrair artefatos adicionais em `docs/` para detalhar agregados, fluxos e integrações.
 
@@ -397,7 +428,7 @@ A expansão do projeto deve preservar o princípio central desta árvore: **cres
 
 ## Próximos artefatos recomendados
 
-Após este documento, recomenda-se criar:
+Após este documento, recomenda-se manter e evoluir:
 
 1. `docs/diagrams/03-core-erd.md`
 2. `docs/diagrams/04-aggregates-and-invariants.md`
@@ -407,11 +438,13 @@ Após este documento, recomenda-se criar:
 
 ## Resumo
 
-A estrutura inicial do Cortex deve ser organizada em torno de quatro apps de domínio:
+A estrutura inicial do Cortex deve ser organizada em torno de módulos de domínio preparados para abrigar apps relacionados.
 
-- `identidade`
-- `organizacional`
-- `pessoas_institucionais`
-- `academico`
+A recomendação inicial é usar:
+
+- `Identidade/identidade`
+- `Organizacional/organizacional`
+- `PessoasInstitucionais/pessoas_institucionais`
+- `Academico/academico`
 
 Essa árvore aproveita a base reutilizável já existente, mantém a arquitetura em camadas e cria uma fundação clara para evolução incremental do sistema.

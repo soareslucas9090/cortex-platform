@@ -739,3 +739,58 @@ class UsuarioSetor(BasicModel):
   - `validate`
   - `create`
   - `update``
+
+### Estrutura física dos apps Django
+
+- Apps Django do projeto **não devem ficar soltos na raiz do repositório**.
+- Apps devem ficar dentro de **módulos/pacotes organizados por domínio**, e não em agregadores técnicos genéricos.
+- A organização física do projeto deve refletir os contextos de negócio do sistema.
+
+### Regra de organização por domínio
+
+Use a seguinte convenção estrutural:
+
+- **módulo de domínio** com nome conceitual em PascalCase
+- **app Django** dentro desse módulo, com nome técnico em minúsculo
+
+Exemplos esperados:
+
+- `Identidade/identidade/`
+- `Organizacional/organizacional/`
+- `PessoasInstitucionais/pessoas_institucionais/`
+- `Academico/academico/`
+
+### Regras práticas
+
+- Não criar apps diretamente na raiz do repositório.
+- Não criar um módulo técnico genérico como `Apps/` apenas para agrupar tudo.
+- Ao criar um novo app, ele deve ser colocado dentro do módulo de domínio adequado.
+- Mesmo que um módulo de domínio tenha apenas um app inicialmente, ele deve ser estruturado de forma a permitir crescimento futuro.
+- A organização física deve seguir a linguagem do domínio do projeto.
+
+### Convenção de nomenclatura para métodos e funções
+
+- Não misture inglês e português em nomes de métodos, funções e variáveis do domínio.
+- Prefira nomes em português para métodos e funções implementados no projeto.
+- Use inglês apenas quando isso for exigido por sobrescrita de framework, convenção do Django/DRF/Python ou interface externa.
+
+**Exemplos corretos:**
+
+- `obter_contatos()`
+- `criar_usuario()`
+- `atualizar_dados()`
+
+**Evitar:**
+
+- `get_contatos()`
+- `create_usuario()`
+- `update_dados()`
+
+**Exceções aceitáveis:**
+
+- métodos exigidos por sobrescrita ou convenção, como:
+  - `get_queryset`
+  - `get_serializer_class`
+  - `validate`
+  - `create`
+  - `update`
