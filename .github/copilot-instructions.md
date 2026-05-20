@@ -19,6 +19,7 @@ Este projeto segue uma arquitetura modular de 4 camadas bem definidas. **Cada mo
 - **Toda lógica de estado** vai no `state.py`
 
 > **Proibições absolutas nas views:**
+>
 > - Views **NUNCA** fazem queries ORM diretamente (`Model.objects.get(...)`, `.filter(...)`, `.create(...)`, etc.) — toda query deve ir para o Business
 > - Views **SEMPRE** usam as views base do AppCore (`BasicPostAPIView`, `BasicGetAPIView`, etc.) — usar `GenericAPIView` diretamente é exceção justificada, não a regra
 
