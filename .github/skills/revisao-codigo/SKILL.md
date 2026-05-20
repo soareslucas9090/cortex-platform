@@ -1,7 +1,7 @@
 ---
 name: revisao-codigo
-description: 'Revisão de código do projeto Cortex/DRF. Use para revisar arquivos Python (views, business, rules, helpers, models, serializers) verificando se os padrões da arquitetura em camadas estão corretos: views leves, hooks do_action_post/do_action_put/do_action_patch/do_action_delete implementados corretamente, delegação para Business, uso de exceções do AppCore, nomenclatura em português, documentação Swagger, permissões e serializers.'
-argument-hint: 'Arquivo ou trecho de código a revisar (opcional)'
+description: "Revisão de código do projeto Cortex/DRF. Use para revisar arquivos Python (views, business, rules, helpers, models, serializers) verificando se os padrões da arquitetura em camadas estão corretos: views leves, hooks do_action_post/do_action_put/do_action_patch/do_action_delete implementados corretamente, delegação para Business, uso de exceções do AppCore, nomenclatura em português, documentação Swagger, permissões e serializers."
+argument-hint: "Arquivo ou trecho de código a revisar (opcional)"
 user-invocable: true
 ---
 
@@ -28,6 +28,7 @@ Execute o checklist correspondente ao tipo de arquivo detectado (Views, Business
 ### 3. Reportar os resultados
 
 Para cada problema encontrado:
+
 - Indique a **linha ou trecho** problemático.
 - Explique **qual padrão está sendo violado**.
 - Forneça o **código corrigido**.
@@ -47,6 +48,7 @@ Se nenhum problema for encontrado, confirme que o arquivo está em conformidade.
 - [ ] **Toda lógica** está no `business.py`, não na view.
 
 **Exemplo errado:**
+
 ```python
 def do_action_post(self, serializer_data, request):
     for attr, value in serializer_data.items():   # ← lógica de negócio na view
@@ -55,6 +57,7 @@ def do_action_post(self, serializer_data, request):
 ```
 
 **Exemplo correto:**
+
 ```python
 def do_action_post(self, serializer_data, request):
     UsuarioBusiness().criar_usuario(**serializer_data)
@@ -67,6 +70,7 @@ def do_action_post(self, serializer_data, request):
 Os hooks `do_action_post`, `do_action_put`, `do_action_patch` e `do_action_delete` têm contratos específicos:
 
 ##### `do_action_post(self, serializer_data, request)`
+
 - Parâmetro é `serializer_data` (dict de `validated_data`), **não** o serializer.
 - Retorno: `dict` opcional com `mensagem` e/ou `status_code`. Se retornar `None` ou `{}`, usa `mensagem_sucesso` da view.
 - **NÃO** deve retornar `Response` diretamente.
@@ -93,6 +97,7 @@ def do_action_post(self, serializer_data, request):
 ```
 
 ##### `do_action_put(self, serializer_data, request)` e `do_action_patch(self, serializer_data, request)`
+
 - `self.object` está disponível (objeto recuperado pelo `get_object()`).
 - Parâmetro é `serializer_data` (dict), **não** o serializer.
 - Retorno: `dict` opcional com `mensagem` e/ou `status_code`.
@@ -117,6 +122,7 @@ def do_action_patch(self, serializer_data, request):
 ```
 
 ##### `do_action_delete(self, request)`
+
 - `self.object` está disponível.
 - **NÃO** deve retornar nada — a view base responde com `204 No Content`.
 - **NÃO** deve retornar `Response`.
@@ -264,6 +270,7 @@ def can_desativar(self):
 - [ ] Módulos e apps: snake_case minúsculo (`usuarios`, `auth`).
 
 **Exemplos:**
+
 ```python
 # ✅ CORRETO
 def obter_contatos(self): ...

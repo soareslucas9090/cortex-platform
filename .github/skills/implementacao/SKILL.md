@@ -1,7 +1,7 @@
 ---
 name: implementacao
-description: 'Implementação de código no projeto Cortex/DRF seguindo os padrões arquiteturais. Use para criar ou modificar views, business, rules, helpers, models, serializers e urls. Aplica corretamente os mixins do AppCore, as views base (BasicPostAPIView, BasicGetAPIView, BasicRetrieveAPIView, BasicPutAPIView, BasicPatchAPIView, BasicDeleteAPIView), exceções, permissões, paginação, documentação Swagger e nomenclatura em português.'
-argument-hint: 'Descreva o que precisa ser implementado (ex: endpoint de criação de produto, camada business de Aluno, etc.)'
+description: "Implementação de código no projeto Cortex/DRF seguindo os padrões arquiteturais. Use para criar ou modificar views, business, rules, helpers, models, serializers e urls. Aplica corretamente os mixins do AppCore, as views base (BasicPostAPIView, BasicGetAPIView, BasicRetrieveAPIView, BasicPutAPIView, BasicPatchAPIView, BasicDeleteAPIView), exceções, permissões, paginação, documentação Swagger e nomenclatura em português."
+argument-hint: "Descreva o que precisa ser implementado (ex: endpoint de criação de produto, camada business de Aluno, etc.)"
 user-invocable: true
 ---
 
@@ -614,20 +614,20 @@ nome_app/
 
 ## Referências Rápidas
 
-| Componente | Caminho no AppCore |
-|---|---|
-| `BasicModel` | `AppCore.basics.models.models` |
-| `AbstractBaseAppUser` | `AppCore.basics.models.user_model` |
-| `BaseManagerUser` | `AppCore.basics.models.models` |
-| `ModelBusinessMixin` | `AppCore.core.business.business_mixin` |
-| `ModelHelperMixin` | `AppCore.core.helpers.helpers_mixin` |
-| `ModelInstanceBusiness` | `AppCore.core.business.business` |
-| `ModelInstanceRules` | `AppCore.core.rules.rules` |
-| `ModelInstanceHelpers` | `AppCore.core.helpers.helpers` |
-| `BasicPostAPIView` … | `AppCore.basics.views.basic_views` |
-| `AllowAnyMixin` … | `AppCore.basics.mixins.mixins` |
-| `PaginacaoCustomizada` | `AppCore.basics.pagination.pagination` |
-| `handle_exceptions` | `AppCore.basics.decorators.decorators` |
-| Todas as exceções | `AppCore.core.exceptions.exceptions` |
-| `BaseLoginSerializer` | `AppCore.basics.auth.serializers` |
-| `BaseTypedLoginSerializer` | `AppCore.basics.auth.serializers` |
+| Componente                 | Caminho no AppCore                     |
+| -------------------------- | -------------------------------------- |
+| `BasicModel`               | `AppCore.basics.models.models`         |
+| `AbstractBaseAppUser`      | `AppCore.basics.models.user_model`     |
+| `BaseManagerUser`          | `AppCore.basics.models.models`         |
+| `ModelBusinessMixin`       | `AppCore.core.business.business_mixin` |
+| `ModelHelperMixin`         | `AppCore.core.helpers.helpers_mixin`   |
+| `ModelInstanceBusiness`    | `AppCore.core.business.business`       |
+| `ModelInstanceRules`       | `AppCore.core.rules.rules`             |
+| `ModelInstanceHelpers`     | `AppCore.core.helpers.helpers`         |
+| `BasicPostAPIView` …       | `AppCore.basics.views.basic_views`     |
+| `AllowAnyMixin` …          | `AppCore.basics.mixins.mixins`         |
+| `PaginacaoCustomizada`     | `AppCore.basics.pagination.pagination` |
+| `handle_exceptions`        | `AppCore.basics.decorators.decorators` |
+| Todas as exceções          | `AppCore.core.exceptions.exceptions`   |
+| `BaseLoginSerializer`      | `AppCore.basics.auth.serializers`      |
+| `BaseTypedLoginSerializer` | `AppCore.basics.auth.serializers`      |
