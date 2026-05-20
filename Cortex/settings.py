@@ -112,6 +112,7 @@ AUTH_APPS = [
 # Adicione os apps do seu projeto aqui
 PROJECT_APPS = [
     'Identidade.identidade',
+    'Organizacional.organizacional',
 ]
 
 INSTALLED_APPS = DEFAULT_ROOT_APPS + AUTH_APPS + PROJECT_APPS
