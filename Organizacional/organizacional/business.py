@@ -192,6 +192,19 @@ class SetorVinculoBusiness(ModelInstanceBusiness):
             logger.exception('Erro ao remover responsabilidade do vínculo: %s', e)
             raise SystemErrorException('Não foi possível remover a responsabilidade do vínculo.')
 
+    def criar_vinculo_no_setor(self, usuario, setor_pk: int, funcao, responsavel: bool = False):
+        """
+        Cria um vínculo buscando o setor pelo pk informado na URL.
+        Conveniente para views onde o setor vem do contexto da URL.
+        """
+        from .models import Setor
+        from AppCore.core.exceptions.exceptions import NotFoundException
+        try:
+            setor = Setor.objects.get(pk=setor_pk)
+        except Setor.DoesNotExist:
+            raise NotFoundException('Setor não encontrado.')
+        return self.criar_vinculo(usuario=usuario, setor=setor, funcao=funcao, responsavel=responsavel)
+
     def encerrar_vinculo(self):
         """
         Remove o vínculo do setor.
