@@ -768,6 +768,64 @@ Exemplos esperados:
 - Mesmo que um módulo de domínio tenha apenas um app inicialmente, ele deve ser estruturado de forma a permitir crescimento futuro.
 - A organização física deve seguir a linguagem do domínio do projeto.
 
+### Convenção de nomenclatura no `apps.py`
+
+O campo `name` do `AppConfig` deve sempre refletir o caminho Python completo do app dentro do módulo:
+
+```python
+class IdentidadeConfig(AppConfig):
+    name = 'Identidade.identidade'  # caminho completo: Módulo.app
+    verbose_name = 'Identidade'
+```
+
+O `label` (usado em `AUTH_USER_MODEL`, migrations e referencias de model) é derivado automaticamente do **último segmento** do `name` — não precisa ser declarado explicitamente, a menos que haja conflito de nomes entre apps.
+
+### `urls.py` do módulo de domínio — obrigatório
+
+Cada módulo de domínio **deve ter um `urls.py`** próprio na raiz do módulo. Esse arquivo:
+
+- define `app_name` com o nome do domínio (em minúsculo);
+- inclui as URLs de cada app do módulo;
+- é o **único ponto de entrada** registrado no `Cortex/urls.py`.
+
+```python
+# Identidade/urls.py
+from django.urls import path, include
+
+app_name = 'identidade'
+
+urlpatterns = [
+    path('', include('Identidade.identidade.urls')),
+    # quando houver mais apps no domínio:
+    # path('prefixo/', include('Identidade.outro_app.urls')),
+]
+```
+
+O app interno **não deve ter `app_name`** em seu `urls.py` — o namespace é gerenciado pelo módulo.
+
+O `Cortex/urls.py` inclui **sempre o módulo**, nunca o app diretamente:
+
+```python
+# ✅ correto — aponta para o módulo
+path('identidade/', include('Identidade.urls')),
+
+# ❌ errado — acessa o app diretamente, bypassa o agregador do módulo
+# path('identidade/', include('Identidade.identidade.urls')),
+```
+
+### Estrutura mínima de um módulo de domínio
+
+```
+Identidade/                  ← módulo de domínio (PascalCase)
+├── __init__.py              ← torna o diretório um pacote Python
+├── urls.py                  ← agregador de rotas do módulo (app_name obrigatório)
+└── identidade/              ← app Django (minúsculo)
+    ├── __init__.py
+    ├── apps.py              ← name = 'Identidade.identidade'
+    ├── urls.py              ← sem app_name
+    └── ...
+```
+
 ### Convenção de nomenclatura para métodos e funções
 
 - Não misture inglês e português em nomes de métodos, funções e variáveis do domínio.

@@ -85,6 +85,7 @@ novo_cortex/
 │
 ├── Identidade/
 │   ├── __init__.py
+│   ├── urls.py
 │   └── identidade/
 │       ├── __init__.py
 │       ├── apps.py
@@ -98,6 +99,7 @@ novo_cortex/
 │
 ├── Organizacional/
 │   ├── __init__.py
+│   ├── urls.py
 │   └── organizacional/
 │       ├── __init__.py
 │       ├── apps.py
@@ -112,6 +114,7 @@ novo_cortex/
 │
 ├── PessoasInstitucionais/
 │   ├── __init__.py
+│   ├── urls.py
 │   └── pessoas_institucionais/
 │       ├── __init__.py
 │       ├── apps.py
@@ -126,6 +129,7 @@ novo_cortex/
 │
 ├── Academico/
 │   ├── __init__.py
+│   ├── urls.py
 │   └── academico/
 │       ├── __init__.py
 │       ├── apps.py
@@ -373,10 +377,10 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('auth/', include('Auth.urls')),
 
-    path('identidade/', include('Identidade.identidade.urls')),
-    path('organizacional/', include('Organizacional.organizacional.urls')),
-    path('pessoas-institucionais/', include('PessoasInstitucionais.pessoas_institucionais.urls')),
-    path('academico/', include('Academico.academico.urls')),
+    path('identidade/', include('Identidade.urls')),
+    path('organizacional/', include('Organizacional.urls')),
+    path('pessoas-institucionais/', include('PessoasInstitucionais.urls')),
+    path('academico/', include('Academico.urls')),
 ] + debug_toolbar_urls()
 ```
 
