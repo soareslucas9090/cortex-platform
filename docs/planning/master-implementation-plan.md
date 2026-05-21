@@ -2,349 +2,410 @@
 
 ## Objetivo
 
-Este documento define a estratégia principal de implementação do Cortex, organizando o desenvolvimento em milestones sequenciais e controladas.
+Este documento organiza a implementação do Cortex em milestones coerentes com a arquitetura atual do projeto.
 
-Ele foi pensado para orientar um fluxo de trabalho em que:
+O plano considera:
 
-- o planejamento acontece antes da implementação;
-- cada etapa possui escopo claro;
-- a base técnica é ajustada antes dos domínios;
-- o uso de agentes de IA na implementação seja mais preciso, previsível e seguro.
+- organização por domínio;
+- módulos de domínio como agregadores estruturais;
+- apps internos finos;
+- regra preferencial de um app por model principal;
+- arquitetura em camadas;
+- evolução incremental com validação por etapas.
 
-Este plano mestre deve funcionar como referência para:
-
-- decidir a ordem das implementações;
-- planejar prompts;
-- evitar retrabalho;
-- controlar dependências entre milestones;
-- manter alinhamento entre domínio, arquitetura e execução.
+Este documento é o artefato macro de planejamento do projeto.  
+Ele não substitui o checklist global nem os planos operacionais específicos de cada milestone, mas serve como visão principal da ordem de execução.
 
 ---
 
-## Estratégia geral
+## Princípios orientadores
 
-A implementação do Cortex deve seguir uma abordagem **por milestones**, e cada milestone deve ser tratada em quatro momentos:
-
-1. **Planejamento da milestone**
-2. **Desenho técnico da milestone**
-3. **Implementação da milestone**
-4. **Revisão da milestone**
-
-A ideia central é evitar pedidos amplos demais ao agente de implementação, reduzindo o risco de:
-
-- extrapolação de escopo;
-- decisões inventadas;
-- acoplamento indevido;
-- implementação fora de ordem.
+1. O projeto é organizado por **domínios**, não por conveniência técnica.
+2. Cada domínio pode conter **um ou mais apps internos**.
+3. Em regra, cada **app representa um model principal**.
+4. Exceções devem ser raras e justificadas.
+5. Views devem permanecer leves e delegar para as camadas apropriadas.
+6. A implementação deve priorizar:
+   - estrutura correta;
+   - consistência do domínio;
+   - integração progressiva;
+   - documentação sempre atualizada.
 
 ---
 
-## Decisões já assumidas neste plano
+## Estrutura conceitual de execução
 
-Este plano já considera como decisões consolidadas:
+A implementação do Cortex ocorre em três níveis:
 
-- organização do sistema por domínio;
-- nomes conceituais de domínio com inicial maiúscula;
-- nomes técnicos dos apps Django em minúsculo;
-- documentação centralizada dentro de `docs/`;
-- domínios iniciais:
-  - `Identidade`
-  - `Organizacional`
-  - `PessoasInstitucionais`
-  - `Academico`
-- substituição de `SetorLotacao` por `SetorVinculo`;
-- `Funcao` com atributo `e_gratificada`;
-- monitor representado como função;
-- autenticação por email ou CPF;
-- remoção da lógica implícita de `ativo=True` do manager base;
-- tratamento de “ativos” por helpers e consultas explícitas.
+### 1. Fundação técnica
+
+Ajustes e consolidações da base reutilizável.
+
+### 2. Implementação por domínio
+
+Cada milestone trata um domínio do sistema, mas sua execução interna ocorre por apps menores.
+
+### 3. Integração e consolidação
+
+Etapa final de validação cruzada entre domínios, documentação e coerência estrutural.
 
 ---
 
-## Milestones do projeto
+# Milestone 0 — Fundação técnica
 
-## Milestone 0 — Fundação técnica
+## Objetivo
 
-### Objetivo
+Consolidar a base técnica do projeto para suportar os domínios reais do sistema.
 
-Ajustar a base técnica existente antes do início efetivo dos apps de domínio.
+## Foco principal
 
-### Escopo principal
+- revisão do `AppCore`
+- revisão do `Auth`
+- revisão do `Cortex`
+- autenticação por email/CPF
+- alinhamento do `AUTH_USER_MODEL`
+- padronização de BasicViews
+- garantia de views leves
+- consolidação de convenções estruturais e de nomenclatura
 
-- revisar e ajustar autenticação;
-- consolidar estratégia de login por email ou CPF;
-- preparar estratégia final de `AUTH_USER_MODEL`;
-- revisar e ajustar o thin app `Auth`;
-- remover o filtro implícito de `ativo=True` do `BaseManager`;
-- preparar a base para receber o domínio `Identidade`.
+## Resultado esperado
 
-### Motivo
-
-Sem essa milestone, existe alto risco de retrabalho em:
-
-- autenticação;
-- migrations;
-- model concreto de usuário;
-- integração entre `Auth`, `AppCore` e domínio real.
+A base técnica do projeto deve estar estável, segura e coerente com a arquitetura do Cortex.
 
 ---
 
-## Milestone 1 — Domínio Identidade
+# Milestone 1 — Domínio Identidade
 
-### Objetivo
+## Objetivo
 
-Criar o núcleo do usuário real do sistema e os dados centrais de identidade.
+Implementar o domínio `Identidade`, que fornece a base concreta de identidade do usuário no sistema.
 
-### Escopo principal
+## Estrutura do domínio
+
+Módulo:
+
+- `Identidade/`
+
+Apps internos previstos:
+
+- `usuarios/`
+- `contatos/`
+- `enderecos/`
+- `matriculas/`
+
+## Ordem interna recomendada
+
+### 1.1 — `usuarios`
+
+Responsável por:
 
 - `Usuario`
+- manager do usuário
+- autenticação real do sistema
+- integração com `AUTH_USER_MODEL`
+
+### 1.2 — `contatos`
+
+Responsável por:
+
 - `Contato`
+
+### 1.3 — `enderecos`
+
+Responsável por:
+
 - `Endereco`
+
+### 1.4 — `matriculas`
+
+Responsável por:
+
 - `Matricula`
-- manager concreto
-- business, rules e helpers do domínio
-- serializers, views e urls básicas
 
-### Motivo
+### 1.5 — integração interna do domínio
 
-`Identidade` sustenta todos os demais domínios.
+Responsável por:
+
+- coerência entre apps do domínio
+- ajustes de rotas agregadas
+- validação da integração interna do módulo `Identidade`
+
+## Resultado esperado
+
+O projeto passa a possuir o usuário real do sistema e sua base de identidade consolidada.
 
 ---
 
-## Milestone 2 — Domínio Organizacional
+# Milestone 2 — Domínio Organizacional
 
-### Objetivo
+## Objetivo
 
-Modelar a estrutura institucional e os vínculos funcionais com setores.
+Implementar o domínio `Organizacional`, responsável pela estrutura institucional e vínculos organizacionais.
 
-### Escopo principal
+## Estrutura do domínio
+
+Módulo:
+
+- `Organizacional/`
+
+Apps internos previstos:
+
+- `setores/`
+- `funcoes/`
+- `vinculos/`
+
+## Ordem interna recomendada
+
+### 2.1 — `setores`
+
+Responsável por:
 
 - `Setor`
+
+### 2.2 — `funcoes`
+
+Responsável por:
+
 - `Funcao`
+- atributo `e_gratificada`
+
+### 2.3 — `vinculos`
+
+Responsável por:
+
 - `SetorVinculo`
-- regra de responsável
-- regra de função obrigatória
-- monitor como função
+- função obrigatória no vínculo
+- monitoria como função
 
-### Motivo
+### 2.4 — integração interna do domínio
 
-Esse domínio representa uma das áreas mais sensíveis e estruturantes do sistema.
+Responsável por:
+
+- coerência entre `setores`, `funcoes` e `vinculos`
+- validação estrutural do domínio organizacional
+- preparação para integração com `PessoasInstitucionais`
+
+## Observação importante
+
+A validação completa da regra **“responsável do setor deve ser servidor”** depende do domínio `PessoasInstitucionais` e deve ser consolidada posteriormente.
+
+## Resultado esperado
+
+O projeto passa a representar estrutura institucional, funções e vínculos organizacionais de forma consistente.
 
 ---
 
-## Milestone 3 — Domínio PessoasInstitucionais
+# Milestone 3 — Domínio PessoasInstitucionais
 
-### Objetivo
+## Objetivo
 
-Modelar os perfis institucionais formais dos usuários.
+Implementar o domínio `PessoasInstitucionais`, responsável pelos perfis institucionais formais do usuário.
 
-### Escopo principal
+## Estrutura do domínio
+
+Módulo:
+
+- `PessoasInstitucionais/`
+
+Apps internos sugeridos:
+
+- `servidores/`
+- `cargos/`
+- `terceirizados/`
+- `empresas_instituicoes/`
+
+## Ordem interna recomendada
+
+### 3.1 — `servidores`
+
+Responsável por:
 
 - `Servidor`
+
+### 3.2 — `cargos`
+
+Responsável por:
+
 - `Cargo`
+
+### 3.3 — `terceirizados`
+
+Responsável por:
+
 - `Terceirizado`
+
+### 3.4 — `empresas_instituicoes`
+
+Responsável por:
+
 - `EmpresaInstituicao`
 
-### Motivo
+### 3.5 — integração interna do domínio
 
-Esse domínio depende de `Identidade` e interage com `Organizacional`, especialmente na regra de responsabilidade de setor.
+Responsável por:
+
+- coerência entre os perfis institucionais
+- regras de associação institucional
+- consolidação da integração com `Identidade`
+
+### 3.6 — integração com `Organizacional`
+
+Responsável por:
+
+- consolidar a regra de elegibilidade do responsável do setor
+- validar interações entre vínculo organizacional e perfil institucional
+
+## Resultado esperado
+
+O projeto passa a representar formalmente servidores, terceirizados e estruturas institucionais relacionadas.
 
 ---
 
-## Milestone 4 — Domínio Academico
+# Milestone 4 — Domínio Acadêmico
 
-### Objetivo
+## Objetivo
 
-Modelar perfis acadêmicos e vínculos com cursos.
+Implementar o domínio `Academico`, responsável pelos perfis acadêmicos e vínculos com cursos.
 
-### Escopo principal
+## Estrutura do domínio
+
+Módulo:
+
+- `Academico/`
+
+Apps internos sugeridos:
+
+- `alunos/`
+- `cursos/`
+- `aluno_cursos/`
+
+## Ordem interna recomendada
+
+### 4.1 — `alunos`
+
+Responsável por:
 
 - `Aluno`
+
+### 4.2 — `cursos`
+
+Responsável por:
+
 - `Curso`
+
+### 4.3 — `aluno_cursos`
+
+Responsável por:
+
 - `AlunoCurso`
 
-### Motivo
+### 4.4 — integração interna do domínio
 
-Esse domínio depende de `Identidade` e se conecta ao `Organizacional` em casos como monitoria.
+Responsável por:
 
----
+- coerência entre aluno, curso e vínculo acadêmico
+- alinhamento com o domínio `Identidade`
 
-## Milestone 5 — Integrações e consolidação
+## Observação importante
 
-### Objetivo
+Regras relacionadas à monitoria não devem ser modeladas diretamente neste domínio. Elas pertencem ao domínio `Organizacional`.
 
-Revisar o sistema como um todo e consolidar as integrações entre domínios.
+## Resultado esperado
 
-### Escopo principal
-
-- ajustes de integração entre domínios;
-- validação de regras cruzadas;
-- revisão final de documentação;
-- consolidação de massa inicial e cenários de uso;
-- refinos estruturais e arquiteturais.
+O projeto passa a representar perfis acadêmicos e seus vínculos formais com cursos.
 
 ---
 
-## Fluxo padrão por milestone
+# Milestone 5 — Integração e consolidação final
 
-Cada milestone deve seguir o mesmo fluxo.
+## Objetivo
 
-### Etapa A — Planejamento da milestone
+Consolidar a integração entre os domínios já implementados, validar invariantes cruzadas e finalizar a coerência estrutural do projeto.
 
-Definir:
+## Foco principal
 
-- escopo;
-- exclusões;
-- dependências;
-- critérios de aceite;
-- riscos.
+- integração entre `Identidade` e `PessoasInstitucionais`
+- integração entre `Identidade` e `Academico`
+- integração entre `Organizacional` e `PessoasInstitucionais`
+- integração entre `Organizacional` e `Academico`
+- revisão final das invariantes do sistema
+- revisão final da documentação
+- revisão final de rotas, apps, settings e convenções
 
-### Etapa B — Desenho técnico
+## Resultado esperado
 
-Definir:
-
-- models;
-- regras;
-- contratos de API;
-- arquivos impactados;
-- estratégia de implementação.
-
-### Etapa C — Implementação
-
-Pedir ao agente apenas o escopo da milestone atual.
-
-### Etapa D — Revisão
-
-Verificar:
-
-- aderência à arquitetura;
-- aderência às decisões do domínio;
-- ausência de extrapolações;
-- qualidade geral da implementação.
+O projeto deve terminar coerente, navegável, documentado e estruturalmente consistente de ponta a ponta.
 
 ---
 
-## Regras de uso com agente de implementação
+# Ordem geral recomendada
 
-### 1. Nunca pedir o sistema inteiro de uma vez
-
-A implementação deve ser feita sempre por milestone.
-
-### 2. Nunca misturar planejamento com implementação no mesmo prompt
-
-Planejamento e execução devem ocorrer separadamente.
-
-### 3. Levar decisões estratégicas já fechadas para o prompt
-
-O agente não deve decidir sozinho aspectos como:
-
-- autenticação;
-- modelagem central;
-- semântica dos domínios;
-- convenções principais.
-
-### 4. Sempre explicitar o que não deve ser implementado
-
-Isso ajuda a reduzir extrapolação de escopo.
-
-### 5. Revisar a saída de cada milestone antes de iniciar a próxima
-
-Erros estruturais devem ser corrigidos cedo.
+1. Fundação técnica
+2. Identidade
+3. Organizacional
+4. PessoasInstitucionais
+5. Acadêmico
+6. Integração e consolidação final
 
 ---
 
-## Critérios de avanço entre milestones
+# Estratégia de execução dentro de cada domínio
 
-## Para sair da Milestone 0 e entrar na Milestone 1
+Cada domínio deve ser executado, preferencialmente, nesta sequência:
 
-Deve estar resolvido:
-
-- design de autenticação;
-- alinhamento do `Auth`;
-- preparação da estratégia de `AUTH_USER_MODEL`;
-- remoção do filtro implícito do manager base.
-
-## Para sair da Milestone 1 e entrar na Milestone 2
-
-Deve estar resolvido:
-
-- usuário concreto funcional;
-- identidade central estável;
-- integração inicial de autenticação consistente.
-
-## Para sair da Milestone 2 e entrar na Milestone 3
-
-Deve estar resolvido:
-
-- `Setor`, `Funcao` e `SetorVinculo` estáveis;
-- regra de responsável clara e consistente.
-
-## Para sair da Milestone 3 e entrar na Milestone 4
-
-Deve estar resolvido:
-
-- perfis institucionais estáveis;
-- integração com `Usuario` funcional.
-
-## Para sair da Milestone 4 e entrar na Milestone 5
-
-Deve estar resolvido:
-
-- vínculo acadêmico consistente;
-- monitoria corretamente tratada no domínio `Organizacional`.
+1. estrutura física do módulo e do app
+2. `models.py`
+3. `business.py`, `rules.py`, `helpers.py`
+4. `serializers.py`, `views.py`, `urls.py`
+5. `tests.py`
+6. integração interna do domínio
+7. validação estrutural e documental
 
 ---
 
-## Riscos que este plano busca evitar
+# Critérios gerais de avanço entre milestones
 
-- começar pelos apps errados;
-- retrabalho em autenticação e modelagem do usuário;
-- acoplamento precoce entre domínios;
-- prompts amplos demais;
-- inconsistência entre arquitetura documentada e código gerado;
-- decisões estratégicas sendo improvisadas pelo agente.
+Uma milestone só deve ser considerada concluída quando:
 
----
-
-## Ordem prática recomendada
-
-A ordem prática recomendada a partir deste plano é:
-
-1. detalhar a **Milestone 0**
-2. criar o **prompt da Milestone 0**
-3. executar a **Milestone 0**
-4. revisar a **Milestone 0**
-5. detalhar a **Milestone 1**
-6. seguir adiante milestone por milestone
+1. os apps internos previstos estiverem implementados;
+2. a integração interna do domínio estiver validada;
+3. a documentação relevante estiver atualizada;
+4. a estrutura física estiver coerente com o padrão do projeto;
+5. as views estiverem aderentes ao padrão de BasicViews;
+6. a lógica principal estiver nas camadas corretas;
+7. os testes previstos para aquela etapa estiverem implementados e consistentes com o padrão do projeto.
 
 ---
 
-## Próximo passo sugerido
+# Artefatos complementares
 
-O próximo passo imediato, a partir deste documento, é elaborar:
+Este plano mestre deve ser usado junto com:
 
-- o plano da **Milestone 0 — Fundação técnica**
-
-Esse plano deve detalhar:
-
-- objetivo;
-- escopo;
-- o que entra e o que não entra;
-- arquivos impactados;
-- critérios de aceite;
-- e posteriormente o prompt de implementação.
+- `docs/project/implementation-checklist.md`
+- `docs/project/django-project-tree.md`
+- `.github/copilot-instructions.md`
+- diagramas e ADRs do projeto
+- planos operacionais específicos de cada milestone, quando necessários
 
 ---
 
-## Resumo executivo
+# Regras de descarte de arquivos operacionais
 
-O Cortex deve ser implementado em milestones progressivas:
+- Prompts operacionais podem ser descartados após implementação e validação da etapa correspondente.
+- Planos de milestone podem ser descartados após o encerramento seguro da milestone, se não forem necessários como histórico.
+- O checklist global, a árvore do projeto, as ADRs e as instruções do repositório devem ser preservados.
 
-1. fundação técnica
-2. identidade
-3. organizacional
-4. pessoas institucionais
-5. acadêmico
-6. consolidação
+---
 
-Essa estratégia reduz retrabalho, melhora a qualidade dos prompts, aumenta a previsibilidade da implementação com agentes de IA e protege a coerência arquitetural do sistema.
+# Resumo executivo
+
+O Cortex deve evoluir por milestones orientadas por domínio, mantendo a implementação real organizada em apps internos finos.
+
+A estrutura atual recomendada é:
+
+- `Identidade/` com apps como `usuarios`, `contatos`, `enderecos`, `matriculas`
+- `Organizacional/` com apps como `setores`, `funcoes`, `vinculos`
+- `PessoasInstitucionais/` com apps específicos para perfis institucionais
+- `Academico/` com apps específicos para perfis acadêmicos
+
+Esse plano substitui a visão anterior em que cada domínio era tratado como um único app principal, e passa a refletir a arquitetura atual do projeto.
