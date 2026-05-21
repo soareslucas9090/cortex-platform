@@ -242,10 +242,10 @@ class ReativarUsuarioViewTest(APITestCase):
     def setUp(self):
         self.admin = criar_usuario('00000000001', nome='Admin', is_admin=True)
         self.usuario = criar_usuario('00000000002', nome='Inativo')
-        self.usuario.ativo = False
-        self.usuario.save(update_fields=['ativo'])
         self.token_admin = obter_tokens(self.admin)
         self.token_usuario = obter_tokens(self.usuario)
+        self.usuario.ativo = False
+        self.usuario.save(update_fields=['ativo'])
         self.url = reverse('identidade:usuario-reativar', kwargs={'pk': self.usuario.pk})
 
     def test_admin_reativa_usuario_com_sucesso(self):

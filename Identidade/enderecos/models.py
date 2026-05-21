@@ -22,6 +22,7 @@ class Endereco(BasicModel):
     class Meta:
         verbose_name = 'Endereço'
         verbose_name_plural = 'Endereços'
+        ordering = ['usuario__nome']
 
     def __str__(self):
         return f'Endereço de {self.usuario}'

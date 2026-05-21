@@ -23,6 +23,7 @@ class Contato(ModelBusinessMixin, BasicModel):
     class Meta:
         verbose_name = 'Contato'
         verbose_name_plural = 'Contatos'
+        ordering = ['usuario__nome']
 
     def __str__(self):
         return f'Contato de {self.usuario}'

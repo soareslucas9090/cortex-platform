@@ -28,6 +28,7 @@ class Matricula(ModelBusinessMixin, BasicModel):
     class Meta:
         verbose_name = 'Matrícula'
         verbose_name_plural = 'Matrículas'
+        ordering = ['matricula']
 
     def __str__(self):
         return f'{self.matricula} — {self.usuario}'
