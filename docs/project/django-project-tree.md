@@ -1,168 +1,81 @@
-# Árvore Inicial do Projeto Django
+# Estrutura Atual do Projeto Django
 
 ## Objetivo
 
-Este documento define a estrutura inicial sugerida para o projeto Cortex, considerando:
+Este documento descreve a estrutura arquitetural atual do Cortex, refletindo a organização real do projeto após a descentralização dos domínios em apps menores.
 
-- modularização por domínio;
-- arquitetura em camadas já adotada no projeto base;
-- convenção de nomenclatura definida para domínios e apps;
-- crescimento incremental do sistema.
+A estrutura do projeto segue estes princípios:
 
-Este artefato não representa uma estrutura imutável, mas sim a **árvore inicial recomendada** para organizar o desenvolvimento do sistema com clareza e coesão.
+- organização por domínio;
+- módulos agregadores por contexto de negócio;
+- apps internos finos;
+- regra preferencial de um app para um model principal;
+- arquitetura em camadas;
+- views leves baseadas nas BasicViews do AppCore.
 
 ---
 
-## Convenções adotadas
+## Princípios estruturais
 
-### Domínio vs app
+### 1. Domínio não é app
 
-- **Domínio**: nome conceitual com inicial maiúscula
-- **App Django**: nome técnico em minúsculo
+No Cortex, um domínio representa um contexto de negócio e pode agrupar múltiplos apps internos.
 
 Exemplos:
 
-- Domínio: `Organizacional`
-- app Django: `organizacional`
+- `Identidade/`
+- `Organizacional/`
 
-### Estrutura física por domínio
-
-Cada domínio deve possuir um **módulo de domínio** próprio, preparado para agrupar apps relacionados daquele contexto de negócio.
-
-Dentro desse módulo, os apps Django ficam organizados com nomes técnicos em minúsculo.
-
-Exemplo:
-
-```text name=estrutura-dominio-exemplo.txt
-Organizacional/
-└── organizacional/
-```
-
-### Princípio arquitetural
-
-As views devem permanecer leves, delegando a lógica para a camada de business, que por sua vez coordena rules, helpers e state quando necessário.
+Esses diretórios são **módulos de domínio**, e não apps Django isolados.
 
 ---
 
-## Estrutura inicial recomendada
+### 2. Cada app corresponde, em regra, a um model principal
 
-```text name=project-tree.txt
-novo_cortex/
-├── docs/
-│   ├── decisions/
-│   │   └── ADR-001-modularizacao-por-dominio.md
-│   ├── diagrams/
-│   │   └── 02-bounded-contexts.md
-│   ├── planning/
-│   └── project/
-│       ├── django-project-tree.md
-│       └── implementation-checklist.md
-│
+A regra preferencial do projeto é:
+
+- um app Django para um model principal.
+
+Exceções aceitas:
+
+- tabelas de domínio;
+- tabelas auxiliares;
+- relações many-to-many sem lógica própria relevante;
+- casos explicitamente aprovados.
+
+---
+
+### 3. Estrutura física orientada por domínio
+
+O projeto é organizado em três níveis principais:
+
+1. **infraestrutura/base**
+2. **módulos de domínio**
+3. **apps internos do domínio**
+
+---
+
+## Estrutura macro atual
+
+```text name=project-tree-current.txt
+cortex-platform/
+├── .github/
+├── .vscode/
 ├── AppCore/
-│   ├── __init__.py
-│   ├── basics/
-│   ├── common/
-│   └── core/
-│
 ├── Auth/
-│   ├── __init__.py
-│   ├── auth/
-│   │   ├── __init__.py
-│   │   ├── apps.py
-│   │   ├── serializers.py
-│   │   ├── urls.py
-│   │   └── views.py
-│   └── urls.py
-│
 ├── Cortex/
-│   ├── __init__.py
-│   ├── asgi.py
-│   ├── rest_framework_settings.py
-│   ├── settings.py
-│   ├── spectacular_settings.py
-│   ├── urls.py
-│   └── wsgi.py
-│
 ├── Identidade/
-│   ├── __init__.py
-│   ├── urls.py
-│   └── identidade/
-│       ├── __init__.py
-│       ├── apps.py
-│       ├── business.py
-│       ├── helpers.py
-│       ├── models.py
-│       ├── rules.py
-│       ├── serializers.py
-│       ├── urls.py
-│       └── views.py
-│
 ├── Organizacional/
-│   ├── __init__.py
-│   ├── urls.py
-│   └── organizacional/
-│       ├── __init__.py
-│       ├── apps.py
-│       ├── business.py
-│       ├── choices.py
-│       ├── helpers.py
-│       ├── models.py
-│       ├── rules.py
-│       ├── serializers.py
-│       ├── urls.py
-│       └── views.py
-│
-├── PessoasInstitucionais/
-│   ├── __init__.py
-│   ├── urls.py
-│   └── pessoas_institucionais/
-│       ├── __init__.py
-│       ├── apps.py
-│       ├── business.py
-│       ├── choices.py
-│       ├── helpers.py
-│       ├── models.py
-│       ├── rules.py
-│       ├── serializers.py
-│       ├── urls.py
-│       └── views.py
-│
-├── Academico/
-│   ├── __init__.py
-│   ├── urls.py
-│   └── academico/
-│       ├── __init__.py
-│       ├── apps.py
-│       ├── business.py
-│       ├── choices.py
-│       ├── helpers.py
-│       ├── models.py
-│       ├── rules.py
-│       ├── serializers.py
-│       ├── urls.py
-│       └── views.py
-│
+├── docs/
 ├── manage.py
-├── db.sqlite3
-└── venv/
+├── pyproject.toml
+├── requirements.txt
+└── README.md
 ```
 
 ---
 
-## Descrição dos blocos principais
-
-### `docs/`
-
-Diretório responsável pela documentação viva do projeto.
-
-#### Subpastas
-
-- `docs/decisions/`: ADRs e decisões arquiteturais
-- `docs/diagrams/`: visão de domínio, ERD, agregados e outros artefatos conceituais
-- `docs/planning/`: planos e artefatos operacionais temporários de implementação
-- `docs/project/`: estrutura do projeto, checklist e guias práticos de execução
-
----
+## Blocos principais
 
 ### `AppCore/`
 
@@ -171,31 +84,21 @@ Camada base reutilizável do projeto.
 Responsável por:
 
 - classes base;
+- BasicViews;
 - mixins;
+- autenticação base;
 - exceptions;
-- permissões;
-- views base;
 - paginação;
-- autenticação genérica;
-- helpers e infraestrutura compartilhada.
-
-Esse módulo deve permanecer genérico e reutilizável, evitando conter regras específicas do domínio do Cortex.
+- helpers e componentes compartilhados.
 
 ---
 
 ### `Auth/`
 
-App fino de autenticação do projeto.
+App fino responsável pelo fluxo de autenticação do projeto.
 
-Responsável por:
-
-- customização do login;
-- serializers específicos do projeto;
-- integração com os endpoints de autenticação da base;
-- eventual especialização futura do fluxo de acesso.
-
-Observação:
-A autenticação não substitui o domínio `Identidade`; ela representa o fluxo de acesso ao sistema.
+Ele não substitui o domínio de identidade.  
+Seu papel é centralizar os endpoints e serializers de autenticação.
 
 ---
 
@@ -207,248 +110,204 @@ Responsável por:
 
 - settings;
 - urls globais;
-- ASGI/WSGI;
-- configurações de DRF e documentação.
+- configuração de DRF;
+- configuração de documentação OpenAPI;
+- ASGI/WSGI.
 
 ---
 
-## Módulos de domínio
+## Módulos de domínio atuais
 
-O projeto é organizado em **módulos de domínio**, e cada módulo pode abrigar um ou mais apps relacionados daquele contexto de negócio.
+### `Identidade/`
 
-Mesmo quando houver apenas um app inicialmente, a estrutura deve ser preparada para crescimento futuro.
+Domínio responsável pelos dados centrais de identidade do usuário.
 
----
+#### Estrutura atual
 
-## `Identidade/`
+```text name=identidade-module-tree.txt
+Identidade/
+├── __init__.py
+├── urls.py
+├── usuarios/
+├── contatos/
+├── enderecos/
+└── matriculas/
+```
 
-Domínio: `Identidade`
+#### Responsabilidades
 
-### App atual
-
-- `identidade`
-
-### Responsabilidade
-
-Cadastro base da pessoa no sistema.
-
-### Entidades esperadas
-
-- `Usuario`
-- `Contato`
-- `Endereco`
-- `Matricula`
-
-### Observações
-
-Esse módulo deve ser criado primeiro, pois sustenta os demais domínios.
+- `usuarios/` → model principal `Usuario`
+- `contatos/` → model principal `Contato`
+- `enderecos/` → model principal `Endereco`
+- `matriculas/` → model principal `Matricula`
 
 ---
 
-## `Organizacional/`
+### `Organizacional/`
 
-Domínio: `Organizacional`
+Domínio responsável pela estrutura institucional e vínculos organizacionais.
 
-### App atual
+#### Estrutura atual
 
-- `organizacional`
+```text name=organizacional-module-tree.txt
+Organizacional/
+├── __init__.py
+├── urls.py
+├── setores/
+├── funcoes/
+└── vinculos/
+```
 
-### Responsabilidade
+#### Responsabilidades
 
-Estrutura institucional e vínculo de usuários com setores.
-
-### Entidades esperadas
-
-- `Setor`
-- `Funcao`
-- `SetorVinculo`
-
-### Observações
-
-- `SetorVinculo` substitui `SetorLotacao`
-- `Funcao` deve conter `e_gratificada`
-- vínculo com setor sempre exige função
-- monitoria deve ser modelada como função
+- `setores/` → model principal `Setor`
+- `funcoes/` → model principal `Funcao`
+- `vinculos/` → model principal `SetorVinculo`
 
 ---
 
-## `PessoasInstitucionais/`
+## Estrutura esperada de um módulo de domínio
 
-Domínio: `PessoasInstitucionais`
+```text name=domain-module-pattern.txt
+ModuloDominio/
+├── __init__.py
+├── urls.py
+├── app_1/
+├── app_2/
+└── app_n/
+```
 
-### App atual
+### Regras
 
-- `pessoas_institucionais`
-
-### Responsabilidade
-
-Perfis institucionais formais vinculados ao usuário.
-
-### Entidades esperadas
-
-- `Servidor`
-- `Cargo`
-- `Terceirizado`
-- `EmpresaInstituicao`
-
-### Observações
-
-- `Cargo` é exclusivo de `Servidor`
-- `EmpresaInstituicao` será usada, neste momento, para terceirizados
+- o módulo de domínio agrega os apps internos;
+- o `urls.py` do módulo é o ponto de entrada do domínio;
+- o `Cortex/urls.py` inclui o módulo, não os apps internos diretamente.
 
 ---
 
-## `Academico/`
+## Estrutura esperada de um app interno
 
-Domínio: `Academico`
-
-### App atual
-
-- `academico`
-
-### Responsabilidade
-
-Perfis acadêmicos e vínculo com cursos.
-
-### Entidades esperadas
-
-- `Aluno`
-- `Curso`
-- `AlunoCurso`
-
-### Observações
-
-Monitoria não deve ser tratada como atributo isolado aqui, e sim pelo domínio `Organizacional`.
-
----
-
-## Estrutura mínima por app
-
-Cada app deve nascer, no mínimo, com os seguintes arquivos:
-
-```text name=estrutura-minima-app.txt
-app/
+```text name=internal-app-pattern.txt
+app_interno/
 ├── __init__.py
 ├── apps.py
-├── business.py
-├── helpers.py
 ├── models.py
+├── business.py
 ├── rules.py
+├── helpers.py
 ├── serializers.py
+├── views.py
 ├── urls.py
-└── views.py
+├── tests.py
+└── migrations/
 ```
 
 Arquivos opcionais:
 
 - `choices.py`
 - `state.py`
+- `selectors.py`, se um dia o projeto formalizar esse padrão
+- outros arquivos auxiliares justificados
 
 ---
 
-## Sugestão de inclusão em `INSTALLED_APPS`
+## Convenção de rotas
 
-Quando os apps forem criados, a tendência é que entrem em `PROJECT_APPS` no `settings.py` com o caminho Python completo do app dentro do módulo de domínio.
+### `Cortex/urls.py`
+
+Deve incluir apenas os módulos de domínio e apps estruturais globais.
+
+Exemplo atual:
+
+```python name=cortex-urls-pattern.py
+urlpatterns = [
+    path('auth/', include('Auth.urls')),
+    path('identidade/', include('Identidade.urls')),
+    path('organizacional/', include('Organizacional.urls')),
+]
+```
+
+### `urls.py` do módulo de domínio
+
+Deve agregar os apps internos do domínio.
 
 Exemplo conceitual:
 
-```python name=project_apps_example.py
-PROJECT_APPS = [
-    'Identidade.identidade',
-    'Organizacional.organizacional',
-    'PessoasInstitucionais.pessoas_institucionais',
-    'Academico.academico',
+```python name=domain-urls-pattern.py
+app_name = 'identidade'
+
+urlpatterns = [
+    path('usuarios/', include('Identidade.usuarios.urls')),
+    path('contatos/', include('Identidade.contatos.urls')),
+    path('enderecos/', include('Identidade.enderecos.urls')),
+    path('matriculas/', include('Identidade.matriculas.urls')),
 ]
 ```
 
 ---
 
-## Sugestão de rotas globais
+## Convenção de `INSTALLED_APPS`
 
-No `Cortex/urls.py`, a estrutura de inclusão deve seguir a ideia de separar as rotas por domínio.
+O `settings.py` registra os apps internos, e não o módulo de domínio agregador.
 
-Exemplo conceitual:
+Exemplo real atual:
 
-```python name=cortex_urls_example.py
-urlpatterns = [
-    path('api/schema/', SpectacularAPIView.as_view(), name='schema'),
-    path('api/schema/swagger/', SpectacularSwaggerView.as_view(url_name='schema'), name='swagger-ui'),
-    path('api/schema/redoc/', SpectacularRedocView.as_view(url_name='schema'), name='redoc'),
-    path('admin/', admin.site.urls),
-    path('auth/', include('Auth.urls')),
-
-    path('identidade/', include('Identidade.urls')),
-    path('organizacional/', include('Organizacional.urls')),
-    path('pessoas-institucionais/', include('PessoasInstitucionais.urls')),
-    path('academico/', include('Academico.urls')),
-] + debug_toolbar_urls()
+```python name=project-apps-current.py
+PROJECT_APPS = [
+    'Identidade.usuarios',
+    'Identidade.contatos',
+    'Identidade.enderecos',
+    'Identidade.matriculas',
+    'Organizacional.setores',
+    'Organizacional.funcoes',
+    'Organizacional.vinculos',
+]
 ```
 
 ---
 
-## Ordem recomendada de criação física dos módulos/apps
+## Convenção de autenticação
 
-### 1. `Identidade/identidade`
+O `AUTH_USER_MODEL` deve apontar para o app interno que contém o model real do usuário.
 
-Motivo:
+Exemplo atual:
 
-- define `Usuario`, base para o restante do sistema
-
-### 2. `Organizacional/organizacional`
-
-Motivo:
-
-- estrutura setores, funções e vínculos
-- modela responsabilidade de setor e monitoria
-
-### 3. `PessoasInstitucionais/pessoas_institucionais`
-
-Motivo:
-
-- especializa servidor e terceirizado
-- introduz cargo e empresa
-
-### 4. `Academico/academico`
-
-Motivo:
-
-- especializa aluno e curso
-- pode aproveitar infraestrutura já consolidada
+```python name=auth-user-model-current.py
+AUTH_USER_MODEL = 'usuarios.Usuario'
+```
 
 ---
 
-## Observações sobre crescimento futuro
+## Próximos módulos esperados
 
-Esta árvore inicial foi pensada para o estágio atual do sistema. Conforme o Cortex evoluir, será possível:
+### `PessoasInstitucionais/`
 
-- adicionar novos apps dentro dos módulos de domínio já existentes;
-- criar novos módulos de domínio quando necessário;
-- introduzir `state.py` em domínios que demandem máquina de estados;
-- extrair artefatos adicionais em `docs/` para detalhar agregados, fluxos e integrações.
+Sugestão de apps internos:
 
-A expansão do projeto deve preservar o princípio central desta árvore: **crescimento orientado por domínio, e não por conveniência técnica momentânea**.
+- `servidores/`
+- `cargos/`
+- `terceirizados/`
+- `empresas_instituicoes/`
 
----
+### `Academico/`
 
-## Próximos artefatos recomendados
+Sugestão de apps internos:
 
-Após este documento, recomenda-se manter e evoluir:
-
-1. `docs/diagrams/03-core-erd.md`
-2. `docs/diagrams/04-aggregates-and-invariants.md`
-3. `docs/project/implementation-checklist.md`
+- `alunos/`
+- `cursos/`
+- `aluno_cursos/`
 
 ---
 
 ## Resumo
 
-A estrutura inicial do Cortex deve ser organizada em torno de módulos de domínio preparados para abrigar apps relacionados.
+O Cortex atualmente adota:
 
-A recomendação inicial é usar:
+- módulos de domínio como agregadores estruturais;
+- apps internos finos;
+- regra preferencial de um app por model principal;
+- arquitetura em camadas;
+- roteamento global por domínio;
+- registro de apps no `settings.py` por app interno.
 
-- `Identidade/identidade`
-- `Organizacional/organizacional`
-- `PessoasInstitucionais/pessoas_institucionais`
-- `Academico/academico`
-
-Essa árvore aproveita a base reutilizável já existente, mantém a arquitetura em camadas e cria uma fundação clara para evolução incremental do sistema.
+Essa estrutura substitui a visão anterior em que cada domínio era tratado como um único app principal.

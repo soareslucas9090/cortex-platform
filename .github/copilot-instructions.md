@@ -849,25 +849,123 @@ class UsuarioSetor(BasicModel):
   - `create`
   - `update``
 
-### Estrutura física dos apps Django
+## Estrutura física do projeto
 
-- Apps Django do projeto **não devem ficar soltos na raiz do repositório**.
-- Apps devem ficar dentro de **módulos/pacotes organizados por domínio**, e não em agregadores técnicos genéricos.
-- A organização física do projeto deve refletir os contextos de negócio do sistema.
+### Domínios e apps
 
-### Regra de organização por domínio
+No Cortex, **domínio não é app**.
 
-Use a seguinte convenção estrutural:
+Um domínio representa um contexto de negócio e deve ser estruturado como um **módulo agregador**, contendo um ou mais apps internos.
 
-- **módulo de domínio** com nome conceitual em PascalCase
-- **app Django** dentro desse módulo, com nome técnico em minúsculo
+Exemplos de módulos de domínio:
 
-Exemplos esperados:
+- `Identidade/`
+- `Organizacional/`
+- `PessoasInstitucionais/`
+- `Academico/`
 
-- `Identidade/identidade/`
-- `Organizacional/organizacional/`
-- `PessoasInstitucionais/pessoas_institucionais/`
-- `Academico/academico/`
+### Regra preferencial de modelagem física
+
+A regra padrão do projeto é:
+
+- **cada app corresponde a um model principal**
+
+Exceções aceitas:
+
+- tabelas de domínio;
+- tabelas auxiliares;
+- relações many-to-many sem lógica própria relevante;
+- casos explicitamente aprovados pelo usuário.
+
+Na dúvida, prefira separar em apps menores.
+
+### Estrutura esperada
+
+Exemplo de módulo de domínio:
+
+```text
+Identidade/
+├── __init__.py
+├── urls.py
+├── usuarios/
+├── contatos/
+├── enderecos/
+└── matriculas/
+```
+
+Exemplo de app interno:
+
+```text
+usuarios/
+├── __init__.py
+├── apps.py
+├── models.py
+├── business.py
+├── rules.py
+├── helpers.py
+├── serializers.py
+├── views.py
+├── urls.py
+├── tests.py
+└── migrations/
+```
+
+### Regras obrigatórias
+
+- Apps Django **não devem ficar soltos na raiz do repositório**.
+- Apps devem ficar dentro do módulo de domínio correspondente.
+- O `Cortex/urls.py` deve incluir o **módulo de domínio**, nunca os apps internos diretamente.
+- O `urls.py` do módulo de domínio é o agregador das rotas dos apps internos.
+- O `PROJECT_APPS` no `settings.py` deve registrar os apps internos.
+- O `AUTH_USER_MODEL` deve apontar para o app interno que contém o model real do usuário.
+
+### Arquitetura em camadas
+
+Cada app deve seguir a arquitetura em camadas do projeto.
+
+Em regra, um app interno deve conter:
+
+- `models.py`
+- `business.py`
+- `rules.py`
+- `helpers.py`
+- `serializers.py`
+- `views.py`
+- `urls.py`
+- `tests.py`
+
+Arquivos opcionais:
+
+- `choices.py`
+- `state.py`
+
+### Views leves
+
+As views devem continuar extremamente leves:
+
+- recebem dados;
+- delegam para o Business;
+- retornam a resposta.
+
+Views não devem conter lógica de negócio, queries ORM diretas, nem implementação manual de fluxo já coberto pelas BasicViews.
+
+### Convenção de nomenclatura
+
+- Não misture inglês e português em nomes de métodos, funções e variáveis do domínio.
+- Prefira português para código do domínio.
+- Use inglês apenas em sobrescritas obrigatórias de framework, convenções do Django/DRF/Python ou interfaces externas.
+
+Exemplos corretos:
+
+- `obter_contatos()`
+- `criar_usuario()`
+- `atualizar_dados()`
+
+Evitar:
+
+- `get_contatos()`
+- `create_usuario()`
+- `update_dados()`
 
 ### Regras práticas
 
