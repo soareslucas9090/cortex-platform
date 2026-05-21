@@ -112,7 +112,9 @@ PROJECT_APPS = [
     'Identidade.contatos',
     'Identidade.enderecos',
     'Identidade.matriculas',
-    'Organizacional.organizacional',
+    'Organizacional.setores',
+    'Organizacional.funcoes',
+    'Organizacional.vinculos',
 ]
 
 INSTALLED_APPS = DEFAULT_ROOT_APPS + AUTH_APPS + PROJECT_APPS

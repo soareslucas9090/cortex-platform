@@ -450,6 +450,7 @@ Permissões padrão do DRF: `IsAuthenticated` (configurado no REST_FRAMEWORK).
 ### Estrutura de Apps
 
 **Regra: cada app corresponde a um model principal.** É incomum que um `models.py` declare mais de um model. Exceções aceitas:
+
 - **Tabelas de domínio** (choices/lookups simples sem lógica própria)
 - **Tabelas auxiliares** ou de suporte ao model principal
 - **Tabelas M:N com campos extras** (through tables) quando não justificarem um app próprio
