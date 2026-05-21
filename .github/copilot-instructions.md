@@ -21,8 +21,11 @@ Este projeto segue uma arquitetura modular de 4 camadas bem definidas. **Cada mo
 > **Proibições absolutas nas views:**
 >
 > - Views **NUNCA** fazem queries ORM diretamente (`Model.objects.get(...)`, `.filter(...)`, `.create(...)`, etc.) — toda query deve ir para o Business
-> - Views **SEMPRE** herdam de alguma view base do AppCore (`BasicPostAPIView`, `BasicGetAPIView`, `BasicRetrieveAPIView`, `BasicPutAPIView`, `BasicPatchAPIView`, `BasicDeleteAPIView`) — **`GenericAPIView` nunca deve ser importado ou usado diretamente nos apps do projeto**; Views nunca devem usar herança múltipla a fim de realizar mais de uma função. Uma view tem uma única responsabilidade (ex: listar, criar, atualizar parcialmente, etc.) e herda da view base correspondente.
+> - Views **SEMPRE** herdam de exatamente **uma** view base do AppCore (`BasicPostAPIView`, `BasicGetAPIView`, `BasicRetrieveAPIView`, `BasicPutAPIView`, `BasicPatchAPIView`, `BasicDeleteAPIView`) — **`GenericAPIView` JAMAIS deve ser importado ou usado diretamente nos apps do projeto**; Views nunca devem usar herança múltipla a fim de realizar mais de uma função. Uma view tem uma única responsabilidade (ex: listar, criar, atualizar parcialmente, etc.) e herda da view base correspondente.
+> - Views **NUNCA** sobrescrevem os métodos HTTP (`get`, `post`, `patch`, `put`, `delete`) sem justificativa — sempre use os hooks `do_action_*` das BasicViews. A única exceção aceita é quando a view precisa retornar `dados` na resposta (ex: objeto criado), e isso é feito **retornando um dict do hook**, não sobrescrevendo o método HTTP.
 > - Views **NUNCA** definem funções soltas no nível do módulo (`def _funcao(...)`) — utilitários genéricos vão em mixins do AppCore (`RespostasMixin`, `IsOwnerOrAdminMixin`, etc.); utilitários exclusivos de um app vão em uma classe base herdada por todas as views do app; toda chamada é feita via `self.*`
+> - Views **NUNCA** importam `transaction`, `handle_exceptions`, `RespostasMixin` ou chamam `transaction.atomic()` manualmente — tudo isso já é gerenciado pelas BasicViews automaticamente.
+> - URLs que aceitam mais de um método HTTP usam **`roteador_por_metodo`** com views separadas — nunca uma única view com múltiplos métodos.
 
 ```python
 # ❌ ERRADO - Lógica na view
@@ -363,21 +366,35 @@ class SetoresView(IsAdminMixin, RespostasMixin, BasicGetAPIView, BasicPostAPIVie
 
 ### Quando sobrescrever métodos HTTP (get, post, patch, put, delete)
 
-O objetivo das `BasicXxxAPIViews` é **minimizar código nas views**. Use sempre os hooks (`do_action_post`, `do_action_patch`, etc.) em vez de sobrescrever os métodos HTTP.
+> ⚠️ **NUNCA sobrescreva métodos HTTP sem justificativa.** Este é o erro mais comum e recorrente. Sempre use os hooks `do_action_*`.
 
-**Sobrescritas são justificadas APENAS quando:**
+O objetivo das `BasicXxxAPIViews` é **minimizar código nas views**. Sobrescrever `get`, `post`, `patch`, `put` ou `delete` é **proibido** como padrão.
 
-1. A view precisa **retornar dados** (objeto criado/atualizado) na resposta — `_build_success_response` só retorna `{status, mensagem}`, sem `dados`
-2. A lógica não se encaixa nos hooks disponíveis (ex: busca não-padrão que não usa `queryset`)
+**A única exceção aceita** é quando `do_action_*` precisa retornar dados na resposta (objeto criado/atualizado). Isso é feito **retornando um dict do hook** — não sobrescrevendo o método HTTP:
 
-> ⚠️ Se o usuário não pedir explicitamente para pular esta regra, **não sobrescreva métodos HTTP sem uma dessas justificativas**.
+```python
+# ✅ CORRETO — retornar dados via hook (sem sobrescrita de método)
+def do_action_post(self, serializer_data, request, *args, **kwargs):
+    setor = SetorBusiness().criar_setor(**serializer_data)
+    return {
+        'mensagem': self.mensagem_sucesso,
+        'dados': SetorSerializer(setor).data,
+        'status_code': status.HTTP_201_CREATED,
+    }
+
+# ❌ ERRADO — sobrescrita do método HTTP
+def post(self, request, *args, **kwargs):
+    ...
+    return self.resposta_sucesso(...)
+```
+
+**Nunca importe ou use** `transaction`, `handle_exceptions`, `RespostasMixin`, `GenericAPIView` nas views dos apps do projeto — as BasicViews já gerenciam tudo isso.
 
 ### Posição do `@extend_schema`
 
-- View que usa apenas hooks (sem sobrescrita de método HTTP): `@extend_schema` na **CLASSE**
-- View com sobrescrita justificada: `@extend_schema` no **MÉTODO** sobrescrito
+- **Sempre** na **CLASSE** — as views usam apenas hooks (`do_action_*`), não sobrescrevem métodos HTTP.
 
-### Exemplo (sem sobrescrita — padrão recomendado)
+### Exemplo (padrão obrigatório)
 
 ```python
 from AppCore.basics.views.basic_views import BasicPostAPIView
@@ -392,7 +409,7 @@ class DesativarProdutoView(IsAdminMixin, BasicPostAPIView):
     mensagem_sucesso = 'Produto desativado com sucesso.'
     queryset = Produto.objects.all()
 
-    def do_action_post(self, serializer_data, request):  # ← parâmetro é serializer_data, não serializer
+    def do_action_post(self, serializer_data, request, *args, **kwargs):
         self.get_object().business.desativar()
 ```
 
@@ -431,6 +448,14 @@ Permissões padrão do DRF: `IsAuthenticated` (configurado no REST_FRAMEWORK).
 ## Convenções de Código
 
 ### Estrutura de Apps
+
+**Regra: cada app corresponde a um model principal.** É incomum que um `models.py` declare mais de um model. Exceções aceitas:
+- **Tabelas de domínio** (choices/lookups simples sem lógica própria)
+- **Tabelas auxiliares** ou de suporte ao model principal
+- **Tabelas M:N com campos extras** (through tables) quando não justificarem um app próprio
+- **Lógica de negócio que autorize** dois models juntos (ex: model + seu histórico manual)
+
+Na dúvida, crie um app separado.
 
 ```
 AppNome/
@@ -719,13 +744,18 @@ O arquivo `Usuarios/models-teste.py` contém a tradução completa do DER para D
 
 1. **campus** - Model: `Campus` (sem dependências)
 2. **cargos** - Model: `Cargo` (sem dependências)
-3. **empresas** - Models: `Empresa`, `Curso` (sem dependências)
-4. **usuarios** - Models: `Usuario`, `Contato`, `Endereco`, `Matricula` (depende de campus)
-5. **setores** - Models: `Setor`, `Atividade`, `Funcao`, `UsuarioSetor` (depende de usuarios, campus)
-6. **servidores** - Model: `Servidor` (depende de usuarios)
-7. **alunos** - Model: `Aluno` (depende de usuarios)
-8. **terceirizados** - Model: `Terceirizado` (depende de usuarios, empresas)
-9. **estagiarios** - Model: `Estagiario` (depende de usuarios, empresas)
+3. **empresas** - Models: `Empresa`, `Curso` (sem dependências — Curso é tabela auxiliar de Estagiário)
+4. **usuarios** - Model: `Usuario` (depende de campus)
+5. **contatos** - Model: `Contato` (depende de usuarios)
+6. **enderecos** - Model: `Endereco` (depende de usuarios)
+7. **matriculas** - Model: `Matricula` (depende de usuarios)
+8. **setores** - Model: `Setor` (sem dependências)
+9. **funcoes** - Model: `Funcao` (sem dependências)
+10. **vinculos** - Model: `SetorVinculo` (depende de usuarios, setores, funcoes)
+11. **servidores** - Model: `Servidor` (depende de usuarios)
+12. **alunos** - Model: `Aluno` (depende de usuarios)
+13. **terceirizados** - Model: `Terceirizado` (depende de usuarios, empresas)
+14. **estagiarios** - Model: `Estagiario` (depende de usuarios, empresas)
 
 ### Choices Definidos
 

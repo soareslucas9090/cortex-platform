@@ -20,6 +20,7 @@ Implementar código novo ou modificar existente seguindo rigorosamente os padrõ
 3. **Implementar na ordem correta**: Models → Rules → Helpers → Business → Serializers → Views → URLs.
 4. **Seguir os padrões** descritos nesta skill sem desvios.
 5. **Verificar conformidade** — ao concluir cada arquivo, aplicar o Checklist de Conformidade Obrigatório abaixo.
+6. **Testes** — ao criar ou modificar views, escrever testes é **essencial**. Ao alterar comportamentos importantes em qualquer camada, analisar se os testes existentes precisam ser atualizados.
 
 ---
 
