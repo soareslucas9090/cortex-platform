@@ -42,6 +42,11 @@ class AtualizarVinculoFuncaoSerializer(serializers.Serializer):
         help_text='ID da nova função a ser atribuída ao vínculo.',
     )
 
+    def validate(self, data):
+        if 'funcao' not in data:
+            raise serializers.ValidationError({'funcao': 'Este campo é obrigatório.'})
+        return data
+
 
 class SerializerVazio(serializers.Serializer):
     """Serializer sem campos — usado em endpoints de ação pura."""
