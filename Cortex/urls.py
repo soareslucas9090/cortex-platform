@@ -13,4 +13,5 @@ urlpatterns = [
     path('auth/', include('Auth.urls')),
     path('identidade/', include('Identidade.urls')),
     path('organizacional/', include('Organizacional.urls')),
+    path('pessoas-institucionais/', include('PessoasInstitucionais.urls')),
 ] + debug_toolbar_urls()
