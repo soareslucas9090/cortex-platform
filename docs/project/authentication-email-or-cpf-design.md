@@ -13,7 +13,7 @@ com um único endpoint, um único contrato de entrada e compatibilidade com:
 - DRF
 - SimpleJWT
 - thin app `Auth`
-- model concreto `Usuario` no domínio `identidade`
+- model concreto `Usuario` no app `Identidade.usuarios`
 
 ---
 
@@ -63,7 +63,7 @@ ou
 
 ## Model de usuário
 
-O model concreto `identidade.Usuario` deve possuir, no mínimo:
+O model concreto `Identidade.usuarios.Usuario` deve possuir, no mínimo:
 
 - `email`
 - `cpf`
@@ -81,16 +81,16 @@ O model concreto `identidade.Usuario` deve possuir, no mínimo:
 
 ## Decisão sobre `USERNAME_FIELD`
 
-A recomendação para o model concreto é:
+O model concreto adota:
 
 ```python
-USERNAME_FIELD = 'email'
-REQUIRED_FIELDS = ['cpf', 'nome']
+USERNAME_FIELD = 'cpf'
+REQUIRED_FIELDS = ['nome']
 ```
 
 ### Justificativa
 
-Essa decisão preserva melhor compatibilidade com o ecossistema do Django, enquanto o suporte a CPF fica na camada de autenticação customizada.
+O CPF é o identificador único central do usuário no Cortex. O suporte a e-mail como alternativa no login híbrido é resolvido pela camada de backend customizada (`EmailOrCpfBackend`), garantindo que tanto a integração com Django admin/auth quanto a autenticação DRF/SimpleJWT funcionem de maneira transparente e sem conflito de design.
 
 ---
 
@@ -297,15 +297,15 @@ Mudança:
 
 ### Model concreto
 
-Arquivo futuro:
+Arquivo:
 
-- `identidade/models.py`
+- `Identidade/usuarios/models.py`
 
 ---
 
 ## Manager de usuário
 
-O domínio `identidade` deve possuir um manager concreto, por exemplo:
+O app `Identidade.usuarios` possui um manager concreto em `Identidade/usuarios/models.py`:
 
 - `UsuarioManager(BaseManagerUser)`
 
@@ -314,7 +314,7 @@ Responsável por:
 - normalizar email;
 - normalizar CPF;
 - implementar `create_user`;
-- implementar `create_superuser`.
+- implementar `create_superuser` (recebendo o CPF como primeiro argumento).
 
 ---
 

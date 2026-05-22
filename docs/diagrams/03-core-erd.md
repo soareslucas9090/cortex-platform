@@ -459,33 +459,29 @@ Terceirizados não possuem `Cargo`.
 
 ---
 
-# 7. Mapeamento dos models por domínio
+# 7. Mapeamento dos models por app interno e domínio
 
-## Identidade
+## Módulo: `Identidade/`
+- `Identidade.usuarios` -> Model: `Usuario`
+- `Identidade.contatos` -> Model: `Contato`
+- `Identidade.enderecos` -> Model: `Endereco`
+- `Identidade.matriculas` -> Model: `Matricula`
 
-- `Usuario`
-- `Contato`
-- `Endereco`
-- `Matricula`
+## Módulo: `Organizacional/`
+- `Organizacional.setores` -> Model: `Setor`
+- `Organizacional.funcoes` -> Model: `Funcao`
+- `Organizacional.vinculos` -> Model: `SetorVinculo`
 
-## Organizacional
+## Módulo: `PessoasInstitucionais/` (Planejado)
+- `PessoasInstitucionais.cargos` -> Model: `Cargo`
+- `PessoasInstitucionais.servidores` -> Model: `Servidor`
+- `PessoasInstitucionais.empresas_instituicoes` -> Model: `EmpresaInstituicao`
+- `PessoasInstitucionais.terceirizados` -> Model: `Terceirizado`
 
-- `Setor`
-- `Funcao`
-- `SetorVinculo`
-
-## PessoasInstitucionais
-
-- `Cargo`
-- `Servidor`
-- `EmpresaInstituicao`
-- `Terceirizado`
-
-## Academico
-
-- `Aluno`
-- `Curso`
-- `AlunoCurso`
+## Módulo: `Academico/` (Planejado)
+- `Academico.alunos` -> Model: `Aluno`
+- `Academico.cursos` -> Model: `Curso`
+- `Academico.aluno_cursos` -> Model: `AlunoCurso`
 
 ---
 
@@ -495,9 +491,9 @@ Terceirizados não possuem `Cargo`.
 
 Perfis como `Servidor`, `Terceirizado` e `Aluno` devem especializar `Usuario` via relacionamento 1:1.
 
-## Arquitetura em camadas
+## Arquitetura em camadas por app interno
 
-Cada domínio deve conter, conforme necessidade:
+Cada **app interno** possui sua própria estrutura de camadas independente, e não o domínio agregador como um todo. Cada app interno deve conter, conforme a necessidade:
 
 - `models.py`
 - `business.py`

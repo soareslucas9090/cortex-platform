@@ -40,54 +40,52 @@ Com isso, tornou-se necessário formalizar a decisão de modularizar o sistema p
 
 ## Decisão
 
-O Cortex será modularizado por **domínios de negócio**, e cada domínio será implementado como um **app Django próprio**, mantendo a convenção:
+O Cortex será modularizado por **domínios de negócio** (Bounded Contexts), e cada domínio será implementado como um **módulo agregador** (um diretório com inicial maiúscula contendo um roteamento unificado em seu `urls.py`). As entidades de cada domínio serão implementadas em **apps Django específicos e finos** (nomes em minúsculo dentro do módulo).
 
-- **Domínio** com inicial maiúscula, para uso conceitual e documental;
-- **app Django** com nome minúsculo, para uso no código e na estrutura do projeto.
+A convenção de nomenclatura e organização física segue:
+- **Domínio / Módulo agregador:** Inicial maiúscula, correspondendo à pasta principal (ex: `Identidade/`, `Organizacional/`).
+- **Apps internos:** Nome em minúsculo dentro de cada pasta de domínio (ex: `Identidade/usuarios/`, `Organizacional/setores/`).
+- **Regra de mapeamento:** Em regra, cada app interno corresponde a **um model principal**.
 
-Os domínios iniciais definidos são:
+Os domínios iniciais definidos e seus respectivos apps internos são:
 
 ### 1. Identidade
 
-App Django: `identidade`
+Módulo agregador: `Identidade`
 
-Responsável por:
-
-- `Usuario`
-- `Contato`
-- `Endereco`
-- `Matricula`
+Apps internos:
+- `usuarios` (Model principal: `Usuario`)
+- `contatos` (Model principal: `Contato`)
+- `enderecos` (Model principal: `Endereco`)
+- `matriculas` (Model principal: `Matricula`)
 
 ### 2. Organizacional
 
-App Django: `organizacional`
+Módulo agregador: `Organizacional`
 
-Responsável por:
-
-- `Setor`
-- `Funcao`
-- `SetorVinculo`
+Apps internos:
+- `setores` (Model principal: `Setor`)
+- `funcoes` (Model principal: `Funcao`)
+- `vinculos` (Model principal: `SetorVinculo`)
 
 ### 3. PessoasInstitucionais
 
-App Django: `pessoas_institucionais`
+Módulo agregador: `PessoasInstitucionais`
 
-Responsável por:
-
-- `Servidor`
-- `Cargo`
-- `Terceirizado`
-- `EmpresaInstituicao`
+Apps internos planejados:
+- `cargos` (Model principal: `Cargo`)
+- `servidores` (Model principal: `Servidor`)
+- `empresas_instituicoes` (Model principal: `EmpresaInstituicao`)
+- `terceirizados` (Model principal: `Terceirizado`)
 
 ### 4. Academico
 
-App Django: `academico`
+Módulo agregador: `Academico`
 
-Responsável por:
-
-- `Aluno`
-- `Curso`
-- `AlunoCurso`
+Apps internos planejados:
+- `alunos` (Model principal: `Aluno`)
+- `cursos` (Model principal: `Curso`)
+- `aluno_cursos` (Model principal: `AlunoCurso` - tabela/app associativo M:N)
 
 ---
 
@@ -108,7 +106,7 @@ A modularização por domínio foi escolhida porque:
    - Permite iniciar por domínios essenciais e expandir o sistema sem desorganizar a base.
 
 5. **Apoia a arquitetura em camadas já adotada**
-   - Cada domínio poderá manter suas próprias classes de `business`, `rules`, `helpers` e `views`.
+   - Cada app interno de um domínio manterá suas próprias classes de `business`, `rules`, `helpers` e `views`.
 
 6. **Cria melhor base para documentação**
    - Os artefatos de domínio, DER, agregados e decisões arquiteturais ficam mais consistentes entre si.
@@ -119,20 +117,25 @@ A modularização por domínio foi escolhida porque:
 
 ### Estrutura de projeto
 
-Cada domínio será representado por um app Django com estrutura semelhante a:
+Cada domínio é representado por uma pasta (módulo de domínio agregador) contendo um agregador de rotas `urls.py` e um ou mais subdiretórios para seus apps internos. Cada app interno do domínio possui a seguinte estrutura de camadas:
 
-- `__init__.py`
-- `apps.py`
-- `models.py`
-- `business.py`
-- `rules.py`
-- `helpers.py`
-- `serializers.py`
-- `views.py`
-- `urls.py`
+```text
+ModuloDominio/
+├── urls.py          # Agregador de rotas do domínio
+└── app_interno/
+    ├── __init__.py
+    ├── apps.py
+    ├── models.py
+    ├── business.py
+    ├── rules.py
+    ├── helpers.py
+    ├── serializers.py
+    ├── views.py
+    ├── urls.py
+    └── migrations/
+```
 
-Arquivos opcionais:
-
+Arquivos opcionais por app interno:
 - `choices.py`
 - `state.py`
 
@@ -220,14 +223,15 @@ Isso criaria excesso de fragmentação, dependências pequenas demais e perda de
 
 A partir desta ADR, ficam consolidadas as seguintes definições:
 
-1. O sistema será organizado por domínio.
-2. Domínios terão inicial maiúscula apenas em documentação/conceito.
-3. Apps Django terão nomes minúsculos.
-4. `SetorLotacao` será renomeado para `SetorVinculo`.
-5. `monitor` será representado como `Funcao`.
-6. `Funcao` terá o atributo `e_gratificada`.
-7. Todo vínculo com setor exigirá uma função.
-8. A responsabilidade de setor será modelada por vínculo, e não necessariamente por campo direto no model de setor.
+1. O sistema será organizado por domínios de negócio conceituais (inicial maiúscula).
+2. Cada domínio será implementado fisicamente como um módulo agregador (diretório com inicial maiúscula).
+3. O módulo agregador conterá um ou mais apps Django internos (nomes em minúsculo).
+4. Em regra, cada app interno corresponderá a exatamente um model principal do domínio.
+5. `SetorLotacao` será renomeado para `SetorVinculo`.
+6. `monitor` será representado como `Funcao` em `Organizacional.funcoes`.
+7. `Funcao` terá o atributo `e_gratificada`.
+8. Todo vínculo com setor exigirá uma função.
+9. A responsabilidade de setor será modelada por vínculo (no app `vinculos` via `SetorVinculo`), e não por campo direto no model de setor.
 
 ---
 

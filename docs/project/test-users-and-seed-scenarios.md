@@ -138,9 +138,10 @@ Usuário servidor docente, com cargo formal e responsabilidade por setor.
 - `nome`: `Professor Responsavel`
 - perfil: `Servidor`
 - cargo: `PROFESSOR EBTT`
-- setor: `CODIS`
-- função: `COORDENADOR`
-- responsável: `True`
+- vínculo com setor (no `SetorVinculo`):
+  - setor: `CODIS`
+  - função: `COORDENADOR`
+  - responsavel: `True`
 
 ### Regra validada
 
@@ -161,9 +162,9 @@ Servidor técnico vinculado a mais de um setor.
 - `nome`: `Tecnico MultiSetor`
 - perfil: `Servidor`
 - cargo: `TECNICO DE TECNOLOGIA DA INFORMACAO`
-- vínculos:
-  - setor `CCTI`, função `CHEFE`
-  - setor `DIAP`, função `MEMBRO`
+- vínculos com setores (em múltiplos `SetorVinculo`):
+  - setor: `CCTI`, função: `CHEFE`, responsavel: `False`
+  - setor: `DIAP`, função: `MEMBRO`, responsavel: `False`
 
 ### Regra validada
 
@@ -183,9 +184,10 @@ Servidor técnico-administrativo comum, sem ser responsável de setor.
 - `nome`: `Assistente Administrativo`
 - perfil: `Servidor`
 - cargo: `ASSISTENTE EM ADMINISTRACAO`
-- setor: `DENS`
-- função: `MEMBRO`
-- responsável: `False`
+- vínculo com setor (no `SetorVinculo`):
+  - setor: `DENS`
+  - função: `MEMBRO`
+  - responsavel: `False`
 
 ### Regra validada
 
@@ -225,9 +227,10 @@ Aluno com vínculo acadêmico e atuação organizacional como monitor.
 - `nome`: `Aluno Monitor`
 - perfil: `Aluno`
 - curso: `Licenciatura em Matemática`
-- setor: `NAPNE/FLO`
-- função: `MONITOR`
-- responsável: `False`
+- vínculo com setor (no `SetorVinculo`):
+  - setor: `NAPNE/FLO`
+  - função: `MONITOR`
+  - responsavel: `False`
 
 ### Regra validada
 

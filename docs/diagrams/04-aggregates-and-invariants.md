@@ -88,8 +88,8 @@ As informações de identidade tendem a mudar em conjunto e dependem semanticame
 
 ## Onde as regras devem morar
 
-- validações simples e teóricas: `identidade/rules.py`
-- orquestração de criação/atualização: `identidade/business.py`
+- validações simples e teóricas: `Identidade/usuarios/rules.py` (e respectivos apps como `contatos`, `enderecos` e `matriculas`)
+- orquestração de criação/atualização: `Identidade/usuarios/business.py` (e respectivos apps)
 
 ---
 
@@ -136,8 +136,8 @@ As regras mais críticas do domínio organizacional giram em torno do setor, esp
 
 ## Onde as regras devem morar
 
-- invariantes teóricas: `organizacional/rules.py`
-- criação, troca e atualização de vínculos: `organizacional/business.py`
+- invariantes teóricas: `Organizacional/setores/rules.py` e `Organizacional/vinculos/rules.py`
+- criação, troca e atualização de vínculos: `Organizacional/vinculos/business.py`
 
 ## Observações importantes
 
@@ -185,8 +185,8 @@ As regras de servidor são específicas e não devem se misturar com identidade 
 
 ## Onde as regras devem morar
 
-- regras específicas do perfil de servidor: `pessoas_institucionais/rules.py`
-- orquestração de criação/atualização: `pessoas_institucionais/business.py`
+- regras específicas do perfil de servidor: `PessoasInstitucionais/servidores/rules.py`
+- orquestração de criação/atualização: `PessoasInstitucionais/servidores/business.py`
 
 ---
 
@@ -224,8 +224,8 @@ Representa o perfil institucional de terceirizado vinculado a uma empresa/instit
 
 ## Onde as regras devem morar
 
-- validações de vínculo terceirizado-empresa: `pessoas_institucionais/rules.py`
-- orquestração operacional: `pessoas_institucionais/business.py`
+- validações de vínculo terceirizado-empresa: `PessoasInstitucionais/terceirizados/rules.py`
+- orquestração operacional: `PessoasInstitucionais/terceirizados/business.py`
 
 ---
 
@@ -265,8 +265,8 @@ Representa o perfil acadêmico do usuário e seus vínculos com cursos.
 
 ## Onde as regras devem morar
 
-- validações acadêmicas: `academico/rules.py`
-- criação de vínculo aluno-curso: `academico/business.py`
+- validações acadêmicas: `Academico/alunos/rules.py`
+- criação de vínculo aluno-curso: `Academico/alunos/business.py`
 
 ---
 
@@ -298,8 +298,8 @@ Representa o curso e sua relação com os vínculos acadêmicos dos alunos.
 
 ## Onde as regras devem morar
 
-- regras do curso: `academico/rules.py`
-- operações de manutenção do curso: `academico/business.py`
+- regras do curso: `Academico/cursos/rules.py`
+- operações de manutenção do curso: `Academico/cursos/business.py`
 
 ---
 
@@ -328,39 +328,39 @@ A condição de monitor não nasce no agregado acadêmico, mas sim no organizaci
 
 # Fronteiras recomendadas para a camada de business
 
-## `identidade/business.py`
+## `Identidade/usuarios/business.py` (e respectivos apps)
 
 Deve orquestrar:
 
 - criação de usuário;
 - atualização cadastral;
-- manutenção de contatos, endereço e matrículas.
+- manutenção de contatos (em `Identidade/contatos/business.py`), endereços (em `Identidade/enderecos/business.py`) e matrículas (em `Identidade/matriculas/business.py`).
 
-## `organizacional/business.py`
+## `Organizacional/vinculos/business.py` e `Organizacional/setores/business.py`
 
 Deve orquestrar:
 
-- criação de setor;
-- criação e atualização de vínculos;
-- definição de responsável;
+- criação de setor (em `Organizacional/setores/business.py`);
+- criação e atualização de vínculos (em `Organizacional/vinculos/business.py`);
+- definição de responsável (em `Organizacional/vinculos/business.py`);
 - validação de função obrigatória;
 - operações relacionadas à monitoria como função.
 
-## `pessoas_institucionais/business.py`
+## `PessoasInstitucionais/servidores/business.py` e `PessoasInstitucionais/terceirizados/business.py`
 
 Deve orquestrar:
 
-- criação de servidor;
-- criação de terceirizado;
-- associação de cargo;
-- associação de empresa.
+- criação de servidor (em `PessoasInstitucionais/servidores/business.py`);
+- criação de terceirizado (em `PessoasInstitucionais/terceirizados/business.py`);
+- associação de cargo (em `PessoasInstitucionais/servidores/business.py`);
+- associação de empresa (em `PessoasInstitucionais/terceirizados/business.py`).
 
-## `academico/business.py`
+## `Academico/alunos/business.py` e `Academico/cursos/business.py`
 
 Deve orquestrar:
 
-- criação de aluno;
-- criação de curso;
+- criação de aluno (em `Academico/alunos/business.py`);
+- criação de curso (em `Academico/cursos/business.py`);
 - vínculo entre aluno e curso.
 
 ---

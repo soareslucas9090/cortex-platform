@@ -79,17 +79,18 @@ novo_cortex/
 │   ├── urls.py
 │   └── ...
 │
-├── Identidade/                 # Domínio: identidade base do usuário
-│   └── identidade/             # App Django
-│       ├── models.py           # Usuario, Contato, Endereco, Matricula
-│       ├── business.py
-│       ├── rules.py
-│       ├── helpers.py
-│       ├── serializers.py
-│       ├── views.py
-│       └── urls.py
+├── Identidade/                 # Domínio: identidade base do usuário (módulo agregador)
+│   ├── urls.py
+│   ├── usuarios/               # App Django do model Usuario (com business.py, rules.py, etc.)
+│   ├── contatos/               # App Django do model Contato
+│   ├── enderecos/              # App Django do model Endereco
+│   └── matriculas/             # App Django do model Matricula
 │
-├── Organizacional/             # Domínio: setores, funções, vínculos (em construção)
+├── Organizacional/             # Domínio: setores, funções, vínculos (módulo agregador)
+│   ├── urls.py
+│   ├── setores/                # App Django do model Setor
+│   ├── funcoes/                # App Django do model Funcao
+│   └── vinculos/               # App Django do model SetorVinculo
 ├── PessoasInstitucionais/      # Domínio: servidores, terceirizados (planejado)
 ├── Academico/                  # Domínio: alunos, cursos (planejado)
 │
@@ -251,7 +252,7 @@ O login é feito por **CPF**. O backend `EmailOrCpfBackend` suporta login por CP
 # Exemplo de login
 curl -X POST /auth/token_jwt/ \
   -H "Content-Type: application/json" \
-  -d '{"username": "12345678901", "password": "SuaSenha@123"}'
+  -d '{"login": "12345678901", "password": "SuaSenha@123"}'
 ```
 
 ---
@@ -299,14 +300,13 @@ Cadastro base da pessoa no sistema.
 - `Endereco` — endereço residencial
 - `Matricula` — carteirinha/matrícula institucional
 
-### Organizacional _(em construção)_
+### Organizacional
 
 Estrutura organizacional da instituição.
 
-- `Setor` — setor dentro de um campus
-- `Atividade` — atividade dentro de um setor
-- `Funcao` — função exercida em uma atividade
-- `UsuarioSetor` — vínculo entre usuário e setor (com papel de responsável/monitor)
+- `Setor` — setor dentro de um campus (em `Organizacional.setores`)
+- `Funcao` — função institucional/organizacional (em `Organizacional.funcoes`)
+- `SetorVinculo` — vínculo entre usuário e setor, com papel de responsável e/ou monitor (em `Organizacional.vinculos`)
 
 ### PessoasInstitucionais _(planejado)_
 
