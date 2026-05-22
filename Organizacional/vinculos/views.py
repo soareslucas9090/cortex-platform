@@ -1,4 +1,4 @@
-﻿import logging
+import logging
 
 from rest_framework import status
 
@@ -125,29 +125,32 @@ class EncerrarVinculoView(IsAdminMixin, BasicPostAPIView):
 
 
 @extend_schema(
-    tags=['VÃ­nculos de Setor'],
-    summary='Definir vÃ­nculo como responsÃ¡vel',
+    tags=['Vínculos de Setor'],
+    summary='Definir vínculo como responsável',
     description='''
-    Marca o vÃ­nculo como responsÃ¡vel pelo setor.
+    Marca o vínculo como responsável pelo setor.
 
-    **Nota:** a validaÃ§Ã£o de elegibilidade (responsÃ¡vel deve ser Servidor) serÃ¡
-    implementada em etapa futura junto ao domÃ­nio PessoasInstitucionais.
+    **Regras:**
+    - O setor deve estar ativo.
+    - O usuário do vínculo deve possuir perfil de servidor ativo.
 
-    **PermissÃµes:** Apenas administradores.
+    Apenas servidores ativos podem ocupar a responsabilidade principal de um setor.
+
+    **Permissões:** Apenas administradores.
     ''',
     request=None,
     responses={
-        status.HTTP_200_OK: {'description': 'ResponsÃ¡vel definido com sucesso.'},
-        status.HTTP_400_BAD_REQUEST: {'description': 'Setor inativo.'},
-        status.HTTP_401_UNAUTHORIZED: {'description': 'NÃ£o autenticado.'},
-        status.HTTP_403_FORBIDDEN: {'description': 'Sem permissÃ£o de administrador.'},
-        status.HTTP_404_NOT_FOUND: {'description': 'VÃ­nculo nÃ£o encontrado.'},
+        status.HTTP_200_OK: {'description': 'Responsável definido com sucesso.'},
+        status.HTTP_400_BAD_REQUEST: {'description': 'Setor inativo ou usuário não é servidor ativo.'},
+        status.HTTP_401_UNAUTHORIZED: {'description': 'Não autenticado.'},
+        status.HTTP_403_FORBIDDEN: {'description': 'Sem permissão de administrador.'},
+        status.HTTP_404_NOT_FOUND: {'description': 'Vínculo não encontrado.'},
     },
 )
 class DefinirResponsavelView(IsAdminMixin, BasicPostAPIView):
     """POST /organizacional/setores/<setor_pk>/vinculos/<pk>/definir-responsavel/"""
     serializer_class = SerializerVazio
-    mensagem_sucesso = 'ResponsÃ¡vel definido com sucesso.'
+    mensagem_sucesso = 'Responsável definido com sucesso.'
 
     def get_queryset(self):
         return SetorVinculo.objects.filter(setor_id=self.kwargs['setor_pk'])

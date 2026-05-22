@@ -171,6 +171,22 @@ class CriarVinculoViewTest(APITestCase):
         resposta = self.client.post(self.url, {'usuario': self.comum.pk})
         self.assertEqual(resposta.status_code, status.HTTP_400_BAD_REQUEST)
 
+    def test_nao_servidor_nao_pode_ser_responsavel_no_vinculo(self):
+        """Criar vínculo com responsavel=True falha se o usuário não for servidor."""
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token_admin}')
+        payload = {**self.payload_valido, 'responsavel': True}
+        resposta = self.client.post(self.url, payload)
+        self.assertEqual(resposta.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_servidor_inativo_nao_pode_ser_responsavel_no_vinculo(self):
+        """Criar vínculo com responsavel=True falha se o servidor estiver inativo."""
+        cargo = Cargo.objects.create(nome='Professor Inativo')
+        Servidor.objects.create(usuario=self.comum, cargo=cargo, categoria=1, ativo=False)
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token_admin}')
+        payload = {**self.payload_valido, 'responsavel': True}
+        resposta = self.client.post(self.url, payload)
+        self.assertEqual(resposta.status_code, status.HTTP_400_BAD_REQUEST)
+
 
 class EncerrarVinculoViewTest(APITestCase):
 
@@ -296,6 +312,21 @@ class DefinirResponsavelViewTest(APITestCase):
         self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token_admin}')
         resposta = self.client.post(url)
         self.assertEqual(resposta.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_nao_servidor_nao_pode_ser_responsavel(self):
+        """Usuário sem perfil de servidor não pode ser definido como responsável."""
+        # self.comum NÃO tem perfil de servidor no setUp
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token_admin}')
+        resposta = self.client.post(self.url)
+        self.assertEqual(resposta.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_servidor_inativo_nao_pode_ser_responsavel(self):
+        """Usuário com perfil de servidor inativo não pode ser definido como responsável."""
+        cargo = Cargo.objects.create(nome='Professor Inativo')
+        Servidor.objects.create(usuario=self.comum, cargo=cargo, categoria=1, ativo=False)
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token_admin}')
+        resposta = self.client.post(self.url)
+        self.assertEqual(resposta.status_code, status.HTTP_400_BAD_REQUEST)
 
 
 class RemoverResponsavelViewTest(APITestCase):
