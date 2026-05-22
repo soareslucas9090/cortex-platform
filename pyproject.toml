@@ -8,5 +8,4 @@ exclude = '''
 /(
     \._|\.git|\.hg|\.mypy_cache|\.tox|\.venv|_build|buck-out|build|dist
 )/
-'''
---skip-string-normalization
+'''
