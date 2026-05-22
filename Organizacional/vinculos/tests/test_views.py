@@ -8,6 +8,8 @@ from Identidade.usuarios.models import Usuario
 from Organizacional.funcoes.models import Funcao
 from Organizacional.setores.models import Setor
 from Organizacional.vinculos.models import SetorVinculo
+from PessoasInstitucionais.cargos.models import Cargo
+from PessoasInstitucionais.servidores.models import Servidor
 
 
 def obter_tokens(usuario):
@@ -108,6 +110,8 @@ class CriarVinculoViewTest(APITestCase):
         self.assertEqual(resposta.data['dados']['usuario'], self.comum.pk)
 
     def test_cria_vinculo_como_responsavel(self):
+        cargo = Cargo.objects.create(nome='Professor')
+        Servidor.objects.create(usuario=self.comum, cargo=cargo, categoria=1)
         self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token_admin}')
         payload = {**self.payload_valido, 'responsavel': True}
         resposta = self.client.post(self.url, payload)
@@ -250,6 +254,8 @@ class DefinirResponsavelViewTest(APITestCase):
         )
 
     def test_admin_define_responsavel_com_sucesso(self):
+        cargo = Cargo.objects.create(nome='Professor')
+        Servidor.objects.create(usuario=self.comum, cargo=cargo, categoria=1)
         self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token_admin}')
         resposta = self.client.post(self.url)
         self.assertEqual(resposta.status_code, status.HTTP_200_OK)

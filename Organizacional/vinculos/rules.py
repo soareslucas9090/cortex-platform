@@ -2,9 +2,11 @@ from AppCore.core.rules.rules import ModelInstanceRules
 
 
 class SetorVinculoRules(ModelInstanceRules):
-    # TODO (PessoasInstitucionais — Etapa 3): implementar regra
-    # 'responsavel deve ser Servidor' quando o domínio PessoasInstitucionais existir.
-
+    def usuario_e_servidor(self, usuario) -> bool:
+        """Valida se o usuário informado possui perfil de servidor ativo."""
+        if not hasattr(usuario, 'servidor') or not usuario.servidor.ativo:
+            self.return_exception('Apenas servidores ativos podem ocupar a responsabilidade principal de um setor.')
+        return True
     def setor_esta_ativo(self, setor) -> bool:
         """Vínculo só pode ser criado em setor ativo."""
         if not setor.ativo:
