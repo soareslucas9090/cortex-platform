@@ -174,49 +174,49 @@ O objetivo é permitir uma execução incremental, previsível e consistente, ev
 
 ## App `PessoasInstitucionais/cargos/`
 
-- [ ] Criar estrutura física do app
-- [ ] Criar `apps.py` com `name = 'PessoasInstitucionais.cargos'`
-- [ ] Registrar em `PROJECT_APPS`
-- [ ] Implementar `models.py` — model `Cargo`
-- [ ] Implementar camadas e endpoints
-- [ ] Incluir rotas no `PessoasInstitucionais/urls.py`
-- [ ] Implementar testes em `tests/`
+- [x] Criar estrutura física do app
+- [x] Criar `apps.py` com `name = 'PessoasInstitucionais.cargos'`
+- [x] Registrar em `PROJECT_APPS`
+- [x] Implementar `models.py` — model `Cargo`
+- [x] Implementar camadas e endpoints
+- [x] Incluir rotas no `PessoasInstitucionais/urls.py`
+- [x] Implementar testes em `tests/`
 
 ## App `PessoasInstitucionais/servidores/`
 
-- [ ] Criar estrutura física do app
-- [ ] Criar `apps.py` com `name = 'PessoasInstitucionais.servidores'`
-- [ ] Registrar em `PROJECT_APPS`
-- [ ] Implementar `models.py` — model `Servidor` (OneToOne com `Usuario`)
-- [ ] Implementar camadas e endpoints
-- [ ] Incluir rotas no `PessoasInstitucionais/urls.py`
-- [ ] Implementar testes em `tests/`
+- [x] Criar estrutura física do app
+- [x] Criar `apps.py` com `name = 'PessoasInstitucionais.servidores'`
+- [x] Registrar em `PROJECT_APPS`
+- [x] Implementar `models.py` — model `Servidor` (OneToOne com `Usuario`)
+- [x] Implementar camadas e endpoints
+- [x] Incluir rotas no `PessoasInstitucionais/urls.py`
+- [x] Implementar testes em `tests/`
 
 ## App `PessoasInstitucionais/empresas_instituicoes/`
 
-- [ ] Criar estrutura física do app
-- [ ] Criar `apps.py` com `name = 'PessoasInstitucionais.empresas_instituicoes'`
-- [ ] Registrar em `PROJECT_APPS`
-- [ ] Implementar `models.py` — model `EmpresaInstituicao`
-- [ ] Implementar camadas e endpoints
-- [ ] Incluir rotas no `PessoasInstitucionais/urls.py`
-- [ ] Implementar testes em `tests/`
+- [x] Criar estrutura física do app
+- [x] Criar `apps.py` com `name = 'PessoasInstitucionais.empresas_instituicoes'`
+- [x] Registrar em `PROJECT_APPS`
+- [x] Implementar `models.py` — model `EmpresaInstituicao`
+- [x] Implementar camadas e endpoints
+- [x] Incluir rotas no `PessoasInstitucionais/urls.py`
+- [x] Implementar testes em `tests/`
 
 ## App `PessoasInstitucionais/terceirizados/`
 
-- [ ] Criar estrutura física do app
-- [ ] Criar `apps.py` com `name = 'PessoasInstitucionais.terceirizados'`
-- [ ] Registrar em `PROJECT_APPS`
-- [ ] Implementar `models.py` — model `Terceirizado` (OneToOne com `Usuario`)
-- [ ] Implementar camadas e endpoints
-- [ ] Incluir rotas no `PessoasInstitucionais/urls.py`
-- [ ] Implementar testes em `tests/`
+- [x] Criar estrutura física do app
+- [x] Criar `apps.py` com `name = 'PessoasInstitucionais.terceirizados'`
+- [x] Registrar em `PROJECT_APPS`
+- [x] Implementar `models.py` — model `Terceirizado` (OneToOne com `Usuario`)
+- [x] Implementar camadas e endpoints
+- [x] Incluir rotas no `PessoasInstitucionais/urls.py`
+- [x] Implementar testes em `tests/`
 
 ## Integração interna do domínio PessoasInstitucionais
 
-- [ ] Validar coerência entre os apps do módulo
-- [ ] Consolidar regra de elegibilidade do responsável de setor (integração com `Organizacional`)
-- [ ] Revisar testes de integração
+- [x] Validar coerência entre os apps do módulo
+- [x] Consolidar regra de elegibilidade do responsável de setor (integração com `Organizacional`)
+- [x] Revisar testes de integração
 
 ---
 
