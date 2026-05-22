@@ -691,6 +691,12 @@ Veja exemplo em `Auth.auth.serializers` com `LoginInputSerializer` e `LoginRespo
 
 O projeto **inclui testes** como parte da implementação normal. Cada app interno deve conter um diretório `tests/` com testes unitários e de integração relevantes.
 
+**Padrão de Testes OBRIGATÓRIO:**
+- Todos as classes de teste (tanto de models/business quanto de views/APIs) devem obrigatoriamente herdar de `rest_framework.test.APITestCase`.
+- **NÃO** utilize `django.test.TestCase` nem o formato puro de funções/fixtures do `pytest` (`@pytest.mark.django_db` em classes/funções). A herança de `APITestCase` já cobre a transação do banco.
+- Mantenha a criação de dados para teste (usuários, perfis, tokens) em funções utilitárias ou `setUp`, seguindo o padrão já estabelecido no domínio `Identidade` e `Organizacional` (ex: `criar_usuario_comum()`, `obter_tokens()`).
+- Para testes de API, o cliente em `self.client` já vem do DRF. Configure tokens ou use `force_authenticate` quando necessário.
+
 Testes são exigidos para avançar entre milestones — veja `docs/planning/master-implementation-plan.md`.
 
 ## Deploy (Futuro)
