@@ -1,6 +1,6 @@
 # Instruções para AI Coding Agents - Base DRF App
 
-> **Última atualização:** 20 de maio de 2026
+> **Última atualização:** 21 de maio de 2026
 
 ATUALIZE O ARQUIVO .github/copilot-instructions.md sempre que houver mudanças significativas na estrutura, arquitetura ou convenções do projeto.
 
@@ -682,13 +682,16 @@ Veja exemplo em `Auth.auth.serializers` com `LoginInputSerializer` e `LoginRespo
 
 ## URLs e Estrutura de Rotas
 
-- Apps agrupam URLs: `path('usuarios/', include('Usuarios.urls'))`
-- Apps compostos (Usuarios, Auth) têm `urls.py` na raiz que inclui sub-apps
+- `Cortex/urls.py` inclui os módulos de domínio (`Identidade.urls`, `Organizacional.urls`)
+- O `urls.py` de cada módulo de domínio agrega as rotas dos apps internos
+- Apps internos **não** são incluídos diretamente em `Cortex/urls.py`
 - Documentação: `/api/schema/`, `/api/schema/swagger/`, `/api/schema/redoc/`
 
 ## Testing
 
-**Por enquanto o projeto não terá testes** - foco em implementação.
+O projeto **inclui testes** como parte da implementação normal. Cada app interno deve conter um diretório `tests/` com testes unitários e de integração relevantes.
+
+Testes são exigidos para avançar entre milestones — veja `docs/planning/master-implementation-plan.md`.
 
 ## Deploy (Futuro)
 
@@ -702,7 +705,7 @@ Veja exemplo em `Auth.auth.serializers` com `LoginInputSerializer` e `LoginRespo
 
 ## Modelos do Domínio (DER/Diagrama de Classes)
 
-O arquivo `Usuarios/models-teste.py` contém a tradução completa do DER para Django Models. Abaixo está o resumo dos modelos e seus relacionamentos:
+Abaixo está o resumo dos modelos, seus relacionamentos e o status de implementação atual. Os modelos marcados como **implementado** já possuem app interno criado e funcional.
 
 ### Autenticação
 
@@ -722,41 +725,51 @@ O arquivo `Usuarios/models-teste.py` contém a tradução completa do DER para D
 
 ### Modelos e Relacionamentos
 
-| Modelo           | Descrição                       | Relacionamentos                                           |
-| ---------------- | ------------------------------- | --------------------------------------------------------- |
-| **Campus**       | Campus da instituição           | 1:N com Usuario                                           |
-| **Cargo**        | Cargos na instituição           | Entidade independente                                     |
-| **Empresa**      | Empresa/Instituição externa     | 1:N com Terceirizado, 1:N com Estagiario                  |
-| **Curso**        | Cursos para estagiários         | 1:N com Estagiario                                        |
-| **Setor**        | Setor dentro do campus          | 1:N com Atividade, M:N com Usuario (via UsuarioSetor)     |
-| **Atividade**    | Atividade dentro de um setor    | 1:N com Funcao                                            |
-| **Funcao**       | Função dentro de uma atividade  | N:1 com Atividade                                         |
-| **Usuario**      | Classe base central (login CPF) | Herança para todos os tipos, 1:N com Contato/Endereco/etc |
-| **UsuarioSetor** | Tabela associativa              | M:N entre Usuario e Setor (com e_responsavel, monitor)    |
-| **Contato**      | Email/telefone do usuário       | N:1 com Usuario                                           |
-| **Endereco**     | Endereço do usuário             | N:1 com Usuario                                           |
-| **Matricula**    | Carteirinha/matrícula           | N:1 com Usuario                                           |
-| **Servidor**     | Servidor público                | Herda de Usuario (OneToOne)                               |
-| **Terceirizado** | Funcionário terceirizado        | Herda de Usuario, N:1 com Empresa                         |
-| **Aluno**        | Aluno matriculado               | Herda de Usuario (OneToOne)                               |
-| **Estagiario**   | Estagiário                      | Herda de Usuario, N:1 com Empresa, N:1 com Curso          |
+| Modelo                 | Status          | App interno                                    | Relacionamentos                                           |
+| ---------------------- | --------------- | ---------------------------------------------- | --------------------------------------------------------- |
+| **Usuario**            | ✅ Implementado | `Identidade/usuarios/`                         | Classe base central (login CPF); 1:N com Contato/Endereco |
+| **Contato**            | ✅ Implementado | `Identidade/contatos/`                         | N:1 com Usuario                                           |
+| **Endereco**           | ✅ Implementado | `Identidade/enderecos/`                        | N:1 com Usuario                                           |
+| **Matricula**          | ✅ Implementado | `Identidade/matriculas/`                       | N:1 com Usuario                                           |
+| **Setor**              | ✅ Implementado | `Organizacional/setores/`                      | M:N com Usuario via SetorVinculo                          |
+| **Funcao**             | ✅ Implementado | `Organizacional/funcoes/`                      | Entidade independente; usada em SetorVinculo              |
+| **SetorVinculo**       | ✅ Implementado | `Organizacional/vinculos/`                     | N:1 com Usuario, N:1 com Setor, N:1 com Funcao            |
+| **Cargo**              | 🔜 Planejado    | `PessoasInstitucionais/cargos/`                | Entidade independente                                     |
+| **Servidor**           | 🔜 Planejado    | `PessoasInstitucionais/servidores/`            | OneToOne com Usuario, N:1 com Cargo                       |
+| **EmpresaInstituicao** | 🔜 Planejado    | `PessoasInstitucionais/empresas_instituicoes/` | 1:N com Terceirizado                                      |
+| **Terceirizado**       | 🔜 Planejado    | `PessoasInstitucionais/terceirizados/`         | OneToOne com Usuario, N:1 com EmpresaInstituicao          |
+| **Aluno**              | 🔜 Planejado    | `Academico/alunos/`                            | OneToOne com Usuario                                      |
+| **Curso**              | 🔜 Planejado    | `Academico/cursos/`                            | M:N com Aluno via AlunoCurso                              |
 
-### Apps Sugeridos (Ordem de Criação)
+### Apps Internos por Módulo de Domínio
 
-1. **campus** - Model: `Campus` (sem dependências)
-2. **cargos** - Model: `Cargo` (sem dependências)
-3. **empresas** - Models: `Empresa`, `Curso` (sem dependências — Curso é tabela auxiliar de Estagiário)
-4. **usuarios** - Model: `Usuario` (depende de campus)
-5. **contatos** - Model: `Contato` (depende de usuarios)
-6. **enderecos** - Model: `Endereco` (depende de usuarios)
-7. **matriculas** - Model: `Matricula` (depende de usuarios)
-8. **setores** - Model: `Setor` (sem dependências)
-9. **funcoes** - Model: `Funcao` (sem dependências)
-10. **vinculos** - Model: `SetorVinculo` (depende de usuarios, setores, funcoes)
-11. **servidores** - Model: `Servidor` (depende de usuarios)
-12. **alunos** - Model: `Aluno` (depende de usuarios)
-13. **terceirizados** - Model: `Terceirizado` (depende de usuarios, empresas)
-14. **estagiarios** - Model: `Estagiario` (depende de usuarios, empresas)
+A ordem de criação respeita as dependências entre domínios. Apps dentro do mesmo módulo seguem a ordem abaixo:
+
+**Módulo `Identidade/`** (Milestone 1 — em progresso):
+
+1. `Identidade/usuarios/` — Model: `Usuario` (base de autenticação; sem dependências externas)
+2. `Identidade/contatos/` — Model: `Contato` (depende de `usuarios`)
+3. `Identidade/enderecos/` — Model: `Endereco` (depende de `usuarios`)
+4. `Identidade/matriculas/` — Model: `Matricula` (depende de `usuarios`)
+
+**Módulo `Organizacional/`** (Milestone 2 — em progresso):
+
+5. `Organizacional/setores/` — Model: `Setor` (sem dependências externas)
+6. `Organizacional/funcoes/` — Model: `Funcao` (sem dependências externas)
+7. `Organizacional/vinculos/` — Model: `SetorVinculo` (depende de `usuarios`, `setores`, `funcoes`)
+
+**Módulo `PessoasInstitucionais/`** (Milestone 3 — planejado):
+
+8. `PessoasInstitucionais/cargos/` — Model: `Cargo` (sem dependências externas)
+9. `PessoasInstitucionais/servidores/` — Model: `Servidor` (depende de `usuarios`, `cargos`)
+10. `PessoasInstitucionais/empresas_instituicoes/` — Model: `EmpresaInstituicao` (sem dependências externas)
+11. `PessoasInstitucionais/terceirizados/` — Model: `Terceirizado` (depende de `usuarios`, `empresas_instituicoes`)
+
+**Módulo `Academico/`** (Milestone 4 — planejado):
+
+12. `Academico/alunos/` — Model: `Aluno` (depende de `usuarios`)
+13. `Academico/cursos/` — Model: `Curso` (sem dependências externas)
+14. `Academico/aluno_cursos/` — Model: `AlunoCurso` (depende de `alunos`, `cursos`)
 
 ### Choices Definidos
 
@@ -803,17 +816,16 @@ class Usuario(AbstractBaseUser, BasicModel):
     # ...
 ```
 
-### UsuarioSetor - Tabela Associativa
+### SetorVinculo — Tabela Associativa
+
+Representa o vínculo entre um usuário e um setor. A função desempenhada pelo usuário no setor (incluindo monitoria) é representada pelo FK `funcao`, não por booleanos.
 
 ```python
-class UsuarioSetor(BasicModel):
-    usuario = models.ForeignKey(Usuario, ...)
-    setor = models.ForeignKey(Setor, ...)
-    campus = models.ForeignKey(Campus, ...)
-    e_responsavel = models.BooleanField(default=False)
-    monitor = models.BooleanField(default=False)
-    data_entrada = models.DateField()
-    data_saida = models.DateField(null=True)
+class SetorVinculo(ModelHelperMixin, ModelBusinessMixin, BasicModel):
+    usuario = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, ...)
+    setor = models.ForeignKey('setores.Setor', on_delete=models.CASCADE, ...)
+    funcao = models.ForeignKey('funcoes.Funcao', on_delete=models.PROTECT, ...)
+    responsavel = models.BooleanField('Responsável', default=False)
 ```
 
 ### Criação de Usuários (Via Admin JSON)
@@ -980,9 +992,9 @@ Evitar:
 O campo `name` do `AppConfig` deve sempre refletir o caminho Python completo do app dentro do módulo:
 
 ```python
-class IdentidadeConfig(AppConfig):
-    name = 'Identidade.identidade'  # caminho completo: Módulo.app
-    verbose_name = 'Identidade'
+class UsuariosConfig(AppConfig):
+    name = 'Identidade.usuarios'  # caminho completo: Módulo.app
+    verbose_name = 'Usuários'
 ```
 
 O `label` (usado em `AUTH_USER_MODEL`, migrations e referencias de model) é derivado automaticamente do **último segmento** do `name` — não precisa ser declarado explicitamente, a menos que haja conflito de nomes entre apps.
@@ -1002,11 +1014,14 @@ from django.urls import path, include
 app_name = 'identidade'
 
 urlpatterns = [
-    path('', include('Identidade.identidade.urls')),
-    # quando houver mais apps no domínio:
-    # path('prefixo/', include('Identidade.outro_app.urls')),
+    path('', include('Identidade.usuarios.urls')),
+    path('', include('Identidade.contatos.urls')),
+    path('', include('Identidade.enderecos.urls')),
+    path('', include('Identidade.matriculas.urls')),
 ]
 ```
+
+Cada include pode receber um prefixo se houver convenção de rota, por exemplo `path('contatos/', include('Identidade.contatos.urls'))`. A estrutura real do projeto atual omite prefixos, deixando a responsabilidade para os `urls.py` de cada app.
 
 O app interno **não deve ter `app_name`** em seu `urls.py` — o namespace é gerenciado pelo módulo.
 
@@ -1026,10 +1041,14 @@ path('identidade/', include('Identidade.urls')),
 Identidade/                  ← módulo de domínio (PascalCase)
 ├── __init__.py              ← torna o diretório um pacote Python
 ├── urls.py                  ← agregador de rotas do módulo (app_name obrigatório)
-└── identidade/              ← app Django (minúsculo)
-    ├── __init__.py
-    ├── apps.py              ← name = 'Identidade.identidade'
-    ├── urls.py              ← sem app_name
+├── usuarios/                ← app Django (minúsculo)
+│   ├── __init__.py
+│   ├── apps.py              ← name = 'Identidade.usuarios'
+│   ├── urls.py              ← sem app_name
+│   └── ...
+├── contatos/
+│   └── ...
+└── enderecos/
     └── ...
 ```
 

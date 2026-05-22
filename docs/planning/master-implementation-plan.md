@@ -53,6 +53,10 @@ Etapa final de validação cruzada entre domínios, documentação e coerência 
 
 # Milestone 0 — Fundação técnica
 
+## Estado
+
+**Concluída**
+
 ## Objetivo
 
 Consolidar a base técnica do projeto para suportar os domínios reais do sistema.
@@ -75,6 +79,10 @@ A base técnica do projeto deve estar estável, segura e coerente com a arquitet
 ---
 
 # Milestone 1 — Domínio Identidade
+
+## Estado
+
+**Em andamento** — estrutura física e apps internos criados. Implementação e testes em progresso.
 
 ## Objetivo
 
@@ -138,6 +146,10 @@ O projeto passa a possuir o usuário real do sistema e sua base de identidade co
 
 # Milestone 2 — Domínio Organizacional
 
+## Estado
+
+**Em andamento** — estrutura física e apps internos criados. Implementação e testes em progresso.
+
 ## Objetivo
 
 Implementar o domínio `Organizacional`, responsável pela estrutura institucional e vínculos organizacionais.
@@ -196,6 +208,10 @@ O projeto passa a representar estrutura institucional, funções e vínculos org
 ---
 
 # Milestone 3 — Domínio PessoasInstitucionais
+
+## Estado
+
+**Planejado** — aguardando conclusão das Milestones 1 e 2.
 
 ## Objetivo
 
@@ -263,6 +279,10 @@ O projeto passa a representar formalmente servidores, terceirizados e estruturas
 
 # Milestone 4 — Domínio Acadêmico
 
+## Estado
+
+**Planejado** — aguardando conclusão das Milestones 1, 2 e 3.
+
 ## Objetivo
 
 Implementar o domínio `Academico`, responsável pelos perfis acadêmicos e vínculos com cursos.
@@ -317,6 +337,10 @@ O projeto passa a representar perfis acadêmicos e seus vínculos formais com cu
 ---
 
 # Milestone 5 — Integração e consolidação final
+
+## Estado
+
+**Planejado** — aguardando conclusão de todos os domínios.
 
 ## Objetivo
 

@@ -4,7 +4,7 @@
 
 Este documento organiza a implementação inicial do Cortex em etapas práticas, coerentes com:
 
-- a modularização por domínio;
+- a modularização por domínio com apps internos;
 - o ERD central;
 - os agregados e invariantes já definidos;
 - a arquitetura em camadas da base Django/DRF.
@@ -17,9 +17,11 @@ O objetivo é permitir uma execução incremental, previsível e consistente, ev
 
 1. Implementar primeiro o que serve de base para os demais domínios.
 2. Criar estrutura mínima por domínio antes de expandir features.
-3. Consolidar models e regras críticas antes de avançar para endpoints mais completos.
-4. Evitar colocar regra de negócio diretamente em views.
-5. Priorizar consistência do domínio antes de refino de interface ou otimizações.
+3. Domínio é módulo agregador — apps internos representam models principais.
+4. Consolidar models e regras críticas antes de avançar para endpoints mais completos.
+5. Evitar colocar regra de negócio diretamente em views.
+6. Priorizar consistência do domínio antes de refino de interface ou otimizações.
+7. Testes fazem parte da implementação — cada app deve ter testes antes de avançar à próxima milestone.
 
 ---
 
@@ -27,328 +29,262 @@ O objetivo é permitir uma execução incremental, previsível e consistente, ev
 
 ## Estrutura e documentação
 
-- [ ] Garantir existência da pasta `docs/`
-- [ ] Criar `docs/diagrams/02-bounded-contexts.md`
-- [ ] Criar `docs/decisions/ADR-001-modularizacao-por-dominio.md`
-- [ ] Criar `docs/project/django-project-tree.md`
-- [ ] Criar `docs/diagrams/03-core-erd.md`
-- [ ] Criar `docs/diagrams/04-aggregates-and-invariants.md`
+- [x] Garantir existência da pasta `docs/`
+- [x] Criar `docs/diagrams/02-bounded-contexts.md`
+- [x] Criar `docs/decisions/ADR-001-modularizacao-por-dominio.md`
+- [x] Criar `docs/project/django-project-tree.md`
+- [x] Criar `docs/diagrams/03-core-erd.md`
+- [x] Criar `docs/diagrams/04-aggregates-and-invariants.md`
 
 ## Revisão da base técnica
 
-- [ ] Revisar `Cortex/settings.py`
-- [ ] Confirmar estratégia de `AUTH_USER_MODEL`
-- [ ] Confirmar que o login será por `cpf`
-- [ ] Revisar `AppCore` para garantir aderência ao novo domínio
-- [ ] Validar se a estrutura atual de autenticação está pronta para o model real de usuário
-- [ ] Revisar convenções de nomenclatura em português
-- [ ] Revisar se os apps novos entrarão em `PROJECT_APPS`
+- [x] Revisar `Cortex/settings.py`
+- [x] Confirmar estratégia de `AUTH_USER_MODEL`
+- [x] Confirmar que o login será por `cpf`
+- [x] Revisar `AppCore` para garantir aderência ao novo domínio
+- [x] Validar que a estrutura de autenticação está pronta para o model real de usuário
+- [x] Revisar convenções de nomenclatura em português
+- [x] Registrar apps internos em `PROJECT_APPS` no formato `Modulo.app`
 
 ## Decisão de implementação
 
-- [ ] Confirmar ordem de criação dos apps:
-  - [ ] `identidade`
-  - [ ] `organizacional`
-  - [ ] `pessoas_institucionais`
-  - [ ] `academico`
+- [x] Confirmar ordem de criação dos módulos de domínio:
+  - [x] `Identidade/` (Milestone 1)
+  - [x] `Organizacional/` (Milestone 2)
+  - [ ] `PessoasInstitucionais/` (Milestone 3)
+  - [ ] `Academico/` (Milestone 4)
 
 ---
 
-# Fase 1 — Criação física dos apps de domínio
+# Milestone 1 — Domínio Identidade
 
-## App `identidade`
+## Estrutura do módulo
 
-- [ ] Criar diretório `identidade/`
-- [ ] Criar `identidade/__init__.py`
-- [ ] Criar `identidade/apps.py`
-- [ ] Criar `identidade/models.py`
-- [ ] Criar `identidade/business.py`
-- [ ] Criar `identidade/rules.py`
-- [ ] Criar `identidade/helpers.py`
-- [ ] Criar `identidade/serializers.py`
-- [ ] Criar `identidade/views.py`
-- [ ] Criar `identidade/urls.py`
+- [x] Criar diretório `Identidade/`
+- [x] Criar `Identidade/__init__.py`
+- [x] Criar `Identidade/urls.py` (agregador do módulo, com `app_name = 'identidade'`)
+- [x] Registrar módulo em `Cortex/urls.py`: `path('identidade/', include('Identidade.urls'))`
 
-## App `organizacional`
+## App `Identidade/usuarios/`
 
-- [ ] Criar diretório `organizacional/`
-- [ ] Criar `organizacional/__init__.py`
-- [ ] Criar `organizacional/apps.py`
-- [ ] Criar `organizacional/models.py`
-- [ ] Criar `organizacional/business.py`
-- [ ] Criar `organizacional/rules.py`
-- [ ] Criar `organizacional/helpers.py`
-- [ ] Criar `organizacional/serializers.py`
-- [ ] Criar `organizacional/views.py`
-- [ ] Criar `organizacional/urls.py`
-- [ ] Criar `organizacional/choices.py` se necessário
+- [x] Criar estrutura física do app
+- [x] Criar `apps.py` com `name = 'Identidade.usuarios'`
+- [x] Registrar em `PROJECT_APPS`
+- [x] Implementar `models.py` — model `Usuario` com `USERNAME_FIELD = 'cpf'`
+- [x] Implementar `business.py`, `rules.py`, `helpers.py`
+- [x] Implementar `serializers.py`, `views.py`, `urls.py`
+- [x] Incluir rotas no `Identidade/urls.py`
+- [x] Implementar testes em `tests/`
 
-## App `pessoas_institucionais`
+## App `Identidade/contatos/`
 
-- [ ] Criar diretório `pessoas_institucionais/`
-- [ ] Criar `pessoas_institucionais/__init__.py`
-- [ ] Criar `pessoas_institucionais/apps.py`
-- [ ] Criar `pessoas_institucionais/models.py`
-- [ ] Criar `pessoas_institucionais/business.py`
-- [ ] Criar `pessoas_institucionais/rules.py`
-- [ ] Criar `pessoas_institucionais/helpers.py`
-- [ ] Criar `pessoas_institucionais/serializers.py`
-- [ ] Criar `pessoas_institucionais/views.py`
-- [ ] Criar `pessoas_institucionais/urls.py`
-- [ ] Criar `pessoas_institucionais/choices.py` se necessário
+- [x] Criar estrutura física do app
+- [x] Criar `apps.py` com `name = 'Identidade.contatos'`
+- [x] Registrar em `PROJECT_APPS`
+- [x] Implementar `models.py` — model `Contato`
+- [x] Implementar `business.py`, `serializers.py`, `views.py`, `urls.py`
+- [x] Incluir rotas no `Identidade/urls.py`
+- [x] Implementar testes em `tests/`
 
-## App `academico`
+## App `Identidade/enderecos/`
 
-- [ ] Criar diretório `academico/`
-- [ ] Criar `academico/__init__.py`
-- [ ] Criar `academico/apps.py`
-- [ ] Criar `academico/models.py`
-- [ ] Criar `academico/business.py`
-- [ ] Criar `academico/rules.py`
-- [ ] Criar `academico/helpers.py`
-- [ ] Criar `academico/serializers.py`
-- [ ] Criar `academico/views.py`
-- [ ] Criar `academico/urls.py`
-- [ ] Criar `academico/choices.py` se necessário
+- [x] Criar estrutura física do app
+- [x] Criar `apps.py` com `name = 'Identidade.enderecos'`
+- [x] Registrar em `PROJECT_APPS`
+- [x] Implementar `models.py` — model `Endereco`
+- [x] Implementar `serializers.py`, `views.py`, `urls.py`
+- [x] Incluir rotas no `Identidade/urls.py`
+- [x] Implementar testes em `tests/`
 
----
+## App `Identidade/matriculas/`
 
-# Fase 2 — Configuração do projeto para reconhecer os domínios
+- [x] Criar estrutura física do app
+- [x] Criar `apps.py` com `name = 'Identidade.matriculas'`
+- [x] Registrar em `PROJECT_APPS`
+- [x] Implementar `models.py` — model `Matricula`
+- [x] Implementar `business.py`, `rules.py`, `choices.py`, `serializers.py`, `views.py`, `urls.py`
+- [x] Incluir rotas no `Identidade/urls.py`
+- [x] Implementar testes em `tests/`
 
-## `settings.py`
+## Integração interna do domínio Identidade
 
-- [ ] Adicionar `identidade` em `PROJECT_APPS`
-- [ ] Adicionar `organizacional` em `PROJECT_APPS`
-- [ ] Adicionar `pessoas_institucionais` em `PROJECT_APPS`
-- [ ] Adicionar `academico` em `PROJECT_APPS`
-
-## `urls.py`
-
-- [ ] Incluir rotas de `identidade`
-- [ ] Incluir rotas de `organizacional`
-- [ ] Incluir rotas de `pessoas_institucionais`
-- [ ] Incluir rotas de `academico`
-
-## App de autenticação
-
-- [ ] Ajustar serializers de login para refletir login por CPF
-- [ ] Ajustar documentação Swagger do login
-- [ ] Validar integração com o `Usuario` real do domínio `identidade`
+- [ ] Validar coerência entre os 4 apps do módulo
+- [ ] Validar roteamento agregado em `Identidade/urls.py`
+- [ ] Garantir login por CPF integrado com `Auth`
+- [ ] Revisar testes de integração entre apps do domínio
 
 ---
 
-# Fase 3 — Implementação do domínio Identidade
+# Milestone 2 — Domínio Organizacional
 
-## Models
+## Estrutura do módulo
 
-- [ ] Implementar `Usuario`
-- [ ] Implementar manager de usuário
-- [ ] Definir `USERNAME_FIELD = 'cpf'`
-- [ ] Implementar `Contato`
-- [ ] Implementar `Endereco`
-- [ ] Implementar `Matricula`
+- [x] Criar diretório `Organizacional/`
+- [x] Criar `Organizacional/__init__.py`
+- [x] Criar `Organizacional/urls.py` (agregador do módulo, com `app_name = 'organizacional'`)
+- [x] Registrar módulo em `Cortex/urls.py`: `path('organizacional/', include('Organizacional.urls'))`
 
-## Regras de modelagem
+## App `Organizacional/setores/`
 
-- [ ] Garantir unicidade de `cpf`
-- [ ] Garantir relação correta entre `Usuario` e seus dados auxiliares
-- [ ] Decidir cardinalidade final de `Contato`
-- [ ] Decidir se `Endereco` será estritamente 1:1
+- [x] Criar estrutura física do app
+- [x] Criar `apps.py` com `name = 'Organizacional.setores'`
+- [x] Registrar em `PROJECT_APPS`
+- [x] Implementar `models.py` — model `Setor`
+- [x] Implementar `business.py`, `rules.py`, `helpers.py`, `serializers.py`, `views.py`, `urls.py`
+- [x] Incluir rotas no `Organizacional/urls.py`
+- [x] Implementar testes em `tests/`
 
-## Business / Rules / Helpers
+## App `Organizacional/funcoes/`
 
-- [ ] Criar regras de criação de usuário
-- [ ] Criar regras de atualização cadastral
-- [ ] Criar helpers de consulta por CPF
-- [ ] Criar regras para contatos, endereço e matrícula
+- [x] Criar estrutura física do app
+- [x] Criar `apps.py` com `name = 'Organizacional.funcoes'`
+- [x] Registrar em `PROJECT_APPS`
+- [x] Implementar `models.py` — model `Funcao` com atributo `e_gratificada`
+- [x] Implementar `business.py`, `rules.py`, `helpers.py`, `serializers.py`, `views.py`, `urls.py`
+- [x] Incluir rotas no `Organizacional/urls.py`
+- [x] Implementar testes em `tests/`
 
-## Serializers / Views
+## App `Organizacional/vinculos/`
 
-- [ ] Criar serializer de criação de usuário
-- [ ] Criar serializer de atualização
-- [ ] Criar serializers de resposta
-- [ ] Criar endpoints básicos de consulta e manutenção
-- [ ] Documentar endpoints com `drf-spectacular`
+- [x] Criar estrutura física do app
+- [x] Criar `apps.py` com `name = 'Organizacional.vinculos'`
+- [x] Registrar em `PROJECT_APPS`
+- [x] Implementar `models.py` — model `SetorVinculo` com FK para `Funcao` (monitoria via Funcao, não booleano)
+- [x] Implementar `business.py`, `rules.py`, `helpers.py`, `serializers.py`, `views.py`, `urls.py`
+- [x] Incluir rotas no `Organizacional/urls.py`
+- [x] Implementar testes em `tests/`
 
-## Migrations
+## Integração interna do domínio Organizacional
 
-- [ ] Gerar migrations de `identidade`
-- [ ] Revisar migrations antes de aplicar
-- [ ] Aplicar migrations
-
----
-
-# Fase 4 — Implementação do domínio Organizacional
-
-## Models
-
-- [ ] Implementar `Setor`
-- [ ] Implementar `Funcao`
-- [ ] Adicionar `e_gratificada` em `Funcao`
-- [ ] Implementar `SetorVinculo`
-
-## Regras de modelagem
-
-- [ ] Garantir função obrigatória em `SetorVinculo`
-- [ ] Garantir relação entre `Setor`, `Usuario` e `Funcao`
-- [ ] Remover qualquer ideia de `monitor` como booleano
-- [ ] Representar monitoria como `Funcao`
-
-## Regras de negócio
-
-- [ ] Garantir que setor tenha responsável
-- [ ] Garantir que responsável seja servidor
-- [ ] Garantir que troca de responsável não deixe setor inconsistente
-- [ ] Garantir que usuário possa possuir múltiplos vínculos setoriais
-
-## Business / Rules / Helpers
-
-- [ ] Criar regras para criação de setor
-- [ ] Criar regras para criação de vínculo
-- [ ] Criar regras para definição de responsável
-- [ ] Criar helpers de consulta de vínculos por setor
-- [ ] Criar helpers de consulta de vínculos por usuário
-
-## Serializers / Views
-
-- [ ] Criar serializers de setor
-- [ ] Criar serializers de função
-- [ ] Criar serializers de vínculo
-- [ ] Criar endpoints de cadastro e listagem
-- [ ] Criar endpoint para atribuição/troca de responsável
-- [ ] Documentar tudo com Swagger
-
-## Migrations
-
-- [ ] Gerar migrations de `organizacional`
-- [ ] Revisar migrations
-- [ ] Aplicar migrations
+- [ ] Validar coerência entre `setores`, `funcoes` e `vinculos`
+- [ ] Garantir que regras de responsável de setor estejam implementadas
+- [ ] Revisar testes de integração entre apps do domínio
+- [ ] Preparar integração futura com `PessoasInstitucionais` (regra de elegibilidade de responsável)
 
 ---
 
-# Fase 5 — Implementação do domínio PessoasInstitucionais
+# Milestone 3 — Domínio PessoasInstitucionais
 
-## Models
+## Estrutura do módulo
 
-- [ ] Implementar `Cargo`
-- [ ] Implementar `Servidor`
-- [ ] Implementar `EmpresaInstituicao`
-- [ ] Implementar `Terceirizado`
+- [ ] Criar diretório `PessoasInstitucionais/`
+- [ ] Criar `PessoasInstitucionais/__init__.py`
+- [ ] Criar `PessoasInstitucionais/urls.py` (agregador do módulo, com `app_name = 'pessoas_institucionais'`)
+- [ ] Registrar módulo em `Cortex/urls.py`
 
-## Regras de modelagem
+## App `PessoasInstitucionais/cargos/`
 
-- [ ] Garantir que `Cargo` seja exclusivo de `Servidor`
-- [ ] Garantir vínculo 1:1 entre `Usuario` e `Servidor`
-- [ ] Garantir vínculo 1:1 entre `Usuario` e `Terceirizado`
-- [ ] Garantir associação entre `Terceirizado` e `EmpresaInstituicao`
+- [ ] Criar estrutura física do app
+- [ ] Criar `apps.py` com `name = 'PessoasInstitucionais.cargos'`
+- [ ] Registrar em `PROJECT_APPS`
+- [ ] Implementar `models.py` — model `Cargo`
+- [ ] Implementar camadas e endpoints
+- [ ] Incluir rotas no `PessoasInstitucionais/urls.py`
+- [ ] Implementar testes em `tests/`
 
-## Regras de negócio
+## App `PessoasInstitucionais/servidores/`
 
-- [ ] Validar elegibilidade de servidor para responsabilidade de setor
-- [ ] Validar criação consistente de terceirizado com empresa
-- [ ] Definir se usuário pode acumular perfis diferentes no sistema
+- [ ] Criar estrutura física do app
+- [ ] Criar `apps.py` com `name = 'PessoasInstitucionais.servidores'`
+- [ ] Registrar em `PROJECT_APPS`
+- [ ] Implementar `models.py` — model `Servidor` (OneToOne com `Usuario`)
+- [ ] Implementar camadas e endpoints
+- [ ] Incluir rotas no `PessoasInstitucionais/urls.py`
+- [ ] Implementar testes em `tests/`
 
-## Business / Rules / Helpers
+## App `PessoasInstitucionais/empresas_instituicoes/`
 
-- [ ] Criar regras de criação de servidor
-- [ ] Criar regras de criação de terceirizado
-- [ ] Criar helpers de consulta por cargo
-- [ ] Criar helpers de consulta por empresa
+- [ ] Criar estrutura física do app
+- [ ] Criar `apps.py` com `name = 'PessoasInstitucionais.empresas_instituicoes'`
+- [ ] Registrar em `PROJECT_APPS`
+- [ ] Implementar `models.py` — model `EmpresaInstituicao`
+- [ ] Implementar camadas e endpoints
+- [ ] Incluir rotas no `PessoasInstitucionais/urls.py`
+- [ ] Implementar testes em `tests/`
 
-## Serializers / Views
+## App `PessoasInstitucionais/terceirizados/`
 
-- [ ] Criar serializers de cargo
-- [ ] Criar serializers de servidor
-- [ ] Criar serializers de empresa
-- [ ] Criar serializers de terceirizado
-- [ ] Criar endpoints básicos
-- [ ] Documentar endpoints com Swagger
+- [ ] Criar estrutura física do app
+- [ ] Criar `apps.py` com `name = 'PessoasInstitucionais.terceirizados'`
+- [ ] Registrar em `PROJECT_APPS`
+- [ ] Implementar `models.py` — model `Terceirizado` (OneToOne com `Usuario`)
+- [ ] Implementar camadas e endpoints
+- [ ] Incluir rotas no `PessoasInstitucionais/urls.py`
+- [ ] Implementar testes em `tests/`
 
-## Migrations
+## Integração interna do domínio PessoasInstitucionais
 
-- [ ] Gerar migrations de `pessoas_institucionais`
-- [ ] Revisar migrations
-- [ ] Aplicar migrations
-
----
-
-# Fase 6 — Implementação do domínio Academico
-
-## Models
-
-- [ ] Implementar `Aluno`
-- [ ] Implementar `Curso`
-- [ ] Implementar `AlunoCurso`
-
-## Regras de modelagem
-
-- [ ] Garantir vínculo 1:1 entre `Usuario` e `Aluno`
-- [ ] Garantir vínculo entre `Aluno` e `Curso` por `AlunoCurso`
-- [ ] Evitar modelar monitoria diretamente em `Aluno`
-
-## Regras de negócio
-
-- [ ] Validar criação de aluno a partir de usuário existente
-- [ ] Validar vínculos acadêmicos
-- [ ] Preservar histórico acadêmico por meio de `AlunoCurso`
-
-## Business / Rules / Helpers
-
-- [ ] Criar regras de criação de aluno
-- [ ] Criar regras de criação de curso
-- [ ] Criar regras de vínculo aluno-curso
-- [ ] Criar helpers de consulta de cursos por aluno
-- [ ] Criar helpers de consulta de alunos por curso
-
-## Serializers / Views
-
-- [ ] Criar serializers de aluno
-- [ ] Criar serializers de curso
-- [ ] Criar serializers de vínculo acadêmico
-- [ ] Criar endpoints básicos
-- [ ] Documentar endpoints com Swagger
-
-## Migrations
-
-- [ ] Gerar migrations de `academico`
-- [ ] Revisar migrations
-- [ ] Aplicar migrations
+- [ ] Validar coerência entre os apps do módulo
+- [ ] Consolidar regra de elegibilidade do responsável de setor (integração com `Organizacional`)
+- [ ] Revisar testes de integração
 
 ---
 
-# Fase 7 — Integração entre domínios
+# Milestone 4 — Domínio Acadêmico
 
-## Integração organizacional + perfis
+## Estrutura do módulo
+
+- [ ] Criar diretório `Academico/`
+- [ ] Criar `Academico/__init__.py`
+- [ ] Criar `Academico/urls.py` (agregador do módulo, com `app_name = 'academico'`)
+- [ ] Registrar módulo em `Cortex/urls.py`
+
+## App `Academico/alunos/`
+
+- [ ] Criar estrutura física do app
+- [ ] Criar `apps.py` com `name = 'Academico.alunos'`
+- [ ] Registrar em `PROJECT_APPS`
+- [ ] Implementar `models.py` — model `Aluno` (OneToOne com `Usuario`)
+- [ ] Implementar camadas e endpoints
+- [ ] Incluir rotas no `Academico/urls.py`
+- [ ] Implementar testes em `tests/`
+
+## App `Academico/cursos/`
+
+- [ ] Criar estrutura física do app
+- [ ] Criar `apps.py` com `name = 'Academico.cursos'`
+- [ ] Registrar em `PROJECT_APPS`
+- [ ] Implementar `models.py` — model `Curso`
+- [ ] Implementar camadas e endpoints
+- [ ] Incluir rotas no `Academico/urls.py`
+- [ ] Implementar testes em `tests/`
+
+## App `Academico/aluno_cursos/`
+
+- [ ] Criar estrutura física do app
+- [ ] Criar `apps.py` com `name = 'Academico.aluno_cursos'`
+- [ ] Registrar em `PROJECT_APPS`
+- [ ] Implementar `models.py` — model `AlunoCurso`
+- [ ] Implementar camadas e endpoints
+- [ ] Incluir rotas no `Academico/urls.py`
+- [ ] Implementar testes em `tests/`
+
+## Integração interna do domínio Acadêmico
+
+- [ ] Validar coerência entre os apps do módulo
+- [ ] Garantir alinhamento com `Identidade` (aluno deriva de Usuario)
+- [ ] Revisar testes de integração
+
+---
+
+# Milestone 5 — Integração e consolidação final
+
+## Integração entre domínios
 
 - [ ] Validar regra de responsável de setor usando perfil `Servidor`
 - [ ] Validar monitoria com base em `SetorVinculo + Funcao`
-
-## Integração identidade + autenticação
-
-- [ ] Garantir login por CPF
-- [ ] Garantir compatibilidade do serializer de login com `Usuario`
-
-## Integração acadêmica + organizacional
-
+- [ ] Garantir login por CPF integrado com `Usuario`
 - [ ] Garantir que aluno monitor seja tratado no domínio correto
-- [ ] Evitar duplicação de regras de monitoria
+- [ ] Evitar duplicação de regras de monitoria entre domínios
 
----
+## Refinamento documental
 
-# Fase 8 — Refinamento documental
-
-## Atualizações obrigatórias
-
-- [ ] Atualizar `docs/diagrams/03-core-erd.md` caso a modelagem mude
-- [ ] Atualizar `docs/diagrams/04-aggregates-and-invariants.md` caso as invariantes mudem
+- [ ] Atualizar `docs/diagrams/03-core-erd.md` caso a modelagem tenha mudado
+- [ ] Atualizar `docs/diagrams/04-aggregates-and-invariants.md` caso as invariantes tenham mudado
 - [ ] Atualizar `docs/decisions/ADR-001-modularizacao-por-dominio.md` se houver mudança arquitetural relevante
 - [ ] Atualizar `.github/copilot-instructions.md` quando houver mudança significativa na estrutura do projeto
 
----
-
-# Fase 9 — Validação funcional mínima
-
-## Cenários mínimos
+## Validação funcional mínima
 
 - [ ] Criar usuário com CPF
 - [ ] Criar servidor com cargo
@@ -380,11 +316,14 @@ O objetivo é permitir uma execução incremental, previsível e consistente, ev
 
 # Resumo executivo
 
-A implementação do Cortex deve seguir uma ordem orientada por domínio:
+A implementação do Cortex segue uma ordem orientada por domínio, com cada domínio organizado como módulo agregador contendo apps internos finos:
 
-1. `identidade`
-2. `organizacional`
-3. `pessoas_institucionais`
-4. `academico`
+| Milestone | Módulo de domínio        | Apps internos                                                    | Status       |
+| --------- | ------------------------ | ---------------------------------------------------------------- | ------------ |
+| 1         | `Identidade/`            | `usuarios`, `contatos`, `enderecos`, `matriculas`                | Em andamento |
+| 2         | `Organizacional/`        | `setores`, `funcoes`, `vinculos`                                 | Em andamento |
+| 3         | `PessoasInstitucionais/` | `cargos`, `servidores`, `empresas_instituicoes`, `terceirizados` | Planejado    |
+| 4         | `Academico/`             | `alunos`, `cursos`, `aluno_cursos`                               | Planejado    |
+| 5         | —                        | Integração, consolidação e validação final                       | Planejado    |
 
 Esse checklist transforma a visão arquitetural já definida em uma sequência prática de execução, reduzindo risco de retrabalho e ajudando a preservar a consistência do domínio desde o início.
