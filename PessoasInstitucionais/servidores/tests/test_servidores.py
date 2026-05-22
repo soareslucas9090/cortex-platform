@@ -1,10 +1,21 @@
+from django.urls import reverse
+from rest_framework import status
 from rest_framework.test import APITestCase
+from rest_framework_simplejwt.tokens import RefreshToken
 
 from AppCore.core.exceptions.exceptions import BusinessRuleException, NotFoundException
 from PessoasInstitucionais.cargos.models import Cargo
 from PessoasInstitucionais.servidores.choices import CategoriaServidor
 from PessoasInstitucionais.servidores.models import Servidor
 from Identidade.usuarios.models import Usuario
+
+
+def obter_token(usuario):
+    return str(RefreshToken.for_user(usuario).access_token)
+
+
+def criar_admin(cpf='00000000001', nome='Admin'):
+    return Usuario.objects.create_superuser(cpf=cpf, password='Senha@123', nome=nome)
 
 
 class ServidorBusinessTestCase(APITestCase):
@@ -149,3 +160,62 @@ class ServidorBusinessTestCase(APITestCase):
             categoria=CategoriaServidor.DOCENTE,
         )
         self.assertEqual(str(servidor), 'João da Silva - Professor')
+
+
+class ServidoresAPITestCase(APITestCase):
+
+    def setUp(self):
+        self.admin = criar_admin()
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {obter_token(self.admin)}')
+        self.cargo = Cargo.objects.create(nome='Professor')
+        self.usuario = Usuario.objects.create_user(
+            cpf='12345678901',
+            password='Teste@1234',
+            nome='João da Silva',
+        )
+        self.servidor = Servidor().business.criar_servidor(
+            usuario_pk=self.usuario.pk,
+            cargo_pk=self.cargo.pk,
+            categoria=CategoriaServidor.DOCENTE,
+        )
+
+    def test_listar_servidores(self):
+        url = reverse('pessoas-institucionais:servidor-list')
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data['dados']), 1)
+
+    def test_criar_servidor(self):
+        outro_usuario = Usuario.objects.create_user(
+            cpf='98765432100',
+            password='Teste@1234',
+            nome='Maria Souza',
+        )
+        url = reverse('pessoas-institucionais:servidor-list')
+        data = {
+            'usuario_pk': outro_usuario.pk,
+            'cargo_pk': self.cargo.pk,
+            'categoria': CategoriaServidor.TECNICO_ADMINISTRATIVO,
+        }
+        response = self.client.post(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+    def test_detalhar_servidor(self):
+        url = reverse('pessoas-institucionais:servidor-detail', kwargs={'pk': self.servidor.pk})
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    def test_desativar_servidor(self):
+        url = reverse('pessoas-institucionais:servidor-desativar', kwargs={'pk': self.servidor.pk})
+        response = self.client.post(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.servidor.refresh_from_db()
+        self.assertFalse(self.servidor.ativo)
+
+    def test_reativar_servidor(self):
+        self.servidor.business.desativar()
+        url = reverse('pessoas-institucionais:servidor-reativar', kwargs={'pk': self.servidor.pk})
+        response = self.client.post(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.servidor.refresh_from_db()
+        self.assertTrue(self.servidor.ativo)

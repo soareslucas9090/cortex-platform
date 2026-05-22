@@ -58,6 +58,13 @@ Aplicar a cada arquivo gerado ou modificado **antes de considerar a implementaç
 - [ ] `apps.py` usa `name = 'Modulo.app'` (caminho completo)
 - [ ] O módulo tem `__init__.py` e `urls.py` com `app_name`
 
+### URLs
+
+- [ ] Todo `path()` tem `name=` declarado — **sem exceção**
+- [ ] Padrão: `<recurso>-list` (raiz), `<recurso>-detail` (com pk), `<recurso>-<verbo>` (ações)
+- [ ] Sub-apps **não** declaram `app_name` — namespace gerenciado pelo domínio pai
+- [ ] Testes de API usam `reverse('<namespace>:<name>')`, nunca paths hardcoded
+
 ---
 
 ## Componentes do AppCore
@@ -598,9 +605,8 @@ from django.urls import path
 from . import views
 
 urlpatterns = [
-    path('', views.ListarProdutosView.as_view(), name='produtos-listar'),
-    path('criar/', views.CriarProdutoView.as_view(), name='produtos-criar'),
-    path('<int:pk>/', views.ProdutoView.as_view(), name='produto-detalhe'),
+    path('', views.ListarProdutosView.as_view(), name='produto-list'),
+    path('<int:pk>/', views.ProdutoView.as_view(), name='produto-detail'),
     path('<int:pk>/atualizar/', views.AtualizarProdutoView.as_view(), name='produto-atualizar'),
     path('<int:pk>/excluir/', views.ExcluirProdutoView.as_view(), name='produto-excluir'),
 ]
@@ -608,6 +614,16 @@ urlpatterns = [
 # No urls.py principal (Cortex/urls.py)
 # path('produtos/', include('produtos.urls')),
 ```
+
+> **Regras obrigatórias para URLs:**
+> - Todo `path()` deve ter `name=` declarado — sem exceção.
+> - Padrão de nomenclatura: `<recurso>-<ação>` no singular, em kebab-case.
+>   - Listagem/criação (rota raiz): `<recurso>-list`
+>   - Detalhe/atualização (rota com pk): `<recurso>-detail`
+>   - Ações específicas: `<recurso>-<verbo>` (ex: `produto-desativar`, `produto-reativar`)
+> - Sub-apps **não** devem declarar `app_name` — o namespace é gerenciado exclusivamente pelo `urls.py` do domínio pai (que tem `app_name`).
+> - Nos testes, sempre use `reverse('<namespace>:<name>')` ao invés de hardcoded paths.
+
 
 ---
 

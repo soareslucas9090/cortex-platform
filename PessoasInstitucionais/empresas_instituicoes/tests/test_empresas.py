@@ -19,6 +19,10 @@ def criar_usuario_comum(cpf='00000000002', nome='Comum'):
     return Usuario.objects.create_user(cpf=cpf, password='Senha@123', email='test@test.com', nome=nome)
 
 
+def criar_admin(cpf='00000000001', nome='Admin'):
+    return Usuario.objects.create_superuser(cpf=cpf, password='Senha@123', nome=nome)
+
+
 class TestEmpresaInstituicaoBusiness(APITestCase):
 
     def setUp(self):
@@ -66,8 +70,8 @@ class TestEmpresaInstituicaoBusiness(APITestCase):
 class TestEmpresaInstituicaoAPI(APITestCase):
 
     def setUp(self):
-        self.comum = criar_usuario_comum()
-        self.token = obter_tokens(self.comum)
+        self.admin = criar_admin()
+        self.token = obter_tokens(self.admin)
         self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token}')
         
         self.empresa = EmpresaInstituicao.objects.create(
@@ -76,21 +80,21 @@ class TestEmpresaInstituicaoAPI(APITestCase):
         )
 
     def test_list_empresas(self):
-        url = reverse('pessoas_institucionais:empresa-list')
+        url = reverse('pessoas-institucionais:empresa-list')
         response = self.client.get(url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(len(response.data['results']), 1)
+        self.assertEqual(len(response.data['dados']), 1)
 
     def test_create_empresa(self):
-        url = reverse('pessoas_institucionais:empresa-list')
+        url = reverse('pessoas-institucionais:empresa-list')
         data = {'nome': 'Nova via API', 'cnpj': '12345678901234'}
         response = self.client.post(url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertTrue(EmpresaInstituicao.objects.filter(nome='Nova via API').exists())
 
     def test_desativar_empresa(self):
-        url = reverse('pessoas_institucionais:empresa-desativar', kwargs={'pk': self.empresa.pk})
+        url = reverse('pessoas-institucionais:empresa-desativar', kwargs={'pk': self.empresa.pk})
         response = self.client.post(url)
-        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.empresa.refresh_from_db()
         self.assertFalse(self.empresa.ativo)

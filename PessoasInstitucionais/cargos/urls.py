@@ -10,11 +10,9 @@ from .views import (
     ReativarCargoView,
 )
 
-app_name = 'cargos'
-
 urlpatterns = [
-    path('', roteador_por_metodo(GET=ListarCargosView, POST=CriarCargoView)),
-    path('<int:pk>/', roteador_por_metodo(GET=DetalharCargoView, PATCH=AtualizarCargoView)),
-    path('<int:pk>/desativar/', roteador_por_metodo(POST=DesativarCargoView)),
-    path('<int:pk>/reativar/', roteador_por_metodo(POST=ReativarCargoView)),
+    path('', roteador_por_metodo(GET=ListarCargosView, POST=CriarCargoView), name='cargo-list'),
+    path('<int:pk>/', roteador_por_metodo(GET=DetalharCargoView, PATCH=AtualizarCargoView), name='cargo-detail'),
+    path('<int:pk>/desativar/', roteador_por_metodo(POST=DesativarCargoView), name='cargo-desativar'),
+    path('<int:pk>/reativar/', roteador_por_metodo(POST=ReativarCargoView), name='cargo-reativar'),
 ]
