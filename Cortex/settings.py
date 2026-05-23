@@ -119,6 +119,7 @@ PROJECT_APPS = [
     'PessoasInstitucionais.empresas_instituicoes',
     'PessoasInstitucionais.servidores',
     'PessoasInstitucionais.terceirizados',
+    'Academico.cursos',
 ]
 
 INSTALLED_APPS = DEFAULT_ROOT_APPS + AUTH_APPS + PROJECT_APPS

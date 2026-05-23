@@ -14,4 +14,5 @@ urlpatterns = [
     path('identidade/', include('Identidade.urls')),
     path('organizacional/', include('Organizacional.urls')),
     path('pessoas-institucionais/', include('PessoasInstitucionais.urls')),
+    path('academico/', include('Academico.urls')),
 ] + debug_toolbar_urls()
