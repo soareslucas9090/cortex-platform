@@ -1,8 +1,13 @@
 # Instruções para AI Coding Agents - Base DRF App
 
-> **Última atualização:** 21 de maio de 2026
+> **Última atualização:** 23 de maio de 2026
+
+> [!IMPORTANT]
+> **Sincronização entre Antigravity e GitHub Copilot:**
+> Este arquivo de regras gerais do projeto (e suas diretrizes por domínio localizadas na pasta `./rules/`) deve ser mantido sempre sincronizado com as configurações de instruções do GitHub Copilot e do Antigravity, garantindo consistência no comportamento de ambos os assistentes de codificação.
 
 ATUALIZE O ARQUIVO docs/antigravity/project-rules.md sempre que houver mudanças significativas na estrutura, arquitetura ou convenções do projeto.
+
 
 ## Arquitetura em Camadas
 
@@ -477,14 +482,25 @@ AppNome/
 
 - **Aspas simples**: SEMPRE use `'texto'` (nunca aspas duplas)
 - **Imports**: Organizados (stdlib → Django → DRF → AppCore → apps locais)
-- **Nomes**:
+- **Nomenclatura Geral**:
   - Módulos principais: PascalCase (`AppCore`, `Cortex`)
   - Apps: snake_case minúsculo (`usuarios`, `auth`)
   - Arquivos: snake_case (`business.py`, `helpers.py`)
-- **Nomenclatura em Português**:
-  - Variáveis e funções: português (`mensagem_sucesso`, `obter_usuario_dono()`)
+- **Convenção de Nomenclatura para Métodos, Funções e Variáveis**:
+  - Não misture inglês e português em nomes de métodos, funções e variáveis do domínio.
+  - Prefira nomes em português para métodos e funções implementados no projeto (ex: `obter_contatos()`, `criar_usuario()`, `atualizar_dados()`).
+  - Evite misturas como `get_contatos()`, `create_usuario()`, `update_dados()`.
+  - Use inglês apenas quando for exigido por sobrescrita de framework, convenção do Django/DRF/Python ou interface externa.
+  - **Exceções aceitáveis**:
+    - `get_queryset`
+    - `get_serializer_class`
+    - `validate`
+    - `create`
+    - `update`
+- **Nomenclatura em Português (Pastas e Utils)**:
   - Estruturas de pastas: `AppCore/common/textos/` (emails, mensagens)
   - Funções utilitárias: `enviar_email_simples()` (não `send_simple_email()`)
+
 
 ### Localização
 
@@ -713,13 +729,16 @@ Testes são exigidos para avançar entre milestones — veja `docs/planning/mast
 
 Abaixo está o resumo dos modelos, seus relacionamentos e o status de implementação atual. Os modelos marcados como **implementado** já possuem app interno criado e funcional.
 
-### Autenticação
+### Diretrizes por Domínio (Complementos)
 
-- **Login por CPF** (não email)
-- **Criação de usuários**: Via JSON por admin (individual ou em lote) ou por portal Admin
-- **Não há auto-cadastro**: Usuários são criados por administradores
+As regras específicas, escolhas de campos (choices), e detalhes de modelagem física de cada domínio foram movidos para arquivos dedicados na pasta `./rules/`. Consulte-os para guias detalhados de cada módulo:
 
-### Hierarquia de Herança
+- 👤 **Identidade**: [identidade.md](./rules/identidade.md) (Controles de Usuário, Autenticação, Contatos, Endereços, Matrículas)
+- 🏢 **Organizacional**: [organizacional.md](./rules/organizacional.md) (Setores, Funções, Vínculos, Tabela Associativa)
+- 💼 **Pessoas Institucionais**: [pessoas-institucionais.md](./rules/pessoas-institucionais.md) (Servidores, Cargos, Terceirizados, Jornada de Trabalho)
+- 🎓 **Acadêmico**: [academico.md](./rules/academico.md) (Alunos, Cursos, Matrículas Acadêmicas)
+
+### Hierarquia de Herança Geral
 
 ```
                     Usuario
@@ -747,125 +766,37 @@ Abaixo está o resumo dos modelos, seus relacionamentos e o status de implementa
 | **Aluno**              | 🔜 Planejado    | `Academico/alunos/`                            | OneToOne com Usuario                                      |
 | **Curso**              | 🔜 Planejado    | `Academico/cursos/`                            | M:N com Aluno via AlunoCurso                              |
 
-### Apps Internos por Módulo de Domínio
+### Módulos de Domínio e Milestones
 
 A ordem de criação respeita as dependências entre domínios. Apps dentro do mesmo módulo seguem a ordem abaixo:
 
-**Módulo `Identidade/`** (Milestone 1 — em progresso):
+**Módulo [Identidade](./rules/identidade.md)** (Milestone 1 — em progresso):
 
 1. `Identidade/usuarios/` — Model: `Usuario` (base de autenticação; sem dependências externas)
 2. `Identidade/contatos/` — Model: `Contato` (depende de `usuarios`)
 3. `Identidade/enderecos/` — Model: `Endereco` (depende de `usuarios`)
 4. `Identidade/matriculas/` — Model: `Matricula` (depende de `usuarios`)
 
-**Módulo `Organizacional/`** (Milestone 2 — em progresso):
+**Módulo [Organizacional](./rules/organizacional.md)** (Milestone 2 — em progresso):
 
 5. `Organizacional/setores/` — Model: `Setor` (sem dependências externas)
 6. `Organizacional/funcoes/` — Model: `Funcao` (sem dependências externas)
 7. `Organizacional/vinculos/` — Model: `SetorVinculo` (depende de `usuarios`, `setores`, `funcoes`)
 
-**Módulo `PessoasInstitucionais/`** (Milestone 3 — planejado):
+**Módulo [Pessoas Institucionais](./rules/pessoas-institucionais.md)** (Milestone 3 — planejado):
 
 8. `PessoasInstitucionais/cargos/` — Model: `Cargo` (sem dependências externas)
 9. `PessoasInstitucionais/servidores/` — Model: `Servidor` (depende de `usuarios`, `cargos`)
 10. `PessoasInstitucionais/empresas_instituicoes/` — Model: `EmpresaInstituicao` (sem dependências externas)
 11. `PessoasInstitucionais/terceirizados/` — Model: `Terceirizado` (depende de `usuarios`, `empresas_instituicoes`)
 
-**Módulo `Academico/`** (Milestone 4 — planejado):
+**Módulo [Acadêmico](./rules/academico.md)** (Milestone 4 — planejado):
 
 12. `Academico/alunos/` — Model: `Aluno` (depende de `usuarios`)
 13. `Academico/cursos/` — Model: `Curso` (sem dependências externas)
 14. `Academico/aluno_cursos/` — Model: `AlunoCurso` (depende de `alunos`, `cursos`)
 
-### Choices Definidos
-
-- **Status genérico**: `STATUS_ATIVO`, `STATUS_INATIVO`
-- **Situação do Aluno**: `MATRICULADO`, `TRANCADO`, `FORMADO`, `DESISTENTE`, `TRANSFERIDO`
-- **Turno**: `MATUTINO`, `VESPERTINO`, `NOTURNO`, `INTEGRAL`
-- **Forma de Ingresso**: `VESTIBULAR`, `ENEM`, `TRANSFERENCIA`, `REINGRESSO`
-- **Jornada de Trabalho Servidor**: `20`, `40`, `0` (Dedicação Exclusiva)
-
-### Padrão de Herança nos Models
-
-Usamos **OneToOneField com primary_key=True** para herança:
-
-```python
-class Servidor(BasicModel):
-    usuario = models.OneToOneField(
-        Usuario,
-        on_delete=models.CASCADE,
-        related_name='servidor',
-        primary_key=True,
-    )
-    # campos específicos do servidor...
-
-class Aluno(BasicModel):
-    usuario = models.OneToOneField(
-        Usuario,
-        on_delete=models.CASCADE,
-        related_name='aluno',
-        primary_key=True,
-    )
-    # campos específicos do aluno...
-```
-
-### Usuario - Configuração de Autenticação
-
-```python
-class Usuario(AbstractBaseUser, BasicModel):
-    USERNAME_FIELD = 'cpf'
-    REQUIRED_FIELDS = ['nome']
-
-    # campos...
-    cpf = models.CharField('CPF', max_length=11, unique=True)
-    nome = models.CharField('Nome', max_length=255)
-    # ...
-```
-
-### SetorVinculo — Tabela Associativa
-
-Representa o vínculo entre um usuário e um setor. A função desempenhada pelo usuário no setor (incluindo monitoria) é representada pelo FK `funcao`, não por booleanos.
-
-```python
-class SetorVinculo(ModelHelperMixin, ModelBusinessMixin, BasicModel):
-    usuario = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, ...)
-    setor = models.ForeignKey('setores.Setor', on_delete=models.CASCADE, ...)
-    funcao = models.ForeignKey('funcoes.Funcao', on_delete=models.PROTECT, ...)
-    responsavel = models.BooleanField('Responsável', default=False)
-```
-
-### Criação de Usuários (Via Admin JSON)
-
-- Usuários são criados por administradores via endpoint específico
-- Suporte a criação individual ou em lote via JSON
-- Não há fluxo de auto-cadastro com envio de email
-
-### Convenção de nomenclatura para métodos e funções
-
-- Não misture inglês e português em nomes de métodos, funções e variáveis do domínio.
-- Prefira nomes em português para métodos e funções implementados no projeto.
-- Use inglês apenas quando isso for exigido por sobrescrita de framework, convenção do Django/DRF/Python ou interface externa.
-
-**Exemplos corretos:**
-
-- `obter_contatos()`
-- `criar_usuario()`
-- `atualizar_dados()`
-
-**Evitar:**
-
-- `get_contatos()`
-- `create_usuario()`
-- `update_dados()`
-
-**Exceções aceitáveis:**
-
-- métodos exigidos por sobrescrita ou convenção, como:
-  - `get_queryset`
-  - `get_serializer_class`
-  - `validate`
-  - `create`
-  - `update``
+---
 
 ## Estrutura física do projeto
 
@@ -936,54 +867,6 @@ usuarios/
 - O `urls.py` do módulo de domínio é o agregador das rotas dos apps internos.
 - O `PROJECT_APPS` no `settings.py` deve registrar os apps internos.
 - O `AUTH_USER_MODEL` deve apontar para o app interno que contém o model real do usuário.
-
-### Arquitetura em camadas
-
-Cada app deve seguir a arquitetura em camadas do projeto.
-
-Em regra, um app interno deve conter:
-
-- `models.py`
-- `business.py`
-- `rules.py`
-- `helpers.py`
-- `serializers.py`
-- `views.py`
-- `urls.py`
-- `tests.py`
-
-Arquivos opcionais:
-
-- `choices.py`
-- `state.py`
-
-### Views leves
-
-As views devem continuar extremamente leves:
-
-- recebem dados;
-- delegam para o Business;
-- retornam a resposta.
-
-Views não devem conter lógica de negócio, queries ORM diretas, nem implementação manual de fluxo já coberto pelas BasicViews.
-
-### Convenção de nomenclatura
-
-- Não misture inglês e português em nomes de métodos, funções e variáveis do domínio.
-- Prefira português para código do domínio.
-- Use inglês apenas em sobrescritas obrigatórias de framework, convenções do Django/DRF/Python ou interfaces externas.
-
-Exemplos corretos:
-
-- `obter_contatos()`
-- `criar_usuario()`
-- `atualizar_dados()`
-
-Evitar:
-
-- `get_contatos()`
-- `create_usuario()`
-- `update_dados()`
 
 ### Regras práticas
 
@@ -1058,29 +941,3 @@ Identidade/                  ← módulo de domínio (PascalCase)
     └── ...
 ```
 
-### Convenção de nomenclatura para métodos e funções
-
-- Não misture inglês e português em nomes de métodos, funções e variáveis do domínio.
-- Prefira nomes em português para métodos e funções implementados no projeto.
-- Use inglês apenas quando isso for exigido por sobrescrita de framework, convenção do Django/DRF/Python ou interface externa.
-
-**Exemplos corretos:**
-
-- `obter_contatos()`
-- `criar_usuario()`
-- `atualizar_dados()`
-
-**Evitar:**
-
-- `get_contatos()`
-- `create_usuario()`
-- `update_dados()`
-
-**Exceções aceitáveis:**
-
-- métodos exigidos por sobrescrita ou convenção, como:
-  - `get_queryset`
-  - `get_serializer_class`
-  - `validate`
-  - `create`
-  - `update`
