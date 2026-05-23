@@ -1,8 +1,19 @@
 # Instruções para AI Coding Agents - Base DRF App
 
-> **Última atualização:** 21 de maio de 2026
+> **Última atualização:** 23 de maio de 2026
+
+> [!IMPORTANT]
+> **Sincronização com a documentação do projeto:**
+> A pasta `docs/` é a referência obrigatória para qualquer decisão de arquitetura, domínio, regras de negócio, testes, convenções ou implementação. Antes de alterar código ou instruções, consulte `docs/antigravity/project-rules.md` e `docs/antigravity/rules/*.md`. Este arquivo deve permanecer sincronizado com essa documentação.
 
 ATUALIZE O ARQUIVO .github/copilot-instructions.md sempre que houver mudanças significativas na estrutura, arquitetura ou convenções do projeto.
+
+## Fontes de Verdade
+
+- `docs/` sempre tem prioridade como documentação de referência do projeto.
+- `docs/antigravity/project-rules.md` consolida as regras gerais de arquitetura e comportamento.
+- `docs/antigravity/rules/*.md` consolida as regras específicas por domínio.
+- Se houver divergência entre este arquivo e a documentação em `docs/`, a documentação deve ser considerada a base a ser refletida na próxima atualização.
 
 ## Arquitetura em Camadas
 
@@ -207,6 +218,16 @@ class MinhaModel(BasicModel):
 
 - User models: herde de `BaseManagerUser` (combina `BaseUserManager` e `BaseManager`)
 - Todos os managers herdam de `BaseManager`: lançam `NotFoundException` e filtram `ativo=True` por padrão no `.filter()` _(`.all()` não é sobrescrito — comportamento intencional)_
+
+## Instruções Específicas por Domínio
+
+- As regras detalhadas por domínio ficam em `.github/instructions/*.instructions.md`.
+- Cada instrução deve ter escopo explícito e refletir o conteúdo de `docs/antigravity/rules/*.md`.
+- Domínios atualmente separados:
+  - Identidade
+  - Organizacional
+  - PessoasInstitucionais
+  - Acadêmico
 
 ## Autenticação
 
