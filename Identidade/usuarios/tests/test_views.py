@@ -32,7 +32,7 @@ class ListarUsuariosViewTest(APITestCase):
         self.usuario_comum = criar_usuario('00000000002', nome='Comum')
         self.token_admin = obter_tokens(self.admin)
         self.token_comum = obter_tokens(self.usuario_comum)
-        self.url = reverse('identidade:usuarios')
+        self.url = reverse('identidade:usuario-list')
 
     def test_admin_lista_usuarios_com_sucesso(self):
         self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token_admin}')
@@ -81,7 +81,7 @@ class CriarUsuarioViewTest(APITestCase):
         self.usuario_comum = criar_usuario('00000000002', nome='Comum')
         self.token_admin = obter_tokens(self.admin)
         self.token_comum = obter_tokens(self.usuario_comum)
-        self.url = reverse('identidade:usuarios')
+        self.url = reverse('identidade:usuario-list')
         self.payload_valido = {
             'cpf': '11111111111',
             'nome': 'Novo Usuário',
@@ -132,7 +132,7 @@ class DetalheUsuarioViewTest(APITestCase):
         self.token_admin = obter_tokens(self.admin)
         self.token_usuario = obter_tokens(self.usuario)
         self.token_outro = obter_tokens(self.outro)
-        self.url = reverse('identidade:usuario-detalhe', kwargs={'pk': self.usuario.pk})
+        self.url = reverse('identidade:usuario-detail', kwargs={'pk': self.usuario.pk})
 
     def test_admin_obtem_qualquer_usuario(self):
         self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token_admin}')
@@ -156,7 +156,7 @@ class DetalheUsuarioViewTest(APITestCase):
 
     def test_usuario_inexistente_retorna_404(self):
         self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token_admin}')
-        url = reverse('identidade:usuario-detalhe', kwargs={'pk': 99999})
+        url = reverse('identidade:usuario-detail', kwargs={'pk': 99999})
         resposta = self.client.get(url)
         self.assertEqual(resposta.status_code, status.HTTP_404_NOT_FOUND)
 
@@ -170,7 +170,7 @@ class AtualizarUsuarioViewTest(APITestCase):
         self.token_admin = obter_tokens(self.admin)
         self.token_usuario = obter_tokens(self.usuario)
         self.token_outro = obter_tokens(self.outro)
-        self.url = reverse('identidade:usuario-detalhe', kwargs={'pk': self.usuario.pk})
+        self.url = reverse('identidade:usuario-detail', kwargs={'pk': self.usuario.pk})
 
     def test_admin_atualiza_usuario(self):
         self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token_admin}')
