@@ -269,18 +269,41 @@ def roteador_por_metodo(**metodo_para_view):
         path('recursos/<int:pk>/', roteador_por_metodo(GET=DetalheView, PATCH=AtualizarView))
     """
     from django.http import HttpResponseNotAllowed
+    from rest_framework.generics import GenericAPIView
+    import functools
 
     metodo_para_view_upper = {k.upper(): v for k, v in metodo_para_view.items()}
     metodos_permitidos = list(metodo_para_view_upper.keys())
 
-    def dispatcher(request, *args, **kwargs):
-        method = request.method.upper()
-        if method == 'HEAD' and 'GET' in metodo_para_view_upper:
-            method = 'GET'
-        view_class = metodo_para_view_upper.get(method)
-        if view_class:
-            return view_class.as_view()(request, *args, **kwargs)
-        return HttpResponseNotAllowed(metodos_permitidos)
+    class RoteadorMultiploView(GenericAPIView):
+        def get_serializer_class(self):
+            method = self.request.method.upper()
+            if method == 'HEAD' and 'GET' in metodo_para_view_upper:
+                method = 'GET'
+            view_class = metodo_para_view_upper.get(method)
+            if view_class and hasattr(view_class, 'serializer_class'):
+                return view_class.serializer_class
+            return super().get_serializer_class()
 
-    return dispatcher
+    def create_handler(method, view_class):
+        def handler(self, request, *args, **kwargs):
+            return view_class.as_view()(request._request, *args, **kwargs)
+
+        orig_method = getattr(view_class, method.lower(), None)
+        if orig_method:
+            handler = functools.update_wrapper(handler, orig_method)
+            if not hasattr(handler, 'kwargs'):
+                handler.kwargs = {}
+            if hasattr(orig_method, 'kwargs'):
+                handler.kwargs.update(orig_method.kwargs)
+            # drf-spectacular class-level @extend_schema stores ExtendedSchema in view_class.schema
+            if hasattr(view_class, 'schema'):
+                handler.kwargs['schema'] = view_class.schema
+        return handler
+
+    for method, view_class in metodo_para_view_upper.items():
+        setattr(RoteadorMultiploView, method.lower(), create_handler(method, view_class))
+
+    return RoteadorMultiploView.as_view()
+
 

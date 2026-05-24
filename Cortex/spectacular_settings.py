@@ -9,4 +9,8 @@ SPECTACULAR_SETTINGS = {
     'SWAGGER_UI_DIST': 'SIDECAR',
     'SWAGGER_UI_FAVICON_HREF': 'SIDECAR',
     'REDOC_DIST': 'SIDECAR',
+    'ENUM_NAME_OVERRIDES': {
+        'SituacaoAlunoEnum': 'Academico.alunos.choices.SituacaoAluno',
+        'SituacaoMatriculaEnum': 'Identidade.matriculas.choices.SituacaoMatricula',
+    },
 }

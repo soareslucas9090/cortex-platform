@@ -4,6 +4,7 @@ from .models import Terceirizado
 
 
 class TerceirizadoSerializer(serializers.ModelSerializer):
+    pk = serializers.IntegerField(read_only=True)
     usuario_nome = serializers.CharField(source='usuario.nome', read_only=True)
     usuario_cpf = serializers.CharField(source='usuario.cpf', read_only=True)
     empresa_nome = serializers.CharField(source='empresa.nome', read_only=True)

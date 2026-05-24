@@ -5,6 +5,7 @@ from .models import Servidor
 
 
 class ServidorSerializer(serializers.ModelSerializer):
+    pk = serializers.IntegerField(read_only=True)
     usuario_nome = serializers.CharField(source='usuario.nome', read_only=True)
     usuario_cpf = serializers.CharField(source='usuario.cpf', read_only=True)
     cargo_nome = serializers.CharField(source='cargo.nome', read_only=True)

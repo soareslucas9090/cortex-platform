@@ -210,6 +210,12 @@ python manage.py collectstatic
 | `/api/schema/redoc/`   | ReDoc                      |
 | `/api/schema/`         | Schema OpenAPI (JSON/YAML) |
 
+Para gerar o arquivo de schema estático (`schema.yaml`) localmente via linha de comando:
+
+```bash
+python manage.py spectacular --file schema.yaml
+```
+
 ### Autenticação
 
 | Método | URL                        | Descrição                      |

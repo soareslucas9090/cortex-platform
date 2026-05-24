@@ -8,7 +8,7 @@ from .models import Usuario
 class UsuarioSerializer(serializers.ModelSerializer):
     tem_perfil_aluno = serializers.SerializerMethodField()
 
-    def get_tem_perfil_aluno(self, obj):
+    def get_tem_perfil_aluno(self, obj) -> bool:
         """
         Indica se o usuário possui um perfil acadêmico associado.
         Detectado via reverse relation nativa do Django, sem importar
