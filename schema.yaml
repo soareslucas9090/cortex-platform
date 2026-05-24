@@ -6,11 +6,11 @@ paths:
   /academico/aluno-cursos/:
     get:
       operationId: academico_aluno_cursos_list
-      description: "\n    Lista os vínculos acadêmicos entre alunos e cursos.\n\n
-        \   **Permissões:** Apenas administradores.\n\n    **Paginação:** Suportada
-        via query param `paginacao` (padrão 10, máximo 100).\n\n    **Filtros:** Os
-        query params apenas reduzem o conjunto de resultados — nunca expandem o acesso
-        além do que a permissão do usuário já permite.\n    "
+      description: "\n    Lista os vínculos acadêmicos entre alunos e cursos.\n\n\
+        \    **Permissões:** Apenas administradores.\n\n    **Paginação:** Suportada\
+        \ via query param `paginacao` (padrão 10, máximo 100).\n\n    **Filtros:**\
+        \ Os query params apenas reduzem o conjunto de resultados — nunca expandem\
+        \ o acesso além do que a permissão do usuário já permite.\n    "
       summary: Listar vínculos aluno-curso
       parameters:
       - in: query
@@ -64,9 +64,9 @@ paths:
           description: ''
     post:
       operationId: academico_aluno_cursos_create
-      description: "\n    Cria um novo vínculo acadêmico entre um aluno e um curso.\n\n
-        \   **Permissões:** Apenas administradores.\n\n    Não é possível criar um
-        segundo vínculo ativo do mesmo aluno no mesmo curso.\n    "
+      description: "\n    Cria um novo vínculo acadêmico entre um aluno e um curso.\n\
+        \n    **Permissões:** Apenas administradores.\n\n    Não é possível criar\
+        \ um segundo vínculo ativo do mesmo aluno no mesmo curso.\n    "
       summary: Criar vínculo aluno-curso
       tags:
       - Aluno-Cursos
@@ -112,8 +112,8 @@ paths:
   /academico/aluno-cursos/{id}/:
     get:
       operationId: academico_aluno_cursos_retrieve
-      description: "\n    Exibe os detalhes de um vínculo acadêmico específico.\n\n
-        \   **Permissões:** Apenas administradores.\n    "
+      description: "\n    Exibe os detalhes de um vínculo acadêmico específico.\n\n\
+        \    **Permissões:** Apenas administradores.\n    "
       summary: Detalhar vínculo aluno-curso
       parameters:
       - in: path
@@ -152,8 +152,9 @@ paths:
           description: ''
     patch:
       operationId: academico_aluno_cursos_partial_update
-      description: "\n    Atualiza parcialmente os dados de um vínculo acadêmico (ex:
-        ano_conclusao, ativo).\n\n    **Permissões:** Apenas administradores.\n    "
+      description: "\n    Atualiza parcialmente os dados de um vínculo acadêmico (ex:\
+        \ ano_conclusao, ativo).\n\n    **Permissões:** Apenas administradores.\n\
+        \    "
       summary: Atualizar vínculo aluno-curso
       parameters:
       - in: path
@@ -210,8 +211,8 @@ paths:
   /academico/aluno-cursos/{id}/encerrar/:
     post:
       operationId: academico_aluno_cursos_encerrar_create
-      description: "\n    Encerra um vínculo acadêmico ativo, registrando o ano de
-        conclusão.\n\n    **Permissões:** Apenas administradores.\n    "
+      description: "\n    Encerra um vínculo acadêmico ativo, registrando o ano de\
+        \ conclusão.\n\n    **Permissões:** Apenas administradores.\n    "
       summary: Encerrar vínculo aluno-curso
       parameters:
       - in: path
@@ -390,11 +391,11 @@ paths:
   /academico/cursos/:
     get:
       operationId: academico_cursos_list
-      description: "\n    Lista todos os cursos cadastrados.\n\n    **Permissões:**
-        Apenas administradores.\n\n    **Paginação:** Suportada via query param `paginacao`
-        (padrão 10, máximo 100).\n\n    **Filtros:** Os query params apenas reduzem
-        o conjunto de resultados — nunca expandem o acesso além do que a permissão
-        do usuário já permite.\n    "
+      description: "\n    Lista todos os cursos cadastrados.\n\n    **Permissões:**\
+        \ Apenas administradores.\n\n    **Paginação:** Suportada via query param\
+        \ `paginacao` (padrão 10, máximo 100).\n\n    **Filtros:** Os query params\
+        \ apenas reduzem o conjunto de resultados — nunca expandem o acesso além do\
+        \ que a permissão do usuário já permite.\n    "
       summary: Listar cursos
       parameters:
       - in: query
@@ -449,8 +450,8 @@ paths:
           description: ''
     post:
       operationId: academico_cursos_create
-      description: "\n    Cria um novo curso.\n\n    **Permissões:** Apenas administradores.\n
-        \   "
+      description: "\n    Cria um novo curso.\n\n    **Permissões:** Apenas administradores.\n\
+        \    "
       summary: Criar curso
       tags:
       - Cursos
@@ -496,8 +497,8 @@ paths:
   /academico/cursos/{id}/:
     get:
       operationId: academico_cursos_retrieve
-      description: "\n    Exibe os detalhes de um curso específico.\n\n    **Permissões:**
-        Apenas administradores.\n    "
+      description: "\n    Exibe os detalhes de um curso específico.\n\n    **Permissões:**\
+        \ Apenas administradores.\n    "
       summary: Detalhar curso
       parameters:
       - in: path
@@ -536,8 +537,8 @@ paths:
           description: ''
     patch:
       operationId: academico_cursos_partial_update
-      description: "\n    Atualiza parcialmente os dados de um curso existente.\n\n
-        \   **Permissões:** Apenas administradores.\n    "
+      description: "\n    Atualiza parcialmente os dados de um curso existente.\n\n\
+        \    **Permissões:** Apenas administradores.\n    "
       summary: Atualizar curso
       parameters:
       - in: path
@@ -594,8 +595,8 @@ paths:
   /academico/cursos/{id}/desativar/:
     post:
       operationId: academico_cursos_desativar_create
-      description: "\n    Desativa um curso ativo.\n\n    **Permissões:** Apenas administradores.\n
-        \   "
+      description: "\n    Desativa um curso ativo.\n\n    **Permissões:** Apenas administradores.\n\
+        \    "
       summary: Desativar curso
       parameters:
       - in: path
@@ -641,8 +642,8 @@ paths:
   /academico/cursos/{id}/reativar/:
     post:
       operationId: academico_cursos_reativar_create
-      description: "\n    Reativa um curso inativo.\n\n    **Permissões:** Apenas
-        administradores.\n    "
+      description: "\n    Reativa um curso inativo.\n\n    **Permissões:** Apenas\
+        \ administradores.\n    "
       summary: Reativar curso
       parameters:
       - in: path
@@ -688,14 +689,15 @@ paths:
   /auth/token_jwt/:
     post:
       operationId: auth_token_jwt_create
-      description: "\n        Autentica o usuário e retorna os tokens de acesso (access)
-        e renovação (refresh).\n\n        O campo ``login`` aceita **e-mail** ou **CPF**
-        (com ou sem máscara).\n\n        **Exemplos de identificador:**\n        -
-        E-mail: `usuario@email.com`\n        - CPF sem máscara: `12345678901`\n        -
-        CPF com máscara: `123.456.789-01`\n\n        **Token de acesso:** válido por
-        30 minutos.\n        **Token de renovação:** válido por 7 dias.\n\n        Em
-        caso de falha, a resposta é sempre genérica e não revela\n        o motivo
-        específico (usuário inexistente, senha incorreta ou inativo).\n        "
+      description: "\n        Autentica o usuário e retorna os tokens de acesso (access)\
+        \ e renovação (refresh).\n\n        O campo ``login`` aceita **e-mail** ou\
+        \ **CPF** (com ou sem máscara).\n\n        **Exemplos de identificador:**\n\
+        \        - E-mail: `usuario@email.com`\n        - CPF sem máscara: `12345678901`\n\
+        \        - CPF com máscara: `123.456.789-01`\n\n        **Token de acesso:**\
+        \ válido por 30 minutos.\n        **Token de renovação:** válido por 7 dias.\n\
+        \n        Em caso de falha, a resposta é sempre genérica e não revela\n  \
+        \      o motivo específico (usuário inexistente, senha incorreta ou inativo).\n\
+        \        "
       summary: Login — obter tokens JWT
       tags:
       - Auth
@@ -723,6 +725,28 @@ paths:
             application/json:
               schema:
                 description: Credenciais inválidas.
+          description: ''
+  /auth/token_jwt/me/:
+    get:
+      operationId: auth_token_jwt_me_retrieve
+      description: Retorna as informações do usuário atual.
+      summary: Dados do usuário logado
+      tags:
+      - Auth
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Me'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                description: Não autenticado.
           description: ''
   /auth/token_jwt/refresh/:
     post:
@@ -792,13 +816,14 @@ paths:
   /identidade/usuarios/:
     get:
       operationId: identidade_usuarios_list
-      description: "\n    Retorna a lista paginada de usuários do sistema.\n\n    **Permissões:**
-        Apenas administradores.\n\n    **Query params:**\n    - `ativo` (bool, opcional):
-        filtra por status — `true` (ativos) ou `false` (inativos).\n      Omitindo
-        o parâmetro, retorna todos.\n    - `paginacao` (int, opcional): tamanho da
-        página, entre 1 e 100. Padrão: 10.\n\n    **Segurança:** os query params apenas
-        restringem o conjunto de resultados dentro do\n    escopo já autorizado —
-        nunca expandem o acesso além do permitido pela permissão.\n    "
+      description: "\n    Retorna a lista paginada de usuários do sistema.\n\n   \
+        \ **Permissões:** Apenas administradores.\n\n    **Query params:**\n    -\
+        \ `ativo` (bool, opcional): filtra por status — `true` (ativos) ou `false`\
+        \ (inativos).\n      Omitindo o parâmetro, retorna todos.\n    - `paginacao`\
+        \ (int, opcional): tamanho da página, entre 1 e 100. Padrão: 10.\n\n    **Segurança:**\
+        \ os query params apenas restringem o conjunto de resultados dentro do\n \
+        \   escopo já autorizado — nunca expandem o acesso além do permitido pela\
+        \ permissão.\n    "
       summary: Listar usuários
       parameters:
       - in: query
@@ -842,9 +867,10 @@ paths:
           description: ''
     post:
       operationId: identidade_usuarios_create
-      description: "\n    Cria um novo usuário no sistema.\n\n    **Permissões:**
-        Apenas administradores.\n\n    Não há auto-cadastro — usuários são sempre
-        criados por administradores,\n    individualmente ou em lote via JSON.\n    "
+      description: "\n    Cria um novo usuário no sistema.\n\n    **Permissões:**\
+        \ Apenas administradores.\n\n    Não há auto-cadastro — usuários são sempre\
+        \ criados por administradores,\n    individualmente ou em lote via JSON.\n\
+        \    "
       summary: Criar usuário
       tags:
       - Identidade
@@ -890,8 +916,8 @@ paths:
   /identidade/usuarios/{id}/:
     get:
       operationId: identidade_usuarios_retrieve
-      description: "\n    Retorna os dados de um usuário específico.\n\n    **Permissões:**
-        O próprio usuário ou administradores.\n    "
+      description: "\n    Retorna os dados de um usuário específico.\n\n    **Permissões:**\
+        \ O próprio usuário ou administradores.\n    "
       summary: Detalhe do usuário
       parameters:
       - in: path
@@ -930,9 +956,9 @@ paths:
           description: ''
     patch:
       operationId: identidade_usuarios_partial_update
-      description: "\n    Atualiza parcialmente os dados básicos do usuário (nome,
-        e-mail, foto, deficiência).\n\n    **Permissões:** O próprio usuário ou administradores.\n\n
-        \   CPF não é alterável neste endpoint.\n    "
+      description: "\n    Atualiza parcialmente os dados básicos do usuário (nome,\
+        \ e-mail, foto, deficiência).\n\n    **Permissões:** O próprio usuário ou\
+        \ administradores.\n\n    CPF não é alterável neste endpoint.\n    "
       summary: Atualizar dados do usuário
       parameters:
       - in: path
@@ -989,8 +1015,8 @@ paths:
   /identidade/usuarios/{id}/desativar/:
     post:
       operationId: identidade_usuarios_desativar_create
-      description: "\n    Desativa um usuário do sistema (não remove o registro).\n\n
-        \   **Permissões:** Apenas administradores.\n    "
+      description: "\n    Desativa um usuário do sistema (não remove o registro).\n\
+        \n    **Permissões:** Apenas administradores.\n    "
       summary: Desativar usuário
       parameters:
       - in: path
@@ -1036,8 +1062,8 @@ paths:
   /identidade/usuarios/{id}/reativar/:
     post:
       operationId: identidade_usuarios_reativar_create
-      description: "\n    Reativa um usuário previamente desativado.\n\n    **Permissões:**
-        Apenas administradores.\n    "
+      description: "\n    Reativa um usuário previamente desativado.\n\n    **Permissões:**\
+        \ Apenas administradores.\n    "
       summary: Reativar usuário
       parameters:
       - in: path
@@ -1083,12 +1109,12 @@ paths:
   /identidade/usuarios/{usuario_pk}/contatos/:
     get:
       operationId: identidade_usuarios_contatos_list
-      description: "\n    Retorna a lista de contatos de um usuário específico.\n\n
-        \   **Permissões:** O próprio usuário ou administradores.\n\n    **Query params:**\n
-        \   - `paginacao` (int, opcional): tamanho da página, entre 1 e 100. Padrão:
-        10.\n\n    **Segurança:** os resultados já estão restritos ao usuário da URL
-        — query params\n    apenas reduzem o conjunto, nunca expandem o acesso.\n
-        \   "
+      description: "\n    Retorna a lista de contatos de um usuário específico.\n\n\
+        \    **Permissões:** O próprio usuário ou administradores.\n\n    **Query\
+        \ params:**\n    - `paginacao` (int, opcional): tamanho da página, entre 1\
+        \ e 100. Padrão: 10.\n\n    **Segurança:** os resultados já estão restritos\
+        \ ao usuário da URL — query params\n    apenas reduzem o conjunto, nunca expandem\
+        \ o acesso.\n    "
       summary: Listar contatos do usuário
       parameters:
       - name: page
@@ -1138,9 +1164,9 @@ paths:
           description: ''
     post:
       operationId: identidade_usuarios_contatos_create
-      description: "\n    Adiciona um novo contato (e-mail acadêmico, e-mail pessoal
-        ou telefone) ao usuário.\n\n    **Permissões:** O próprio usuário ou administradores.\n\n
-        \   Informe ao menos um dos campos de contato.\n    "
+      description: "\n    Adiciona um novo contato (e-mail acadêmico, e-mail pessoal\
+        \ ou telefone) ao usuário.\n\n    **Permissões:** O próprio usuário ou administradores.\n\
+        \n    Informe ao menos um dos campos de contato.\n    "
       summary: Adicionar contato ao usuário
       parameters:
       - in: path
@@ -1197,8 +1223,8 @@ paths:
   /identidade/usuarios/{usuario_pk}/contatos/{id}/:
     patch:
       operationId: identidade_usuarios_contatos_partial_update
-      description: "\n    Atualiza parcialmente os dados de um contato do usuário.\n\n
-        \   **Permissões:** O próprio usuário ou administradores.\n    "
+      description: "\n    Atualiza parcialmente os dados de um contato do usuário.\n\
+        \n    **Permissões:** O próprio usuário ou administradores.\n    "
       summary: Atualizar contato
       parameters:
       - in: path
@@ -1260,9 +1286,9 @@ paths:
   /identidade/usuarios/{usuario_pk}/endereco/:
     get:
       operationId: identidade_usuarios_endereco_retrieve
-      description: "\n    Retorna o endereço cadastrado do usuário.\n\n    **Permissões:**
-        O próprio usuário ou administradores.\n\n    Retorna 404 se o endereço ainda
-        não foi cadastrado.\n    "
+      description: "\n    Retorna o endereço cadastrado do usuário.\n\n    **Permissões:**\
+        \ O próprio usuário ou administradores.\n\n    Retorna 404 se o endereço ainda\
+        \ não foi cadastrado.\n    "
       summary: Obter endereço do usuário
       parameters:
       - in: path
@@ -1301,8 +1327,8 @@ paths:
           description: ''
     put:
       operationId: identidade_usuarios_endereco_update
-      description: "\n    Cria ou atualiza o endereço do usuário (operação idempotente).\n\n
-        \   **Permissões:** O próprio usuário ou administradores.\n    "
+      description: "\n    Cria ou atualiza o endereço do usuário (operação idempotente).\n\
+        \n    **Permissões:** O próprio usuário ou administradores.\n    "
       summary: Salvar endereço do usuário
       parameters:
       - in: path
@@ -1360,13 +1386,13 @@ paths:
   /identidade/usuarios/{usuario_pk}/matriculas/:
     get:
       operationId: identidade_usuarios_matriculas_list
-      description: "\n    Retorna a lista de matrículas de um usuário específico.\n\n
-        \   **Permissões:** O próprio usuário ou administradores.\n\n    **Query params:**\n
-        \   - `situacao` (int, opcional): filtra por situação — `1` (Ativa) ou `2`
-        (Inativa).\n      Omitindo, retorna todas.\n    - `paginacao` (int, opcional):
-        tamanho da página, entre 1 e 100. Padrão: 10.\n\n    **Segurança:** os resultados
-        já estão restritos ao usuário da URL — query params\n    apenas reduzem o
-        conjunto, nunca expandem o acesso.\n    "
+      description: "\n    Retorna a lista de matrículas de um usuário específico.\n\
+        \n    **Permissões:** O próprio usuário ou administradores.\n\n    **Query\
+        \ params:**\n    - `situacao` (int, opcional): filtra por situação — `1` (Ativa)\
+        \ ou `2` (Inativa).\n      Omitindo, retorna todas.\n    - `paginacao` (int,\
+        \ opcional): tamanho da página, entre 1 e 100. Padrão: 10.\n\n    **Segurança:**\
+        \ os resultados já estão restritos ao usuário da URL — query params\n    apenas\
+        \ reduzem o conjunto, nunca expandem o acesso.\n    "
       summary: Listar matrículas do usuário
       parameters:
       - name: page
@@ -1424,8 +1450,8 @@ paths:
           description: ''
     post:
       operationId: identidade_usuarios_matriculas_create
-      description: "\n    Adiciona uma nova matrícula (número) ao usuário.\n\n    **Permissões:**
-        Apenas administradores.\n    "
+      description: "\n    Adiciona uma nova matrícula (número) ao usuário.\n\n   \
+        \ **Permissões:** Apenas administradores.\n    "
       summary: Adicionar matrícula ao usuário
       parameters:
       - in: path
@@ -1483,8 +1509,8 @@ paths:
   /identidade/usuarios/{usuario_pk}/matriculas/{id}/desativar/:
     post:
       operationId: identidade_usuarios_matriculas_desativar_create
-      description: "\n    Marca uma matrícula do usuário como inativa.\n\n    **Permissões:**
-        Apenas administradores.\n    "
+      description: "\n    Marca uma matrícula do usuário como inativa.\n\n    **Permissões:**\
+        \ Apenas administradores.\n    "
       summary: Desativar matrícula
       parameters:
       - in: path
@@ -1529,9 +1555,9 @@ paths:
   /organizacional/funcoes/:
     get:
       operationId: organizacional_funcoes_list
-      description: "\n    Retorna a lista paginada de funções organizacionais.\n\n
-        \   **Permissões:** Apenas administradores.\n\n    **Query params apenas reduzem
-        o conjunto â€” nunca expandem o acesso.**\n    "
+      description: "\n    Retorna a lista paginada de funções organizacionais.\n\n\
+        \    **Permissões:** Apenas administradores.\n\n    **Query params apenas\
+        \ reduzem o conjunto â€” nunca expandem o acesso.**\n    "
       summary: Listar funções
       parameters:
       - in: query
@@ -1824,9 +1850,9 @@ paths:
   /organizacional/setores/:
     get:
       operationId: organizacional_setores_list
-      description: "\n    Retorna a lista paginada de setores da instituição.\n\n
-        \   **Permissões:** Apenas administradores.\n\n    **Query params apenas reduzem
-        o conjunto — nunca expandem o acesso.**\n    "
+      description: "\n    Retorna a lista paginada de setores da instituição.\n\n\
+        \    **Permissões:** Apenas administradores.\n\n    **Query params apenas\
+        \ reduzem o conjunto — nunca expandem o acesso.**\n    "
       summary: Listar setores
       parameters:
       - in: query
@@ -2119,9 +2145,9 @@ paths:
   /organizacional/setores/{setor_pk}/vinculos/:
     get:
       operationId: organizacional_setores_vinculos_list
-      description: "\n    Retorna a lista paginada de vínculos de um setor específico.\n\n
-        \   **Permissões:** Apenas administradores.\n\n    **Query params apenas reduzem
-        o conjunto â€” nunca expandem o acesso.**\n    "
+      description: "\n    Retorna a lista paginada de vínculos de um setor específico.\n\
+        \n    **Permissões:** Apenas administradores.\n\n    **Query params apenas\
+        \ reduzem o conjunto â€” nunca expandem o acesso.**\n    "
       summary: Listar vínculos do setor
       parameters:
       - name: page
@@ -2171,11 +2197,11 @@ paths:
           description: ''
     post:
       operationId: organizacional_setores_vinculos_create
-      description: "\n    Vincula um usuário ao setor com uma função obrigatória.\n\n
-        \   **Regras:**\n    - Setor e função devem estar ativos.\n    - A combinação
-        (usuário, setor, função) deve ser única.\n    - Um usuário pode ter múltiplos
-        vínculos com setores ou funções diferentes.\n\n    **Permissões:** Apenas
-        administradores.\n    "
+      description: "\n    Vincula um usuário ao setor com uma função obrigatória.\n\
+        \n    **Regras:**\n    - Setor e função devem estar ativos.\n    - A combinação\
+        \ (usuário, setor, função) deve ser única.\n    - Um usuário pode ter múltiplos\
+        \ vínculos com setores ou funções diferentes.\n\n    **Permissões:** Apenas\
+        \ administradores.\n    "
       summary: Criar vínculo no setor
       parameters:
       - in: path
@@ -2233,10 +2259,11 @@ paths:
   /organizacional/setores/{setor_pk}/vinculos/{id}/definir-responsavel/:
     post:
       operationId: organizacional_setores_vinculos_definir_responsavel_create
-      description: "\n    Marca o vínculo como responsável pelo setor.\n\n    **Regras:**\n
-        \   - O setor deve estar ativo.\n    - O usuário do vínculo deve possuir perfil
-        de servidor ativo.\n\n    Apenas servidores ativos podem ocupar a responsabilidade
-        principal de um setor.\n\n    **Permissões:** Apenas administradores.\n    "
+      description: "\n    Marca o vínculo como responsável pelo setor.\n\n    **Regras:**\n\
+        \    - O setor deve estar ativo.\n    - O usuário do vínculo deve possuir\
+        \ perfil de servidor ativo.\n\n    Apenas servidores ativos podem ocupar a\
+        \ responsabilidade principal de um setor.\n\n    **Permissões:** Apenas administradores.\n\
+        \    "
       summary: Definir vínculo como responsável
       parameters:
       - in: path
@@ -2460,8 +2487,8 @@ paths:
   /pessoas-institucionais/cargos/:
     get:
       operationId: pessoas_institucionais_cargos_list
-      description: "\n    Lista todos os cargos cadastrados.\n    \n    **Permissões:**
-        Apenas administradores.\n    "
+      description: "\n    Lista todos os cargos cadastrados.\n    \n    **Permissões:**\
+        \ Apenas administradores.\n    "
       summary: Listar cargos
       parameters:
       - in: query
@@ -2493,8 +2520,8 @@ paths:
           description: ''
     post:
       operationId: pessoas_institucionais_cargos_create
-      description: "\n    Cria um novo cargo.\n    \n    **Permissões:** Apenas administradores.\n
-        \   "
+      description: "\n    Cria um novo cargo.\n    \n    **Permissões:** Apenas administradores.\n\
+        \    "
       summary: Criar cargo
       tags:
       - Cargos
@@ -2522,8 +2549,8 @@ paths:
   /pessoas-institucionais/cargos/{id}/:
     get:
       operationId: pessoas_institucionais_cargos_retrieve
-      description: "\n    Exibe os detalhes de um cargo específico.\n    \n    **Permissões:**
-        Apenas administradores.\n    "
+      description: "\n    Exibe os detalhes de um cargo específico.\n    \n    **Permissões:**\
+        \ Apenas administradores.\n    "
       summary: Detalhar cargo
       parameters:
       - in: path
@@ -2544,8 +2571,8 @@ paths:
           description: ''
     patch:
       operationId: pessoas_institucionais_cargos_partial_update
-      description: "\n    Atualiza os dados de um cargo existente.\n    \n    **Permissões:**
-        Apenas administradores.\n    "
+      description: "\n    Atualiza os dados de um cargo existente.\n    \n    **Permissões:**\
+        \ Apenas administradores.\n    "
       summary: Atualizar cargo
       parameters:
       - in: path
@@ -2578,8 +2605,8 @@ paths:
   /pessoas-institucionais/cargos/{id}/desativar/:
     post:
       operationId: pessoas_institucionais_cargos_desativar_create
-      description: "\n    Desativa um cargo.\n    \n    **Permissões:** Apenas administradores.\n
-        \   "
+      description: "\n    Desativa um cargo.\n    \n    **Permissões:** Apenas administradores.\n\
+        \    "
       summary: Desativar cargo
       parameters:
       - in: path
@@ -2601,8 +2628,8 @@ paths:
   /pessoas-institucionais/cargos/{id}/reativar/:
     post:
       operationId: pessoas_institucionais_cargos_reativar_create
-      description: "\n    Reativa um cargo inativo.\n    \n    **Permissões:** Apenas
-        administradores.\n    "
+      description: "\n    Reativa um cargo inativo.\n    \n    **Permissões:** Apenas\
+        \ administradores.\n    "
       summary: Reativar cargo
       parameters:
       - in: path
@@ -2624,9 +2651,9 @@ paths:
   /pessoas-institucionais/empresas/:
     get:
       operationId: pessoas_institucionais_empresas_list
-      description: "\n    Lista todas as empresas/instituições cadastradas.\n\n    **Permissões:**
-        Apenas administradores.\n\n    Query params apenas reduzem o conjunto, nunca
-        expandem o acesso.\n    "
+      description: "\n    Lista todas as empresas/instituições cadastradas.\n\n  \
+        \  **Permissões:** Apenas administradores.\n\n    Query params apenas reduzem\
+        \ o conjunto, nunca expandem o acesso.\n    "
       summary: Listar empresas/instituições
       parameters:
       - in: query
@@ -2658,8 +2685,8 @@ paths:
           description: ''
     post:
       operationId: pessoas_institucionais_empresas_create
-      description: "\n    Cria uma nova empresa/instituição.\n\n    **Permissões:**
-        Apenas administradores.\n    "
+      description: "\n    Cria uma nova empresa/instituição.\n\n    **Permissões:**\
+        \ Apenas administradores.\n    "
       summary: Criar empresa/instituição
       tags:
       - Empresas/Instituições
@@ -2687,8 +2714,8 @@ paths:
   /pessoas-institucionais/empresas/{id}/:
     get:
       operationId: pessoas_institucionais_empresas_retrieve
-      description: "\n    Exibe os detalhes de uma empresa/instituição específica.\n\n
-        \   **Permissões:** Apenas administradores.\n    "
+      description: "\n    Exibe os detalhes de uma empresa/instituição específica.\n\
+        \n    **Permissões:** Apenas administradores.\n    "
       summary: Detalhar empresa/instituição
       parameters:
       - in: path
@@ -2709,8 +2736,8 @@ paths:
           description: ''
     patch:
       operationId: pessoas_institucionais_empresas_partial_update
-      description: "\n    Atualiza os dados de uma empresa/instituição existente.\n\n
-        \   **Permissões:** Apenas administradores.\n    "
+      description: "\n    Atualiza os dados de uma empresa/instituição existente.\n\
+        \n    **Permissões:** Apenas administradores.\n    "
       summary: Atualizar empresa/instituição
       parameters:
       - in: path
@@ -2743,8 +2770,8 @@ paths:
   /pessoas-institucionais/empresas/{id}/desativar/:
     post:
       operationId: pessoas_institucionais_empresas_desativar_create
-      description: "\n    Desativa uma empresa/instituição.\n\n    **Permissões:**
-        Apenas administradores.\n    "
+      description: "\n    Desativa uma empresa/instituição.\n\n    **Permissões:**\
+        \ Apenas administradores.\n    "
       summary: Desativar empresa/instituição
       parameters:
       - in: path
@@ -2766,8 +2793,8 @@ paths:
   /pessoas-institucionais/empresas/{id}/reativar/:
     post:
       operationId: pessoas_institucionais_empresas_reativar_create
-      description: "\n    Reativa uma empresa/instituição inativa.\n\n    **Permissões:**
-        Apenas administradores.\n    "
+      description: "\n    Reativa uma empresa/instituição inativa.\n\n    **Permissões:**\
+        \ Apenas administradores.\n    "
       summary: Reativar empresa/instituição
       parameters:
       - in: path
@@ -2789,9 +2816,9 @@ paths:
   /pessoas-institucionais/servidores/:
     get:
       operationId: pessoas_institucionais_servidores_list
-      description: "\n    Lista todos os servidores cadastrados.\n\n    **Permissões:**
-        Apenas administradores.\n\n    Query params apenas reduzem o conjunto, nunca
-        expandem o acesso.\n    "
+      description: "\n    Lista todos os servidores cadastrados.\n\n    **Permissões:**\
+        \ Apenas administradores.\n\n    Query params apenas reduzem o conjunto, nunca\
+        \ expandem o acesso.\n    "
       summary: Listar servidores
       parameters:
       - in: query
@@ -2836,10 +2863,10 @@ paths:
           description: ''
     post:
       operationId: pessoas_institucionais_servidores_create
-      description: "\n    Cria um novo perfil de servidor para um usuário existente.\n\n
-        \   **Permissões:** Apenas administradores.\n\n    **Regras:**\n    - O usuário
-        informado deve existir e não possuir perfil de servidor.\n    - O cargo informado
-        deve existir e estar ativo.\n    "
+      description: "\n    Cria um novo perfil de servidor para um usuário existente.\n\
+        \n    **Permissões:** Apenas administradores.\n\n    **Regras:**\n    - O\
+        \ usuário informado deve existir e não possuir perfil de servidor.\n    -\
+        \ O cargo informado deve existir e estar ativo.\n    "
       summary: Criar servidor
       tags:
       - Servidores
@@ -2867,8 +2894,8 @@ paths:
   /pessoas-institucionais/servidores/{id}/:
     get:
       operationId: pessoas_institucionais_servidores_retrieve
-      description: "\n    Exibe os detalhes de um servidor específico.\n\n    **Permissões:**
-        Apenas administradores.\n    "
+      description: "\n    Exibe os detalhes de um servidor específico.\n\n    **Permissões:**\
+        \ Apenas administradores.\n    "
       summary: Detalhar servidor
       parameters:
       - in: path
@@ -2889,8 +2916,8 @@ paths:
           description: ''
     patch:
       operationId: pessoas_institucionais_servidores_partial_update
-      description: "\n    Atualiza os dados de um servidor existente.\n\n    **Permissões:**
-        Apenas administradores.\n    "
+      description: "\n    Atualiza os dados de um servidor existente.\n\n    **Permissões:**\
+        \ Apenas administradores.\n    "
       summary: Atualizar servidor
       parameters:
       - in: path
@@ -2923,8 +2950,8 @@ paths:
   /pessoas-institucionais/servidores/{id}/desativar/:
     post:
       operationId: pessoas_institucionais_servidores_desativar_create
-      description: "\n    Desativa o perfil de um servidor.\n\n    **Permissões:**
-        Apenas administradores.\n    "
+      description: "\n    Desativa o perfil de um servidor.\n\n    **Permissões:**\
+        \ Apenas administradores.\n    "
       summary: Desativar servidor
       parameters:
       - in: path
@@ -2946,8 +2973,8 @@ paths:
   /pessoas-institucionais/servidores/{id}/reativar/:
     post:
       operationId: pessoas_institucionais_servidores_reativar_create
-      description: "\n    Reativa o perfil de um servidor inativo.\n\n    **Permissões:**
-        Apenas administradores.\n    "
+      description: "\n    Reativa o perfil de um servidor inativo.\n\n    **Permissões:**\
+        \ Apenas administradores.\n    "
       summary: Reativar servidor
       parameters:
       - in: path
@@ -2969,9 +2996,9 @@ paths:
   /pessoas-institucionais/terceirizados/:
     get:
       operationId: pessoas_institucionais_terceirizados_list
-      description: "\n    Lista todos os terceirizados cadastrados.\n\n    **Permissões:**
-        Apenas administradores.\n\n    Query params apenas reduzem o conjunto, nunca
-        expandem o acesso.\n    "
+      description: "\n    Lista todos os terceirizados cadastrados.\n\n    **Permissões:**\
+        \ Apenas administradores.\n\n    Query params apenas reduzem o conjunto, nunca\
+        \ expandem o acesso.\n    "
       summary: Listar terceirizados
       parameters:
       - in: query
@@ -3008,10 +3035,10 @@ paths:
           description: ''
     post:
       operationId: pessoas_institucionais_terceirizados_create
-      description: "\n    Cria um novo perfil de terceirizado para um usuário existente.\n\n
-        \   **Permissões:** Apenas administradores.\n\n    **Regras:**\n    - O usuário
-        informado deve existir e não possuir perfil de terceirizado.\n    - A empresa/instituição
-        informada deve existir e estar ativa.\n    "
+      description: "\n    Cria um novo perfil de terceirizado para um usuário existente.\n\
+        \n    **Permissões:** Apenas administradores.\n\n    **Regras:**\n    - O\
+        \ usuário informado deve existir e não possuir perfil de terceirizado.\n \
+        \   - A empresa/instituição informada deve existir e estar ativa.\n    "
       summary: Criar terceirizado
       tags:
       - Terceirizados
@@ -3039,8 +3066,8 @@ paths:
   /pessoas-institucionais/terceirizados/{id}/:
     get:
       operationId: pessoas_institucionais_terceirizados_retrieve
-      description: "\n    Exibe os detalhes de um terceirizado específico.\n\n    **Permissões:**
-        Apenas administradores.\n    "
+      description: "\n    Exibe os detalhes de um terceirizado específico.\n\n   \
+        \ **Permissões:** Apenas administradores.\n    "
       summary: Detalhar terceirizado
       parameters:
       - in: path
@@ -3061,8 +3088,8 @@ paths:
           description: ''
     patch:
       operationId: pessoas_institucionais_terceirizados_partial_update
-      description: "\n    Atualiza os dados de um terceirizado existente.\n\n    **Permissões:**
-        Apenas administradores.\n    "
+      description: "\n    Atualiza os dados de um terceirizado existente.\n\n    **Permissões:**\
+        \ Apenas administradores.\n    "
       summary: Atualizar terceirizado
       parameters:
       - in: path
@@ -3095,8 +3122,8 @@ paths:
   /pessoas-institucionais/terceirizados/{id}/desativar/:
     post:
       operationId: pessoas_institucionais_terceirizados_desativar_create
-      description: "\n    Desativa o perfil de um terceirizado.\n\n    **Permissões:**
-        Apenas administradores.\n    "
+      description: "\n    Desativa o perfil de um terceirizado.\n\n    **Permissões:**\
+        \ Apenas administradores.\n    "
       summary: Desativar terceirizado
       parameters:
       - in: path
@@ -3118,8 +3145,8 @@ paths:
   /pessoas-institucionais/terceirizados/{id}/reativar/:
     post:
       operationId: pessoas_institucionais_terceirizados_reativar_create
-      description: "\n    Reativa o perfil de um terceirizado inativo.\n\n    **Permissões:**
-        Apenas administradores.\n    "
+      description: "\n    Reativa o perfil de um terceirizado inativo.\n\n    **Permissões:**\
+        \ Apenas administradores.\n    "
       summary: Reativar terceirizado
       parameters:
       - in: path
@@ -3740,6 +3767,68 @@ components:
       - id
       - matricula
       - situacao_display
+    Me:
+      type: object
+      description: |-
+        Serializer padrão para retornar os dados do usuário autenticado.
+        Remove campos sensíveis como senha e permissões detalhadas.
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        last_login:
+          type: string
+          format: date-time
+          nullable: true
+          title: Último login
+        is_superuser:
+          type: boolean
+          title: Status de superusuário
+          description: Indica que este usuário tem todas as permissões sem atribuí-las
+            explicitamente.
+        nome:
+          type: string
+          maxLength: 255
+        ativo:
+          type: boolean
+        is_admin:
+          type: boolean
+          title: Administrador
+        is_staff:
+          type: boolean
+          title: Staff
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+          title: Criado em
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+          title: Atualizado em
+        email:
+          type: string
+          format: email
+          nullable: true
+          title: E-mail
+          maxLength: 254
+        cpf:
+          type: string
+          maxLength: 11
+        foto:
+          type: string
+          format: uri
+          nullable: true
+        deficiencia:
+          type: string
+          title: Deficiência / necessidade especial
+      required:
+      - cpf
+      - created_at
+      - id
+      - nome
+      - updated_at
     NullEnum:
       enum:
       - null
