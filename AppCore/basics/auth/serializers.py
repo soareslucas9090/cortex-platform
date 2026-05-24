@@ -45,11 +45,23 @@ COMO USAR: LOGIN COM TIPO (ex: motorista vs empresa)
             return {'nome': user.nome}
 """
 
+from django.contrib.auth import get_user_model
 from django.contrib.auth import authenticate as django_authenticate
 from rest_framework import serializers
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from rest_framework_simplejwt.exceptions import AuthenticationFailed
 from rest_framework_simplejwt.settings import api_settings
+
+User = get_user_model()
+
+class MeSerializer(serializers.ModelSerializer):
+    """
+    Serializer padrão para retornar os dados do usuário autenticado.
+    Remove campos sensíveis como senha e permissões detalhadas.
+    """
+    class Meta:
+        model = User
+        exclude = ('password', 'groups', 'user_permissions')
 
 
 class BaseLoginSerializer(TokenObtainPairSerializer):

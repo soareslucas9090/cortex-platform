@@ -6,11 +6,21 @@ from .models import Usuario
 
 
 class UsuarioSerializer(serializers.ModelSerializer):
+    tem_perfil_aluno = serializers.SerializerMethodField()
+
+    def get_tem_perfil_aluno(self, obj):
+        """
+        Indica se o usuário possui um perfil acadêmico associado.
+        Detectado via reverse relation nativa do Django, sem importar
+        models do domínio Acadêmico dentro do domínio Identidade.
+        """
+        return hasattr(obj, 'aluno') and obj.aluno is not None
+
     class Meta:
         model = Usuario
         fields = [
             'id', 'cpf', 'nome', 'email', 'ativo', 'is_admin',
-            'foto', 'deficiencia', 'created_at',
+            'foto', 'deficiencia', 'tem_perfil_aluno', 'created_at',
         ]
 
 

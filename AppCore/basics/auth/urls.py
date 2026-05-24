@@ -16,7 +16,7 @@ Ou no thin app Auth/:
 
 from django.urls import path
 
-from AppCore.basics.auth.views import BaseLoginView, AtualizarTokenView, VerificarTokenView
+from AppCore.basics.auth.views import BaseLoginView, AtualizarTokenView, VerificarTokenView, MeView
 
 app_name = 'appcore-auth'
 
@@ -24,4 +24,5 @@ urlpatterns = [
     path('', BaseLoginView.as_view(), name='login'),
     path('refresh/', AtualizarTokenView.as_view(), name='token-refresh'),
     path('verify/', VerificarTokenView.as_view(), name='token-verify'),
+    path('me/', MeView.as_view(), name='me'),
 ]

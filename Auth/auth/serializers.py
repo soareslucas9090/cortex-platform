@@ -44,12 +44,18 @@ class LoginSerializer(BaseHybridLoginSerializer):
     Serializer de login do projeto. Herda de BaseHybridLoginSerializer.
 
     Aceita ``login`` (e-mail ou CPF) e ``password``.
-    Sobrescreva ``get_extra_payload(user)`` para enriquecer o retorno do login
-    com dados do domínio (ex: nome, cargo, setores, lotação).
+
+    O payload do token inclui indicadores de perfis acoplados ao usuário,
+    permitindo que o client-side determine fluxos e permissões de UX sem
+    consultas adicionais. Os perfis são detectados via reverse relations
+    nativas do Django, sem importar models de domínios dependentes.
     """
 
     def get_extra_payload(self, user) -> dict:
-        return {}
+        return {
+            'nome': user.nome,
+            'tem_perfil_aluno': hasattr(user, 'aluno') and user.aluno is not None,
+        }
 
 
 # Serializers para documentação Swagger

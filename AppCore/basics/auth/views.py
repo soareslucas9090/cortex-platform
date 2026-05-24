@@ -7,13 +7,39 @@ Projetos devem herdar estas views ou usar diretamente via include das urls.
 
 from drf_spectacular.utils import extend_schema
 from rest_framework import status
+from rest_framework.generics import RetrieveAPIView
+from rest_framework.permissions import IsAuthenticated
 from rest_framework_simplejwt.views import (
     TokenObtainPairView,
     TokenRefreshView,
     TokenVerifyView,
 )
 
-from AppCore.basics.auth.serializers import BaseLoginSerializer
+from AppCore.basics.auth.serializers import BaseLoginSerializer, MeSerializer
+
+
+class MeView(RetrieveAPIView):
+    """
+    Retorna os dados do usuário atualmente autenticado.
+    """
+    permission_classes = [IsAuthenticated]
+    serializer_class = MeSerializer
+
+    def get_object(self):
+        return self.request.user
+
+    @extend_schema(
+        tags=['Auth'],
+        summary='Dados do usuário logado',
+        description='Retorna as informações do usuário atual.',
+        responses={
+            status.HTTP_200_OK: MeSerializer,
+            status.HTTP_401_UNAUTHORIZED: {'description': 'Não autenticado.'},
+        },
+    )
+    def get(self, request, *args, **kwargs):
+        return super().get(request, *args, **kwargs)
+
 
 
 class BaseLoginView(TokenObtainPairView):
