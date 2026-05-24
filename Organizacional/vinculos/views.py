@@ -26,64 +26,64 @@ logger = logging.getLogger(__name__)
 
 
 @extend_schema(
-    tags=['VÃ­nculos de Setor'],
-    summary='Listar vÃ­nculos do setor',
+    tags=['Vínculos de Setor'],
+    summary='Listar vínculos do setor',
     description='''
-    Retorna a lista paginada de vÃ­nculos de um setor especÃ­fico.
+    Retorna a lista paginada de vínculos de um setor específico.
 
-    **PermissÃµes:** Apenas administradores.
+    **Permissões:** Apenas administradores.
 
     **Query params apenas reduzem o conjunto â€” nunca expandem o acesso.**
     ''',
     parameters=[
         OpenApiParameter(
             'paginacao', OpenApiTypes.INT, OpenApiParameter.QUERY,
-            required=False, description='Tamanho da pÃ¡gina (1â€“100, padrÃ£o 10).',
+            required=False, description='Tamanho da página (1â€“100, padrão 10).',
         ),
     ],
     responses={
         status.HTTP_200_OK: SetorVinculoSerializer(many=True),
-        status.HTTP_401_UNAUTHORIZED: {'description': 'NÃ£o autenticado.'},
-        status.HTTP_403_FORBIDDEN: {'description': 'Sem permissÃ£o de administrador.'},
-        status.HTTP_404_NOT_FOUND: {'description': 'Setor nÃ£o encontrado.'},
+        status.HTTP_401_UNAUTHORIZED: {'description': 'Não autenticado.'},
+        status.HTTP_403_FORBIDDEN: {'description': 'Sem permissão de administrador.'},
+        status.HTTP_404_NOT_FOUND: {'description': 'Setor não encontrado.'},
     },
 )
 class ListarVinculosView(IsAdminMixin, BasicGetAPIView):
     """GET /organizacional/setores/<setor_pk>/vinculos/"""
     pagination_class = PaginacaoCustomizada
     serializer_class = SetorVinculoSerializer
-    mensagem_sucesso = 'VÃ­nculos listados com sucesso.'
+    mensagem_sucesso = 'Vínculos listados com sucesso.'
 
     def get_queryset(self):
         return SetorVinculo.objects.filter(setor_id=self.kwargs['setor_pk'])
 
 
 @extend_schema(
-    tags=['VÃ­nculos de Setor'],
-    summary='Criar vÃ­nculo no setor',
+    tags=['Vínculos de Setor'],
+    summary='Criar vínculo no setor',
     description='''
-    Vincula um usuÃ¡rio ao setor com uma funÃ§Ã£o obrigatÃ³ria.
+    Vincula um usuário ao setor com uma função obrigatória.
 
     **Regras:**
-    - Setor e funÃ§Ã£o devem estar ativos.
-    - A combinaÃ§Ã£o (usuÃ¡rio, setor, funÃ§Ã£o) deve ser Ãºnica.
-    - Um usuÃ¡rio pode ter mÃºltiplos vÃ­nculos com setores ou funÃ§Ãµes diferentes.
+    - Setor e função devem estar ativos.
+    - A combinação (usuário, setor, função) deve ser única.
+    - Um usuário pode ter múltiplos vínculos com setores ou funções diferentes.
 
-    **PermissÃµes:** Apenas administradores.
+    **Permissões:** Apenas administradores.
     ''',
     request=CriarVinculoSerializer,
     responses={
         status.HTTP_201_CREATED: SetorVinculoSerializer,
-        status.HTTP_400_BAD_REQUEST: {'description': 'Dados invÃ¡lidos, setor/funÃ§Ã£o inativo ou vÃ­nculo duplicado.'},
-        status.HTTP_401_UNAUTHORIZED: {'description': 'NÃ£o autenticado.'},
-        status.HTTP_403_FORBIDDEN: {'description': 'Sem permissÃ£o de administrador.'},
-        status.HTTP_404_NOT_FOUND: {'description': 'Setor nÃ£o encontrado.'},
+        status.HTTP_400_BAD_REQUEST: {'description': 'Dados inválidos, setor/função inativo ou vínculo duplicado.'},
+        status.HTTP_401_UNAUTHORIZED: {'description': 'Não autenticado.'},
+        status.HTTP_403_FORBIDDEN: {'description': 'Sem permissão de administrador.'},
+        status.HTTP_404_NOT_FOUND: {'description': 'Setor não encontrado.'},
     },
 )
 class CriarVinculoView(IsAdminMixin, BasicPostAPIView):
     """POST /organizacional/setores/<setor_pk>/vinculos/"""
     serializer_class = CriarVinculoSerializer
-    mensagem_sucesso = 'VÃ­nculo criado com sucesso.'
+    mensagem_sucesso = 'Vínculo criado com sucesso.'
 
     def do_action_post(self, serializer_data, request, *args, **kwargs):
         vinculo = SetorVinculoBusiness().criar_vinculo_no_setor(
@@ -100,22 +100,22 @@ class CriarVinculoView(IsAdminMixin, BasicPostAPIView):
 
 
 @extend_schema(
-    tags=['VÃ­nculos de Setor'],
-    summary='Encerrar vÃ­nculo',
-    description='Remove o vÃ­nculo do usuÃ¡rio com o setor. Bloqueado se for o Ãºnico responsÃ¡vel.\n\n**PermissÃµes:** Apenas administradores.',
+    tags=['Vínculos de Setor'],
+    summary='Encerrar vínculo',
+    description='Remove o vínculo do usuário com o setor. Bloqueado se for o único responsável.\n\n**Permissões:** Apenas administradores.',
     request=None,
     responses={
-        status.HTTP_200_OK: {'description': 'VÃ­nculo encerrado com sucesso.'},
-        status.HTTP_400_BAD_REQUEST: {'description': 'OperaÃ§Ã£o bloqueada: setor perderia seu Ãºnico responsÃ¡vel.'},
-        status.HTTP_401_UNAUTHORIZED: {'description': 'NÃ£o autenticado.'},
-        status.HTTP_403_FORBIDDEN: {'description': 'Sem permissÃ£o de administrador.'},
-        status.HTTP_404_NOT_FOUND: {'description': 'VÃ­nculo nÃ£o encontrado.'},
+        status.HTTP_200_OK: {'description': 'Vínculo encerrado com sucesso.'},
+        status.HTTP_400_BAD_REQUEST: {'description': 'Operação bloqueada: setor perderia seu único responsável.'},
+        status.HTTP_401_UNAUTHORIZED: {'description': 'Não autenticado.'},
+        status.HTTP_403_FORBIDDEN: {'description': 'Sem permissão de administrador.'},
+        status.HTTP_404_NOT_FOUND: {'description': 'Vínculo não encontrado.'},
     },
 )
 class EncerrarVinculoView(IsAdminMixin, BasicPostAPIView):
     """POST /organizacional/setores/<setor_pk>/vinculos/<pk>/encerrar/"""
     serializer_class = SerializerVazio
-    mensagem_sucesso = 'VÃ­nculo encerrado com sucesso.'
+    mensagem_sucesso = 'Vínculo encerrado com sucesso.'
 
     def get_queryset(self):
         return SetorVinculo.objects.filter(setor_id=self.kwargs['setor_pk'])
@@ -160,16 +160,16 @@ class DefinirResponsavelView(IsAdminMixin, BasicPostAPIView):
 
 
 @extend_schema(
-    tags=['VÃ­nculos de Setor'],
-    summary='Remover responsabilidade do vÃ­nculo',
-    description='Remove a marcaÃ§Ã£o de responsÃ¡vel do vÃ­nculo. Bloqueado se for o Ãºnico responsÃ¡vel do setor.\n\n**PermissÃµes:** Apenas administradores.',
+    tags=['Vínculos de Setor'],
+    summary='Remover responsabilidade do vínculo',
+    description='Remove a marcação de responsável do vínculo. Bloqueado se for o único responsável do setor.\n\n**Permissões:** Apenas administradores.',
     request=None,
     responses={
         status.HTTP_200_OK: {'description': 'Responsabilidade removida com sucesso.'},
-        status.HTTP_400_BAD_REQUEST: {'description': 'OperaÃ§Ã£o bloqueada: setor perderia seu Ãºnico responsÃ¡vel.'},
-        status.HTTP_401_UNAUTHORIZED: {'description': 'NÃ£o autenticado.'},
-        status.HTTP_403_FORBIDDEN: {'description': 'Sem permissÃ£o de administrador.'},
-        status.HTTP_404_NOT_FOUND: {'description': 'VÃ­nculo nÃ£o encontrado.'},
+        status.HTTP_400_BAD_REQUEST: {'description': 'Operação bloqueada: setor perderia seu único responsável.'},
+        status.HTTP_401_UNAUTHORIZED: {'description': 'Não autenticado.'},
+        status.HTTP_403_FORBIDDEN: {'description': 'Sem permissão de administrador.'},
+        status.HTTP_404_NOT_FOUND: {'description': 'Vínculo não encontrado.'},
     },
 )
 class RemoverResponsavelView(IsAdminMixin, BasicPostAPIView):
@@ -185,22 +185,22 @@ class RemoverResponsavelView(IsAdminMixin, BasicPostAPIView):
 
 
 @extend_schema(
-    tags=['VÃ­nculos de Setor'],
-    summary='Atualizar funÃ§Ã£o do vÃ­nculo',
-    description='Substitui a funÃ§Ã£o exercida no vÃ­nculo. A nova funÃ§Ã£o deve estar ativa e a combinaÃ§Ã£o nÃ£o deve ser duplicada.\n\n**PermissÃµes:** Apenas administradores.',
+    tags=['Vínculos de Setor'],
+    summary='Atualizar função do vínculo',
+    description='Substitui a função exercida no vínculo. A nova função deve estar ativa e a combinação não deve ser duplicada.\n\n**Permissões:** Apenas administradores.',
     request=AtualizarVinculoFuncaoSerializer,
     responses={
-        status.HTTP_200_OK: {'description': 'FunÃ§Ã£o do vÃ­nculo atualizada com sucesso.'},
-        status.HTTP_400_BAD_REQUEST: {'description': 'FunÃ§Ã£o inativa ou vÃ­nculo duplicado resultante.'},
-        status.HTTP_401_UNAUTHORIZED: {'description': 'NÃ£o autenticado.'},
-        status.HTTP_403_FORBIDDEN: {'description': 'Sem permissÃ£o de administrador.'},
-        status.HTTP_404_NOT_FOUND: {'description': 'VÃ­nculo nÃ£o encontrado.'},
+        status.HTTP_200_OK: {'description': 'Função do vínculo atualizada com sucesso.'},
+        status.HTTP_400_BAD_REQUEST: {'description': 'Função inativa ou vínculo duplicado resultante.'},
+        status.HTTP_401_UNAUTHORIZED: {'description': 'Não autenticado.'},
+        status.HTTP_403_FORBIDDEN: {'description': 'Sem permissão de administrador.'},
+        status.HTTP_404_NOT_FOUND: {'description': 'Vínculo não encontrado.'},
     },
 )
 class AtualizarVinculoFuncaoView(IsAdminMixin, BasicPatchAPIView):
     """PATCH /organizacional/setores/<setor_pk>/vinculos/<pk>/funcao/"""
     serializer_class = AtualizarVinculoFuncaoSerializer
-    mensagem_sucesso = 'FunÃ§Ã£o do vÃ­nculo atualizada com sucesso.'
+    mensagem_sucesso = 'Função do vínculo atualizada com sucesso.'
 
     def get_queryset(self):
         return SetorVinculo.objects.filter(setor_id=self.kwargs['setor_pk'])

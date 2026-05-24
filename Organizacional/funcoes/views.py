@@ -27,12 +27,12 @@ logger = logging.getLogger(__name__)
 
 
 @extend_schema(
-    tags=['FunÃ§Ãµes'],
-    summary='Listar funÃ§Ãµes',
+    tags=['Funções'],
+    summary='Listar funções',
     description='''
-    Retorna a lista paginada de funÃ§Ãµes organizacionais.
+    Retorna a lista paginada de funções organizacionais.
 
-    **PermissÃµes:** Apenas administradores.
+    **Permissões:** Apenas administradores.
 
     **Query params apenas reduzem o conjunto â€” nunca expandem o acesso.**
     ''',
@@ -43,20 +43,20 @@ logger = logging.getLogger(__name__)
         ),
         OpenApiParameter(
             'paginacao', OpenApiTypes.INT, OpenApiParameter.QUERY,
-            required=False, description='Tamanho da pÃ¡gina (1â€“100, padrÃ£o 10).',
+            required=False, description='Tamanho da página (1â€“100, padrão 10).',
         ),
     ],
     responses={
         status.HTTP_200_OK: FuncaoSerializer(many=True),
-        status.HTTP_401_UNAUTHORIZED: {'description': 'NÃ£o autenticado.'},
-        status.HTTP_403_FORBIDDEN: {'description': 'Sem permissÃ£o de administrador.'},
+        status.HTTP_401_UNAUTHORIZED: {'description': 'Não autenticado.'},
+        status.HTTP_403_FORBIDDEN: {'description': 'Sem permissão de administrador.'},
     },
 )
 class ListarFuncoesView(IsAdminMixin, BasicGetAPIView):
     """GET /organizacional/funcoes/"""
     pagination_class = PaginacaoCustomizada
     serializer_class = FuncaoSerializer
-    mensagem_sucesso = 'FunÃ§Ãµes listadas com sucesso.'
+    mensagem_sucesso = 'Funções listadas com sucesso.'
 
     def get_queryset(self):
         qs = Funcao.objects.all()
@@ -67,21 +67,21 @@ class ListarFuncoesView(IsAdminMixin, BasicGetAPIView):
 
 
 @extend_schema(
-    tags=['FunÃ§Ãµes'],
-    summary='Criar funÃ§Ã£o',
-    description='Cria uma nova funÃ§Ã£o organizacional. A sigla deve ser Ãºnica.\n\n**PermissÃµes:** Apenas administradores.',
+    tags=['Funções'],
+    summary='Criar função',
+    description='Cria uma nova função organizacional. A sigla deve ser única.\n\n**Permissões:** Apenas administradores.',
     request=CriarFuncaoSerializer,
     responses={
         status.HTTP_201_CREATED: FuncaoSerializer,
-        status.HTTP_400_BAD_REQUEST: {'description': 'Dados invÃ¡lidos ou sigla jÃ¡ cadastrada.'},
-        status.HTTP_401_UNAUTHORIZED: {'description': 'NÃ£o autenticado.'},
-        status.HTTP_403_FORBIDDEN: {'description': 'Sem permissÃ£o de administrador.'},
+        status.HTTP_400_BAD_REQUEST: {'description': 'Dados inválidos ou sigla já¡ cadastrada.'},
+        status.HTTP_401_UNAUTHORIZED: {'description': 'Não autenticado.'},
+        status.HTTP_403_FORBIDDEN: {'description': 'Sem permissão de administrador.'},
     },
 )
 class CriarFuncaoView(IsAdminMixin, BasicPostAPIView):
     """POST /organizacional/funcoes/"""
     serializer_class = CriarFuncaoSerializer
-    mensagem_sucesso = 'FunÃ§Ã£o criada com sucesso.'
+    mensagem_sucesso = 'Função criada com sucesso.'
 
     def do_action_post(self, serializer_data, request, *args, **kwargs):
         funcao = FuncaoBusiness().criar_funcao(**serializer_data)
@@ -93,41 +93,41 @@ class CriarFuncaoView(IsAdminMixin, BasicPostAPIView):
 
 
 @extend_schema(
-    tags=['FunÃ§Ãµes'],
-    summary='Detalhe da funÃ§Ã£o',
-    description='Retorna os dados de uma funÃ§Ã£o especÃ­fica.\n\n**PermissÃµes:** Apenas administradores.',
+    tags=['Funções'],
+    summary='Detalhe da função',
+    description='Retorna os dados de uma função específica.\n\n**Permissões:** Apenas administradores.',
     responses={
         status.HTTP_200_OK: FuncaoSerializer,
-        status.HTTP_401_UNAUTHORIZED: {'description': 'NÃ£o autenticado.'},
-        status.HTTP_403_FORBIDDEN: {'description': 'Sem permissÃ£o de administrador.'},
-        status.HTTP_404_NOT_FOUND: {'description': 'FunÃ§Ã£o nÃ£o encontrada.'},
+        status.HTTP_401_UNAUTHORIZED: {'description': 'Não autenticado.'},
+        status.HTTP_403_FORBIDDEN: {'description': 'Sem permissão de administrador.'},
+        status.HTTP_404_NOT_FOUND: {'description': 'Função não encontrada.'},
     },
 )
 class DetalheFuncaoView(IsAdminMixin, BasicRetrieveAPIView):
     """GET /organizacional/funcoes/<pk>/"""
     queryset = Funcao.objects.all()
     serializer_class = FuncaoSerializer
-    mensagem_sucesso = 'FunÃ§Ã£o obtida com sucesso.'
+    mensagem_sucesso = 'Função obtida com sucesso.'
 
 
 @extend_schema(
-    tags=['FunÃ§Ãµes'],
-    summary='Atualizar funÃ§Ã£o',
-    description='Atualiza parcialmente os dados da funÃ§Ã£o.\n\n**PermissÃµes:** Apenas administradores.',
+    tags=['Funções'],
+    summary='Atualizar função',
+    description='Atualiza parcialmente os dados da função.\n\n**Permissões:** Apenas administradores.',
     request=AtualizarFuncaoSerializer,
     responses={
         status.HTTP_200_OK: FuncaoSerializer,
-        status.HTTP_400_BAD_REQUEST: {'description': 'Dados invÃ¡lidos ou sigla jÃ¡ cadastrada.'},
-        status.HTTP_401_UNAUTHORIZED: {'description': 'NÃ£o autenticado.'},
-        status.HTTP_403_FORBIDDEN: {'description': 'Sem permissÃ£o de administrador.'},
-        status.HTTP_404_NOT_FOUND: {'description': 'FunÃ§Ã£o nÃ£o encontrada.'},
+        status.HTTP_400_BAD_REQUEST: {'description': 'Dados inválidos ou sigla já¡ cadastrada.'},
+        status.HTTP_401_UNAUTHORIZED: {'description': 'Não autenticado.'},
+        status.HTTP_403_FORBIDDEN: {'description': 'Sem permissão de administrador.'},
+        status.HTTP_404_NOT_FOUND: {'description': 'Função não encontrada.'},
     },
 )
 class AtualizarFuncaoView(IsAdminMixin, BasicPatchAPIView):
     """PATCH /organizacional/funcoes/<pk>/"""
     queryset = Funcao.objects.all()
     serializer_class = AtualizarFuncaoSerializer
-    mensagem_sucesso = 'FunÃ§Ã£o atualizada com sucesso.'
+    mensagem_sucesso = 'Função atualizada com sucesso.'
 
     def do_action_patch(self, serializer_data, request, *args, **kwargs):
         self.object.business.atualizar_dados(serializer_data)
@@ -138,22 +138,22 @@ class AtualizarFuncaoView(IsAdminMixin, BasicPatchAPIView):
 
 
 @extend_schema(
-    tags=['FunÃ§Ãµes'],
-    summary='Desativar funÃ§Ã£o',
-    description='Desativa uma funÃ§Ã£o. Bloqueado se estiver em uso em vÃ­nculos.\n\n**PermissÃµes:** Apenas administradores.',
+    tags=['Funções'],
+    summary='Desativar função',
+    description='Desativa uma função. Bloqueado se estiver em uso em vínculos.\n\n**Permissões:** Apenas administradores.',
     request=None,
     responses={
-        status.HTTP_200_OK: {'description': 'FunÃ§Ã£o desativada com sucesso.'},
-        status.HTTP_400_BAD_REQUEST: {'description': 'FunÃ§Ã£o jÃ¡ inativa ou em uso.'},
-        status.HTTP_401_UNAUTHORIZED: {'description': 'NÃ£o autenticado.'},
-        status.HTTP_403_FORBIDDEN: {'description': 'Sem permissÃ£o de administrador.'},
-        status.HTTP_404_NOT_FOUND: {'description': 'FunÃ§Ã£o nÃ£o encontrada.'},
+        status.HTTP_200_OK: {'description': 'Função desativada com sucesso.'},
+        status.HTTP_400_BAD_REQUEST: {'description': 'Função já¡ inativa ou em uso.'},
+        status.HTTP_401_UNAUTHORIZED: {'description': 'Não autenticado.'},
+        status.HTTP_403_FORBIDDEN: {'description': 'Sem permissão de administrador.'},
+        status.HTTP_404_NOT_FOUND: {'description': 'Função não encontrada.'},
     },
 )
 class DesativarFuncaoView(IsAdminMixin, BasicPostAPIView):
     """POST /organizacional/funcoes/<pk>/desativar/"""
     serializer_class = SerializerVazio
-    mensagem_sucesso = 'FunÃ§Ã£o desativada com sucesso.'
+    mensagem_sucesso = 'Função desativada com sucesso.'
     queryset = Funcao.objects.all()
 
     def do_action_post(self, serializer_data, request, *args, **kwargs):
@@ -161,22 +161,22 @@ class DesativarFuncaoView(IsAdminMixin, BasicPostAPIView):
 
 
 @extend_schema(
-    tags=['FunÃ§Ãµes'],
-    summary='Reativar funÃ§Ã£o',
-    description='Reativa uma funÃ§Ã£o previamente desativada.\n\n**PermissÃµes:** Apenas administradores.',
+    tags=['Funções'],
+    summary='Reativar função',
+    description='Reativa uma função previamente desativada.\n\n**Permissões:** Apenas administradores.',
     request=None,
     responses={
-        status.HTTP_200_OK: {'description': 'FunÃ§Ã£o reativada com sucesso.'},
-        status.HTTP_400_BAD_REQUEST: {'description': 'FunÃ§Ã£o jÃ¡ estÃ¡ ativa.'},
-        status.HTTP_401_UNAUTHORIZED: {'description': 'NÃ£o autenticado.'},
-        status.HTTP_403_FORBIDDEN: {'description': 'Sem permissÃ£o de administrador.'},
-        status.HTTP_404_NOT_FOUND: {'description': 'FunÃ§Ã£o nÃ£o encontrada.'},
+        status.HTTP_200_OK: {'description': 'Função reativada com sucesso.'},
+        status.HTTP_400_BAD_REQUEST: {'description': 'Função já está ativa.'},
+        status.HTTP_401_UNAUTHORIZED: {'description': 'Não autenticado.'},
+        status.HTTP_403_FORBIDDEN: {'description': 'Sem permissão de administrador.'},
+        status.HTTP_404_NOT_FOUND: {'description': 'Função não encontrada.'},
     },
 )
 class ReativarFuncaoView(IsAdminMixin, BasicPostAPIView):
     """POST /organizacional/funcoes/<pk>/reativar/"""
     serializer_class = SerializerVazio
-    mensagem_sucesso = 'FunÃ§Ã£o reativada com sucesso.'
+    mensagem_sucesso = 'Função reativada com sucesso.'
     queryset = Funcao.objects.all()
 
     def do_action_post(self, serializer_data, request, *args, **kwargs):
