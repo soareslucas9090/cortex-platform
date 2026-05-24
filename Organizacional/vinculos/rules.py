@@ -7,6 +7,13 @@ class SetorVinculoRules(ModelInstanceRules):
         if not hasattr(usuario, 'servidor') or not usuario.servidor.ativo:
             self.return_exception('Apenas servidores ativos podem ocupar a responsabilidade principal de um setor.')
         return True
+
+    def usuario_e_aluno_se_exigido(self, usuario, funcao) -> bool:
+        """Valida se a função exige perfil acadêmico e se o usuário atende à exigência."""
+        if getattr(funcao, 'exige_aluno', False):
+            if not hasattr(usuario, 'aluno') or not usuario.aluno.ativo:
+                self.return_exception('Esta função é exclusiva para alunos ativos.')
+        return True
     def setor_esta_ativo(self, setor) -> bool:
         """Vínculo só pode ser criado em setor ativo."""
         if not setor.ativo:

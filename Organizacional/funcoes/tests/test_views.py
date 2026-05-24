@@ -22,9 +22,9 @@ def criar_usuario_comum(cpf='00000000002', nome='Comum'):
     return Usuario.objects.create_user(cpf=cpf, password='Senha@123', nome=nome)
 
 
-def criar_funcao(sigla='TI', descricao='Técnico de Informática', e_gratificada=False, ativo=True):
+def criar_funcao(sigla='TI', descricao='Técnico de Informática', e_gratificada=False, exige_aluno=False, ativo=True):
     return Funcao.objects.create(
-        sigla=sigla, descricao=descricao, e_gratificada=e_gratificada, ativo=ativo,
+        sigla=sigla, descricao=descricao, e_gratificada=e_gratificada, exige_aluno=exige_aluno, ativo=ativo,
     )
 
 
@@ -124,6 +124,19 @@ class CriarFuncaoViewTest(APITestCase):
         resposta = self.client.post(self.url, self.payload_valido)
         self.assertEqual(resposta.status_code, status.HTTP_201_CREATED)
         self.assertFalse(resposta.data['dados']['e_gratificada'])
+
+    def test_cria_funcao_exige_aluno(self):
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token_admin}')
+        payload = {**self.payload_valido, 'exige_aluno': True}
+        resposta = self.client.post(self.url, payload)
+        self.assertEqual(resposta.status_code, status.HTTP_201_CREATED)
+        self.assertTrue(resposta.data['dados']['exige_aluno'])
+
+    def test_exige_aluno_padrao_e_false(self):
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token_admin}')
+        resposta = self.client.post(self.url, self.payload_valido)
+        self.assertEqual(resposta.status_code, status.HTTP_201_CREATED)
+        self.assertFalse(resposta.data['dados']['exige_aluno'])
 
     def test_usuario_comum_nao_pode_criar(self):
         self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token_comum}')

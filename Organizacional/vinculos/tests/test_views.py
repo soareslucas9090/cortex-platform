@@ -10,6 +10,7 @@ from Organizacional.setores.models import Setor
 from Organizacional.vinculos.models import SetorVinculo
 from PessoasInstitucionais.cargos.models import Cargo
 from PessoasInstitucionais.servidores.models import Servidor
+from Academico.alunos.models import Aluno
 
 
 def obter_tokens(usuario):
@@ -30,8 +31,8 @@ def criar_setor(sigla='TI', nome='Tecnologia da Informação', ativo=True):
     return Setor.objects.create(sigla=sigla, nome=nome, ativo=ativo)
 
 
-def criar_funcao(sigla='AUX', descricao='Auxiliar Técnico', ativo=True):
-    return Funcao.objects.create(sigla=sigla, descricao=descricao, ativo=ativo)
+def criar_funcao(sigla='AUX', descricao='Auxiliar Técnico', ativo=True, exige_aluno=False):
+    return Funcao.objects.create(sigla=sigla, descricao=descricao, ativo=ativo, exige_aluno=exige_aluno)
 
 
 def criar_vinculo(usuario, setor, funcao, responsavel=False):
@@ -186,6 +187,21 @@ class CriarVinculoViewTest(APITestCase):
         payload = {**self.payload_valido, 'responsavel': True}
         resposta = self.client.post(self.url, payload)
         self.assertEqual(resposta.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_cria_vinculo_com_funcao_que_exige_aluno_falha_se_nao_aluno(self):
+        funcao_aluno = criar_funcao(sigla='MON', descricao='Monitor', exige_aluno=True)
+        payload = {'usuario': self.comum.pk, 'funcao': funcao_aluno.pk}
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token_admin}')
+        resposta = self.client.post(self.url, payload)
+        self.assertEqual(resposta.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_cria_vinculo_com_funcao_que_exige_aluno_sucesso(self):
+        Aluno.objects.create(usuario=self.comum, ativo=True)
+        funcao_aluno = criar_funcao(sigla='MON', descricao='Monitor', exige_aluno=True)
+        payload = {'usuario': self.comum.pk, 'funcao': funcao_aluno.pk}
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token_admin}')
+        resposta = self.client.post(self.url, payload)
+        self.assertEqual(resposta.status_code, status.HTTP_201_CREATED)
 
 
 class EncerrarVinculoViewTest(APITestCase):
@@ -459,3 +475,16 @@ class AtualizarVinculoFuncaoViewTest(APITestCase):
         self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token_admin}')
         resposta = self.client.patch(url, {'funcao': self.nova_funcao.pk})
         self.assertEqual(resposta.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_atualizar_para_funcao_que_exige_aluno_falha_se_nao_aluno(self):
+        funcao_aluno = criar_funcao(sigla='MON', descricao='Monitor', exige_aluno=True)
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token_admin}')
+        resposta = self.client.patch(self.url, {'funcao': funcao_aluno.pk})
+        self.assertEqual(resposta.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_atualizar_para_funcao_que_exige_aluno_sucesso(self):
+        Aluno.objects.create(usuario=self.comum, ativo=True)
+        funcao_aluno = criar_funcao(sigla='MON', descricao='Monitor', exige_aluno=True)
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token_admin}')
+        resposta = self.client.patch(self.url, {'funcao': funcao_aluno.pk})
+        self.assertEqual(resposta.status_code, status.HTTP_200_OK)

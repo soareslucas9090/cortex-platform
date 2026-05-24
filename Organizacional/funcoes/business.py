@@ -10,7 +10,7 @@ logger = logging.getLogger(__name__)
 
 class FuncaoBusiness(ModelInstanceBusiness):
 
-    def criar_funcao(self, sigla: str, descricao: str, e_gratificada: bool = False, **kwargs):
+    def criar_funcao(self, sigla: str, descricao: str, e_gratificada: bool = False, exige_aluno: bool = False, **kwargs):
         """Cria uma nova função validando unicidade de sigla."""
         from .models import Funcao
         regras = FuncaoRules()
@@ -20,6 +20,7 @@ class FuncaoBusiness(ModelInstanceBusiness):
                 sigla=sigla,
                 descricao=descricao,
                 e_gratificada=e_gratificada,
+                exige_aluno=exige_aluno,
                 **kwargs,
             )
         except Exception as e:

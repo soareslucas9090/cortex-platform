@@ -27,6 +27,7 @@ class SetorVinculoBusiness(ModelInstanceBusiness):
         regras.setor_esta_ativo(setor)
         regras.funcao_esta_ativa(funcao)
         regras.vinculo_sem_duplicata(usuario, setor, funcao)
+        regras.usuario_e_aluno_se_exigido(usuario, funcao)
         
         if responsavel:
             regras.usuario_e_servidor(usuario)
@@ -55,6 +56,7 @@ class SetorVinculoBusiness(ModelInstanceBusiness):
             nova_funcao,
             excluir_id=self.object_instance.pk,
         )
+        regras.usuario_e_aluno_se_exigido(self.object_instance.usuario, nova_funcao)
         try:
             self.object_instance.funcao = nova_funcao
             self.object_instance.save(update_fields=['funcao'])
