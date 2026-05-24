@@ -1,14 +1,12 @@
 from django.urls import path
-from AppCore.basics.views.basic_views import roteador_por_metodo
 
+from AppCore.basics.views.basic_views import roteador_por_metodo
 from .views import (
     ListarAlunosView,
     CriarAlunoView,
     DetalharAlunoView,
     AtualizarAlunoView,
 )
-
-app_name = 'alunos'
 
 urlpatterns = [
     path(
@@ -17,7 +15,7 @@ urlpatterns = [
             GET=ListarAlunosView,
             POST=CriarAlunoView,
         ),
-        name='alunos-list-create',
+        name='aluno-list',
     ),
     path(
         '<int:usuario_id>/',
@@ -25,6 +23,7 @@ urlpatterns = [
             GET=DetalharAlunoView,
             PATCH=AtualizarAlunoView,
         ),
-        name='alunos-detail-update',
+        name='aluno-detail',
     ),
 ]
+

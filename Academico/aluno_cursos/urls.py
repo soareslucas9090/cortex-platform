@@ -9,8 +9,6 @@ from .views import (
     EncerrarAlunoCursoView,
 )
 
-app_name = 'aluno_cursos'
-
 urlpatterns = [
     path(
         '',

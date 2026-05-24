@@ -4,15 +4,35 @@ from .choices import FormaIngresso, SituacaoAluno
 from .models import Aluno
 
 
-class AlunoSerializer(serializers.Serializer):
+class AlunoSerializer(serializers.ModelSerializer):
     usuario_id = serializers.IntegerField(source='usuario.id', read_only=True)
     usuario_nome = serializers.CharField(source='usuario.nome', read_only=True)
     usuario_cpf = serializers.CharField(source='usuario.cpf', read_only=True)
-    ira = serializers.DecimalField(max_digits=5, decimal_places=4, read_only=True)
-    situacao = serializers.ChoiceField(choices=SituacaoAluno.choices, read_only=True)
-    forma_ingresso = serializers.ChoiceField(choices=FormaIngresso.choices, read_only=True)
-    ativo = serializers.BooleanField(read_only=True)
-    created_at = serializers.DateTimeField(read_only=True)
+    situacao_display = serializers.CharField(source='get_situacao_display', read_only=True)
+    forma_ingresso_display = serializers.CharField(source='get_forma_ingresso_display', read_only=True)
+
+    class Meta:
+        model = Aluno
+        fields = [
+            'usuario_id',
+            'usuario_nome',
+            'usuario_cpf',
+            'ira',
+            'situacao',
+            'situacao_display',
+            'forma_ingresso',
+            'forma_ingresso_display',
+            'ativo',
+            'created_at',
+        ]
+        read_only_fields = [
+            'usuario_id',
+            'usuario_nome',
+            'usuario_cpf',
+            'situacao_display',
+            'forma_ingresso_display',
+            'created_at',
+        ]
 
 
 class CriarAlunoSerializer(serializers.Serializer):
@@ -28,3 +48,4 @@ class AtualizarAlunoSerializer(serializers.Serializer):
     situacao = serializers.ChoiceField(choices=SituacaoAluno.choices, required=False)
     forma_ingresso = serializers.ChoiceField(choices=FormaIngresso.choices, required=False)
     ativo = serializers.BooleanField(required=False)
+

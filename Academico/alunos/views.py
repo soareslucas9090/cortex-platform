@@ -62,11 +62,6 @@ class CriarAlunoView(IsAdminMixin, BasicPostAPIView):
     mensagem_sucesso = 'Aluno criado com sucesso.'
 
     def do_action_post(self, serializer_data, request, *args, **kwargs):
-        # Create an instance to call business (since ModelInstanceBusiness needs an instance or class)
-        # However, for creation we typically use an empty instance or call it on the class if possible.
-        # But according to standard usage, we just use a temporary instance or get_business on the model.
-        # Actually ModelBusinessMixin provides a class method `get_business_class` or we can just instantiate it.
-        # Let's instantiate a temporary empty model to access business, or just instantiate Business directly.
         aluno = Aluno().business.criar_aluno(**serializer_data)
         return {
             'mensagem': self.mensagem_sucesso,
