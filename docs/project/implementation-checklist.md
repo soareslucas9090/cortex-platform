@@ -271,11 +271,11 @@ O objetivo é permitir uma execução incremental, previsível e consistente, ev
 
 ## Integração entre domínios
 
-- [ ] Validar regra de responsável de setor usando perfil `Servidor`
-- [ ] Validar monitoria com base em `SetorVinculo + Funcao`
-- [ ] Garantir login por CPF integrado com `Usuario`
-- [ ] Garantir que aluno monitor seja tratado no domínio correto
-- [ ] Evitar duplicação de regras de monitoria entre domínios
+- [x] Validar regra de responsável de setor usando perfil `Servidor`
+- [x] Validar monitoria com base em `SetorVinculo + Funcao`
+- [x] Garantir login por CPF integrado com `Usuario`
+- [x] Garantir que aluno monitor seja tratado no domínio correto
+- [x] Evitar duplicação de regras de monitoria entre domínios
 
 ## Refinamento documental
 
@@ -286,16 +286,16 @@ O objetivo é permitir uma execução incremental, previsível e consistente, ev
 
 ## Validação funcional mínima
 
-- [ ] Criar usuário com CPF
-- [ ] Criar servidor com cargo
-- [ ] Criar setor
-- [ ] Criar função
-- [ ] Vincular servidor a setor com função
-- [ ] Definir responsável de setor
-- [ ] Criar aluno
-- [ ] Vincular aluno a curso
-- [ ] Vincular aluno monitor a setor com função `monitor`
-- [ ] Criar terceirizado com empresa
+- [x] Criar usuário com CPF
+- [x] Criar servidor com cargo
+- [x] Criar setor
+- [x] Criar função
+- [x] Vincular servidor a setor com função
+- [x] Definir responsável de setor
+- [x] Criar aluno
+- [x] Vincular aluno a curso
+- [x] Vincular aluno monitor a setor com função `monitor`
+- [x] Criar terceirizado com empresa
 
 ---
 
