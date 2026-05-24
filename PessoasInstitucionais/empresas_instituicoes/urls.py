@@ -11,8 +11,8 @@ from .views import (
 )
 
 urlpatterns = [
-    path('', roteador_por_metodo(GET=ListarEmpresasView, POST=CriarEmpresaView), name='empresa-list'),
-    path('<int:pk>/', roteador_por_metodo(GET=DetalharEmpresaView, PATCH=AtualizarEmpresaView), name='empresa-detail'),
-    path('<int:pk>/desativar/', roteador_por_metodo(POST=DesativarEmpresaView), name='empresa-desativar'),
-    path('<int:pk>/reativar/', roteador_por_metodo(POST=ReativarEmpresaView), name='empresa-reativar'),
+    path('empresas/', roteador_por_metodo(GET=ListarEmpresasView, POST=CriarEmpresaView), name='empresa-list'),
+    path('empresas/<int:pk>/', roteador_por_metodo(GET=DetalharEmpresaView, PATCH=AtualizarEmpresaView), name='empresa-detail'),
+    path('empresas/<int:pk>/desativar/', roteador_por_metodo(POST=DesativarEmpresaView), name='empresa-desativar'),
+    path('empresas/<int:pk>/reativar/', roteador_por_metodo(POST=ReativarEmpresaView), name='empresa-reativar'),
 ]

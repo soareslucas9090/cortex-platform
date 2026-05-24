@@ -82,7 +82,7 @@ A base técnica do projeto deve estar estável, segura e coerente com a arquitet
 
 ## Estado
 
-**Em andamento** — estrutura física e apps internos criados. Implementação e testes em progresso.
+**Concluída**
 
 ## Objetivo
 
@@ -148,7 +148,7 @@ O projeto passa a possuir o usuário real do sistema e sua base de identidade co
 
 ## Estado
 
-**Em andamento** — estrutura física e apps internos criados. Implementação e testes em progresso.
+**Concluída**
 
 ## Objetivo
 
@@ -211,7 +211,7 @@ O projeto passa a representar estrutura institucional, funções e vínculos org
 
 ## Estado
 
-**Planejado** — aguardando conclusão das Milestones 1 e 2.
+**Concluída**
 
 ## Objetivo
 
@@ -281,7 +281,7 @@ O projeto passa a representar formalmente servidores, terceirizados e estruturas
 
 ## Estado
 
-**Planejado** — aguardando conclusão das Milestones 1, 2 e 3.
+**Concluída**
 
 ## Objetivo
 
@@ -340,7 +340,7 @@ O projeto passa a representar perfis acadêmicos e seus vínculos formais com cu
 
 ## Estado
 
-**Planejado** — aguardando conclusão de todos os domínios.
+**Em andamento** — estruturação e validação de documentos concluída.
 
 ## Objetivo
 

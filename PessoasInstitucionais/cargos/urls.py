@@ -11,8 +11,8 @@ from .views import (
 )
 
 urlpatterns = [
-    path('', roteador_por_metodo(GET=ListarCargosView, POST=CriarCargoView), name='cargo-list'),
-    path('<int:pk>/', roteador_por_metodo(GET=DetalharCargoView, PATCH=AtualizarCargoView), name='cargo-detail'),
-    path('<int:pk>/desativar/', roteador_por_metodo(POST=DesativarCargoView), name='cargo-desativar'),
-    path('<int:pk>/reativar/', roteador_por_metodo(POST=ReativarCargoView), name='cargo-reativar'),
+    path('cargos/', roteador_por_metodo(GET=ListarCargosView, POST=CriarCargoView), name='cargo-list'),
+    path('cargos/<int:pk>/', roteador_por_metodo(GET=DetalharCargoView, PATCH=AtualizarCargoView), name='cargo-detail'),
+    path('cargos/<int:pk>/desativar/', roteador_por_metodo(POST=DesativarCargoView), name='cargo-desativar'),
+    path('cargos/<int:pk>/reativar/', roteador_por_metodo(POST=ReativarCargoView), name='cargo-reativar'),
 ]

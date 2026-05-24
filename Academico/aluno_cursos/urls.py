@@ -11,17 +11,17 @@ from .views import (
 
 urlpatterns = [
     path(
-        '',
+        'aluno-cursos/',
         roteador_por_metodo(GET=ListarAlunoCursosView, POST=CriarAlunoCursoView),
         name='aluno-curso-list',
     ),
     path(
-        '<int:pk>/',
+        'aluno-cursos/<int:pk>/',
         roteador_por_metodo(GET=DetalharAlunoCursoView, PATCH=AtualizarAlunoCursoView),
         name='aluno-curso-detail',
     ),
     path(
-        '<int:pk>/encerrar/',
+        'aluno-cursos/<int:pk>/encerrar/',
         roteador_por_metodo(POST=EncerrarAlunoCursoView),
         name='aluno-curso-encerrar',
     ),

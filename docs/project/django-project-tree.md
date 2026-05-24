@@ -224,6 +224,8 @@ urlpatterns = [
     path('auth/', include('Auth.urls')),
     path('identidade/', include('Identidade.urls')),
     path('organizacional/', include('Organizacional.urls')),
+    path('pessoas-institucionais/', include('PessoasInstitucionais.urls')),
+    path('academico/', include('Academico.urls')),
 ]
 ```
 
@@ -261,6 +263,13 @@ PROJECT_APPS = [
     'Organizacional.setores',
     'Organizacional.funcoes',
     'Organizacional.vinculos',
+    'PessoasInstitucionais.cargos',
+    'PessoasInstitucionais.empresas_instituicoes',
+    'PessoasInstitucionais.servidores',
+    'PessoasInstitucionais.terceirizados',
+    'Academico.cursos',
+    'Academico.alunos',
+    'Academico.aluno_cursos',
 ]
 ```
 
@@ -278,24 +287,51 @@ AUTH_USER_MODEL = 'usuarios.Usuario'
 
 ---
 
-## Próximos módulos esperados
-
 ### `PessoasInstitucionais/`
 
-Sugestão de apps internos:
+Domínio responsável pelos perfis institucionais formais do usuário.
 
-- `servidores/`
-- `cargos/`
-- `terceirizados/`
-- `empresas_instituicoes/`
+#### Estrutura atual
+
+```text name=pessoas-institucionais-module-tree.txt
+PessoasInstitucionais/
+├── __init__.py
+├── urls.py
+├── cargos/
+├── empresas_instituicoes/
+├── servidores/
+└── terceirizados/
+```
+
+#### Responsabilidades
+
+- `cargos/` → model principal `Cargo`
+- `empresas_instituicoes/` → model principal `EmpresaInstituicao`
+- `servidores/` → model principal `Servidor`
+- `terceirizados/` → model principal `Terceirizado`
+
+---
 
 ### `Academico/`
 
-Sugestão de apps internos:
+Domínio responsável pelos perfis acadêmicos e vínculos com cursos.
 
-- `alunos/`
-- `cursos/`
-- `aluno_cursos/`
+#### Estrutura atual
+
+```text name=academico-module-tree.txt
+Academico/
+├── __init__.py
+├── urls.py
+├── aluno_cursos/
+├── alunos/
+└── cursos/
+```
+
+#### Responsabilidades
+
+- `alunos/` → model principal `Aluno`
+- `cursos/` → model principal `Curso`
+- `aluno_cursos/` → model principal `AlunoCurso`
 
 ---
 

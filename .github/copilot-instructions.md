@@ -755,38 +755,38 @@ Abaixo está o resumo dos modelos, seus relacionamentos e o status de implementa
 | **Setor**              | ✅ Implementado | `Organizacional/setores/`                      | M:N com Usuario via SetorVinculo                          |
 | **Funcao**             | ✅ Implementado | `Organizacional/funcoes/`                      | Entidade independente; usada em SetorVinculo              |
 | **SetorVinculo**       | ✅ Implementado | `Organizacional/vinculos/`                     | N:1 com Usuario, N:1 com Setor, N:1 com Funcao            |
-| **Cargo**              | 🔜 Planejado    | `PessoasInstitucionais/cargos/`                | Entidade independente                                     |
-| **Servidor**           | 🔜 Planejado    | `PessoasInstitucionais/servidores/`            | OneToOne com Usuario, N:1 com Cargo                       |
-| **EmpresaInstituicao** | 🔜 Planejado    | `PessoasInstitucionais/empresas_instituicoes/` | 1:N com Terceirizado                                      |
-| **Terceirizado**       | 🔜 Planejado    | `PessoasInstitucionais/terceirizados/`         | OneToOne com Usuario, N:1 com EmpresaInstituicao          |
-| **Aluno**              | 🔜 Planejado    | `Academico/alunos/`                            | OneToOne com Usuario                                      |
-| **Curso**              | 🔜 Planejado    | `Academico/cursos/`                            | M:N com Aluno via AlunoCurso                              |
+| **Cargo**              | ✅ Implementado | `PessoasInstitucionais/cargos/`                | Entidade independente                                     |
+| **Servidor**           | ✅ Implementado | `PessoasInstitucionais/servidores/`            | OneToOne com Usuario, N:1 com Cargo                       |
+| **EmpresaInstituicao** | ✅ Implementado | `PessoasInstitucionais/empresas_instituicoes/` | 1:N com Terceirizado                                      |
+| **Terceirizado**       | ✅ Implementado | `PessoasInstitucionais/terceirizados/`         | OneToOne com Usuario, N:1 com EmpresaInstituicao          |
+| **Aluno**              | ✅ Implementado | `Academico/alunos/`                            | OneToOne com Usuario                                      |
+| **Curso**              | ✅ Implementado | `Academico/cursos/`                            | M:N com Aluno via AlunoCurso                              |
 
 ### Apps Internos por Módulo de Domínio
 
 A ordem de criação respeita as dependências entre domínios. Apps dentro do mesmo módulo seguem a ordem abaixo:
 
-**Módulo `Identidade/`** (Milestone 1 — em progresso):
+**Módulo `Identidade/`** (Milestone 1 — concluído):
 
 1. `Identidade/usuarios/` — Model: `Usuario` (base de autenticação; sem dependências externas)
 2. `Identidade/contatos/` — Model: `Contato` (depende de `usuarios`)
 3. `Identidade/enderecos/` — Model: `Endereco` (depende de `usuarios`)
 4. `Identidade/matriculas/` — Model: `Matricula` (depende de `usuarios`)
 
-**Módulo `Organizacional/`** (Milestone 2 — em progresso):
+**Módulo `Organizacional/`** (Milestone 2 — concluído):
 
 5. `Organizacional/setores/` — Model: `Setor` (sem dependências externas)
 6. `Organizacional/funcoes/` — Model: `Funcao` (sem dependências externas)
 7. `Organizacional/vinculos/` — Model: `SetorVinculo` (depende de `usuarios`, `setores`, `funcoes`)
 
-**Módulo `PessoasInstitucionais/`** (Milestone 3 — planejado):
+**Módulo `PessoasInstitucionais/`** (Milestone 3 — concluído):
 
 8. `PessoasInstitucionais/cargos/` — Model: `Cargo` (sem dependências externas)
 9. `PessoasInstitucionais/servidores/` — Model: `Servidor` (depende de `usuarios`, `cargos`)
 10. `PessoasInstitucionais/empresas_instituicoes/` — Model: `EmpresaInstituicao` (sem dependências externas)
 11. `PessoasInstitucionais/terceirizados/` — Model: `Terceirizado` (depende de `usuarios`, `empresas_instituicoes`)
 
-**Módulo `Academico/`** (Milestone 4 — planejado):
+**Módulo `Academico/`** (Milestone 4 — concluído):
 
 12. `Academico/alunos/` — Model: `Aluno` (depende de `usuarios`)
 13. `Academico/cursos/` — Model: `Curso` (sem dependências externas)

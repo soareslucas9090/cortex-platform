@@ -11,8 +11,8 @@ from .views import (
 )
 
 urlpatterns = [
-    path('', roteador_por_metodo(GET=ListarTerceirizadosView, POST=CriarTerceirizadoView), name='terceirizado-list'),
-    path('<int:pk>/', roteador_por_metodo(GET=DetalharTerceirizadoView, PATCH=AtualizarTerceirizadoView), name='terceirizado-detail'),
-    path('<int:pk>/desativar/', roteador_por_metodo(POST=DesativarTerceirizadoView), name='terceirizado-desativar'),
-    path('<int:pk>/reativar/', roteador_por_metodo(POST=ReativarTerceirizadoView), name='terceirizado-reativar'),
+    path('terceirizados/', roteador_por_metodo(GET=ListarTerceirizadosView, POST=CriarTerceirizadoView), name='terceirizado-list'),
+    path('terceirizados/<int:pk>/', roteador_por_metodo(GET=DetalharTerceirizadoView, PATCH=AtualizarTerceirizadoView), name='terceirizado-detail'),
+    path('terceirizados/<int:pk>/desativar/', roteador_por_metodo(POST=DesativarTerceirizadoView), name='terceirizado-desativar'),
+    path('terceirizados/<int:pk>/reativar/', roteador_por_metodo(POST=ReativarTerceirizadoView), name='terceirizado-reativar'),
 ]

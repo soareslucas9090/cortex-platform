@@ -51,8 +51,8 @@ O objetivo é permitir uma execução incremental, previsível e consistente, ev
 - [x] Confirmar ordem de criação dos módulos de domínio:
   - [x] `Identidade/` (Milestone 1)
   - [x] `Organizacional/` (Milestone 2)
-  - [ ] `PessoasInstitucionais/` (Milestone 3)
-  - [ ] `Academico/` (Milestone 4)
+  - [x] `PessoasInstitucionais/` (Milestone 3)
+  - [x] `Academico/` (Milestone 4)
 
 ---
 
@@ -108,10 +108,10 @@ O objetivo é permitir uma execução incremental, previsível e consistente, ev
 
 ## Integração interna do domínio Identidade
 
-- [ ] Validar coerência entre os 4 apps do módulo
-- [ ] Validar roteamento agregado em `Identidade/urls.py`
-- [ ] Garantir login por CPF integrado com `Auth`
-- [ ] Revisar testes de integração entre apps do domínio
+- [x] Validar coerência entre os 4 apps do módulo
+- [x] Validar roteamento agregado em `Identidade/urls.py`
+- [x] Garantir login por CPF integrado com `Auth`
+- [x] Revisar testes de integração entre apps do domínio
 
 ---
 
@@ -156,10 +156,10 @@ O objetivo é permitir uma execução incremental, previsível e consistente, ev
 
 ## Integração interna do domínio Organizacional
 
-- [ ] Validar coerência entre `setores`, `funcoes` e `vinculos`
-- [ ] Garantir que regras de responsável de setor estejam implementadas
-- [ ] Revisar testes de integração entre apps do domínio
-- [ ] Preparar integração futura com `PessoasInstitucionais` (regra de elegibilidade de responsável)
+- [x] Validar coerência entre `setores`, `funcoes` e `vinculos`
+- [x] Garantir que regras de responsável de setor estejam implementadas
+- [x] Revisar testes de integração entre apps do domínio
+- [x] Preparar integração futura com `PessoasInstitucionais` (regra de elegibilidade de responsável)
 
 ---
 
@@ -167,10 +167,10 @@ O objetivo é permitir uma execução incremental, previsível e consistente, ev
 
 ## Estrutura do módulo
 
-- [ ] Criar diretório `PessoasInstitucionais/`
-- [ ] Criar `PessoasInstitucionais/__init__.py`
-- [ ] Criar `PessoasInstitucionais/urls.py` (agregador do módulo, com `app_name = 'pessoas_institucionais'`)
-- [ ] Registrar módulo em `Cortex/urls.py`
+- [x] Criar diretório `PessoasInstitucionais/`
+- [x] Criar `PessoasInstitucionais/__init__.py`
+- [x] Criar `PessoasInstitucionais/urls.py` (agregador do módulo, com `app_name = 'pessoas-institucionais'`)
+- [x] Registrar módulo em `Cortex/urls.py`
 
 ## App `PessoasInstitucionais/cargos/`
 
@@ -224,46 +224,46 @@ O objetivo é permitir uma execução incremental, previsível e consistente, ev
 
 ## Estrutura do módulo
 
-- [ ] Criar diretório `Academico/`
-- [ ] Criar `Academico/__init__.py`
-- [ ] Criar `Academico/urls.py` (agregador do módulo, com `app_name = 'academico'`)
-- [ ] Registrar módulo em `Cortex/urls.py`
+- [x] Criar diretório `Academico/`
+- [x] Criar `Academico/__init__.py`
+- [x] Criar `Academico/urls.py` (agregador do módulo, com `app_name = 'academico'`)
+- [x] Registrar módulo em `Cortex/urls.py`
 
 ## App `Academico/alunos/`
 
-- [ ] Criar estrutura física do app
-- [ ] Criar `apps.py` com `name = 'Academico.alunos'`
-- [ ] Registrar em `PROJECT_APPS`
-- [ ] Implementar `models.py` — model `Aluno` (OneToOne com `Usuario`)
-- [ ] Implementar camadas e endpoints
-- [ ] Incluir rotas no `Academico/urls.py`
-- [ ] Implementar testes em `tests/`
+- [x] Criar estrutura física do app
+- [x] Criar `apps.py` com `name = 'Academico.alunos'`
+- [x] Registrar em `PROJECT_APPS`
+- [x] Implementar `models.py` — model `Aluno` (OneToOne com `Usuario`)
+- [x] Implementar camadas e endpoints
+- [x] Incluir rotas no `Academico/urls.py`
+- [x] Implementar testes em `tests/`
 
 ## App `Academico/cursos/`
 
-- [ ] Criar estrutura física do app
-- [ ] Criar `apps.py` com `name = 'Academico.cursos'`
-- [ ] Registrar em `PROJECT_APPS`
-- [ ] Implementar `models.py` — model `Curso`
-- [ ] Implementar camadas e endpoints
-- [ ] Incluir rotas no `Academico/urls.py`
-- [ ] Implementar testes em `tests/`
+- [x] Criar estrutura física do app
+- [x] Criar `apps.py` com `name = 'Academico.cursos'`
+- [x] Registrar em `PROJECT_APPS`
+- [x] Implementar `models.py` — model `Curso`
+- [x] Implementar camadas e endpoints
+- [x] Incluir rotas no `Academico/urls.py`
+- [x] Implementar testes em `tests/`
 
 ## App `Academico/aluno_cursos/`
 
-- [ ] Criar estrutura física do app
-- [ ] Criar `apps.py` com `name = 'Academico.aluno_cursos'`
-- [ ] Registrar em `PROJECT_APPS`
-- [ ] Implementar `models.py` — model `AlunoCurso`
-- [ ] Implementar camadas e endpoints
-- [ ] Incluir rotas no `Academico/urls.py`
-- [ ] Implementar testes em `tests/`
+- [x] Criar estrutura física do app
+- [x] Criar `apps.py` com `name = 'Academico.aluno_cursos'`
+- [x] Registrar em `PROJECT_APPS`
+- [x] Implementar `models.py` — model `AlunoCurso`
+- [x] Implementar camadas e endpoints
+- [x] Incluir rotas no `Academico/urls.py`
+- [x] Implementar testes em `tests/`
 
 ## Integração interna do domínio Acadêmico
 
-- [ ] Validar coerência entre os apps do módulo
-- [ ] Garantir alinhamento com `Identidade` (aluno deriva de Usuario)
-- [ ] Revisar testes de integração
+- [x] Validar coerência entre os apps do módulo
+- [x] Garantir alinhamento com `Identidade` (aluno deriva de Usuario)
+- [x] Revisar testes de integração
 
 ---
 
@@ -279,10 +279,10 @@ O objetivo é permitir uma execução incremental, previsível e consistente, ev
 
 ## Refinamento documental
 
-- [ ] Atualizar `docs/diagrams/03-core-erd.md` caso a modelagem tenha mudado
-- [ ] Atualizar `docs/diagrams/04-aggregates-and-invariants.md` caso as invariantes tenham mudado
-- [ ] Atualizar `docs/decisions/ADR-001-modularizacao-por-dominio.md` se houver mudança arquitetural relevante
-- [ ] Atualizar `.github/copilot-instructions.md` quando houver mudança significativa na estrutura do projeto
+- [x] Atualizar `docs/diagrams/03-core-erd.md` caso a modelagem tenha mudado
+- [x] Atualizar `docs/diagrams/04-aggregates-and-invariants.md` caso as invariantes tenham mudado
+- [x] Atualizar `docs/decisions/ADR-001-modularizacao-por-dominio.md` se houver mudança arquitetural relevante
+- [x] Atualizar `.github/copilot-instructions.md` quando houver mudança significativa na estrutura do projeto
 
 ## Validação funcional mínima
 
@@ -320,10 +320,10 @@ A implementação do Cortex segue uma ordem orientada por domínio, com cada dom
 
 | Milestone | Módulo de domínio        | Apps internos                                                    | Status       |
 | --------- | ------------------------ | ---------------------------------------------------------------- | ------------ |
-| 1         | `Identidade/`            | `usuarios`, `contatos`, `enderecos`, `matriculas`                | Em andamento |
-| 2         | `Organizacional/`        | `setores`, `funcoes`, `vinculos`                                 | Em andamento |
-| 3         | `PessoasInstitucionais/` | `cargos`, `servidores`, `empresas_instituicoes`, `terceirizados` | Planejado    |
-| 4         | `Academico/`             | `alunos`, `cursos`, `aluno_cursos`                               | Planejado    |
-| 5         | —                        | Integração, consolidação e validação final                       | Planejado    |
+| 1         | `Identidade/`            | `usuarios`, `contatos`, `enderecos`, `matriculas`                | Concluído    |
+| 2         | `Organizacional/`        | `setores`, `funcoes`, `vinculos`                                 | Concluído    |
+| 3         | `PessoasInstitucionais/` | `cargos`, `servidores`, `empresas_instituicoes`, `terceirizados` | Concluído    |
+| 4         | `Academico/`             | `alunos`, `cursos`, `aluno_cursos`                               | Concluído    |
+| 5         | —                        | Integração, consolidação e validação final                       | Em andamento |
 
 Esse checklist transforma a visão arquitetural já definida em uma sequência prática de execução, reduzindo risco de retrabalho e ajudando a preservar a consistência do domínio desde o início.

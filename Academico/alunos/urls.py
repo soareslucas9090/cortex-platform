@@ -10,7 +10,7 @@ from .views import (
 
 urlpatterns = [
     path(
-        '',
+        'alunos/',
         roteador_por_metodo(
             GET=ListarAlunosView,
             POST=CriarAlunoView,
@@ -18,7 +18,7 @@ urlpatterns = [
         name='aluno-list',
     ),
     path(
-        '<int:usuario_id>/',
+        'alunos/<int:usuario_id>/',
         roteador_por_metodo(
             GET=DetalharAlunoView,
             PATCH=AtualizarAlunoView,
