@@ -13,6 +13,7 @@ from AppCore.basics.auth.views import (
     BaseLoginView,
     AtualizarTokenView,
     VerificarTokenView,
+    MeView,
 )
 
 from Auth.auth.serializers import LoginSerializer, LoginInputSerializer, LoginResponseSerializer
@@ -58,4 +59,4 @@ class LoginView(BaseLoginView):
 
 
 # Re-exporta para usar nas urls sem import adicional
-__all__ = ['LoginView', 'AtualizarTokenView', 'VerificarTokenView']
+__all__ = ['LoginView', 'AtualizarTokenView', 'VerificarTokenView', 'MeView']
