@@ -4,6 +4,9 @@ from rest_framework.test import APITestCase
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from AppCore.core.exceptions.exceptions import BusinessRuleException, NotFoundException
+from Organizacional.setores.models import Setor
+from Organizacional.funcoes.models import Funcao
+from Organizacional.vinculos.models import SetorVinculo
 from PessoasInstitucionais.cargos.models import Cargo
 from PessoasInstitucionais.servidores.choices import CategoriaServidor
 from PessoasInstitucionais.servidores.models import Servidor
@@ -160,6 +163,59 @@ class ServidorBusinessTestCase(APITestCase):
             categoria=CategoriaServidor.DOCENTE,
         )
         self.assertEqual(str(servidor), 'João da Silva - Professor')
+
+    # -------------------------------------------------------------------
+    # Testes de integração: Organizacional x PessoasInstitucionais
+    # -------------------------------------------------------------------
+
+    def test_desativar_servidor_bloqueado_quando_responsavel_por_setor_ativo(self):
+        """
+        Integração 5.3: desativar um Servidor que seja o responsável ativo
+        de um setor ativo deve ser bloqueado pela regra de domínio.
+        """
+        servidor = Servidor().business.criar_servidor(
+            usuario_pk=self.usuario.pk,
+            cargo_pk=self.cargo.pk,
+            categoria=CategoriaServidor.DOCENTE,
+        )
+        funcao = Funcao.objects.create(sigla='CH', descricao='Chefe')
+        setor = Setor.objects.create(nome='TI', sigla='TI')
+        SetorVinculo.objects.create(
+            usuario=self.usuario,
+            setor=setor,
+            funcao=funcao,
+            responsavel=True,
+        )
+
+        with self.assertRaises(BusinessRuleException) as ctx:
+            servidor.business.desativar()
+        self.assertIn('responsável pelo setor', str(ctx.exception))
+
+    def test_desativar_servidor_permitido_apos_remover_responsabilidade(self):
+        """
+        Integração 5.3: após remover a responsabilidade de setor, a
+        desativação do servidor deve ser permitida normalmente.
+        """
+        servidor = Servidor().business.criar_servidor(
+            usuario_pk=self.usuario.pk,
+            cargo_pk=self.cargo.pk,
+            categoria=CategoriaServidor.DOCENTE,
+        )
+        funcao = Funcao.objects.create(sigla='CH2', descricao='Chefe 2')
+        setor = Setor.objects.create(nome='RH', sigla='RH')
+        vinculo = SetorVinculo.objects.create(
+            usuario=self.usuario,
+            setor=setor,
+            funcao=funcao,
+            responsavel=True,
+        )
+        # Remove a responsabilidade antes de desativar
+        vinculo.responsavel = False
+        vinculo.save(update_fields=['responsavel'])
+
+        servidor.business.desativar()
+        servidor.refresh_from_db()
+        self.assertFalse(servidor.ativo)
 
 
 class ServidoresAPITestCase(APITestCase):
