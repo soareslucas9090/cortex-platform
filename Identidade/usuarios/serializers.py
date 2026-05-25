@@ -68,6 +68,56 @@ class AtualizarUsuarioSerializer(serializers.Serializer):
     deficiencia = serializers.CharField(required=False, allow_blank=True)
 
 
+class ArquivoImportacaoUsuariosSerializer(serializers.Serializer):
+    file = serializers.FileField(
+        help_text='Arquivo .ods da planilha multiaba de importação em lote de usuários.'
+    )
+
+
+class ImportacaoErroLinhaSerializer(serializers.Serializer):
+    aba = serializers.CharField()
+    numero_linha = serializers.IntegerField()
+    campo = serializers.CharField()
+    valor = serializers.JSONField(required=False, allow_null=True)
+    codigo = serializers.CharField()
+    mensagem = serializers.CharField()
+
+
+class ResumoImportacaoSerializer(serializers.Serializer):
+    total_abas_processadas = serializers.IntegerField()
+    total_linhas_processadas = serializers.IntegerField()
+    total_linhas_com_erro = serializers.IntegerField()
+    usuarios_criados = serializers.IntegerField()
+    usuarios_atualizados = serializers.IntegerField()
+    contatos_criados = serializers.IntegerField()
+    contatos_atualizados = serializers.IntegerField()
+    enderecos_criados = serializers.IntegerField()
+    enderecos_atualizados = serializers.IntegerField()
+    matriculas_criadas = serializers.IntegerField()
+    matriculas_atualizadas = serializers.IntegerField()
+    alunos_criados = serializers.IntegerField()
+    servidores_criados = serializers.IntegerField()
+    terceirizados_criados = serializers.IntegerField()
+    vinculos_aluno_curso_criados = serializers.IntegerField()
+    lotacoes_criadas = serializers.IntegerField()
+
+
+class ImportacaoUsuariosPreviewResponseSerializer(serializers.Serializer):
+    sucesso = serializers.BooleanField()
+    mensagem = serializers.CharField()
+    resumo = ResumoImportacaoSerializer()
+    erros = ImportacaoErroLinhaSerializer(many=True)
+    metadados = serializers.DictField(required=False)
+
+
+class ImportacaoUsuariosResponseSerializer(serializers.Serializer):
+    sucesso = serializers.BooleanField()
+    mensagem = serializers.CharField()
+    resumo = ResumoImportacaoSerializer()
+    erros = ImportacaoErroLinhaSerializer(many=True)
+    metadados = serializers.DictField(required=False)
+
+
 class SerializerVazio(serializers.Serializer):
     """Serializer sem campos — usado em endpoints de ação pura (desativar, reativar)."""
     pass
