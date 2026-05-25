@@ -1,5 +1,7 @@
-import logging
+import logging, os
+from pathlib import Path
 
+from django.http import FileResponse, Http404
 from rest_framework import status
 
 from drf_spectacular.utils import extend_schema, OpenApiParameter
@@ -21,6 +23,9 @@ from .serializers import (
     CriarUsuarioSerializer,
     SerializerVazio,
     UsuarioSerializer,
+    ArquivoImportacaoUsuariosSerializer,
+    ImportacaoUsuariosPreviewResponseSerializer,
+    ImportacaoUsuariosResponseSerializer,
 )
 
 logger = logging.getLogger(__name__)
@@ -224,3 +229,115 @@ class ReativarUsuarioView(IsAdminMixin, BasicPostAPIView):
 
     def do_action_post(self, serializer_data, request, **kwargs):
         self.get_object().business.reativar()
+
+
+@extend_schema(
+    tags=['Identidade'],
+    summary='Baixar modelo da planilha de importação',
+    description='''
+    Realiza o download do arquivo modelo `.ods` utilizado como base para a importação em lote de usuários.
+
+    **Permissões:** Apenas administradores.
+    ''',
+    responses={
+        status.HTTP_200_OK: {'description': 'Arquivo retornado com sucesso.'},
+        status.HTTP_401_UNAUTHORIZED: {'description': 'Não autenticado.'},
+        status.HTTP_403_FORBIDDEN: {'description': 'Sem permissão de administrador.'},
+        status.HTTP_404_NOT_FOUND: {'description': 'Arquivo modelo não encontrado.'},
+    },
+)
+class BaixarModeloImportacaoUsuariosView(IsAdminMixin, BasicGetAPIView):
+    """GET /identidade/usuarios/importacao/modelo/"""
+    serializer_class = SerializerVazio
+    mensagem_sucesso = 'Modelo de importação localizado com sucesso.'
+
+    def get(self, request, *args, **kwargs):
+        base_dir = Path(__file__).resolve().parents[2]
+        caminho_arquivo = base_dir / 'docs' / 'seeds' / 'import' / 'modelo-importacao-usuarios.ods'
+
+        if not caminho_arquivo.exists() or not caminho_arquivo.is_file():
+            raise Http404('Arquivo modelo de importação não encontrado.')
+
+        return FileResponse(
+            open(caminho_arquivo, 'rb'),
+            as_attachment=True,
+            filename=os.path.basename(caminho_arquivo),
+            content_type='application/vnd.oasis.opendocument.spreadsheet',
+        )
+
+
+@extend_schema(
+    tags=['Identidade'],
+    summary='Pré-visualizar importação em lote de usuários',
+    description='''
+    Recebe um arquivo `.ods` multiaba e executa a validação estrutural e prévia da importação,
+    sem persistir dados no banco.
+
+    **Permissões:** Apenas administradores.
+    ''',
+    request=ArquivoImportacaoUsuariosSerializer,
+    responses={
+        status.HTTP_200_OK: ImportacaoUsuariosPreviewResponseSerializer,
+        status.HTTP_400_BAD_REQUEST: {'description': 'Arquivo inválido ou estrutura inconsistente.'},
+        status.HTTP_401_UNAUTHORIZED: {'description': 'Não autenticado.'},
+        status.HTTP_403_FORBIDDEN: {'description': 'Sem permissão de administrador.'},
+    },
+)
+class PreVisualizarImportacaoUsuariosView(IsAdminMixin, BasicPostAPIView):
+    """POST /identidade/usuarios/importacao/pre-visualizar/"""
+    serializer_class = ArquivoImportacaoUsuariosSerializer
+    mensagem_sucesso = 'Pré-visualização concluída com sucesso.'
+
+    def do_action_post(self, serializer_data, request):
+        resultado = UsuarioBusiness().pre_visualizar_importacao(
+            arquivo=serializer_data['file']
+        )
+        return {
+            'mensagem': resultado.mensagem,
+            'dados': {
+                'sucesso': resultado.sucesso,
+                'mensagem': resultado.mensagem,
+                'resumo': resultado.resumo.__dict__,
+                'erros': [erro.__dict__ for erro in resultado.erros],
+                'metadados': resultado.metadados,
+            },
+            'status_code': status.HTTP_200_OK,
+        }
+
+
+@extend_schema(
+    tags=['Identidade'],
+    summary='Importar usuários em lote',
+    description='''
+    Recebe um arquivo `.ods` multiaba e processa a importação em lote de usuários e entidades relacionadas.
+
+    **Permissões:** Apenas administradores.
+    ''',
+    request=ArquivoImportacaoUsuariosSerializer,
+    responses={
+        status.HTTP_200_OK: ImportacaoUsuariosResponseSerializer,
+        status.HTTP_400_BAD_REQUEST: {'description': 'Arquivo inválido, estrutura inconsistente ou erros de validação.'},
+        status.HTTP_401_UNAUTHORIZED: {'description': 'Não autenticado.'},
+        status.HTTP_403_FORBIDDEN: {'description': 'Sem permissão de administrador.'},
+    },
+)
+class ImportarUsuariosLoteView(IsAdminMixin, BasicPostAPIView):
+    """POST /identidade/usuarios/importacao/"""
+    serializer_class = ArquivoImportacaoUsuariosSerializer
+    mensagem_sucesso = 'Importação concluída com sucesso.'
+
+    def do_action_post(self, serializer_data, request):
+        resultado = UsuarioBusiness().importar_usuarios_em_lote(
+            arquivo=serializer_data['file']
+        )
+        return {
+            'mensagem': resultado.mensagem,
+            'dados': {
+                'sucesso': resultado.sucesso,
+                'mensagem': resultado.mensagem,
+                'resumo': resultado.resumo.__dict__,
+                'erros': [erro.__dict__ for erro in resultado.erros],
+                'metadados': resultado.metadados,
+            },
+            'status_code': status.HTTP_200_OK,
+        }

@@ -9,6 +9,9 @@ from .views import (
     DesativarUsuarioView,
     ListarUsuariosView,
     ReativarUsuarioView,
+    BaixarModeloImportacaoUsuariosView,
+    PreVisualizarImportacaoUsuariosView,
+    ImportarUsuariosLoteView,
 )
 
 urlpatterns = [
@@ -16,4 +19,19 @@ urlpatterns = [
     path('usuarios/<int:pk>/', roteador_por_metodo(GET=DetalheUsuarioView, PATCH=AtualizarUsuarioView), name='usuario-detail'),
     path('usuarios/<int:pk>/desativar/', DesativarUsuarioView.as_view(), name='usuario-desativar'),
     path('usuarios/<int:pk>/reativar/', ReativarUsuarioView.as_view(), name='usuario-reativar'),
+    path(
+        'usuarios/importacao/modelo/',
+        BaixarModeloImportacaoUsuariosView.as_view(),
+        name='usuarios-importacao-modelo',
+    ),
+    path(
+        'usuarios/importacao/pre-visualizar/',
+        PreVisualizarImportacaoUsuariosView.as_view(),
+        name='usuarios-importacao-pre-visualizar',
+    ),
+    path(
+        'usuarios/importacao/',
+        ImportarUsuariosLoteView.as_view(),
+        name='usuarios-importacao',
+    ),
 ]

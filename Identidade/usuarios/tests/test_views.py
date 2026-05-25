@@ -1,10 +1,24 @@
-from django.urls import reverse
+from io import BytesIO
 
+from unittest.mock import patch
+
+from django.urls import reverse
+from django.contrib.auth import get_user_model
+from django.core.files.uploadedfile import SimpleUploadedFile
+from django.test import TestCase
+from rest_framework.test import APIClient
 from rest_framework import status
 from rest_framework.test import APITestCase
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from Identidade.usuarios.models import Usuario
+from Identidade.usuarios.importacao_parser import ImportacaoUsuariosParser
+from Identidade.usuarios.importacao_dtos import (
+    ArquivoImportacaoUsuariosDTO,
+    LinhaUsuarioImportacaoDTO,
+    ResumoImportacaoDTO,
+    ResultadoImportacaoDTO,
+)
 
 
 def obter_tokens(usuario):
@@ -277,3 +291,318 @@ class ReativarUsuarioViewTest(APITestCase):
         url = reverse('identidade:usuario-reativar', kwargs={'pk': 99999})
         resposta = self.client.post(url)
         self.assertEqual(resposta.status_code, status.HTTP_404_NOT_FOUND)
+
+
+class ImportacaoUsuariosParserTests(TestCase):
+
+    @patch('Identidade.usuarios.importacao_parser.get_data')
+    def test_deve_fazer_parse_da_aba_usuario_com_sucesso(self, mock_get_data):
+        parser = ImportacaoUsuariosParser()
+
+        arquivo = SimpleUploadedFile(
+            'modelo-importacao-usuarios.ods',
+            b'fake-content',
+            content_type='application/vnd.oasis.opendocument.spreadsheet',
+        )
+
+        mock_get_data.return_value = {
+            'Usuario': [
+                [
+                    'usuario_id\n(int, PK)',
+                    'cpf\n(String)',
+                    'nome\n(String)',
+                    'foto\n(String)',
+                    'deficiencia\n(String)',
+                    'ativo\n(boolean)',
+                    'ultimo_login\n(Date)',
+                ],
+                [1, '12345678901', 'Usuário Teste', '', '', True, None],
+            ]
+        }
+
+        resultado = parser.parse(arquivo)
+
+        self.assertEqual(len(resultado.usuarios), 1)
+        self.assertEqual(resultado.usuarios[0].usuario_id_planilha, 1)
+        self.assertEqual(resultado.usuarios[0].cpf, '12345678901')
+        self.assertEqual(resultado.usuarios[0].nome, 'Usuário Teste')
+
+    @patch('Identidade.usuarios.importacao_parser.get_data')
+    def test_deve_ignorar_linhas_vazias(self, mock_get_data):
+        parser = ImportacaoUsuariosParser()
+
+        arquivo = SimpleUploadedFile(
+            'modelo-importacao-usuarios.ods',
+            b'fake-content',
+            content_type='application/vnd.oasis.opendocument.spreadsheet',
+        )
+
+        mock_get_data.return_value = {
+            'Usuario': [
+                [
+                    'usuario_id\n(int, PK)',
+                    'cpf\n(String)',
+                    'nome\n(String)',
+                    'foto\n(String)',
+                    'deficiencia\n(String)',
+                    'ativo\n(boolean)',
+                    'ultimo_login\n(Date)',
+                ],
+                ['', '', '', '', '', '', ''],
+                [2, '98765432100', 'Outro Usuário', '', '', True, None],
+            ]
+        }
+
+        resultado = parser.parse(arquivo)
+
+        self.assertEqual(len(resultado.usuarios), 1)
+        self.assertEqual(resultado.usuarios[0].usuario_id_planilha, 2)
+
+    def test_deve_rejeitar_extensao_invalida(self):
+        parser = ImportacaoUsuariosParser()
+
+        arquivo = SimpleUploadedFile(
+            'modelo-importacao-usuarios.xlsx',
+            b'fake-content',
+            content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        )
+
+        with self.assertRaises(Exception) as exc:
+            parser.parse(arquivo)
+
+        self.assertIn('Extensão', str(exc.exception))
+
+
+class ImportacaoUsuariosBusinessPreviewTests(TestCase):
+
+    @patch('Identidade.usuarios.business.ImportacaoUsuariosParser.parse')
+    def test_deve_retornar_preview_com_sucesso(self, mock_parse):
+        from Identidade.usuarios.business import UsuarioBusiness
+
+        estrutura = ArquivoImportacaoUsuariosDTO(
+            usuarios=[
+                LinhaUsuarioImportacaoDTO(
+                    numero_linha=2,
+                    usuario_id_planilha=1,
+                    cpf='12345678901',
+                    nome='Usuário Preview',
+                )
+            ]
+        )
+        mock_parse.return_value = estrutura
+
+        business = UsuarioBusiness()
+        resultado = business.pre_visualizar_importacao(arquivo=BytesIO(b'test'))
+
+        self.assertTrue(resultado.sucesso)
+        self.assertEqual(resultado.resumo.total_abas_processadas, 1)
+        self.assertEqual(resultado.resumo.total_linhas_processadas, 1)
+        self.assertEqual(len(resultado.erros), 0)
+
+    @patch('Identidade.usuarios.business.ImportacaoUsuariosParser.parse')
+    def test_preview_deve_retornar_erro_quando_nao_ha_usuarios(self, mock_parse):
+        from Identidade.usuarios.business import UsuarioBusiness
+
+        estrutura = ArquivoImportacaoUsuariosDTO()
+        mock_parse.return_value = estrutura
+
+        business = UsuarioBusiness()
+        resultado = business.pre_visualizar_importacao(arquivo=BytesIO(b'test'))
+
+        self.assertFalse(resultado.sucesso)
+        self.assertEqual(len(resultado.erros), 1)
+        self.assertEqual(resultado.erros[0].aba, '__arquivo__')
+
+
+class ImportacaoUsuariosBusinessImportacaoTests(TestCase):
+
+    def setUp(self):
+        self.User = get_user_model()
+
+    @patch('Identidade.usuarios.business.ImportacaoUsuariosParser.parse')
+    def test_deve_importar_usuario_novo_com_sucesso(self, mock_parse):
+        from Identidade.usuarios.business import UsuarioBusiness
+
+        estrutura = ArquivoImportacaoUsuariosDTO(
+            usuarios=[
+                LinhaUsuarioImportacaoDTO(
+                    numero_linha=2,
+                    usuario_id_planilha=1,
+                    cpf='12345678901',
+                    nome='Usuário Importado',
+                    ativo=True,
+                )
+            ]
+        )
+        mock_parse.return_value = estrutura
+
+        business = UsuarioBusiness()
+        resultado = business.importar_usuarios_em_lote(arquivo=BytesIO(b'test'))
+
+        self.assertTrue(resultado.sucesso)
+        self.assertEqual(resultado.resumo.usuarios_criados, 1)
+        self.assertEqual(self.User.objects.filter(cpf='12345678901').count(), 1)
+
+    @patch('Identidade.usuarios.business.ImportacaoUsuariosParser.parse')
+    def test_deve_atualizar_usuario_existente(self, mock_parse):
+        from Identidade.usuarios.business import UsuarioBusiness
+
+        usuario = self.User.objects.create(
+            cpf='12345678901',
+            nome='Nome Antigo',
+            ativo=True,
+        )
+
+        estrutura = ArquivoImportacaoUsuariosDTO(
+            usuarios=[
+                LinhaUsuarioImportacaoDTO(
+                    numero_linha=2,
+                    usuario_id_planilha=1,
+                    cpf='12345678901',
+                    nome='Nome Atualizado',
+                    ativo=True,
+                )
+            ]
+        )
+        mock_parse.return_value = estrutura
+
+        business = UsuarioBusiness()
+        resultado = business.importar_usuarios_em_lote(arquivo=BytesIO(b'test'))
+
+        usuario.refresh_from_db()
+
+        self.assertTrue(resultado.sucesso)
+        self.assertEqual(resultado.resumo.usuarios_atualizados, 1)
+        self.assertEqual(usuario.nome, 'Nome Atualizado')
+
+    @patch('Identidade.usuarios.business.ImportacaoUsuariosParser.parse')
+    def test_deve_retornar_erro_se_cpf_for_invalido(self, mock_parse):
+        from Identidade.usuarios.business import UsuarioBusiness
+
+        estrutura = ArquivoImportacaoUsuariosDTO(
+            usuarios=[
+                LinhaUsuarioImportacaoDTO(
+                    numero_linha=2,
+                    usuario_id_planilha=1,
+                    cpf='123',
+                    nome='Usuário Inválido',
+                    ativo=True,
+                )
+            ]
+        )
+        mock_parse.return_value = estrutura
+
+        business = UsuarioBusiness()
+        resultado = business.importar_usuarios_em_lote(arquivo=BytesIO(b'test'))
+
+        self.assertFalse(resultado.sucesso)
+        self.assertEqual(resultado.resumo.usuarios_criados, 0)
+        self.assertEqual(resultado.resumo.total_linhas_com_erro, 1)
+        self.assertEqual(resultado.erros[0].aba, 'Usuario')
+
+
+class ImportacaoUsuariosApiTests(TestCase):
+
+    def setUp(self):
+        self.client = APIClient()
+        self.User = get_user_model()
+
+        self.admin = self.User.objects.create(
+            cpf='11122233344',
+            nome='Administrador',
+            ativo=True,
+            is_admin=True,
+            is_superuser=True,
+        )
+        self.client.force_authenticate(user=self.admin)
+
+    @patch('Identidade.usuarios.views.UsuarioBusiness.pre_visualizar_importacao')
+    def test_endpoint_preview_deve_retornar_200(self, mock_preview):
+        mock_preview.return_value = ResultadoImportacaoDTO(
+            sucesso=True,
+            mensagem='Pré-visualização concluída.',
+            resumo=ResumoImportacaoDTO(
+                total_abas_processadas=1,
+                total_linhas_processadas=1,
+                total_linhas_com_erro=0,
+            ),
+            erros=[],
+            metadados={'modo': 'preview'},
+        )
+
+        arquivo = SimpleUploadedFile(
+            'modelo-importacao-usuarios.ods',
+            b'fake-content',
+            content_type='application/vnd.oasis.opendocument.spreadsheet',
+        )
+
+        response = self.client.post(
+            '/identidade/usuarios/importacao/pre-visualizar/',
+            {'file': arquivo},
+            format='multipart',
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data['status'], 'success')
+        self.assertIn('dados', response.data)
+
+    @patch('Identidade.usuarios.views.UsuarioBusiness.importar_usuarios_em_lote')
+    def test_endpoint_importacao_deve_retornar_200(self, mock_importar):
+        mock_importar.return_value = ResultadoImportacaoDTO(
+            sucesso=True,
+            mensagem='Importação concluída com sucesso.',
+            resumo=ResumoImportacaoDTO(
+                total_abas_processadas=1,
+                total_linhas_processadas=1,
+                total_linhas_com_erro=0,
+                usuarios_criados=1,
+            ),
+            erros=[],
+            metadados={'modo': 'importacao'},
+        )
+
+        arquivo = SimpleUploadedFile(
+            'modelo-importacao-usuarios.ods',
+            b'fake-content',
+            content_type='application/vnd.oasis.opendocument.spreadsheet',
+        )
+
+        response = self.client.post(
+            '/identidade/usuarios/importacao/',
+            {'file': arquivo},
+            format='multipart',
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data['status'], 'success')
+        self.assertIn('dados', response.data)
+
+    def test_endpoint_preview_deve_exigir_autenticacao(self):
+        self.client.force_authenticate(user=None)
+
+        arquivo = SimpleUploadedFile(
+            'modelo-importacao-usuarios.ods',
+            b'fake-content',
+            content_type='application/vnd.oasis.opendocument.spreadsheet',
+        )
+
+        response = self.client.post(
+            '/identidade/usuarios/importacao/pre-visualizar/',
+            {'file': arquivo},
+            format='multipart',
+        )
+
+        self.assertIn(response.status_code, [401, 403])
+
+    @patch('pathlib.Path.exists')
+    @patch('pathlib.Path.is_file')
+    def test_endpoint_download_modelo_deve_retornar_404_se_arquivo_nao_existir(
+        self,
+        mock_is_file,
+        mock_exists,
+    ):
+        mock_exists.return_value = False
+        mock_is_file.return_value = False
+
+        response = self.client.get('/identidade/usuarios/importacao/modelo/')
+        self.assertEqual(response.status_code, 404)
