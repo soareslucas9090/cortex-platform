@@ -21,7 +21,7 @@ class SetorVinculo(ModelHelperMixin, ModelBusinessMixin, BasicModel):
     )
     setor = models.ForeignKey(
         'setores.Setor',
-        on_delete=models.CASCADE,
+        on_delete=models.PROTECT,
         related_name='vinculos',
         verbose_name='Setor',
     )
