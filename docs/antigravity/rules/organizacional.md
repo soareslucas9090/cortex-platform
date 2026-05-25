@@ -8,8 +8,8 @@ O domínio `Organizacional` gerencia a estrutura administrativa do projeto, como
 
 ### Modelos e Relacionamentos
 
-- **Setor**: Unidade administrativa ou departamento dentro da instituição.
-- **Funcao**: Atividade ou cargo de confiança desempenhado por um usuário no setor.
+- **Setor**: Unidade administrativa ou departamento dentro da instituição. Os dados raízes/seeds para os setores encontram-se em [docs/seeds/documentação DER - cortex.md](../../seeds/documentação DER - cortex.md).
+- **Funcao**: Atividade ou cargo de confiança desempenhado por um usuário no setor. Os dados raízes/seeds para as funções encontram-se em [docs/seeds/documentação DER - cortex.md](../../seeds/documentação DER - cortex.md).
 - **SetorVinculo**: Tabela associativa (M:N) que vincula um `Usuario` a um `Setor` com uma determinada `Funcao`.
 
 ### Estrutura de Apps

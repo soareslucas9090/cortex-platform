@@ -19,6 +19,25 @@ Diagramas e visões gerais do sistema e produto.
 ### 🗺️ Planning
 Documentos de planejamento de implementação e marcos.
 - [Master Implementation Plan](planning/master-implementation-plan.md)
+- [Milestone 1: Identidade Plan](planning/milestone-1-identidade-plan.md)
+- [Milestone 2: Organizacional Plan](planning/milestone-2-organizacional-plan.md)
+- [Milestone 3: Pessoas Institucionais Plan](planning/milestone-3-pessoas-institucionais-plan.md)
+- [Milestone 4: Acadêmico Plan](planning/milestone-4-academico-plan.md)
+- [Milestone 5: Integração e Consolidação Final Plan](planning/milestone-5-integracao-e-consolidacao-final-plan.md)
+- [Milestone: Importação de Usuários](planning/milestone-importacao-usuarios.md)
+
+### 🔌 API
+Especificações e especificações de integração das APIs.
+- [Importação de Usuários OpenAPI](api/importacao-usuarios-openapi.md)
+
+### 📊 Schemas e Importação
+Modelagens de dados, mapeamentos e regras de carga.
+- [Dados Raízes da Importação](schema/dados-raizes-importacao.md)
+- [Importação de Usuários](schema/importacao-usuarios.md)
+
+### 🌱 Seeds e Inicialização
+Dados de sementes (seeds) e informações de carga inicial do banco.
+- [Documentação DER - Cortex Seeds](seeds/documentação%20DER%20-%20cortex.md)
 
 ### 📁 Project
 Documentos gerais do projeto, checklists, revisões e estratégias de refatoração.
@@ -36,3 +55,9 @@ Instruções, regras arquiteturais e skills para uso com agentes de inteligênci
 - [Skill: Implementação](antigravity/skill-implementation.md)
 - [Skill: Revisão de Código](antigravity/skill-code-review.md)
 - [Skill: Corrigir Testes](antigravity/skill-test-fixing.md)
+
+#### Diretrizes por Domínio:
+- [Domínio: Identidade](antigravity/rules/identidade.md)
+- [Domínio: Organizacional](antigravity/rules/organizacional.md)
+- [Domínio: Pessoas Institucionais](antigravity/rules/pessoas-institucionais.md)
+- [Domínio: Acadêmico](antigravity/rules/academico.md)

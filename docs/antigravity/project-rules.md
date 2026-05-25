@@ -6,7 +6,13 @@
 > **Sincronização entre Antigravity e GitHub Copilot:**
 > Este arquivo de regras gerais do projeto (e suas diretrizes por domínio localizadas na pasta `./rules/`) deve ser mantido sempre sincronizado com as configurações de instruções do GitHub Copilot e do Antigravity, garantindo consistência no comportamento de ambos os assistentes de codificação.
 
-ATUALIZE O ARQUIVO docs/antigravity/project-rules.md sempre que houver mudanças significativas na estrutura, arquitetura ou convenções do projeto.
+## Fontes de Verdade
+
+- `docs/` sempre tem prioridade como documentação de referência do projeto.
+- `docs/antigravity/project-rules.md` consolida as regras gerais de arquitetura e comportamento.
+- `docs/antigravity/rules/*.md` consolida as regras específicas por domínio.
+- `docs/seeds/` contém a documentação das entidades e os dados de seeds/inicialização do sistema (como `docs/seeds/documentação DER - cortex.md`).
+- Se houver divergência entre este arquivo e a documentação em `docs/`, a documentação deve ser considerada a base a ser refletida na próxima atualização.
 
 
 ## Arquitetura em Camadas

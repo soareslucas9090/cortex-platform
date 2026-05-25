@@ -13,6 +13,7 @@ ATUALIZE O ARQUIVO .github/copilot-instructions.md sempre que houver mudanças s
 - `docs/` sempre tem prioridade como documentação de referência do projeto.
 - `docs/antigravity/project-rules.md` consolida as regras gerais de arquitetura e comportamento.
 - `docs/antigravity/rules/*.md` consolida as regras específicas por domínio.
+- `docs/seeds/` contém a documentação das entidades e os dados de seeds/inicialização do sistema (como `docs/seeds/documentação DER - cortex.md`).
 - Se houver divergência entre este arquivo e a documentação em `docs/`, a documentação deve ser considerada a base a ser refletida na próxima atualização.
 
 ## Arquitetura em Camadas
