@@ -12,8 +12,8 @@ from rest_framework.test import APITestCase
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from Identidade.usuarios.models import Usuario
-from Identidade.usuarios.importacao_parser import ImportacaoUsuariosParser
-from Identidade.usuarios.importacao_dtos import (
+from Identidade.usuarios.importacao.importacao_parser import ImportacaoUsuariosParser
+from Identidade.usuarios.importacao.importacao_dtos import (
     ArquivoImportacaoUsuariosDTO,
     LinhaUsuarioImportacaoDTO,
     ResumoImportacaoDTO,
@@ -524,7 +524,7 @@ class ImportacaoUsuariosBusinessImportacaoTests(TestCase):
     @patch('Identidade.usuarios.business.ImportacaoUsuariosParser.parse')
     def test_deve_importar_usuario_sem_cpf_com_matricula_com_sucesso(self, mock_parse):
         from Identidade.usuarios.business import UsuarioBusiness
-        from Identidade.usuarios.importacao_dtos import LinhaMatriculaImportacaoDTO
+        from Identidade.usuarios.importacao.importacao_dtos import LinhaMatriculaImportacaoDTO
 
         estrutura = ArquivoImportacaoUsuariosDTO(
             usuarios=[

@@ -8,8 +8,8 @@ from AppCore.common.util.util import normalizar_cpf
 
 from .rules import UsuarioRules
 from .helpers import UsuarioHelpers
-from .importacao_parser import ImportacaoUsuariosParser
-from .importacao_dtos import (
+from .importacao.importacao_parser import ImportacaoUsuariosParser
+from .importacao.importacao_dtos import (
     ErroImportacaoDTO,
     ResumoImportacaoDTO,
     ResultadoImportacaoDTO,
