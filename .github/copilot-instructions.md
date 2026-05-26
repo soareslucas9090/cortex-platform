@@ -531,6 +531,12 @@ python manage.py migrate
 
 # Criar superusuário
 python manage.py createsuperuser
+
+# Celery Worker (Linux/Mac)
+celery -A Cortex worker -l INFO
+
+# Celery Worker (Windows - requer pool=solo para funcionar corretamente)
+celery -A Cortex worker -l INFO --pool=solo
 ```
 
 ### Criar Novo App
@@ -548,6 +554,7 @@ cd NomeApp
 - **Django 5.2.7** + **DRF 3.16.1**
 - **Auth**: SimpleJWT (tokens 30min/7 dias) + django-allauth 65.9.0 (login social)
 - **Database**: PostgreSQL (dev usa SQLite)
+- **Background Tasks**: Celery 5.4.0 + Redis 5.0.3 (usado para importações assíncronas)
 - **Docs API**: drf-spectacular (Swagger/ReDoc em `/api/schema/swagger/`)
 - **Auditoria**: django-simple-history (histórico automático em models)
 - **Email**: SMTP (padrão Gmail, configurável via env)
