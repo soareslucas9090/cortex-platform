@@ -51,13 +51,7 @@ class BasicPostAPIView(GenericAPIView):
         resultado = {}
 
         with transaction.atomic():
-            sid = transaction.savepoint()
-            try:
-                resultado = self.do_action_post(serializer_data, request, *args, **kwargs) or {}
-            except Exception as e:
-                transaction.savepoint_rollback(sid)
-                raise
-            transaction.savepoint_commit(sid)
+            resultado = self.do_action_post(serializer_data, request, *args, **kwargs) or {}
 
         data, status_code = _build_success_response(resultado, self.mensagem_sucesso)
         return Response(data, status=status_code)
@@ -129,13 +123,7 @@ class BasicDeleteAPIView(GenericAPIView):
             raise NotFoundException(RESPONSE_ALGUM_DADO_NAO_FOI_ENCONTRADO)
 
         with transaction.atomic():
-            sid = transaction.savepoint()
-            try:
-                self.do_action_delete(request, *args, **kwargs)
-            except Exception as e:
-                transaction.savepoint_rollback(sid)
-                raise
-            transaction.savepoint_commit(sid)
+            self.do_action_delete(request, *args, **kwargs)
 
         return Response(status=status.HTTP_204_NO_CONTENT)
 
@@ -169,13 +157,7 @@ class BasicPutAPIView(GenericAPIView):
         resultado = {}
 
         with transaction.atomic():
-            sid = transaction.savepoint()
-            try:
-                resultado = self.do_action_put(serializer_data, request, *args, **kwargs) or {}
-            except Exception as e:
-                transaction.savepoint_rollback(sid)
-                raise
-            transaction.savepoint_commit(sid)
+            resultado = self.do_action_put(serializer_data, request, *args, **kwargs) or {}
 
         data, status_code = _build_success_response(resultado, self.mensagem_sucesso)
         return Response(data, status=status_code)
@@ -210,13 +192,7 @@ class BasicPatchAPIView(GenericAPIView):
         resultado = {}
 
         with transaction.atomic():
-            sid = transaction.savepoint()
-            try:
-                resultado = self.do_action_patch(serializer_data, request, *args, **kwargs) or {}
-            except Exception as e:
-                transaction.savepoint_rollback(sid)
-                raise
-            transaction.savepoint_commit(sid)
+            resultado = self.do_action_patch(serializer_data, request, *args, **kwargs) or {}
 
         data, status_code = _build_success_response(resultado, self.mensagem_sucesso)
         return Response(data, status=status_code)

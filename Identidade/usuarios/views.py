@@ -1,6 +1,7 @@
 import logging, os
 from pathlib import Path
 
+from django.db import transaction
 from django.http import FileResponse, Http404
 from rest_framework import status
 from rest_framework.parsers import MultiPartParser
@@ -106,7 +107,8 @@ class CriarUsuarioView(IsAdminMixin, BasicPostAPIView):
 
     def do_action_post(self, serializer_data, request):
         usuario = UsuarioBusiness().criar_usuario(
-            cpf=serializer_data['cpf'],
+            cpf=serializer_data.get('cpf'),
+            matricula=serializer_data.get('matricula'),
             nome=serializer_data['nome'],
             password=serializer_data.get('password'),
             email=serializer_data.get('email'),
@@ -371,7 +373,7 @@ class ImportarUsuariosLoteView(IsAdminMixin, BasicPostAPIView):
             arquivo=serializer_data['file']
         )
         
-        processar_importacao_usuarios_task.delay(importacao.id)
+        transaction.on_commit(lambda: processar_importacao_usuarios_task.delay(importacao.id))
 
         return {
             'mensagem': self.mensagem_sucesso,

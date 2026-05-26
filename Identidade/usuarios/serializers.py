@@ -27,13 +27,23 @@ class UsuarioSerializer(serializers.ModelSerializer):
 class CriarUsuarioSerializer(serializers.Serializer):
     cpf = serializers.CharField(
         max_length=14,
+        required=False,
+        allow_null=True,
+        allow_blank=True,
         help_text='CPF do usuário. Aceita com ou sem máscara (ex: 12345678901 ou 123.456.789-01).',
+    )
+    matricula = serializers.CharField(
+        max_length=50,
+        required=False,
+        allow_null=True,
+        allow_blank=True,
+        help_text='Matrícula do usuário (obrigatória caso o CPF não seja informado).',
     )
     nome = serializers.CharField(max_length=255)
     password = serializers.CharField(
         write_only=True,
         required=False,
-        help_text='Senha (opcional). Se não for informada, será usada a senha padrão (11 dígitos numéricos do CPF).',
+        help_text='Senha (opcional). Se não for informada, será usada a senha padrão (CPF ou matrícula).',
     )
     email = serializers.EmailField(
         required=False,
@@ -47,6 +57,13 @@ class CriarUsuarioSerializer(serializers.Serializer):
         default='',
         help_text='Descrição de deficiência ou necessidade especial (opcional).',
     )
+
+    def validate(self, attrs):
+        cpf = attrs.get('cpf')
+        matricula = attrs.get('matricula')
+        if not cpf and not matricula:
+            raise serializers.ValidationError('É necessário informar o CPF ou a Matrícula.')
+        return attrs
 
     def validate_password(self, value):
         if len(value) < 8:

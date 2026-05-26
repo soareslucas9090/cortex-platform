@@ -29,23 +29,43 @@ class UsuarioBusiness(ModelInstanceBusiness):
     # Operações de criação (sem object_instance)
     # ------------------------------------------------------------------
 
-    def criar_usuario(self, cpf: str, nome: str, password: str = None, **kwargs):
-        """Cria um novo usuário no sistema após validar CPF."""
+    def criar_usuario(self, cpf: str = None, matricula: str = None, nome: str = None, password: str = None, **kwargs):
+        """Cria um novo usuário no sistema após validar CPF ou matrícula."""
         from .models import Usuario
-        cpf_normalizado = normalizar_cpf(cpf)
-        regras = UsuarioRules()
-        regras.cpf_formato_valido(cpf_normalizado)
-        regras.cpf_unico(cpf_normalizado)
+        from Identidade.matriculas.models import Matricula
+        from Identidade.matriculas.choices import SituacaoMatricula
         
-        senha_final = password if password else cpf_normalizado
+        regras = UsuarioRules()
+        
+        cpf_normalizado = None
+        if cpf:
+            cpf_normalizado = normalizar_cpf(cpf)
+            regras.cpf_formato_valido(cpf_normalizado)
+            regras.cpf_unico(cpf_normalizado)
+        else:
+            if not matricula:
+                raise ValidationException('A matrícula é obrigatória caso o CPF não seja informado.')
+            if Matricula.objects.filter(matricula=matricula).exists():
+                raise ValidationException('Já existe um usuário cadastrado com esta matrícula.')
+
+        # Senha padrão: CPF (se houver) ou matrícula
+        senha_final = password if password else (cpf_normalizado if cpf_normalizado else matricula)
         
         try:
-            return Usuario.objects.create_user(
-                cpf=cpf_normalizado,
-                password=senha_final,
-                nome=nome,
-                **kwargs,
-            )
+            with transaction.atomic():
+                user = Usuario.objects.create_user(
+                    cpf=cpf_normalizado,
+                    password=senha_final,
+                    nome=nome,
+                    **kwargs,
+                )
+                if matricula:
+                    Matricula.objects.create(
+                        usuario=user,
+                        matricula=matricula,
+                        situacao=SituacaoMatricula.ATIVA,
+                    )
+                return user
         except Exception as e:
             logger.exception('Erro ao criar usuário: %s', e)
             raise SystemErrorException('Não foi possível criar o usuário.')
@@ -211,11 +231,17 @@ class UsuarioBusiness(ModelInstanceBusiness):
             if importacao_lote.linhas_processadas % 10 == 0 or importacao_lote.linhas_processadas == importacao_lote.total_linhas:
                 importacao_lote.save(update_fields=['linhas_processadas'])
 
+        mapa_matriculas = {
+            m.usuario_id_planilha: m.matricula
+            for m in estrutura.matriculas
+            if m.usuario_id_planilha is not None and m.matricula
+        }
+
         for linha in estrutura.usuarios:
             _incrementar_progresso()
             try:
                 with transaction.atomic():
-                    usuario, criado = self._criar_ou_atualizar_usuario(linha)
+                    usuario, criado = self._criar_ou_atualizar_usuario(linha, mapa_matriculas)
                     mapa_usuarios[linha.usuario_id_planilha] = usuario
                     if criado:
                         resumo.usuarios_criados += 1
@@ -446,14 +472,28 @@ class UsuarioBusiness(ModelInstanceBusiness):
         if not estrutura.usuarios:
             raise ValidationException('A aba "Usuario" deve possuir pelo menos um registro.')
 
-    def _criar_ou_atualizar_usuario(self, linha):
+    def _criar_ou_atualizar_usuario(self, linha, mapa_matriculas):
         from .models import Usuario
+        from Identidade.matriculas.models import Matricula
 
         UsuarioRules().usuario_id_planilha_obrigatorio(linha.usuario_id_planilha)
-        UsuarioRules().cpf_valido_importacao(linha.cpf)
+        
+        cpf_normalizado = None
+        matricula_planilha = mapa_matriculas.get(linha.usuario_id_planilha)
 
-        cpf_normalizado = UsuarioHelpers().normalizar_cpf(linha.cpf)
-        usuario = Usuario.objects.filter(cpf=cpf_normalizado).first()
+        if linha.cpf:
+            cpf_digitos = ''.join(c for c in linha.cpf if c.isdigit())
+            if len(cpf_digitos) >= 3:
+                linha.cpf = cpf_digitos.zfill(11)
+
+            UsuarioRules().cpf_valido_importacao(linha.cpf)
+            cpf_normalizado = UsuarioHelpers().normalizar_cpf(linha.cpf)
+            usuario = Usuario.objects.filter(cpf=cpf_normalizado).first()
+        elif matricula_planilha:
+            cpf_normalizado = None
+            usuario = Usuario.objects.filter(matriculas__matricula=matricula_planilha).first()
+        else:
+            raise ValidationException('O usuário deve possuir CPF ou Matrícula.')
 
         if usuario:
             usuario.nome = linha.nome
@@ -464,14 +504,24 @@ class UsuarioBusiness(ModelInstanceBusiness):
             usuario.save()
             return usuario, False
 
+        # Senha padrão: CPF (se houver) ou matrícula
+        senha_padrao = cpf_normalizado if cpf_normalizado else matricula_planilha
+
         usuario = Usuario.objects.create_user(
             cpf=cpf_normalizado,
-            password=cpf_normalizado,
+            password=senha_padrao,
             nome=linha.nome,
             deficiencia=linha.deficiencia,
             ativo=linha.ativo,
             last_login=linha.ultimo_login,
         )
+
+        if matricula_planilha:
+            Matricula.objects.get_or_create(
+                usuario=usuario,
+                matricula=matricula_planilha,
+            )
+
         return usuario, True
 
     def _criar_ou_atualizar_contato(self, usuario, linha):
@@ -553,9 +603,17 @@ class UsuarioBusiness(ModelInstanceBusiness):
         from PessoasInstitucionais.servidores.models import Servidor
 
         servidor = Servidor.objects.filter(usuario=usuario).first()
+
+        from PessoasInstitucionais.servidores.choices import CategoriaServidor
+
+        for categoria in CategoriaServidor.choices:
+            if categoria[1] == linha.categoria:
+                categoria = categoria[0]
+                break
+
         if servidor:
             servidor.cargo = cargo
-            servidor.categoria = linha.categoria
+            servidor.categoria = categoria
             servidor.ativo = linha.ativo
             servidor.save()
             return False
@@ -563,7 +621,7 @@ class UsuarioBusiness(ModelInstanceBusiness):
         Servidor.objects.create(
             usuario=usuario,
             cargo=cargo,
-            categoria=linha.categoria,
+            categoria=categoria,
             ativo=linha.ativo,
         )
         return True

@@ -74,7 +74,7 @@ class TerceirizadoBusiness(ModelInstanceBusiness):
             except EmpresaInstituicao.DoesNotExist:
                 raise NotFoundException('Empresa/instituição não encontrada.')
             regras.empresa_ativa(empresa)
-            self.object_instance.empresa = empresa
+            self.object_instance.empresa_instituicao = empresa
 
         try:
             for attr, value in dados.items():

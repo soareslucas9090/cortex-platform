@@ -28,6 +28,8 @@ class SetorVinculo(ModelHelperMixin, ModelBusinessMixin, BasicModel):
     funcao = models.ForeignKey(
         'funcoes.Funcao',
         on_delete=models.PROTECT,
+        null=True,
+        blank=True,
         related_name='vinculos',
         verbose_name='Função',
     )

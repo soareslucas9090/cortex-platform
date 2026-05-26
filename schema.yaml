@@ -694,9 +694,9 @@ paths:
         \ **CPF** (com ou sem máscara).\n\n        **Exemplos de identificador:**\n\
         \        - E-mail: `usuario@email.com`\n        - CPF sem máscara: `12345678901`\n\
         \        - CPF com máscara: `123.456.789-01`\n\n        **Token de acesso:**\
-        \ válido por 30 minutos.\n        **Token de renovação:** válido por 7 dias.\n\
-        \n        Em caso de falha, a resposta é sempre genérica e não revela\n  \
-        \      o motivo específico (usuário inexistente, senha incorreta ou inativo).\n\
+        \ válido por 1 dia.\n        **Token de renovação:** válido por 7 dias.\n\n\
+        \        Em caso de falha, a resposta é sempre genérica e não revela\n   \
+        \     o motivo específico (usuário inexistente, senha incorreta ou inativo).\n\
         \        "
       summary: Login — obter tokens JWT
       tags:
@@ -3695,17 +3695,23 @@ components:
       properties:
         cpf:
           type: string
+          nullable: true
           description: 'CPF do usuário. Aceita com ou sem máscara (ex: 12345678901
             ou 123.456.789-01).'
           maxLength: 14
+        matricula:
+          type: string
+          nullable: true
+          description: Matrícula do usuário (obrigatória caso o CPF não seja informado).
+          maxLength: 50
         nome:
           type: string
           maxLength: 255
         password:
           type: string
           writeOnly: true
-          description: Senha (mín. 8 caracteres, com maiúscula, minúscula, número
-            e caractere especial).
+          description: Senha (opcional). Se não for informada, será usada a senha
+            padrão (CPF ou matrícula).
         email:
           type: string
           format: email
@@ -3716,9 +3722,7 @@ components:
           default: ''
           description: Descrição de deficiência ou necessidade especial (opcional).
       required:
-      - cpf
       - nome
-      - password
     CriarVinculo:
       type: object
       properties:
@@ -4060,6 +4064,7 @@ components:
           maxLength: 254
         cpf:
           type: string
+          nullable: true
           maxLength: 11
         foto:
           type: string
@@ -4069,7 +4074,6 @@ components:
           type: string
           title: Deficiência / necessidade especial
       required:
-      - cpf
       - created_at
       - id
       - nome
@@ -4840,6 +4844,7 @@ components:
           readOnly: true
         cpf:
           type: string
+          nullable: true
           maxLength: 11
         nome:
           type: string
@@ -4875,7 +4880,6 @@ components:
           readOnly: true
           title: Criado em
       required:
-      - cpf
       - created_at
       - id
       - nome

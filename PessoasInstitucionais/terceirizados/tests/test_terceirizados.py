@@ -41,12 +41,12 @@ class TerceirizadoBusinessTestCase(APITestCase):
     def test_criar_terceirizado_sucesso(self):
         terceirizado = Terceirizado().business.criar_terceirizado(
             usuario_pk=self.usuario.pk,
-            empresa_pk=self.empresa.pk,
+            empresa_instituicao_pk=self.empresa.pk,
             cargo_funcao='Técnico de TI',
             data_inicio=self.data_inicio,
         )
         self.assertEqual(terceirizado.usuario, self.usuario)
-        self.assertEqual(terceirizado.empresa, self.empresa)
+        self.assertEqual(terceirizado.empresa_instituicao, self.empresa)
         self.assertEqual(terceirizado.cargo_funcao, 'Técnico de TI')
         self.assertEqual(terceirizado.data_inicio, self.data_inicio)
         self.assertIsNone(terceirizado.data_fim)
@@ -55,14 +55,14 @@ class TerceirizadoBusinessTestCase(APITestCase):
     def test_criar_terceirizado_usuario_ja_com_perfil(self):
         Terceirizado().business.criar_terceirizado(
             usuario_pk=self.usuario.pk,
-            empresa_pk=self.empresa.pk,
+            empresa_instituicao_pk=self.empresa.pk,
             cargo_funcao='Técnico de TI',
             data_inicio=self.data_inicio,
         )
         with self.assertRaises(BusinessRuleException) as context:
             Terceirizado().business.criar_terceirizado(
                 usuario_pk=self.usuario.pk,
-                empresa_pk=self.empresa.pk,
+                empresa_instituicao_pk=self.empresa.pk,
                 cargo_funcao='Auxiliar Administrativo',
                 data_inicio=self.data_inicio,
             )
@@ -72,7 +72,7 @@ class TerceirizadoBusinessTestCase(APITestCase):
         with self.assertRaises(NotFoundException):
             Terceirizado().business.criar_terceirizado(
                 usuario_pk=99999,
-                empresa_pk=self.empresa.pk,
+                empresa_instituicao_pk=self.empresa.pk,
                 cargo_funcao='Técnico de TI',
                 data_inicio=self.data_inicio,
             )
@@ -81,7 +81,7 @@ class TerceirizadoBusinessTestCase(APITestCase):
         with self.assertRaises(NotFoundException):
             Terceirizado().business.criar_terceirizado(
                 usuario_pk=self.usuario.pk,
-                empresa_pk=99999,
+                empresa_instituicao_pk=99999,
                 cargo_funcao='Técnico de TI',
                 data_inicio=self.data_inicio,
             )
@@ -91,7 +91,7 @@ class TerceirizadoBusinessTestCase(APITestCase):
         with self.assertRaises(BusinessRuleException) as context:
             Terceirizado().business.criar_terceirizado(
                 usuario_pk=self.usuario.pk,
-                empresa_pk=empresa_inativa.pk,
+                empresa_instituicao_pk=empresa_inativa.pk,
                 cargo_funcao='Técnico de TI',
                 data_inicio=self.data_inicio,
             )
@@ -101,7 +101,7 @@ class TerceirizadoBusinessTestCase(APITestCase):
         data_fim = datetime.date(2024, 12, 31)
         terceirizado = Terceirizado().business.criar_terceirizado(
             usuario_pk=self.usuario.pk,
-            empresa_pk=self.empresa.pk,
+            empresa_instituicao_pk=self.empresa.pk,
             cargo_funcao='Técnico de TI',
             data_inicio=self.data_inicio,
             data_fim=data_fim,
@@ -111,7 +111,7 @@ class TerceirizadoBusinessTestCase(APITestCase):
     def test_atualizar_cargo_funcao_sucesso(self):
         terceirizado = Terceirizado().business.criar_terceirizado(
             usuario_pk=self.usuario.pk,
-            empresa_pk=self.empresa.pk,
+            empresa_instituicao_pk=self.empresa.pk,
             cargo_funcao='Técnico de TI',
             data_inicio=self.data_inicio,
         )
@@ -123,11 +123,11 @@ class TerceirizadoBusinessTestCase(APITestCase):
         empresa2 = criar_empresa(nome='Outra Empresa LTDA')
         terceirizado = Terceirizado().business.criar_terceirizado(
             usuario_pk=self.usuario.pk,
-            empresa_pk=self.empresa.pk,
+            empresa_instituicao_pk=self.empresa.pk,
             cargo_funcao='Técnico de TI',
             data_inicio=self.data_inicio,
         )
-        terceirizado.business.atualizar_dados({'empresa_pk': empresa2.pk})
+        terceirizado.business.atualizar_dados({'empresa_instituicao_pk': empresa2.pk})
         terceirizado.refresh_from_db()
         self.assertEqual(terceirizado.empresa, empresa2)
 
@@ -135,17 +135,17 @@ class TerceirizadoBusinessTestCase(APITestCase):
         empresa_inativa = criar_empresa(nome='Empresa Inativa', ativo=False)
         terceirizado = Terceirizado().business.criar_terceirizado(
             usuario_pk=self.usuario.pk,
-            empresa_pk=self.empresa.pk,
+            empresa_instituicao_pk=self.empresa.pk,
             cargo_funcao='Técnico de TI',
             data_inicio=self.data_inicio,
         )
         with self.assertRaises(BusinessRuleException):
-            terceirizado.business.atualizar_dados({'empresa_pk': empresa_inativa.pk})
+            terceirizado.business.atualizar_dados({'empresa_instituicao_pk': empresa_inativa.pk})
 
     def test_desativar_terceirizado_sucesso(self):
         terceirizado = Terceirizado().business.criar_terceirizado(
             usuario_pk=self.usuario.pk,
-            empresa_pk=self.empresa.pk,
+            empresa_instituicao_pk=self.empresa.pk,
             cargo_funcao='Técnico de TI',
             data_inicio=self.data_inicio,
         )
@@ -156,7 +156,7 @@ class TerceirizadoBusinessTestCase(APITestCase):
     def test_desativar_terceirizado_ja_inativo(self):
         terceirizado = Terceirizado().business.criar_terceirizado(
             usuario_pk=self.usuario.pk,
-            empresa_pk=self.empresa.pk,
+            empresa_instituicao_pk=self.empresa.pk,
             cargo_funcao='Técnico de TI',
             data_inicio=self.data_inicio,
         )
@@ -167,7 +167,7 @@ class TerceirizadoBusinessTestCase(APITestCase):
     def test_reativar_terceirizado_sucesso(self):
         terceirizado = Terceirizado().business.criar_terceirizado(
             usuario_pk=self.usuario.pk,
-            empresa_pk=self.empresa.pk,
+            empresa_instituicao_pk=self.empresa.pk,
             cargo_funcao='Técnico de TI',
             data_inicio=self.data_inicio,
         )
@@ -179,7 +179,7 @@ class TerceirizadoBusinessTestCase(APITestCase):
     def test_reativar_terceirizado_ja_ativo(self):
         terceirizado = Terceirizado().business.criar_terceirizado(
             usuario_pk=self.usuario.pk,
-            empresa_pk=self.empresa.pk,
+            empresa_instituicao_pk=self.empresa.pk,
             cargo_funcao='Técnico de TI',
             data_inicio=self.data_inicio,
         )
@@ -189,7 +189,7 @@ class TerceirizadoBusinessTestCase(APITestCase):
     def test_str_terceirizado(self):
         terceirizado = Terceirizado().business.criar_terceirizado(
             usuario_pk=self.usuario.pk,
-            empresa_pk=self.empresa.pk,
+            empresa_instituicao_pk=self.empresa.pk,
             cargo_funcao='Técnico de TI',
             data_inicio=self.data_inicio,
         )
@@ -210,7 +210,7 @@ class TerceirizadosAPITestCase(APITestCase):
         self.data_inicio = datetime.date(2024, 1, 15)
         self.terceirizado = Terceirizado().business.criar_terceirizado(
             usuario_pk=self.usuario.pk,
-            empresa_pk=self.empresa.pk,
+            empresa_instituicao_pk=self.empresa.pk,
             cargo_funcao='Técnico de TI',
             data_inicio=self.data_inicio,
         )
@@ -230,7 +230,7 @@ class TerceirizadosAPITestCase(APITestCase):
         url = reverse('pessoas-institucionais:terceirizado-list')
         data = {
             'usuario_pk': outro_usuario.pk,
-            'empresa_pk': self.empresa.pk,
+            'empresa_instituicao_pk': self.empresa.pk,
             'cargo_funcao': 'Auxiliar Administrativo',
             'data_inicio': '2024-03-01',
         }

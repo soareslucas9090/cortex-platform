@@ -7,12 +7,12 @@ class TerceirizadoSerializer(serializers.ModelSerializer):
     pk = serializers.IntegerField(read_only=True)
     usuario_nome = serializers.CharField(source='usuario.nome', read_only=True)
     usuario_cpf = serializers.CharField(source='usuario.cpf', read_only=True)
-    empresa_nome = serializers.CharField(source='empresa.nome', read_only=True)
+    empresa_nome = serializers.CharField(source='empresa_instituicao.nome', read_only=True)
 
     class Meta:
         model = Terceirizado
         fields = [
-            'pk', 'usuario_nome', 'usuario_cpf', 'empresa', 'empresa_nome',
+            'pk', 'usuario_nome', 'usuario_cpf', 'empresa_instituicao', 'empresa_nome',
             'cargo_funcao', 'data_inicio', 'data_fim',
             'ativo', 'created_at', 'updated_at',
         ]

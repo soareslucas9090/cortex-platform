@@ -15,11 +15,12 @@ def _normalizar_email(email):
 
 class UsuarioManager(BaseManagerUser):
 
-    def create_user(self, cpf, password=None, **extra_fields):
-        if not cpf:
-            raise ValueError('O CPF é obrigatório.')
+    def create_user(self, cpf=None, password=None, **extra_fields):
+        if cpf:
+            cpf = normalizar_cpf(cpf)
 
-        cpf = normalizar_cpf(cpf)
+            if not len(cpf) == 11:
+                raise ValueError('CPF deve ter 11 dígitos')
 
         email = extra_fields.get('email')
         if email:
@@ -54,6 +55,8 @@ class Usuario(ModelHelperMixin, ModelBusinessMixin, AbstractBaseAppUser):
         'CPF',
         max_length=11,
         unique=True,
+        null=True,
+        blank=True,
     )
     foto = models.ImageField(
         'Foto',
@@ -70,6 +73,11 @@ class Usuario(ModelHelperMixin, ModelBusinessMixin, AbstractBaseAppUser):
 
     USERNAME_FIELD = 'cpf'
     REQUIRED_FIELDS = ['nome']
+
+    def save(self, *args, **kwargs):
+        if self.cpf == '':
+            self.cpf = None
+        super().save(*args, **kwargs)
 
     class Meta:
         verbose_name = 'Usuário'

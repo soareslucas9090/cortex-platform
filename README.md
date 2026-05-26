@@ -248,7 +248,7 @@ python manage.py spectacular --file schema.yaml
 
 O sistema usa **JWT Bearer Tokens** com SimpleJWT:
 
-- **Access token:** válido por 30 minutos
+- **Access token:** válido por 1 dia
 - **Refresh token:** válido por 7 dias
 - **Header:** `Authorization: Bearer <token>`
 

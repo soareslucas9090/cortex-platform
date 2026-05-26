@@ -20,7 +20,7 @@ class Terceirizado(ModelHelperMixin, ModelBusinessMixin, BasicModel):
         primary_key=True,
         verbose_name='Usuário',
     )
-    empresa = models.ForeignKey(
+    empresa_instituicao = models.ForeignKey(
         'empresas_instituicoes.EmpresaInstituicao',
         on_delete=models.PROTECT,
         related_name='terceirizados',
@@ -33,6 +33,8 @@ class Terceirizado(ModelHelperMixin, ModelBusinessMixin, BasicModel):
     )
     data_inicio = models.DateField(
         'Data de Início',
+        null=True,
+        blank=True,
         help_text='Data de início do vínculo terceirizado.',
     )
     data_fim = models.DateField(
@@ -49,4 +51,4 @@ class Terceirizado(ModelHelperMixin, ModelBusinessMixin, BasicModel):
         ordering = ['usuario__nome']
 
     def __str__(self):
-        return f'{self.usuario.nome} - {self.empresa.nome}'
+        return f'{self.usuario.nome} - {self.empresa_instituicao.nome}'
