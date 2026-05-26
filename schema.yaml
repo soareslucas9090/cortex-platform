@@ -1552,6 +1552,209 @@ paths:
               schema:
                 description: Usuário ou matrícula não encontrados.
           description: ''
+  /identidade/usuarios/importacao/:
+    post:
+      operationId: identidade_usuarios_importacao_create
+      description: "\n    Inicia o processo de importação em lote de usuários enviando\
+        \ o arquivo `.ods`.\n    O processamento ocorre em background (Celery).\n\n\
+        \    **Permissões:** Apenas administradores.\n    "
+      summary: Importar usuários em lote (Assíncrono)
+      tags:
+      - Identidade
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: Arquivo para upload
+              required:
+              - file
+      security:
+      - jwtAuth: []
+      responses:
+        '202':
+          content:
+            application/json:
+              schema:
+                description: Importação enviada para fila de processamento.
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                description: Já existe uma importação em andamento ou arquivo inválido.
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                description: Não autenticado.
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                description: Sem permissão de administrador.
+          description: ''
+  /identidade/usuarios/importacao/cancelar/:
+    post:
+      operationId: identidade_usuarios_importacao_cancelar_create
+      description: "\n    Cancela uma importação que esteja travada com status EM_ANDAMENTO.\n\
+        \n    **Permissões:** Apenas administradores.\n    "
+      summary: Cancelar importação em lote de usuários
+      tags:
+      - Identidade
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                description: Importação cancelada com sucesso.
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                description: Não há importação em andamento.
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                description: Não autenticado.
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                description: Sem permissão de administrador.
+          description: ''
+  /identidade/usuarios/importacao/modelo/:
+    get:
+      operationId: identidade_usuarios_importacao_modelo_retrieve
+      description: "\n    Realiza o download do arquivo modelo `.ods` utilizado como\
+        \ base para a importação em lote de usuários.\n\n    **Permissões:** Apenas\
+        \ administradores.\n    "
+      summary: Baixar modelo da planilha de importação
+      tags:
+      - Identidade
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                description: Arquivo retornado com sucesso.
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                description: Não autenticado.
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                description: Sem permissão de administrador.
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                description: Arquivo modelo não encontrado.
+          description: ''
+  /identidade/usuarios/importacao/pre-visualizar/:
+    post:
+      operationId: identidade_usuarios_importacao_pre_visualizar_create
+      description: "\n    Recebe um arquivo `.ods` multiaba e executa a validação\
+        \ estrutural e prévia da importação,\n    sem persistir dados no banco.\n\n\
+        \    **Permissões:** Apenas administradores.\n    "
+      summary: Pré-visualizar importação em lote de usuários
+      tags:
+      - Identidade
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: Arquivo para upload
+              required:
+              - file
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ImportacaoUsuariosPreviewResponse'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                description: Arquivo inválido ou estrutura inconsistente.
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                description: Não autenticado.
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                description: Sem permissão de administrador.
+          description: ''
+  /identidade/usuarios/importacao/status/:
+    get:
+      operationId: identidade_usuarios_importacao_status_retrieve
+      description: "\n    Retorna o status da importação atual ou da última importação\
+        \ realizada.\n    Inclui a porcentagem de conclusão se estiver em andamento.\n\
+        \n    **Permissões:** Apenas administradores.\n    "
+      summary: Consultar status da importação de usuários
+      tags:
+      - Identidade
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StatusImportacaoLote'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                description: Não autenticado.
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                description: Sem permissão de administrador.
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                description: Nenhuma importação encontrada.
+          description: ''
   /organizacional/funcoes/:
     get:
       operationId: organizacional_funcoes_list
@@ -3716,6 +3919,48 @@ components:
       - descricao
       - id
       - sigla
+    ImportacaoErroLinha:
+      type: object
+      properties:
+        aba:
+          type: string
+        numero_linha:
+          type: integer
+        campo:
+          type: string
+        valor:
+          nullable: true
+        codigo:
+          type: string
+        mensagem:
+          type: string
+      required:
+      - aba
+      - campo
+      - codigo
+      - mensagem
+      - numero_linha
+    ImportacaoUsuariosPreviewResponse:
+      type: object
+      properties:
+        sucesso:
+          type: boolean
+        mensagem:
+          type: string
+        resumo:
+          $ref: '#/components/schemas/ResumoImportacao'
+        erros:
+          type: array
+          items:
+            $ref: '#/components/schemas/ImportacaoErroLinha'
+        metadados:
+          type: object
+          additionalProperties: {}
+      required:
+      - erros
+      - mensagem
+      - resumo
+      - sucesso
     LoginInput:
       type: object
       description: Documenta o input do login no Swagger.
@@ -4270,6 +4515,58 @@ components:
           type: string
           default: ''
           maxLength: 20
+    ResumoImportacao:
+      type: object
+      properties:
+        total_abas_processadas:
+          type: integer
+        total_linhas_processadas:
+          type: integer
+        total_linhas_com_erro:
+          type: integer
+        usuarios_criados:
+          type: integer
+        usuarios_atualizados:
+          type: integer
+        contatos_criados:
+          type: integer
+        contatos_atualizados:
+          type: integer
+        enderecos_criados:
+          type: integer
+        enderecos_atualizados:
+          type: integer
+        matriculas_criadas:
+          type: integer
+        matriculas_atualizadas:
+          type: integer
+        alunos_criados:
+          type: integer
+        servidores_criados:
+          type: integer
+        terceirizados_criados:
+          type: integer
+        vinculos_aluno_curso_criados:
+          type: integer
+        lotacoes_criadas:
+          type: integer
+      required:
+      - alunos_criados
+      - contatos_atualizados
+      - contatos_criados
+      - enderecos_atualizados
+      - enderecos_criados
+      - lotacoes_criadas
+      - matriculas_atualizadas
+      - matriculas_criadas
+      - servidores_criados
+      - terceirizados_criados
+      - total_abas_processadas
+      - total_linhas_com_erro
+      - total_linhas_processadas
+      - usuarios_atualizados
+      - usuarios_criados
+      - vinculos_aluno_curso_criados
     Servidor:
       type: object
       properties:
@@ -4399,6 +4696,56 @@ components:
       description: |-
         * `1` - Ativa
         * `2` - Inativa
+    StatusEnum:
+      enum:
+      - EM_ANDAMENTO
+      - CONCLUIDA
+      - ERRO
+      type: string
+      description: |-
+        * `EM_ANDAMENTO` - Em Andamento
+        * `CONCLUIDA` - Concluída
+        * `ERRO` - Erro
+    StatusImportacaoLote:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        status:
+          $ref: '#/components/schemas/StatusEnum'
+        total_linhas:
+          type: integer
+          maximum: 9223372036854775807
+          minimum: -9223372036854775808
+          format: int64
+          title: Total de Linhas
+        linhas_processadas:
+          type: integer
+          maximum: 9223372036854775807
+          minimum: -9223372036854775808
+          format: int64
+        porcentagem:
+          type: number
+          format: double
+          readOnly: true
+        resultado_json:
+          type: string
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - created_at
+      - id
+      - porcentagem
+      - resultado_json
+      - updated_at
     Terceirizado:
       type: object
       properties:
