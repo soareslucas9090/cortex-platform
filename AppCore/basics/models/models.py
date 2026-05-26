@@ -7,11 +7,24 @@ from AppCore.core.exceptions.exceptions import NotFoundException
 
 
 class BaseManager(Manager):
+    _exception_class = None
+
+    @property
+    def exception_class(self):
+        if self._exception_class is None:
+            name = f"{self.model.__name__}NotFoundException"
+            self._exception_class = type(
+                name,
+                (NotFoundException, self.model.DoesNotExist),
+                {}
+            )
+        return self._exception_class
+
     def get(self, *args, **kwargs):
         try:
             return super().get(*args, **kwargs)
         except self.model.DoesNotExist as e:
-            raise NotFoundException(f"{self.model._meta.verbose_name} não encontrado.")
+            raise self.exception_class(f"{self.model._meta.verbose_name} não encontrado.")
 
 
 class BaseManagerUser(BaseUserManager, BaseManager):

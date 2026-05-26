@@ -3,6 +3,7 @@ from pathlib import Path
 
 from django.http import FileResponse, Http404
 from rest_framework import status
+from rest_framework.parsers import MultiPartParser
 
 from drf_spectacular.utils import extend_schema, OpenApiParameter
 from drf_spectacular.types import OpenApiTypes
@@ -275,7 +276,19 @@ class BaixarModeloImportacaoUsuariosView(IsAdminMixin, BasicGetAPIView):
 
     **Permissões:** Apenas administradores.
     ''',
-    request=ArquivoImportacaoUsuariosSerializer,
+    request={
+        'multipart/form-data': {
+            'type': 'object',
+            'properties': {
+                'file': {
+                    'type': 'string',
+                    'format': 'binary',
+                    'description': 'Arquivo para upload'
+                }
+            },
+            'required': ['file']
+        }
+    },
     responses={
         status.HTTP_200_OK: ImportacaoUsuariosPreviewResponseSerializer,
         status.HTTP_400_BAD_REQUEST: {'description': 'Arquivo inválido ou estrutura inconsistente.'},
@@ -285,6 +298,7 @@ class BaixarModeloImportacaoUsuariosView(IsAdminMixin, BasicGetAPIView):
 )
 class PreVisualizarImportacaoUsuariosView(IsAdminMixin, BasicPostAPIView):
     """POST /identidade/usuarios/importacao/pre-visualizar/"""
+    parser_classes = (MultiPartParser,)
     serializer_class = ArquivoImportacaoUsuariosSerializer
     mensagem_sucesso = 'Pré-visualização concluída com sucesso.'
 
@@ -305,6 +319,9 @@ class PreVisualizarImportacaoUsuariosView(IsAdminMixin, BasicPostAPIView):
         }
 
 
+from rest_framework import parsers
+
+
 @extend_schema(
     tags=['Identidade'],
     summary='Importar usuários em lote',
@@ -313,7 +330,19 @@ class PreVisualizarImportacaoUsuariosView(IsAdminMixin, BasicPostAPIView):
 
     **Permissões:** Apenas administradores.
     ''',
-    request=ArquivoImportacaoUsuariosSerializer,
+    request={
+        'multipart/form-data': {
+            'type': 'object',
+            'properties': {
+                'file': {
+                    'type': 'string',
+                    'format': 'binary',
+                    'description': 'Arquivo para upload'
+                }
+            },
+            'required': ['file']
+        }
+    },
     responses={
         status.HTTP_200_OK: ImportacaoUsuariosResponseSerializer,
         status.HTTP_400_BAD_REQUEST: {'description': 'Arquivo inválido, estrutura inconsistente ou erros de validação.'},
@@ -323,6 +352,7 @@ class PreVisualizarImportacaoUsuariosView(IsAdminMixin, BasicPostAPIView):
 )
 class ImportarUsuariosLoteView(IsAdminMixin, BasicPostAPIView):
     """POST /identidade/usuarios/importacao/"""
+    parser_classes = (MultiPartParser, parsers.FormParser)
     serializer_class = ArquivoImportacaoUsuariosSerializer
     mensagem_sucesso = 'Importação concluída com sucesso.'
 
