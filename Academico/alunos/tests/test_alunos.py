@@ -26,7 +26,7 @@ class AlunosAPITestCase(APITestCase):
         url = '/academico/alunos/'
         data = {
             'usuario': str(self.usuario.id),
-            'ira': '8.5000',
+            'ira': '8.5',
             'situacao': SituacaoAluno.MATRICULADO,
             'forma_ingresso': FormaIngresso.ENEM,
             'ativo': True
@@ -45,7 +45,7 @@ class AlunosAPITestCase(APITestCase):
         # Primeiro, crio um aluno
         Aluno.objects.create(
             usuario=self.usuario,
-            ira=9.0000,
+            ira=9.0,
             situacao=SituacaoAluno.MATRICULADO,
             forma_ingresso=FormaIngresso.VESTIBULAR
         )
@@ -68,14 +68,14 @@ class AlunosAPITestCase(APITestCase):
     def test_atualizar_aluno(self):
         aluno = Aluno.objects.create(
             usuario=self.usuario,
-            ira=9.0000,
+            ira=9.0,
             situacao=SituacaoAluno.MATRICULADO,
             forma_ingresso=FormaIngresso.VESTIBULAR
         )
         
         url = f'/academico/alunos/{str(self.usuario.id)}/'
         data = {
-            'ira': '9.5000',
+            'ira': '9.5',
             'situacao': SituacaoAluno.FORMADO
         }
         

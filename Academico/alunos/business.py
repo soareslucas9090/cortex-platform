@@ -32,7 +32,7 @@ class AlunoBusiness(ModelInstanceBusiness):
 
         aluno_dados = {
             'usuario': usuario,
-            'ira': dados.get('ira', 0.0000),
+            'ira': dados.get('ira', 0.0),
             'situacao': dados.get('situacao', SituacaoAluno.MATRICULADO),
             'forma_ingresso': dados.get('forma_ingresso', FormaIngresso.VESTIBULAR),
             'ativo': dados.get('ativo', True),

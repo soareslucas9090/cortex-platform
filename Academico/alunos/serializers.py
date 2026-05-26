@@ -37,14 +37,14 @@ class AlunoSerializer(serializers.ModelSerializer):
 
 class CriarAlunoSerializer(serializers.Serializer):
     usuario = serializers.IntegerField(required=True)
-    ira = serializers.DecimalField(max_digits=5, decimal_places=4, required=False)
+    ira = serializers.FloatField(required=False)
     situacao = serializers.ChoiceField(choices=SituacaoAluno.choices, required=False)
     forma_ingresso = serializers.ChoiceField(choices=FormaIngresso.choices, required=False)
     ativo = serializers.BooleanField(required=False, default=True)
 
 
 class AtualizarAlunoSerializer(serializers.Serializer):
-    ira = serializers.DecimalField(max_digits=5, decimal_places=4, required=False)
+    ira = serializers.FloatField(required=False)
     situacao = serializers.ChoiceField(choices=SituacaoAluno.choices, required=False)
     forma_ingresso = serializers.ChoiceField(choices=FormaIngresso.choices, required=False)
     ativo = serializers.BooleanField(required=False)

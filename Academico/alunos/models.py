@@ -22,11 +22,9 @@ class Aluno(ModelHelperMixin, ModelBusinessMixin, BasicModel):
         primary_key=True,
         verbose_name='Usuário',
     )
-    ira = models.DecimalField(
+    ira = models.FloatField(
         'IRA',
-        max_digits=5,
-        decimal_places=4,
-        default=0.0000,
+        default=0.0,
     )
     situacao = models.IntegerField(
         'Situação',
