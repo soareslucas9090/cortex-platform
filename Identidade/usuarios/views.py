@@ -4,6 +4,7 @@ from pathlib import Path
 from django.http import FileResponse, Http404
 from rest_framework import status
 from rest_framework.parsers import MultiPartParser
+from rest_framework.response import Response
 
 from drf_spectacular.utils import extend_schema, OpenApiParameter
 from drf_spectacular.types import OpenApiTypes
@@ -27,6 +28,7 @@ from .serializers import (
     ArquivoImportacaoUsuariosSerializer,
     ImportacaoUsuariosPreviewResponseSerializer,
     ImportacaoUsuariosResponseSerializer,
+    StatusImportacaoLoteSerializer,
 )
 
 logger = logging.getLogger(__name__)
@@ -324,9 +326,10 @@ from rest_framework import parsers
 
 @extend_schema(
     tags=['Identidade'],
-    summary='Importar usuários em lote',
+    summary='Importar usuários em lote (Assíncrono)',
     description='''
-    Recebe um arquivo `.ods` multiaba e processa a importação em lote de usuários e entidades relacionadas.
+    Inicia o processo de importação em lote de usuários enviando o arquivo `.ods`.
+    O processamento ocorre em background (Celery).
 
     **Permissões:** Apenas administradores.
     ''',
@@ -344,8 +347,8 @@ from rest_framework import parsers
         }
     },
     responses={
-        status.HTTP_200_OK: ImportacaoUsuariosResponseSerializer,
-        status.HTTP_400_BAD_REQUEST: {'description': 'Arquivo inválido, estrutura inconsistente ou erros de validação.'},
+        status.HTTP_202_ACCEPTED: {'description': 'Importação enviada para fila de processamento.'},
+        status.HTTP_400_BAD_REQUEST: {'description': 'Já existe uma importação em andamento ou arquivo inválido.'},
         status.HTTP_401_UNAUTHORIZED: {'description': 'Não autenticado.'},
         status.HTTP_403_FORBIDDEN: {'description': 'Sem permissão de administrador.'},
     },
@@ -354,20 +357,105 @@ class ImportarUsuariosLoteView(IsAdminMixin, BasicPostAPIView):
     """POST /identidade/usuarios/importacao/"""
     parser_classes = (MultiPartParser, parsers.FormParser)
     serializer_class = ArquivoImportacaoUsuariosSerializer
-    mensagem_sucesso = 'Importação concluída com sucesso.'
+    mensagem_sucesso = 'Importação enviada para fila de processamento.'
 
     def do_action_post(self, serializer_data, request):
-        resultado = UsuarioBusiness().importar_usuarios_em_lote(
+        from .models import ImportacaoLote, StatusImportacao
+        from .tasks import processar_importacao_usuarios_task
+        from rest_framework.exceptions import ValidationError
+
+        if ImportacaoLote.objects.filter(status=StatusImportacao.EM_ANDAMENTO).exists():
+            raise ValidationError('Já existe uma importação em andamento. Aguarde o término.')
+
+        importacao = ImportacaoLote.objects.create(
             arquivo=serializer_data['file']
         )
+        
+        processar_importacao_usuarios_task.delay(importacao.id)
+
         return {
-            'mensagem': resultado.mensagem,
-            'dados': {
-                'sucesso': resultado.sucesso,
-                'mensagem': resultado.mensagem,
-                'resumo': resultado.resumo.__dict__,
-                'erros': [erro.__dict__ for erro in resultado.erros],
-                'metadados': resultado.metadados,
-            },
+            'mensagem': self.mensagem_sucesso,
+            'dados': {'importacao_id': importacao.id},
+            'status_code': status.HTTP_202_ACCEPTED,
+        }
+
+
+@extend_schema(
+    tags=['Identidade'],
+    summary='Consultar status da importação de usuários',
+    description='''
+    Retorna o status da importação atual ou da última importação realizada.
+    Inclui a porcentagem de conclusão se estiver em andamento.
+
+    **Permissões:** Apenas administradores.
+    ''',
+    responses={
+        status.HTTP_200_OK: StatusImportacaoLoteSerializer,
+        status.HTTP_401_UNAUTHORIZED: {'description': 'Não autenticado.'},
+        status.HTTP_403_FORBIDDEN: {'description': 'Sem permissão de administrador.'},
+        status.HTTP_404_NOT_FOUND: {'description': 'Nenhuma importação encontrada.'},
+    },
+)
+class StatusImportacaoLoteView(IsAdminMixin, BasicGetAPIView):
+    """GET /identidade/usuarios/importacao/status/"""
+    serializer_class = StatusImportacaoLoteSerializer
+    mensagem_sucesso = 'Status retornado com sucesso.'
+
+    def get_queryset(self):
+        from .models import ImportacaoLote
+        return ImportacaoLote.objects.all()
+
+    def get(self, request, *args, **kwargs):
+        from django.http import Http404
+        ultima_importacao = self.get_queryset().first()
+        if not ultima_importacao:
+            raise Http404('Nenhuma importação encontrada.')
+
+        return Response(self.serializer_class(ultima_importacao).data, status=status.HTTP_200_OK)
+
+
+@extend_schema(
+    tags=['Identidade'],
+    summary='Cancelar importação em lote de usuários',
+    description='''
+    Cancela uma importação que esteja travada com status EM_ANDAMENTO.
+
+    **Permissões:** Apenas administradores.
+    ''',
+    request=None,
+    responses={
+        status.HTTP_200_OK: {'description': 'Importação cancelada com sucesso.'},
+        status.HTTP_400_BAD_REQUEST: {'description': 'Não há importação em andamento.'},
+        status.HTTP_401_UNAUTHORIZED: {'description': 'Não autenticado.'},
+        status.HTTP_403_FORBIDDEN: {'description': 'Sem permissão de administrador.'},
+    },
+)
+class CancelarImportacaoView(IsAdminMixin, BasicPostAPIView):
+    """POST /identidade/usuarios/importacao/cancelar/"""
+    serializer_class = SerializerVazio
+    mensagem_sucesso = 'Importação cancelada com sucesso.'
+
+    def do_action_post(self, serializer_data, request):
+        from .models import ImportacaoLote, StatusImportacao
+        from rest_framework.exceptions import ValidationError
+
+        importacoes_travadas = ImportacaoLote.objects.filter(status=StatusImportacao.EM_ANDAMENTO)
+        
+        if not importacoes_travadas.exists():
+            raise ValidationError('Não há nenhuma importação em andamento para ser cancelada.')
+
+        for importacao in importacoes_travadas:
+            importacao.status = StatusImportacao.ERRO
+            
+            # Se já existir algum resultado, preserva e adiciona o erro fatal
+            resultado = importacao.resultado_json or {}
+            resultado['erro_fatal'] = 'Importação cancelada manualmente pelo administrador.'
+            
+            importacao.resultado_json = resultado
+            importacao.save()
+            
+        return {
+            'mensagem': self.mensagem_sucesso,
+            'dados': {},
             'status_code': status.HTTP_200_OK,
         }

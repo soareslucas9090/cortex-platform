@@ -186,9 +186,9 @@ class UsuarioBusiness(ModelInstanceBusiness):
             }
         )
 
-    def importar_usuarios_em_lote(self, arquivo):
+    def importar_usuarios_em_lote(self, importacao_lote):
         parser = ImportacaoUsuariosParser()
-        estrutura = parser.parse(arquivo)
+        estrutura = parser.parse(importacao_lote.arquivo)
 
         self._validar_estrutura_importacao(estrutura)
 
@@ -199,8 +199,17 @@ class UsuarioBusiness(ModelInstanceBusiness):
 
         resumo.total_abas_processadas = self._contar_abas_processadas(estrutura)
         resumo.total_linhas_processadas = self._contar_linhas_processadas(estrutura)
+        
+        importacao_lote.total_linhas = resumo.total_linhas_processadas
+        importacao_lote.save(update_fields=['total_linhas'])
+        
+        def _incrementar_progresso():
+            importacao_lote.linhas_processadas += 1
+            if importacao_lote.linhas_processadas % 10 == 0 or importacao_lote.linhas_processadas == importacao_lote.total_linhas:
+                importacao_lote.save(update_fields=['linhas_processadas'])
 
         for linha in estrutura.usuarios:
+            _incrementar_progresso()
             try:
                 with transaction.atomic():
                     usuario, criado = self._criar_ou_atualizar_usuario(linha)
@@ -222,6 +231,7 @@ class UsuarioBusiness(ModelInstanceBusiness):
                 )
 
         for linha in estrutura.contatos:
+            _incrementar_progresso()
             try:
                 with transaction.atomic():
                     usuario = UsuarioHelpers().obter_usuario_por_id_planilha(linha.usuario_id_planilha, mapa_usuarios)
@@ -244,6 +254,7 @@ class UsuarioBusiness(ModelInstanceBusiness):
                 )
 
         for linha in estrutura.enderecos:
+            _incrementar_progresso()
             try:
                 with transaction.atomic():
                     usuario = UsuarioHelpers().obter_usuario_por_id_planilha(linha.usuario_id_planilha, mapa_usuarios)
@@ -266,6 +277,7 @@ class UsuarioBusiness(ModelInstanceBusiness):
                 )
 
         for linha in estrutura.matriculas:
+            _incrementar_progresso()
             try:
                 with transaction.atomic():
                     usuario = UsuarioHelpers().obter_usuario_por_id_planilha(linha.usuario_id_planilha, mapa_usuarios)
@@ -288,6 +300,7 @@ class UsuarioBusiness(ModelInstanceBusiness):
                 )
 
         for linha in estrutura.alunos:
+            _incrementar_progresso()
             try:
                 with transaction.atomic():
                     usuario = UsuarioHelpers().obter_usuario_por_id_planilha(linha.usuario_id_planilha, mapa_usuarios)
@@ -309,6 +322,7 @@ class UsuarioBusiness(ModelInstanceBusiness):
                 )
 
         for linha in estrutura.servidores:
+            _incrementar_progresso()
             try:
                 with transaction.atomic():
                     usuario = UsuarioHelpers().obter_usuario_por_id_planilha(linha.usuario_id_planilha, mapa_usuarios)
@@ -333,6 +347,7 @@ class UsuarioBusiness(ModelInstanceBusiness):
                 )
 
         for linha in estrutura.terceirizados:
+            _incrementar_progresso()
             try:
                 with transaction.atomic():
                     usuario = UsuarioHelpers().obter_usuario_por_id_planilha(linha.usuario_id_planilha, mapa_usuarios)
@@ -360,6 +375,7 @@ class UsuarioBusiness(ModelInstanceBusiness):
                 )
 
         for linha in estrutura.setores_lotacao:
+            _incrementar_progresso()
             try:
                 with transaction.atomic():
                     usuario = UsuarioHelpers().obter_usuario_por_id_planilha(linha.usuario_id_planilha, mapa_usuarios)
@@ -387,6 +403,7 @@ class UsuarioBusiness(ModelInstanceBusiness):
                 )
 
         for linha in estrutura.alunos_cursos:
+            _incrementar_progresso()
             try:
                 with transaction.atomic():
                     aluno = UsuarioHelpers().obter_aluno_por_id_planilha(linha.aluno_id_planilha, mapa_alunos)

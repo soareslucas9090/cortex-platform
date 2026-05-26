@@ -437,7 +437,7 @@ class ImportacaoUsuariosBusinessImportacaoTests(TestCase):
         mock_parse.return_value = estrutura
 
         business = UsuarioBusiness()
-        resultado = business.importar_usuarios_em_lote(arquivo=BytesIO(b'test'))
+        resultado = business.importar_usuarios_em_lote(importacao_lote=BytesIO(b'test'))
 
         self.assertTrue(resultado.sucesso)
         self.assertEqual(resultado.resumo.usuarios_criados, 1)
@@ -467,7 +467,7 @@ class ImportacaoUsuariosBusinessImportacaoTests(TestCase):
         mock_parse.return_value = estrutura
 
         business = UsuarioBusiness()
-        resultado = business.importar_usuarios_em_lote(arquivo=BytesIO(b'test'))
+        resultado = business.importar_usuarios_em_lote(importacao_lote=BytesIO(b'test'))
 
         usuario.refresh_from_db()
 
@@ -493,7 +493,7 @@ class ImportacaoUsuariosBusinessImportacaoTests(TestCase):
         mock_parse.return_value = estrutura
 
         business = UsuarioBusiness()
-        resultado = business.importar_usuarios_em_lote(arquivo=BytesIO(b'test'))
+        resultado = business.importar_usuarios_em_lote(importacao_lote=BytesIO(b'test'))
 
         self.assertFalse(resultado.sucesso)
         self.assertEqual(resultado.resumo.usuarios_criados, 0)
@@ -606,3 +606,37 @@ class ImportacaoUsuariosApiTests(TestCase):
 
         response = self.client.get('/identidade/usuarios/importacao/modelo/')
         self.assertEqual(response.status_code, 404)
+
+
+class CancelarImportacaoViewTests(TestCase):
+
+    def setUp(self):
+        self.client = APIClient()
+        self.User = get_user_model()
+
+        self.admin = self.User.objects.create(
+            cpf='11122233344',
+            nome='Administrador',
+            ativo=True,
+            is_admin=True,
+            is_superuser=True,
+        )
+        self.client.force_authenticate(user=self.admin)
+
+    def test_deve_cancelar_importacao_em_andamento(self):
+        from Identidade.usuarios.models import ImportacaoLote, StatusImportacao
+        importacao = ImportacaoLote.objects.create(
+            status=StatusImportacao.EM_ANDAMENTO,
+            arquivo='dummy.ods',
+        )
+
+        response = self.client.post('/identidade/usuarios/importacao/cancelar/')
+        
+        self.assertEqual(response.status_code, 200)
+        importacao.refresh_from_db()
+        self.assertEqual(importacao.status, StatusImportacao.ERRO)
+        self.assertIn('erro_fatal', importacao.resultado_json)
+
+    def test_deve_retornar_erro_se_nao_ha_importacao_em_andamento(self):
+        response = self.client.post('/identidade/usuarios/importacao/cancelar/')
+        self.assertEqual(response.status_code, 400)

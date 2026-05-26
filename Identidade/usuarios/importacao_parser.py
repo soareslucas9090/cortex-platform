@@ -118,17 +118,28 @@ class ImportacaoUsuariosParser:
 
         linhas = []
         for index, row in enumerate(dados_aba[1:], start=2):
-            if self._linha_vazia(row):
+            row_limpo = [self._limpar_valor(v) for v in row]
+
+            if self._linha_vazia(row_limpo):
                 continue
 
             item = {}
             for i, coluna in enumerate(header):
-                item[coluna] = row[i] if i < len(row) else None
+                item[coluna] = row_limpo[i] if i < len(row_limpo) else None
 
             item['numero_linha'] = index
             linhas.append(item)
 
         return linhas
+
+    def _limpar_valor(self, valor):
+        if isinstance(valor, str):
+            v_strip = valor.strip()
+            v_upper = v_strip.upper()
+            if v_upper == 'NULL' or v_strip == '-' or v_strip == '':
+                return None
+            return v_strip
+        return valor
 
     def _normalizar_cabecalho(self, valor):
         if valor is None:
@@ -144,10 +155,7 @@ class ImportacaoUsuariosParser:
         return texto
 
     def _linha_vazia(self, row):
-        return all(
-            valor is None or str(valor).strip() == ''
-            for valor in row
-        )
+        return all(valor is None for valor in row)
 
     def _parse_usuarios(self, dados_aba):
         linhas = self._extrair_linhas(dados_aba, 'Usuario')

@@ -121,3 +121,32 @@ class ImportacaoUsuariosResponseSerializer(serializers.Serializer):
 class SerializerVazio(serializers.Serializer):
     """Serializer sem campos — usado em endpoints de ação pura (desativar, reativar)."""
     pass
+
+
+class StatusImportacaoLoteSerializer(serializers.ModelSerializer):
+    porcentagem = serializers.SerializerMethodField()
+    resultado_json = serializers.SerializerMethodField()
+
+    class Meta:
+        from .models import ImportacaoLote
+        model = ImportacaoLote
+        fields = [
+            'id', 'status', 'total_linhas', 'linhas_processadas', 
+            'porcentagem', 'resultado_json', 'created_at', 'updated_at'
+        ]
+
+    def get_porcentagem(self, obj) -> float:
+        if obj.total_linhas == 0:
+            return 0.0
+        return round((obj.linhas_processadas / obj.total_linhas) * 100, 2)
+
+    def get_resultado_json(self, obj):
+        res = obj.resultado_json
+        if res and isinstance(res, dict) and 'erros' in res:
+            max_erros = 50
+            if isinstance(res['erros'], list) and len(res['erros']) > max_erros:
+                res = dict(res)
+                total_erros = len(res['erros'])
+                res['erros'] = res['erros'][:max_erros]
+                res['mensagem_aviso'] = f"Foram omitidos {total_erros - max_erros} erros devido ao tamanho da resposta. Apenas os primeiros {max_erros} estão sendo exibidos."
+        return res

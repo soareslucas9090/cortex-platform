@@ -75,3 +75,25 @@ class Usuario(ModelHelperMixin, ModelBusinessMixin, AbstractBaseAppUser):
         verbose_name = 'Usuário'
         verbose_name_plural = 'Usuários'
         ordering = ['nome']
+
+
+class StatusImportacao(models.TextChoices):
+    EM_ANDAMENTO = 'EM_ANDAMENTO', 'Em Andamento'
+    CONCLUIDA = 'CONCLUIDA', 'Concluída'
+    ERRO = 'ERRO', 'Erro'
+
+
+class ImportacaoLote(BasicModel):
+    arquivo = models.FileField('Arquivo de Importação', upload_to='importacoes/usuarios/%Y/%m/%d/')
+    status = models.CharField('Status', max_length=20, choices=StatusImportacao.choices, default=StatusImportacao.EM_ANDAMENTO)
+    total_linhas = models.IntegerField('Total de Linhas', default=0)
+    linhas_processadas = models.IntegerField('Linhas Processadas', default=0)
+    resultado_json = models.JSONField('Resultado/Erros', null=True, blank=True)
+
+    class Meta:
+        verbose_name = 'Importação de Lote de Usuários'
+        verbose_name_plural = 'Importações de Lote de Usuários'
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"Importação {self.pk} - {self.get_status_display()} ({self.linhas_processadas}/{self.total_linhas})"
