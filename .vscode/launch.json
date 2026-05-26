@@ -1,4 +1,3 @@
-
 {
     "version": "0.2.0",
     "configurations": [
@@ -14,6 +13,26 @@
             "console": "integratedTerminal",
             "justMyCode": false,
             "env": {
+                "PYDEVD_WARN_SLOW_RESOLVE_TIMEOUT": "15"
+            }
+        },
+        {
+            "name": "Celery Worker",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "celery",
+            "args": [
+                "-A",
+                "Cortex",
+                "worker",
+                "--loglevel=info",
+                "--pool=solo",
+                "-E"
+            ],
+            "console": "integratedTerminal",
+            "justMyCode": false,
+            "env": {
+                "DJANGO_SETTINGS_MODULE": "Cortex.settings",
                 "PYDEVD_WARN_SLOW_RESOLVE_TIMEOUT": "15"
             }
         },
