@@ -42,7 +42,7 @@ class LoginView(BaseLoginView):
         - CPF sem máscara: `12345678901`
         - CPF com máscara: `123.456.789-01`
 
-        **Token de acesso:** válido por 30 minutos.
+        **Token de acesso:** válido por 1 dia.
         **Token de renovação:** válido por 7 dias.
 
         Em caso de falha, a resposta é sempre genérica e não revela

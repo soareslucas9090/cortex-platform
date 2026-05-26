@@ -132,7 +132,7 @@ Eles devem ser usados apenas como **identificadores temporários internos do arq
 ### Colunas
 - `aluno_id (int, PK)`
 - `usuario_id (int, FK)`
-- `ira (double)`
+- `ira (float)`
 
 ### Regras
 - `aluno_id` é obrigatório para correlação interna com `Aluno_Curso`;

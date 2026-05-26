@@ -28,6 +28,8 @@ from django.contrib.auth.backends import ModelBackend
 from AppCore.common.util.util import normalizar_cpf
 from AppCore.core.exceptions.exceptions import NotFoundException
 
+from Identidade.matriculas.choices import SituacaoMatricula
+
 logger = logging.getLogger(__name__)
 
 
@@ -45,25 +47,41 @@ class EmailOrCpfBackend(ModelBackend):
             return None
 
         UserModel = get_user_model()
+        user = None
 
-        # Detectar tipo de identificador e normalizar
+        # Detectar tipo de identificador e buscar correspondente
         if '@' in login:
             identificador = login.strip().lower()
-            campo = 'email'
+            try:
+                user = UserModel._default_manager.get(email=identificador)
+            except (UserModel.DoesNotExist, NotFoundException):
+                pass
+            except Exception:
+                logger.exception('Erro inesperado durante busca por email.')
         else:
-            identificador = normalizar_cpf(login)
-            campo = 'cpf'
+            # 1. Tentar busca por CPF se o valor puder ser um CPF válido (11 dígitos)
+            cpf_normalizado = normalizar_cpf(login)
+            if len(cpf_normalizado) == 11:
+                try:
+                    user = UserModel._default_manager.get(cpf=cpf_normalizado)
+                except (UserModel.DoesNotExist, NotFoundException):
+                    pass
+                except Exception:
+                    logger.exception('Erro inesperado durante busca por CPF.')
 
-        try:
-            user = UserModel._default_manager.get(**{campo: identificador})
-        except (UserModel.DoesNotExist, NotFoundException):
+            # 2. Se não encontrou por CPF, tentar busca por matrícula ativa (situação = 1)
+            if not user:
+                try:
+                    user = UserModel._default_manager.filter(
+                        matriculas__matricula=login,
+                        matriculas__situacao=SituacaoMatricula.ATIVA,
+                    ).first()
+                except Exception:
+                    logger.exception('Erro inesperado durante busca por matrícula.')
+
+        if not user:
             # Executar set_password para mitigar timing attacks (Django convention)
             UserModel().set_password(password)
-            return None
-        except Exception:
-            logger.exception(
-                'Erro inesperado durante autenticação. campo=%s', campo
-            )
             return None
 
         if not self.user_can_authenticate(user):

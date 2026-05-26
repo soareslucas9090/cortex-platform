@@ -66,7 +66,7 @@ class BaseLoginView(TokenObtainPairView):
         **Campos adicionais** podem aparecer na resposta dependendo do serializer configurado
         no projeto (ex: nome do usuário, perfis, campus).
 
-        **Token de acesso**: válido por 30 minutos (padrão).
+        **Token de acesso**: válido por 1 dia (padrão).
         **Token de renovação**: válido por 7 dias (padrão).
         ''',
         responses={
