@@ -32,7 +32,8 @@ class CriarUsuarioSerializer(serializers.Serializer):
     nome = serializers.CharField(max_length=255)
     password = serializers.CharField(
         write_only=True,
-        help_text='Senha (mín. 8 caracteres, com maiúscula, minúscula, número e caractere especial).',
+        required=False,
+        help_text='Senha (opcional). Se não for informada, será usada a senha padrão (11 dígitos numéricos do CPF).',
     )
     email = serializers.EmailField(
         required=False,

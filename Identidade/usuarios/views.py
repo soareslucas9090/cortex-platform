@@ -108,7 +108,7 @@ class CriarUsuarioView(IsAdminMixin, BasicPostAPIView):
         usuario = UsuarioBusiness().criar_usuario(
             cpf=serializer_data['cpf'],
             nome=serializer_data['nome'],
-            password=serializer_data['password'],
+            password=serializer_data.get('password'),
             email=serializer_data.get('email'),
             deficiencia=serializer_data.get('deficiencia', ''),
         )

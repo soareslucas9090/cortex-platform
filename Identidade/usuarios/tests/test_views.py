@@ -436,8 +436,14 @@ class ImportacaoUsuariosBusinessImportacaoTests(TestCase):
         )
         mock_parse.return_value = estrutura
 
+        from unittest.mock import MagicMock
+        importacao_mock = MagicMock()
+        importacao_mock.arquivo = BytesIO(b'test')
+        importacao_mock.linhas_processadas = 0
+        importacao_mock.total_linhas = 0
+        
         business = UsuarioBusiness()
-        resultado = business.importar_usuarios_em_lote(importacao_lote=BytesIO(b'test'))
+        resultado = business.importar_usuarios_em_lote(importacao_lote=importacao_mock)
 
         self.assertTrue(resultado.sucesso)
         self.assertEqual(resultado.resumo.usuarios_criados, 1)
@@ -466,8 +472,14 @@ class ImportacaoUsuariosBusinessImportacaoTests(TestCase):
         )
         mock_parse.return_value = estrutura
 
+        from unittest.mock import MagicMock
+        importacao_mock = MagicMock()
+        importacao_mock.arquivo = BytesIO(b'test')
+        importacao_mock.linhas_processadas = 0
+        importacao_mock.total_linhas = 0
+
         business = UsuarioBusiness()
-        resultado = business.importar_usuarios_em_lote(importacao_lote=BytesIO(b'test'))
+        resultado = business.importar_usuarios_em_lote(importacao_lote=importacao_mock)
 
         usuario.refresh_from_db()
 
@@ -492,8 +504,14 @@ class ImportacaoUsuariosBusinessImportacaoTests(TestCase):
         )
         mock_parse.return_value = estrutura
 
+        from unittest.mock import MagicMock
+        importacao_mock = MagicMock()
+        importacao_mock.arquivo = BytesIO(b'test')
+        importacao_mock.linhas_processadas = 0
+        importacao_mock.total_linhas = 0
+
         business = UsuarioBusiness()
-        resultado = business.importar_usuarios_em_lote(importacao_lote=BytesIO(b'test'))
+        resultado = business.importar_usuarios_em_lote(importacao_lote=importacao_mock)
 
         self.assertFalse(resultado.sucesso)
         self.assertEqual(resultado.resumo.usuarios_criados, 0)
@@ -573,7 +591,7 @@ class ImportacaoUsuariosApiTests(TestCase):
             format='multipart',
         )
 
-        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.status_code, 202)
         self.assertEqual(response.data['status'], 'success')
         self.assertIn('dados', response.data)
 

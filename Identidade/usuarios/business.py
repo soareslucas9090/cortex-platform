@@ -29,17 +29,20 @@ class UsuarioBusiness(ModelInstanceBusiness):
     # Operações de criação (sem object_instance)
     # ------------------------------------------------------------------
 
-    def criar_usuario(self, cpf: str, nome: str, password: str, **kwargs):
+    def criar_usuario(self, cpf: str, nome: str, password: str = None, **kwargs):
         """Cria um novo usuário no sistema após validar CPF."""
         from .models import Usuario
         cpf_normalizado = normalizar_cpf(cpf)
         regras = UsuarioRules()
         regras.cpf_formato_valido(cpf_normalizado)
         regras.cpf_unico(cpf_normalizado)
+        
+        senha_final = password if password else cpf_normalizado
+        
         try:
             return Usuario.objects.create_user(
                 cpf=cpf_normalizado,
-                password=password,
+                password=senha_final,
                 nome=nome,
                 **kwargs,
             )
@@ -461,8 +464,9 @@ class UsuarioBusiness(ModelInstanceBusiness):
             usuario.save()
             return usuario, False
 
-        usuario = Usuario.objects.create(
+        usuario = Usuario.objects.create_user(
             cpf=cpf_normalizado,
+            password=cpf_normalizado,
             nome=linha.nome,
             deficiencia=linha.deficiencia,
             ativo=linha.ativo,
