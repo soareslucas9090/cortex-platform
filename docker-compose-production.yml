@@ -35,12 +35,11 @@ services:
     container_name: novo_cortex_web
     command: >
       sh -c "python manage.py migrate &&
-      python -m debugpy --listen 0.0.0.0:5678 manage.py runserver 0.0.0.0:8000 --nothreading --noreload"
+      python manage.py runserver 0.0.0.0:8000"
     env_file:
       - .env.docker
     ports:
       - '8000:8000'
-      - '5678:5678'
     volumes:
       - .:/app
     stdin_open: true
@@ -55,11 +54,9 @@ services:
     build:
       context: .
     container_name: novo_cortex_worker
-    command: python -m debugpy --listen 0.0.0.0:5679 manage.py celery_worker -- --pool=prefork --concurrency=${CELERY_CONCURRENCY:-4}
+    command: celery -A Cortex worker -l INFO --pool=prefork --concurrency=${CELERY_CONCURRENCY:-4}
     env_file:
       - .env.docker
-    ports:
-      - '5679:5679'
     volumes:
       - .:/app
     stdin_open: true
