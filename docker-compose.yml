@@ -1,0 +1,68 @@
+services:
+  db:
+    image: postgres:16
+    container_name: novo_cortex_db
+    environment:
+      POSTGRES_DB: ${DATABASE_NAME:-cortex}
+      POSTGRES_USER: ${DATABASE_USER:-cortex}
+      POSTGRES_PASSWORD: ${DATABASE_PASSWORD:-cortex}
+    ports:
+      - '5432:5432'
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ${DATABASE_USER:-cortex} -d ${DATABASE_NAME:-cortex}']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: novo_cortex_redis
+    ports:
+      - '6379:6379'
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  web:
+    build:
+      context: .
+    container_name: novo_cortex_web
+    command: >
+      sh -c "python manage.py migrate &&
+      python manage.py runserver 0.0.0.0:8000"
+    env_file:
+      - .env.docker
+    ports:
+      - '8000:8000'
+    volumes:
+      - .:/app
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  worker:
+    build:
+      context: .
+    container_name: novo_cortex_worker
+    command: celery -A Cortex worker -l INFO --pool=prefork --concurrency=${CELERY_CONCURRENCY:-4}
+    env_file:
+      - .env.docker
+    volumes:
+      - .:/app
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+volumes:
+  postgres_data:
+  redis_data:

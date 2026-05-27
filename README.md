@@ -198,6 +198,34 @@ python manage.py migrate
 python manage.py collectstatic
 ```
 
+### Rodando com Docker + Celery prefork
+
+Use Docker quando quiser rodar o worker Celery com `prefork`, já que esse pool funciona corretamente em ambiente Linux e entrega paralelismo real entre processos. No Windows, o uso local normalmente fica restrito a `solo`.
+
+```bash
+# 1. Criar o arquivo de ambiente para o cenário Docker
+copy .env.docker.example .env.docker
+
+# 2. Subir API, PostgreSQL, Redis e worker
+docker compose up --build
+```
+
+Serviços disponíveis:
+
+- API Django: `http://localhost:8000`
+- PostgreSQL: `localhost:5432`
+- Redis: `localhost:6379`
+
+O worker sobe com o comando abaixo, já configurado no `docker-compose.yml`:
+
+```bash
+celery -A Cortex worker -l INFO --pool=prefork --concurrency=4
+```
+
+Para ajustar o número de processos, altere `CELERY_CONCURRENCY` no arquivo `.env.docker`.
+
+> Importante: para usar `prefork` com segurança e ganho real, prefira PostgreSQL no Docker. SQLite não é uma boa base para múltiplos processos de worker concorrendo.
+
 ---
 
 ## Endpoints da API
