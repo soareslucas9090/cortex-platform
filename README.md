@@ -9,7 +9,7 @@ Sistema backend para gestão institucional/acadêmica, construído com Django + 
 - Monólito modular organizado por domínios de negócio
 - Arquitetura em camadas: View → Business → Rules → Helpers
 - Framework interno reutilizável (AppCore)
-- Autenticação JWT com login por CPF
+- Autenticação JWT com login por CPF (ou matrícula)
 - Documentação OpenAPI com Swagger/ReDoc
 - Estrutura escalável preparada para integrações institucionais
 
@@ -40,7 +40,7 @@ O Cortex representa de forma consistente:
 - **Como se vinculam** à instituição — setores, cargos, funções
 - **Vínculos acadêmicos** — cursos, matrículas
 
-O login é feito por **CPF** (não e-mail). Usuários são criados por administradores — não há auto-cadastro.
+O login é feito por **CPF** ou **Matrícula** (não e-mail). Usuários são criados por administradores — não há auto-cadastro.
 
 ---
 
@@ -200,7 +200,7 @@ python manage.py collectstatic
 
 ### Rodando com Docker + Celery prefork
 
-Use Docker quando quiser rodar o worker Celery com `prefork`, já que esse pool funciona corretamente em ambiente Linux e entrega paralelismo real entre processos. No Windows, o uso local normalmente fica restrito a `solo`.
+Use Docker quando quiser rodar o worker Celery com `prefork`, já que esse pool funciona corretamente em ambiente Linux e entrega paralelismo real entre processos. O comando `python manage.py celery_worker` foi criado para rodar o worker integrado ao autoreload do Django (e faz fallback automático para o pool `solo` quando executado localmente no Windows).
 
 ```bash
 # 1. Criar o arquivo de ambiente para o cenário Docker
@@ -216,10 +216,10 @@ Serviços disponíveis:
 - PostgreSQL: `localhost:5432`
 - Redis: `localhost:6379`
 
-O worker sobe com o comando abaixo, já configurado no `docker-compose.yml`:
+O worker sobe usando um comando customizado do Django que adiciona suporte a autoreload, já configurado no `docker-compose.yml`:
 
 ```bash
-celery -A Cortex worker -l INFO --pool=prefork --concurrency=4
+python manage.py celery_worker -- --pool=prefork --concurrency=4
 ```
 
 Para ajustar o número de processos, altere `CELERY_CONCURRENCY` no arquivo `.env.docker`.
@@ -280,7 +280,7 @@ O sistema usa **JWT Bearer Tokens** com SimpleJWT:
 - **Refresh token:** válido por 7 dias
 - **Header:** `Authorization: Bearer <token>`
 
-O login é feito por **CPF**. O backend `EmailOrCpfBackend` suporta login por CPF ou e-mail.
+O login é feito por **CPF** ou **Matrícula**. O backend `EmailOrCpfBackend` suporta login por CPF, Matrícula ou E-mail.
 
 ```bash
 # Exemplo de login
@@ -329,7 +329,7 @@ O AppCore define exceções semânticas mapeadas para HTTP:
 
 Cadastro base da pessoa no sistema.
 
-- `Usuario` — entidade central, login por CPF
+- `Usuario` — entidade central, login por CPF ou Matrícula
 - `Contato` — e-mails e telefone
 - `Endereco` — endereço residencial
 - `Matricula` — carteirinha/matrícula institucional
@@ -369,6 +369,6 @@ Cada contexto de negócio (Identidade, Organizacional, Acadêmico) cresce de for
 
 Views que fazem queries ORM diretamente são um passivo de manutenção. Separar View, Business, Rules e Helpers garante que cada arquivo tenha uma única responsabilidade, facilita testes e torna o comportamento do sistema previsível.
 
-### Por que login por CPF?
+### Por que login por CPF (ou Matrícula)?
 
-O sistema é institucional e fechado — usuários são criados por administradores, não por auto-cadastro. O CPF é o identificador único institucional já consolidado nesse contexto, tornando e-mail irrelevante como chave de autenticação.
+O sistema é institucional e fechado — usuários são criados por administradores, não por auto-cadastro. O CPF é o identificador único institucional já consolidado nesse contexto. Para casos específicos onde o usuário ainda não possui CPF, o sistema permite o login através da matrícula. O e-mail torna-se irrelevante como chave principal de autenticação.

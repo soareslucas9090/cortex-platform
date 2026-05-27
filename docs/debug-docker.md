@@ -16,14 +16,14 @@ Para debugar usando breakpoints visuais na interface do VS Code:
          - '5678:5678'
    ```
 
-   Exponha a porta de depuração do Celery (`5679`) e altere o `command` para rodar sob o `debugpy` mantendo o pool `prefork`:
+   Exponha a porta de depuração do Celery (`5679`) e altere o `command` para rodar sob o `debugpy`, utilizando nosso comando customizado de worker:
 
    ```yaml
      worker:
        ...
        ports:
          - '5679:5679'
-       command: python -m debugpy --listen 0.0.0.0:5679 -m celery -A Cortex worker -l INFO --pool=prefork --concurrency=${CELERY_CONCURRENCY:-4}
+       command: python -m debugpy --listen 0.0.0.0:5679 manage.py celery_worker -- --pool=prefork --concurrency=${CELERY_CONCURRENCY:-4}
    ```
 
 2. **Adicione a configuração no seu `.vscode/launch.json`**:

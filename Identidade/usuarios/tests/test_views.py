@@ -329,7 +329,7 @@ class ReativarUsuarioViewTest(APITestCase):
 
 class ImportacaoUsuariosParserTests(TestCase):
 
-    @patch('Identidade.usuarios.importacao_parser.get_data')
+    @patch('Identidade.usuarios.importacao.importacao_parser.get_data')
     def test_deve_fazer_parse_da_aba_usuario_com_sucesso(self, mock_get_data):
         parser = ImportacaoUsuariosParser()
 
@@ -361,7 +361,7 @@ class ImportacaoUsuariosParserTests(TestCase):
         self.assertEqual(resultado.usuarios[0].cpf, '12345678901')
         self.assertEqual(resultado.usuarios[0].nome, 'Usuário Teste')
 
-    @patch('Identidade.usuarios.importacao_parser.get_data')
+    @patch('Identidade.usuarios.importacao.importacao_parser.get_data')
     def test_deve_ignorar_linhas_vazias(self, mock_get_data):
         parser = ImportacaoUsuariosParser()
 

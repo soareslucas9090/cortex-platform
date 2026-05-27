@@ -5,7 +5,8 @@
 Definir o desenho exato da autenticação do Cortex para permitir login usando:
 
 - email
-- ou CPF
+- CPF
+- ou Matrícula
 
 com um único endpoint, um único contrato de entrada e compatibilidade com:
 
@@ -26,7 +27,8 @@ O sistema terá um único endpoint de login e um único campo de identificação
 Esse campo aceitará:
 
 - email
-- ou CPF
+- CPF
+- ou Matrícula
 
 A senha continuará sendo enviada em:
 
@@ -216,7 +218,7 @@ Exemplo:
 
 3. O serializer chama `authenticate(...)`.
 
-4. O backend detecta se o identificador é email ou CPF.
+4. O backend detecta se o identificador é email, CPF ou Matrícula.
 
 5. O backend localiza o usuário pelo model configurado em `AUTH_USER_MODEL`.
 
@@ -320,7 +322,7 @@ Responsável por:
 
 ## Regras de autenticação
 
-1. O sistema usa identificador híbrido de login.
+1. O sistema usa identificador híbrido de login (E-mail, CPF, Matrícula).
 2. CPF deve autenticar com ou sem máscara.
 3. Email deve autenticar ignorando capitalização.
 4. Usuário inativo não autentica.

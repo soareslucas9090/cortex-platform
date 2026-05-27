@@ -8,8 +8,8 @@ from AppCore.common.util.util import normalizar_cpf
 
 from .rules import UsuarioRules
 from .helpers import UsuarioHelpers
-from .importacao.importacao_parser import ImportacaoUsuariosParser
-from .importacao.importacao_dtos import (
+from Identidade.usuarios.importacao.importacao_parser import ImportacaoUsuariosParser
+from Identidade.usuarios.importacao.importacao_dtos import (
     ErroImportacaoDTO,
     ResumoImportacaoDTO,
     ResultadoImportacaoDTO,
@@ -228,7 +228,7 @@ class UsuarioBusiness(ModelInstanceBusiness):
         
         def _incrementar_progresso():
             importacao_lote.linhas_processadas += 1
-            if importacao_lote.linhas_processadas % 10 == 0 or importacao_lote.linhas_processadas == importacao_lote.total_linhas:
+            if importacao_lote.linhas_processadas % 100 == 0 or importacao_lote.linhas_processadas == importacao_lote.total_linhas:
                 importacao_lote.save(update_fields=['linhas_processadas'])
 
         mapa_matriculas = {
@@ -237,12 +237,38 @@ class UsuarioBusiness(ModelInstanceBusiness):
             if m.usuario_id_planilha is not None and m.matricula
         }
 
+        from .models import Usuario
+        from Identidade.matriculas.models import Matricula
+        cpfs_planilha = []
+        for l in estrutura.usuarios:
+            if l.cpf:
+                cpf_str = str(l.cpf)
+                cpf_digitos = ''.join(c for c in cpf_str if c.isdigit())
+                if len(cpf_digitos) >= 3:
+                    l.cpf = cpf_digitos.zfill(11)
+                cpfs_planilha.append(UsuarioHelpers().normalizar_cpf(l.cpf))
+                
+        matriculas_planilha = [m for m in mapa_matriculas.values() if m]
+        
+        usuarios_por_cpf = {u.cpf: u for u in Usuario.objects.filter(cpf__in=cpfs_planilha) if u.cpf}
+        usuarios_por_matricula = {}
+        if matriculas_planilha:
+            for m in Matricula.objects.filter(matricula__in=matriculas_planilha).select_related('usuario'):
+                usuarios_por_matricula[m.matricula] = m.usuario
+
         for linha in estrutura.usuarios:
             _incrementar_progresso()
             try:
                 with transaction.atomic():
-                    usuario, criado = self._criar_ou_atualizar_usuario(linha, mapa_matriculas)
+                    usuario, criado = self._criar_ou_atualizar_usuario(linha, mapa_matriculas, usuarios_por_cpf, usuarios_por_matricula)
                     mapa_usuarios[linha.usuario_id_planilha] = usuario
+                    
+                    if usuario.cpf:
+                        usuarios_por_cpf[usuario.cpf] = usuario
+                    matricula_planilha = mapa_matriculas.get(linha.usuario_id_planilha)
+                    if matricula_planilha:
+                        usuarios_por_matricula[matricula_planilha] = usuario
+
                     if criado:
                         resumo.usuarios_criados += 1
                     else:
@@ -259,74 +285,127 @@ class UsuarioBusiness(ModelInstanceBusiness):
                     )
                 )
 
+        usuarios_ids = [u.id for u in mapa_usuarios.values() if u.id]
+
+        # Contatos
+        from Identidade.contatos.models import Contato
+        contatos_existentes = {c.usuario_id: c for c in Contato.objects.filter(usuario_id__in=usuarios_ids)}
+        contatos_to_create, contatos_to_update = {}, {}
+
         for linha in estrutura.contatos:
             _incrementar_progresso()
             try:
-                with transaction.atomic():
-                    usuario = UsuarioHelpers().obter_usuario_por_id_planilha(linha.usuario_id_planilha, mapa_usuarios)
-                    UsuarioRules().usuario_referenciado_existe(usuario, 'contato')
-                    criado = self._criar_ou_atualizar_contato(usuario, linha)
-                    if criado:
-                        resumo.contatos_criados += 1
-                    else:
-                        resumo.contatos_atualizados += 1
-            except Exception as exc:
-                erros.append(
-                    self._criar_erro(
-                        aba='Contato',
-                        numero_linha=linha.numero_linha,
-                        campo='usuario_id',
-                        valor=linha.usuario_id_planilha,
-                        codigo='erro_contato',
-                        mensagem=str(exc),
+                usuario = UsuarioHelpers().obter_usuario_por_id_planilha(linha.usuario_id_planilha, mapa_usuarios)
+                UsuarioRules().usuario_referenciado_existe(usuario, 'contato')
+
+                contato = contatos_existentes.get(usuario.id)
+                if contato:
+                    contato.email_academico = linha.email_academico
+                    contato.email_pessoal = linha.email_pessoal
+                    contato.telefone = linha.telefone
+                    contato._linha = linha
+                    contatos_to_update[usuario.id] = contato
+                elif usuario.id in contatos_to_create:
+                    contato = contatos_to_create[usuario.id]
+                    contato.email_academico = linha.email_academico
+                    contato.email_pessoal = linha.email_pessoal
+                    contato.telefone = linha.telefone
+                    contato._linha = linha
+                else:
+                    novo_contato = Contato(
+                        usuario=usuario, email_academico=linha.email_academico,
+                        email_pessoal=linha.email_pessoal, telefone=linha.telefone
                     )
-                )
+                    novo_contato._linha = linha
+                    contatos_to_create[usuario.id] = novo_contato
+            except Exception as exc:
+                erros.append(self._criar_erro('Contato', linha.numero_linha, 'usuario_id', linha.usuario_id_planilha, 'erro_contato', str(exc)))
+
+        resumo.contatos_atualizados += len(contatos_to_update)
+        resumo.contatos_criados += len(contatos_to_create)
+
+        self._executar_bulk_com_fallback(
+            Contato, list(contatos_to_update.values()), list(contatos_to_create.values()), ['email_academico', 'email_pessoal', 'telefone'],
+            resumo, 'contatos_atualizados', 'contatos_criados', erros, 'Contato', 'usuario_id'
+        )
+
+        # Enderecos
+        from Identidade.enderecos.models import Endereco
+        enderecos_existentes = {e.usuario_id: e for e in Endereco.objects.filter(usuario_id__in=usuarios_ids)}
+        enderecos_to_create, enderecos_to_update = {}, {}
 
         for linha in estrutura.enderecos:
             _incrementar_progresso()
             try:
-                with transaction.atomic():
-                    usuario = UsuarioHelpers().obter_usuario_por_id_planilha(linha.usuario_id_planilha, mapa_usuarios)
-                    UsuarioRules().usuario_referenciado_existe(usuario, 'endereço')
-                    criado = self._criar_ou_atualizar_endereco(usuario, linha)
-                    if criado:
-                        resumo.enderecos_criados += 1
-                    else:
-                        resumo.enderecos_atualizados += 1
-            except Exception as exc:
-                erros.append(
-                    self._criar_erro(
-                        aba='Endereco',
-                        numero_linha=linha.numero_linha,
-                        campo='usuario_id',
-                        valor=linha.usuario_id_planilha,
-                        codigo='erro_endereco',
-                        mensagem=str(exc),
+                usuario = UsuarioHelpers().obter_usuario_por_id_planilha(linha.usuario_id_planilha, mapa_usuarios)
+                UsuarioRules().usuario_referenciado_existe(usuario, 'endereço')
+
+                endereco = enderecos_existentes.get(usuario.id)
+                if endereco:
+                    endereco.logradouro = linha.endereco
+                    endereco.bairro = linha.bairro
+                    endereco.cep = linha.cep
+                    endereco.complemento = linha.complemento
+                    endereco.numero = str(linha.numero or '')
+                    endereco.cidade = linha.cidade
+                    endereco.estado = linha.estado
+                    endereco._linha = linha
+                    enderecos_to_update[usuario.id] = endereco
+                elif usuario.id in enderecos_to_create:
+                    endereco = enderecos_to_create[usuario.id]
+                    endereco.logradouro = linha.endereco
+                    endereco.bairro = linha.bairro
+                    endereco.cep = linha.cep
+                    endereco.complemento = linha.complemento
+                    endereco.numero = str(linha.numero or '')
+                    endereco.cidade = linha.cidade
+                    endereco.estado = linha.estado
+                    endereco._linha = linha
+                else:
+                    novo_endereco = Endereco(
+                        usuario=usuario, logradouro=linha.endereco, bairro=linha.bairro,
+                        cep=linha.cep, complemento=linha.complemento, numero=str(linha.numero or ''),
+                        cidade=linha.cidade, estado=linha.estado
                     )
-                )
+                    novo_endereco._linha = linha
+                    enderecos_to_create[usuario.id] = novo_endereco
+            except Exception as exc:
+                erros.append(self._criar_erro('Endereco', linha.numero_linha, 'usuario_id', linha.usuario_id_planilha, 'erro_endereco', str(exc)))
+
+        resumo.enderecos_atualizados += len(enderecos_to_update)
+        resumo.enderecos_criados += len(enderecos_to_create)
+
+        self._executar_bulk_com_fallback(
+            Endereco, list(enderecos_to_update.values()), list(enderecos_to_create.values()),
+            ['logradouro', 'bairro', 'cep', 'complemento', 'numero', 'cidade', 'estado'],
+            resumo, 'enderecos_atualizados', 'enderecos_criados', erros, 'Endereco', 'usuario_id'
+        )
+
+        # Matriculas
+        from Identidade.matriculas.models import Matricula
+        matriculas_existentes_qs = Matricula.objects.filter(usuario_id__in=usuarios_ids)
+        matriculas_existentes = {(m.usuario_id, m.matricula): m for m in matriculas_existentes_qs}
+        matriculas_to_create = []
 
         for linha in estrutura.matriculas:
             _incrementar_progresso()
             try:
-                with transaction.atomic():
-                    usuario = UsuarioHelpers().obter_usuario_por_id_planilha(linha.usuario_id_planilha, mapa_usuarios)
-                    UsuarioRules().usuario_referenciado_existe(usuario, 'matrícula')
-                    criado = self._criar_ou_atualizar_matricula(usuario, linha)
-                    if criado:
-                        resumo.matriculas_criadas += 1
-                    else:
-                        resumo.matriculas_atualizadas += 1
+                usuario = UsuarioHelpers().obter_usuario_por_id_planilha(linha.usuario_id_planilha, mapa_usuarios)
+                UsuarioRules().usuario_referenciado_existe(usuario, 'matrícula')
+
+                if (usuario.id, linha.matricula) not in matriculas_existentes:
+                    nova_matricula = Matricula(usuario=usuario, matricula=linha.matricula)
+                    nova_matricula._linha = linha
+                    matriculas_to_create.append(nova_matricula)
+                    matriculas_existentes[(usuario.id, linha.matricula)] = nova_matricula
+                    resumo.matriculas_criadas += 1
             except Exception as exc:
-                erros.append(
-                    self._criar_erro(
-                        aba='Matricula',
-                        numero_linha=linha.numero_linha,
-                        campo='usuario_id',
-                        valor=linha.usuario_id_planilha,
-                        codigo='erro_matricula',
-                        mensagem=str(exc),
-                    )
-                )
+                erros.append(self._criar_erro('Matricula', linha.numero_linha, 'usuario_id', linha.usuario_id_planilha, 'erro_matricula', str(exc)))
+
+        self._executar_bulk_com_fallback(
+            Matricula, [], matriculas_to_create, [],
+            resumo, 'matriculas_atualizadas', 'matriculas_criadas', erros, 'Matricula', 'usuario_id'
+        )
 
         for linha in estrutura.alunos:
             _incrementar_progresso()
@@ -350,6 +429,10 @@ class UsuarioBusiness(ModelInstanceBusiness):
                     )
                 )
 
+        from PessoasInstitucionais.cargos.models import Cargo
+        cargos_ids = {l.cargo_id_planilha for l in estrutura.servidores if l.cargo_id_planilha}
+        mapa_cargos_db = {c.id: c for c in Cargo.objects.filter(id__in=cargos_ids)} if cargos_ids else {}
+
         for linha in estrutura.servidores:
             _incrementar_progresso()
             try:
@@ -357,7 +440,7 @@ class UsuarioBusiness(ModelInstanceBusiness):
                     usuario = UsuarioHelpers().obter_usuario_por_id_planilha(linha.usuario_id_planilha, mapa_usuarios)
                     UsuarioRules().usuario_referenciado_existe(usuario, 'servidor')
 
-                    cargo = UsuarioHelpers().obter_cargo_por_id_seed(linha.cargo_id_planilha)
+                    cargo = mapa_cargos_db.get(linha.cargo_id_planilha)
                     UsuarioRules().referencia_seed_existe(cargo, f'cargo_id={linha.cargo_id_planilha}')
 
                     criado = self._garantir_servidor(usuario, cargo, linha)
@@ -375,6 +458,10 @@ class UsuarioBusiness(ModelInstanceBusiness):
                     )
                 )
 
+        from PessoasInstitucionais.empresas_instituicoes.models import EmpresaInstituicao
+        empresas_ids = {l.empresa_instituicao_id_planilha for l in estrutura.terceirizados if l.empresa_instituicao_id_planilha}
+        mapa_empresas_db = {e.id: e for e in EmpresaInstituicao.objects.filter(id__in=empresas_ids)} if empresas_ids else {}
+
         for linha in estrutura.terceirizados:
             _incrementar_progresso()
             try:
@@ -382,7 +469,7 @@ class UsuarioBusiness(ModelInstanceBusiness):
                     usuario = UsuarioHelpers().obter_usuario_por_id_planilha(linha.usuario_id_planilha, mapa_usuarios)
                     UsuarioRules().usuario_referenciado_existe(usuario, 'terceirizado')
 
-                    empresa = UsuarioHelpers().obter_empresa_por_id_seed(linha.empresa_instituicao_id_planilha)
+                    empresa = mapa_empresas_db.get(linha.empresa_instituicao_id_planilha)
                     UsuarioRules().referencia_seed_existe(
                         empresa,
                         f'empresa_instituicao_id={linha.empresa_instituicao_id_planilha}'
@@ -403,6 +490,13 @@ class UsuarioBusiness(ModelInstanceBusiness):
                     )
                 )
 
+        from Organizacional.setores.models import Setor
+        from Organizacional.funcoes.models import Funcao
+        setores_ids = {l.setor_id_planilha for l in estrutura.setores_lotacao if l.setor_id_planilha}
+        funcoes_siglas = {l.funcao_id_planilha for l in estrutura.setores_lotacao if l.funcao_id_planilha}
+        mapa_setores_db = {s.id: s for s in Setor.objects.filter(id__in=setores_ids)} if setores_ids else {}
+        mapa_funcoes_db = {f.sigla: f for f in Funcao.objects.filter(sigla__in=funcoes_siglas)} if funcoes_siglas else {}
+
         for linha in estrutura.setores_lotacao:
             _incrementar_progresso()
             try:
@@ -410,10 +504,10 @@ class UsuarioBusiness(ModelInstanceBusiness):
                     usuario = UsuarioHelpers().obter_usuario_por_id_planilha(linha.usuario_id_planilha, mapa_usuarios)
                     UsuarioRules().usuario_referenciado_existe(usuario, 'lotação')
 
-                    setor = UsuarioHelpers().obter_setor_por_id_seed(linha.setor_id_planilha)
+                    setor = mapa_setores_db.get(linha.setor_id_planilha)
                     UsuarioRules().referencia_seed_existe(setor, f'setor_id={linha.setor_id_planilha}')
 
-                    funcao = UsuarioHelpers().obter_funcao_por_sigla_seed(linha.funcao_id_planilha)
+                    funcao = mapa_funcoes_db.get(linha.funcao_id_planilha)
                     UsuarioRules().referencia_seed_existe(funcao, f'funcao_id={linha.funcao_id_planilha}')
 
                     criado = self._garantir_lotacao(usuario, setor, funcao, linha)
@@ -431,6 +525,10 @@ class UsuarioBusiness(ModelInstanceBusiness):
                     )
                 )
 
+        from Academico.cursos.models import Curso
+        cursos_ids = {l.curso_id_planilha for l in estrutura.alunos_cursos if l.curso_id_planilha}
+        mapa_cursos_db = {c.id: c for c in Curso.objects.filter(id__in=cursos_ids)} if cursos_ids else {}
+
         for linha in estrutura.alunos_cursos:
             _incrementar_progresso()
             try:
@@ -438,7 +536,7 @@ class UsuarioBusiness(ModelInstanceBusiness):
                     aluno = UsuarioHelpers().obter_aluno_por_id_planilha(linha.aluno_id_planilha, mapa_alunos)
                     UsuarioRules().aluno_referenciado_existe(aluno)
 
-                    curso = UsuarioHelpers().obter_curso_por_id_seed(linha.curso_id_planilha)
+                    curso = mapa_cursos_db.get(linha.curso_id_planilha)
                     UsuarioRules().referencia_seed_existe(curso, f'curso_id={linha.curso_id_planilha}')
 
                     criado = self._garantir_vinculo_aluno_curso(aluno, curso, linha)
@@ -472,7 +570,7 @@ class UsuarioBusiness(ModelInstanceBusiness):
         if not estrutura.usuarios:
             raise ValidationException('A aba "Usuario" deve possuir pelo menos um registro.')
 
-    def _criar_ou_atualizar_usuario(self, linha, mapa_matriculas):
+    def _criar_ou_atualizar_usuario(self, linha, mapa_matriculas, usuarios_por_cpf, usuarios_por_matricula):
         from .models import Usuario
         from Identidade.matriculas.models import Matricula
 
@@ -488,10 +586,10 @@ class UsuarioBusiness(ModelInstanceBusiness):
 
             UsuarioRules().cpf_valido_importacao(linha.cpf)
             cpf_normalizado = UsuarioHelpers().normalizar_cpf(linha.cpf)
-            usuario = Usuario.objects.filter(cpf=cpf_normalizado).first()
+            usuario = usuarios_por_cpf.get(cpf_normalizado)
         elif matricula_planilha:
             cpf_normalizado = None
-            usuario = Usuario.objects.filter(matriculas__matricula=matricula_planilha).first()
+            usuario = usuarios_por_matricula.get(matricula_planilha)
         else:
             raise ValidationException('O usuário deve possuir CPF ou Matrícula.')
 
@@ -734,3 +832,34 @@ class UsuarioBusiness(ModelInstanceBusiness):
             codigo=codigo,
             mensagem=mensagem,
         )
+
+    def _executar_bulk_com_fallback(self, model_class, to_update, to_create, update_fields, resumo, attr_atualizados, attr_criados, erros, aba, campo_erro):
+        if to_update:
+            try:
+                with transaction.atomic():
+                    model_class.objects.bulk_update(to_update, update_fields)
+            except Exception:
+                setattr(resumo, attr_atualizados, getattr(resumo, attr_atualizados) - len(to_update))
+                for obj in to_update:
+                    try:
+                        with transaction.atomic():
+                            obj.save(update_fields=update_fields)
+                            setattr(resumo, attr_atualizados, getattr(resumo, attr_atualizados) + 1)
+                    except Exception as exc:
+                        valor = getattr(obj._linha, f"{campo_erro}_planilha", getattr(obj._linha, campo_erro, None))
+                        erros.append(self._criar_erro(aba, obj._linha.numero_linha, campo_erro, valor, f'erro_{aba.lower()}', str(exc)))
+
+        if to_create:
+            try:
+                with transaction.atomic():
+                    model_class.objects.bulk_create(to_create)
+            except Exception:
+                setattr(resumo, attr_criados, getattr(resumo, attr_criados) - len(to_create))
+                for obj in to_create:
+                    try:
+                        with transaction.atomic():
+                            obj.save()
+                            setattr(resumo, attr_criados, getattr(resumo, attr_criados) + 1)
+                    except Exception as exc:
+                        valor = getattr(obj._linha, f"{campo_erro}_planilha", getattr(obj._linha, campo_erro, None))
+                        erros.append(self._criar_erro(aba, obj._linha.numero_linha, campo_erro, valor, f'erro_{aba.lower()}', str(exc)))
