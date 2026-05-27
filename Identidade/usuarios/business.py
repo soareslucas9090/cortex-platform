@@ -239,7 +239,15 @@ class UsuarioBusiness(ModelInstanceBusiness):
 
         from .models import Usuario
         from Identidade.matriculas.models import Matricula
-        cpfs_planilha = [UsuarioHelpers().normalizar_cpf(l.cpf) for l in estrutura.usuarios if l.cpf]
+        cpfs_planilha = []
+        for l in estrutura.usuarios:
+            if l.cpf:
+                cpf_str = str(l.cpf)
+                cpf_digitos = ''.join(c for c in cpf_str if c.isdigit())
+                if len(cpf_digitos) >= 3:
+                    l.cpf = cpf_digitos.zfill(11)
+                cpfs_planilha.append(UsuarioHelpers().normalizar_cpf(l.cpf))
+                
         matriculas_planilha = [m for m in mapa_matriculas.values() if m]
         
         usuarios_por_cpf = {u.cpf: u for u in Usuario.objects.filter(cpf__in=cpfs_planilha) if u.cpf}
@@ -254,6 +262,13 @@ class UsuarioBusiness(ModelInstanceBusiness):
                 with transaction.atomic():
                     usuario, criado = self._criar_ou_atualizar_usuario(linha, mapa_matriculas, usuarios_por_cpf, usuarios_por_matricula)
                     mapa_usuarios[linha.usuario_id_planilha] = usuario
+                    
+                    if usuario.cpf:
+                        usuarios_por_cpf[usuario.cpf] = usuario
+                    matricula_planilha = mapa_matriculas.get(linha.usuario_id_planilha)
+                    if matricula_planilha:
+                        usuarios_por_matricula[matricula_planilha] = usuario
+
                     if criado:
                         resumo.usuarios_criados += 1
                     else:
