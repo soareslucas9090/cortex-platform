@@ -290,7 +290,7 @@ class UsuarioBusiness(ModelInstanceBusiness):
         # Contatos
         from Identidade.contatos.models import Contato
         contatos_existentes = {c.usuario_id: c for c in Contato.objects.filter(usuario_id__in=usuarios_ids)}
-        contatos_to_create, contatos_to_update = [], []
+        contatos_to_create, contatos_to_update = {}, {}
 
         for linha in estrutura.contatos:
             _incrementar_progresso()
@@ -304,28 +304,35 @@ class UsuarioBusiness(ModelInstanceBusiness):
                     contato.email_pessoal = linha.email_pessoal
                     contato.telefone = linha.telefone
                     contato._linha = linha
-                    contatos_to_update.append(contato)
-                    resumo.contatos_atualizados += 1
+                    contatos_to_update[usuario.id] = contato
+                elif usuario.id in contatos_to_create:
+                    contato = contatos_to_create[usuario.id]
+                    contato.email_academico = linha.email_academico
+                    contato.email_pessoal = linha.email_pessoal
+                    contato.telefone = linha.telefone
+                    contato._linha = linha
                 else:
                     novo_contato = Contato(
                         usuario=usuario, email_academico=linha.email_academico,
                         email_pessoal=linha.email_pessoal, telefone=linha.telefone
                     )
                     novo_contato._linha = linha
-                    contatos_to_create.append(novo_contato)
-                    resumo.contatos_criados += 1
+                    contatos_to_create[usuario.id] = novo_contato
             except Exception as exc:
                 erros.append(self._criar_erro('Contato', linha.numero_linha, 'usuario_id', linha.usuario_id_planilha, 'erro_contato', str(exc)))
 
+        resumo.contatos_atualizados += len(contatos_to_update)
+        resumo.contatos_criados += len(contatos_to_create)
+
         self._executar_bulk_com_fallback(
-            Contato, contatos_to_update, contatos_to_create, ['email_academico', 'email_pessoal', 'telefone'],
+            Contato, list(contatos_to_update.values()), list(contatos_to_create.values()), ['email_academico', 'email_pessoal', 'telefone'],
             resumo, 'contatos_atualizados', 'contatos_criados', erros, 'Contato', 'usuario_id'
         )
 
         # Enderecos
         from Identidade.enderecos.models import Endereco
         enderecos_existentes = {e.usuario_id: e for e in Endereco.objects.filter(usuario_id__in=usuarios_ids)}
-        enderecos_to_create, enderecos_to_update = [], []
+        enderecos_to_create, enderecos_to_update = {}, {}
 
         for linha in estrutura.enderecos:
             _incrementar_progresso()
@@ -343,8 +350,17 @@ class UsuarioBusiness(ModelInstanceBusiness):
                     endereco.cidade = linha.cidade
                     endereco.estado = linha.estado
                     endereco._linha = linha
-                    enderecos_to_update.append(endereco)
-                    resumo.enderecos_atualizados += 1
+                    enderecos_to_update[usuario.id] = endereco
+                elif usuario.id in enderecos_to_create:
+                    endereco = enderecos_to_create[usuario.id]
+                    endereco.logradouro = linha.endereco
+                    endereco.bairro = linha.bairro
+                    endereco.cep = linha.cep
+                    endereco.complemento = linha.complemento
+                    endereco.numero = str(linha.numero or '')
+                    endereco.cidade = linha.cidade
+                    endereco.estado = linha.estado
+                    endereco._linha = linha
                 else:
                     novo_endereco = Endereco(
                         usuario=usuario, logradouro=linha.endereco, bairro=linha.bairro,
@@ -352,13 +368,15 @@ class UsuarioBusiness(ModelInstanceBusiness):
                         cidade=linha.cidade, estado=linha.estado
                     )
                     novo_endereco._linha = linha
-                    enderecos_to_create.append(novo_endereco)
-                    resumo.enderecos_criados += 1
+                    enderecos_to_create[usuario.id] = novo_endereco
             except Exception as exc:
                 erros.append(self._criar_erro('Endereco', linha.numero_linha, 'usuario_id', linha.usuario_id_planilha, 'erro_endereco', str(exc)))
 
+        resumo.enderecos_atualizados += len(enderecos_to_update)
+        resumo.enderecos_criados += len(enderecos_to_create)
+
         self._executar_bulk_com_fallback(
-            Endereco, enderecos_to_update, enderecos_to_create,
+            Endereco, list(enderecos_to_update.values()), list(enderecos_to_create.values()),
             ['logradouro', 'bairro', 'cep', 'complemento', 'numero', 'cidade', 'estado'],
             resumo, 'enderecos_atualizados', 'enderecos_criados', erros, 'Endereco', 'usuario_id'
         )
