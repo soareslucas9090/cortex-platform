@@ -48,6 +48,7 @@ Documentos gerais do projeto, checklists, revisões e estratégias de refatoraç
 - [Django Project Tree](project/django-project-tree.md)
 - [Implementation Checklist](project/implementation-checklist.md)
 - [Test Users and Seed Scenarios](project/test-users-and-seed-scenarios.md)
+- [Debugando com Docker](debug-docker.md)
 
 ### 🤖 Antigravity & AI Agents
 Instruções, regras arquiteturais e skills para uso com agentes de inteligência artificial (como o Antigravity).
