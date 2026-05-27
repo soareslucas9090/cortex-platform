@@ -20,21 +20,49 @@
             "name": "Celery Worker",
             "type": "debugpy",
             "request": "launch",
-            "module": "celery",
+            "program": "${workspaceFolder}/manage.py",
             "args": [
-                "-A",
-                "Cortex",
-                "worker",
-                "--loglevel=info",
-                "--pool=solo",
-                "-E"
+                "celery_worker"
             ],
             "console": "integratedTerminal",
             "justMyCode": false,
+            "subProcess": true,
             "env": {
-                "DJANGO_SETTINGS_MODULE": "Cortex.settings",
                 "PYDEVD_WARN_SLOW_RESOLVE_TIMEOUT": "15"
             }
+        },
+        {
+            "name": "Django Docker",
+            "type": "debugpy",
+            "request": "attach",
+            "connect": {
+            "host": "localhost",
+            "port": 5678
+            },
+            "pathMappings": [
+            {
+                "localRoot": "${workspaceFolder}",
+                "remoteRoot": "/app"
+            }
+            ],
+            "django": true
+        },
+        {
+            "name": "Celery Docker",
+            "type": "debugpy",
+            "request": "attach",
+            "connect": {
+                "host": "localhost",
+                "port": 5679
+            },
+            "pathMappings": [
+            {
+                "localRoot": "${workspaceFolder}",
+                "remoteRoot": "/app"
+            }
+            ],
+            "django": false,
+            "subProcess": true
         },
         {
             "name": "Python Console",
