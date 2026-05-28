@@ -3392,9 +3392,8 @@ components:
           type: string
           readOnly: true
         ira:
-          type: string
-          format: decimal
-          pattern: ^-?\d{0,1}(?:\.\d{0,4})?$
+          type: number
+          format: double
         situacao:
           allOf:
           - $ref: '#/components/schemas/SituacaoAlunoEnum'
@@ -3508,8 +3507,8 @@ components:
       - 2
       type: integer
       description: |-
-        * `1` - Docente
-        * `2` - Técnico-Administrativo
+        * `1` - Professor
+        * `2` - Tec.Administrativo
     Contato:
       type: object
       properties:
@@ -3552,9 +3551,8 @@ components:
         usuario:
           type: integer
         ira:
-          type: string
-          format: decimal
-          pattern: ^-?\d{0,1}(?:\.\d{0,4})?$
+          type: number
+          format: double
         situacao:
           $ref: '#/components/schemas/SituacaoAlunoEnum'
         forma_ingresso:
@@ -4384,9 +4382,8 @@ components:
       type: object
       properties:
         ira:
-          type: string
-          format: decimal
-          pattern: ^-?\d{0,1}(?:\.\d{0,4})?$
+          type: number
+          format: double
         situacao:
           $ref: '#/components/schemas/SituacaoAlunoEnum'
         forma_ingresso:
@@ -4655,6 +4652,7 @@ components:
           type: integer
         funcao:
           type: integer
+          nullable: true
           title: Função
         funcao_sigla:
           type: string
@@ -4671,7 +4669,6 @@ components:
           readOnly: true
       required:
       - created_at
-      - funcao
       - funcao_descricao
       - funcao_sigla
       - id
@@ -4762,7 +4759,7 @@ components:
         usuario_cpf:
           type: string
           readOnly: true
-        empresa:
+        empresa_instituicao:
           type: integer
           title: Empresa/Instituição
         empresa_nome:
@@ -4776,6 +4773,7 @@ components:
         data_inicio:
           type: string
           format: date
+          nullable: true
           title: Data de Início
           description: Data de início do vínculo terceirizado.
         data_fim:
@@ -4797,8 +4795,7 @@ components:
       required:
       - cargo_funcao
       - created_at
-      - data_inicio
-      - empresa
+      - empresa_instituicao
       - empresa_nome
       - pk
       - updated_at
