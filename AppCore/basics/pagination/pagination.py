@@ -11,9 +11,9 @@ class PaginacaoCustomizada(PageNumberPagination):
     - Valores maiores que 100 são ajustados para 100
     
     Exemplo de uso:
-        /api/usuarios/?paginacao=20  → Retorna 20 itens por página
-        /api/usuarios/?paginacao=150 → Retorna 100 itens por página (máximo)
-        /api/usuarios/?paginacao=0   → Retorna 1 item por página (mínimo)
+        /cortex/api/usuarios/?paginacao=20  → Retorna 20 itens por página
+        /cortex/api/usuarios/?paginacao=150 → Retorna 100 itens por página (máximo)
+        /cortex/api/usuarios/?paginacao=0   → Retorna 1 item por página (mínimo)
     """
     page_size = 10
     page_size_query_param = 'paginacao'

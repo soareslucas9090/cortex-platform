@@ -548,7 +548,7 @@ cd NomeApp
 - **Django 5.2.7** + **DRF 3.16.1**
 - **Auth**: SimpleJWT (tokens 30min/7 dias) + django-allauth 65.9.0 (login social)
 - **Database**: PostgreSQL (dev usa SQLite)
-- **Docs API**: drf-spectacular (Swagger/ReDoc em `/api/schema/swagger/`)
+- **Docs API**: drf-spectacular (Swagger/ReDoc em `/cortex/api/schema/swagger/`)
 - **Auditoria**: django-simple-history (histórico automático em models)
 - **Email**: SMTP (padrão Gmail, configurável via env)
 
@@ -571,10 +571,10 @@ O projeto usa uma classe de paginação customizada (`AppCore.basics.pagination.
 
 ```python
 # Exemplos de uso:
-# /api/usuarios/              → 10 itens (padrão)
-# /api/usuarios/?paginacao=25 → 25 itens
-# /api/usuarios/?paginacao=0  → 1 item (mínimo)
-# /api/usuarios/?paginacao=500 → 100 itens (máximo)
+# /cortex/api/usuarios/              → 10 itens (padrão)
+# /cortex/api/usuarios/?paginacao=25 → 25 itens
+# /cortex/api/usuarios/?paginacao=0  → 1 item (mínimo)
+# /cortex/api/usuarios/?paginacao=500 → 100 itens (máximo)
 ```
 
 ## Query Params em Endpoints de Listagem
@@ -707,7 +707,7 @@ Veja exemplo em `Auth.auth.serializers` com `LoginInputSerializer` e `LoginRespo
 - `Cortex/urls.py` inclui os módulos de domínio (`Identidade.urls`, `Organizacional.urls`)
 - O `urls.py` de cada módulo de domínio agrega as rotas dos apps internos
 - Apps internos **não** são incluídos diretamente em `Cortex/urls.py`
-- Documentação: `/api/schema/`, `/api/schema/swagger/`, `/api/schema/redoc/`
+- Documentação: `/cortex/api/schema/`, `/cortex/api/schema/swagger/`, `/cortex/api/schema/redoc/`
 
 ## Testing
 

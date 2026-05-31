@@ -234,9 +234,9 @@ Para ajustar o número de processos, altere `CELERY_CONCURRENCY` no arquivo `.en
 
 | URL                    | Descrição                  |
 | ---------------------- | -------------------------- |
-| `/api/schema/swagger/` | Swagger UI                 |
-| `/api/schema/redoc/`   | ReDoc                      |
-| `/api/schema/`         | Schema OpenAPI (JSON/YAML) |
+| `/cortex/api/schema/swagger/` | Swagger UI                 |
+| `/cortex/api/schema/redoc/`   | ReDoc                      |
+| `/cortex/api/schema/`         | Schema OpenAPI (JSON/YAML) |
 
 Para gerar o arquivo de schema estático (`schema.yaml`) localmente via linha de comando:
 
