@@ -467,3 +467,28 @@ class CancelarImportacaoView(IsAdminMixin, BasicPostAPIView):
             'dados': {},
             'status_code': status.HTTP_200_OK,
         }
+
+
+@extend_schema(
+    tags=['Identidade'],
+    summary='Histórico de importações de usuários',
+    description='''
+    Retorna a lista paginada do histórico de importações de usuários.
+
+    **Permissões:** Apenas administradores.
+    ''',
+    responses={
+        status.HTTP_200_OK: StatusImportacaoLoteSerializer(many=True),
+        status.HTTP_401_UNAUTHORIZED: {'description': 'Não autenticado.'},
+        status.HTTP_403_FORBIDDEN: {'description': 'Sem permissão de administrador.'},
+    },
+)
+class HistoricoImportacaoLoteView(IsAdminMixin, BasicGetAPIView):
+    """GET /identidade/usuarios/importacao/historico/"""
+    pagination_class = PaginacaoCustomizada
+    serializer_class = StatusImportacaoLoteSerializer
+    mensagem_sucesso = 'Histórico de importações listado com sucesso.'
+
+    def get_queryset(self):
+        from .models import ImportacaoLote
+        return ImportacaoLote.objects.all()

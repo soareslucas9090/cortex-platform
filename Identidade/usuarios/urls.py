@@ -14,6 +14,7 @@ from .views import (
     ImportarUsuariosLoteView,
     StatusImportacaoLoteView,
     CancelarImportacaoView,
+    HistoricoImportacaoLoteView,
 )
 
 urlpatterns = [
@@ -45,5 +46,10 @@ urlpatterns = [
         'usuarios/importacao/cancelar/',
         CancelarImportacaoView.as_view(),
         name='usuarios-importacao-cancelar',
+    ),
+    path(
+        'usuarios/importacao/historico/',
+        HistoricoImportacaoLoteView.as_view(),
+        name='usuarios-importacao-historico',
     ),
 ]
