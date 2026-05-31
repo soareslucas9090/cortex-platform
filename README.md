@@ -66,7 +66,7 @@ O login é feito por **CPF** ou **Matrícula** (não e-mail). Usuários são cri
 O projeto é organizado por **domínios de negócio** — cada domínio é um pacote Python com inicial maiúscula, contendo um ou mais apps Django em minúsculo.
 
 ```
-novo_cortex/
+cortex-plataform/
 │
 ├── AppCore/                    # Framework interno reutilizável
 │   ├── basics/                 # Views base, mixins, paginação, auth, modelos base
@@ -119,7 +119,7 @@ novo_cortex/
 ```bash
 # 1. Clonar o repositório
 git clone <url-do-repositorio>
-cd novo_cortex
+cd cortex-plataform
 
 # 2. Criar e ativar o ambiente virtual
 python -m venv venv

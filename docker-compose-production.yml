@@ -1,7 +1,7 @@
 services:
   db:
     image: postgres:16
-    container_name: novo_cortex_db
+    container_name: cortex_db
     environment:
       POSTGRES_DB: ${DATABASE_NAME:-cortex}
       POSTGRES_USER: ${DATABASE_USER:-cortex}
@@ -11,20 +11,20 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ['CMD-SHELL', 'pg_isready -U ${DATABASE_USER:-cortex} -d ${DATABASE_NAME:-cortex}']
+      test: [ 'CMD-SHELL', 'pg_isready -U ${DATABASE_USER:-cortex} -d ${DATABASE_NAME:-cortex}' ]
       interval: 10s
       timeout: 5s
       retries: 5
 
   redis:
     image: redis:7-alpine
-    container_name: novo_cortex_redis
+    container_name: cortex_redis
     ports:
       - '6379:6379'
     volumes:
       - redis_data:/data
     healthcheck:
-      test: ['CMD', 'redis-cli', 'ping']
+      test: [ 'CMD', 'redis-cli', 'ping' ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -32,10 +32,9 @@ services:
   web:
     build:
       context: .
-    container_name: novo_cortex_web
+    container_name: cortex_web
     command: >
-      sh -c "python manage.py migrate &&
-      python manage.py runserver 0.0.0.0:8000"
+      sh -c "python manage.py migrate && python manage.py runserver 0.0.0.0:8000"
     env_file:
       - .env.docker
     ports:
@@ -53,7 +52,7 @@ services:
   worker:
     build:
       context: .
-    container_name: novo_cortex_worker
+    container_name: cortex_worker
     command: celery -A Cortex worker -l INFO --pool=prefork --concurrency=${CELERY_CONCURRENCY:-4}
     env_file:
       - .env.docker

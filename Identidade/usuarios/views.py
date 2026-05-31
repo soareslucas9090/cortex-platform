@@ -307,6 +307,12 @@ class PreVisualizarImportacaoUsuariosView(IsAdminMixin, BasicPostAPIView):
     mensagem_sucesso = 'Pré-visualização concluída com sucesso.'
 
     def do_action_post(self, serializer_data, request):
+        from .models import ImportacaoLote, StatusImportacao
+        from rest_framework.exceptions import ValidationError
+
+        if ImportacaoLote.objects.filter(status=StatusImportacao.EM_ANDAMENTO).exists():
+            raise ValidationError('Já existe uma importação em andamento. Aguarde o término.')
+
         resultado = UsuarioBusiness().pre_visualizar_importacao(
             arquivo=serializer_data['file']
         )

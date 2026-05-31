@@ -36,6 +36,15 @@ def processar_importacao_usuarios_task(importacao_id):
         
     except Exception as exc:
         logger.exception(f"Erro catastrófico na importação {importacao_id}: {exc}")
-        importacao.status = StatusImportacao.ERRO
-        importacao.resultado_json = {'erro_fatal': str(exc)}
-        importacao.save()
+        try:
+            importacao.refresh_from_db()
+            importacao.status = StatusImportacao.ERRO
+            resultado = importacao.resultado_json or {}
+            if not isinstance(resultado, dict):
+                resultado = {}
+            if 'erro_fatal' not in resultado:
+                resultado['erro_fatal'] = str(exc)
+            importacao.resultado_json = resultado
+            importacao.save()
+        except Exception as save_exc:
+            logger.exception(f"Erro ao salvar status de erro da importação {importacao_id}: {save_exc}")

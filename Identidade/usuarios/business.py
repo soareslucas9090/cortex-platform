@@ -228,7 +228,11 @@ class UsuarioBusiness(ModelInstanceBusiness):
         
         def _incrementar_progresso():
             importacao_lote.linhas_processadas += 1
-            if importacao_lote.linhas_processadas % 100 == 0 or importacao_lote.linhas_processadas == importacao_lote.total_linhas:
+            if importacao_lote.linhas_processadas % 10 == 0 or importacao_lote.linhas_processadas == importacao_lote.total_linhas:
+                from .models import ImportacaoLote, StatusImportacao
+                status_atual = ImportacaoLote.objects.filter(id=importacao_lote.id).values_list('status', flat=True).first()
+                if status_atual == StatusImportacao.ERRO:
+                    raise Exception("Importação cancelada manualmente pelo administrador.")
                 importacao_lote.save(update_fields=['linhas_processadas'])
 
         mapa_matriculas = {
