@@ -35,12 +35,17 @@ inflection==0.5.1
 jsonschema==4.26.0
 jsonschema-specifications==2025.9.1
 kombu==5.5.4
+lml==0.2.0
+lxml==6.1.1
 packaging==26.0
 pillow==12.2.0
 prometheus_client==0.25.0
 prompt_toolkit==3.0.52
 psycopg2-binary==2.9.12
 pycparser==3.0
+pyexcel-ezodf==0.3.4
+pyexcel-io==0.6.7
+pyexcel-ods3==0.6.1
 PyJWT==2.11.0
 python-crontab==3.3.0
 python-dateutil==2.9.0.post0
@@ -61,5 +66,3 @@ urllib3==2.6.3
 vine==5.1.0
 wcwidth==0.7.0
 whitenoise==6.11.0
-boto3==1.43.18
-
