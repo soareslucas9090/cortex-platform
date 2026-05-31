@@ -17,6 +17,10 @@ def processar_importacao_usuarios_task(importacao_id):
         return
 
     try:
+        # Garante que o arquivo da importação esteja localmente no worker
+        from .importacao.s3_helper import download_importacao_from_s3_if_needed
+        download_importacao_from_s3_if_needed(importacao)
+
         # Passa a importacao para o business para atualizar o progresso
         resultado = UsuarioBusiness().importar_usuarios_em_lote(importacao)
         

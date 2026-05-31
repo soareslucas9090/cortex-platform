@@ -408,6 +408,10 @@ class ImportarUsuariosLoteView(IsAdminMixin, BasicPostAPIView):
             arquivo=serializer_data['file']
         )
         
+        # Faz upload para o S3 para compartilhar o arquivo com o container do worker Celery
+        from .importacao.s3_helper import upload_importacao_to_s3
+        upload_importacao_to_s3(importacao)
+        
         transaction.on_commit(lambda: processar_importacao_usuarios_task.delay(importacao.id))
 
         return {
