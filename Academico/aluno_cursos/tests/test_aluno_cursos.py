@@ -34,7 +34,7 @@ class AlunoCursoAPITestCase(APITestCase):
         self.curso = criar_curso('Sistemas de Informação', 'SI001')
 
     def test_criar_vinculo_com_sucesso(self):
-        url = '/academico/aluno-cursos/'
+        url = '/cortex/academico/aluno-cursos/'
         data = {'aluno': self.aluno.pk, 'curso': self.curso.pk}
 
         response = self.client.post(url, data, format='json')
@@ -47,7 +47,7 @@ class AlunoCursoAPITestCase(APITestCase):
     def test_nao_permite_vinculo_ativo_duplicado(self):
         AlunoCurso.objects.create(aluno=self.aluno, curso=self.curso)
 
-        url = '/academico/aluno-cursos/'
+        url = '/cortex/academico/aluno-cursos/'
         data = {'aluno': self.aluno.pk, 'curso': self.curso.pk}
 
         response = self.client.post(url, data, format='json')
@@ -57,7 +57,7 @@ class AlunoCursoAPITestCase(APITestCase):
     def test_permite_novo_vinculo_apos_encerrar_anterior(self):
         vinculo = AlunoCurso.objects.create(aluno=self.aluno, curso=self.curso, ativo=False)
 
-        url = '/academico/aluno-cursos/'
+        url = '/cortex/academico/aluno-cursos/'
         data = {'aluno': self.aluno.pk, 'curso': self.curso.pk}
 
         response = self.client.post(url, data, format='json')
@@ -67,7 +67,7 @@ class AlunoCursoAPITestCase(APITestCase):
     def test_listar_vinculos(self):
         AlunoCurso.objects.create(aluno=self.aluno, curso=self.curso)
 
-        url = '/academico/aluno-cursos/'
+        url = '/cortex/academico/aluno-cursos/'
         response = self.client.get(url)
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -75,7 +75,7 @@ class AlunoCursoAPITestCase(APITestCase):
     def test_detalhar_vinculo(self):
         vinculo = AlunoCurso.objects.create(aluno=self.aluno, curso=self.curso)
 
-        url = f'/academico/aluno-cursos/{vinculo.pk}/'
+        url = f'/cortex/academico/aluno-cursos/{vinculo.pk}/'
         response = self.client.get(url)
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -83,7 +83,7 @@ class AlunoCursoAPITestCase(APITestCase):
     def test_atualizar_vinculo(self):
         vinculo = AlunoCurso.objects.create(aluno=self.aluno, curso=self.curso)
 
-        url = f'/academico/aluno-cursos/{vinculo.pk}/'
+        url = f'/cortex/academico/aluno-cursos/{vinculo.pk}/'
         data = {'ano_conclusao': 2026}
 
         response = self.client.patch(url, data, format='json')
@@ -95,7 +95,7 @@ class AlunoCursoAPITestCase(APITestCase):
     def test_encerrar_vinculo(self):
         vinculo = AlunoCurso.objects.create(aluno=self.aluno, curso=self.curso)
 
-        url = f'/academico/aluno-cursos/{vinculo.pk}/encerrar/'
+        url = f'/cortex/academico/aluno-cursos/{vinculo.pk}/encerrar/'
         data = {'ano_conclusao': 2025}
 
         response = self.client.post(url, data, format='json')
@@ -108,7 +108,7 @@ class AlunoCursoAPITestCase(APITestCase):
     def test_nao_permite_encerrar_vinculo_ja_encerrado(self):
         vinculo = AlunoCurso.objects.create(aluno=self.aluno, curso=self.curso, ativo=False)
 
-        url = f'/academico/aluno-cursos/{vinculo.pk}/encerrar/'
+        url = f'/cortex/academico/aluno-cursos/{vinculo.pk}/encerrar/'
         data = {'ano_conclusao': 2025}
 
         response = self.client.post(url, data, format='json')
@@ -118,7 +118,7 @@ class AlunoCursoAPITestCase(APITestCase):
     def test_filtrar_por_aluno(self):
         AlunoCurso.objects.create(aluno=self.aluno, curso=self.curso)
 
-        url = f'/academico/aluno-cursos/?aluno={self.aluno.pk}'
+        url = f'/cortex/academico/aluno-cursos/?aluno={self.aluno.pk}'
         response = self.client.get(url)
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)

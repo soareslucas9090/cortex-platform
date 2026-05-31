@@ -23,7 +23,7 @@ class AlunosAPITestCase(APITestCase):
         )
 
     def test_criar_aluno_com_sucesso(self):
-        url = '/academico/alunos/'
+        url = '/cortex/academico/alunos/'
         data = {
             'usuario': str(self.usuario.id),
             'ira': '8.5',
@@ -50,7 +50,7 @@ class AlunosAPITestCase(APITestCase):
             forma_ingresso=FormaIngresso.VESTIBULAR
         )
         
-        url = '/academico/alunos/'
+        url = '/cortex/academico/alunos/'
         response = self.client.get(url)
         
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -73,7 +73,7 @@ class AlunosAPITestCase(APITestCase):
             forma_ingresso=FormaIngresso.VESTIBULAR
         )
         
-        url = f'/academico/alunos/{str(self.usuario.id)}/'
+        url = f'/cortex/academico/alunos/{str(self.usuario.id)}/'
         data = {
             'ira': '9.5',
             'situacao': SituacaoAluno.FORMADO

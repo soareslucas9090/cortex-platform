@@ -472,6 +472,7 @@ class ImportacaoUsuariosBusinessImportacaoTests(TestCase):
 
         from unittest.mock import MagicMock
         importacao_mock = MagicMock()
+        importacao_mock.id = 999
         importacao_mock.arquivo = BytesIO(b'test')
         importacao_mock.linhas_processadas = 0
         importacao_mock.total_linhas = 0
@@ -508,6 +509,7 @@ class ImportacaoUsuariosBusinessImportacaoTests(TestCase):
 
         from unittest.mock import MagicMock
         importacao_mock = MagicMock()
+        importacao_mock.id = 999
         importacao_mock.arquivo = BytesIO(b'test')
         importacao_mock.linhas_processadas = 0
         importacao_mock.total_linhas = 0
@@ -549,6 +551,7 @@ class ImportacaoUsuariosBusinessImportacaoTests(TestCase):
 
         from unittest.mock import MagicMock
         importacao_mock = MagicMock()
+        importacao_mock.id = 999
         importacao_mock.arquivo = BytesIO(b'test')
         importacao_mock.linhas_processadas = 0
         importacao_mock.total_linhas = 0
@@ -586,6 +589,7 @@ class ImportacaoUsuariosBusinessImportacaoTests(TestCase):
 
         from unittest.mock import MagicMock
         importacao_mock = MagicMock()
+        importacao_mock.id = 999
         importacao_mock.arquivo = BytesIO(b'test')
         importacao_mock.linhas_processadas = 0
         importacao_mock.total_linhas = 0
@@ -617,6 +621,7 @@ class ImportacaoUsuariosBusinessImportacaoTests(TestCase):
 
         from unittest.mock import MagicMock
         importacao_mock = MagicMock()
+        importacao_mock.id = 999
         importacao_mock.arquivo = BytesIO(b'test')
         importacao_mock.linhas_processadas = 0
         importacao_mock.total_linhas = 0
@@ -666,7 +671,7 @@ class ImportacaoUsuariosApiTests(TestCase):
         )
 
         response = self.client.post(
-            '/identidade/usuarios/importacao/pre-visualizar/',
+            reverse('identidade:usuarios-importacao-pre-visualizar'),
             {'file': arquivo},
             format='multipart',
         )
@@ -697,7 +702,7 @@ class ImportacaoUsuariosApiTests(TestCase):
         )
 
         response = self.client.post(
-            '/identidade/usuarios/importacao/',
+            reverse('identidade:usuarios-importacao'),
             {'file': arquivo},
             format='multipart',
         )
@@ -716,24 +721,41 @@ class ImportacaoUsuariosApiTests(TestCase):
         )
 
         response = self.client.post(
-            '/identidade/usuarios/importacao/pre-visualizar/',
+            reverse('identidade:usuarios-importacao-pre-visualizar'),
             {'file': arquivo},
             format='multipart',
         )
 
         self.assertIn(response.status_code, [401, 403])
 
-    @patch('pathlib.Path.exists')
-    @patch('pathlib.Path.is_file')
-    def test_endpoint_download_modelo_deve_retornar_404_se_arquivo_nao_existir(
-        self,
-        mock_is_file,
-        mock_exists,
-    ):
-        mock_exists.return_value = False
-        mock_is_file.return_value = False
+    @patch('boto3.client')
+    def test_endpoint_download_modelo_sucesso(self, mock_boto_client):
+        from unittest.mock import MagicMock
+        mock_s3 = MagicMock()
+        mock_boto_client.return_value = mock_s3
+        
+        def mock_download(bucket, key, fileobj):
+            fileobj.write(b'fake ods spreadsheet content')
+            
+        mock_s3.download_fileobj.side_effect = mock_download
+        
+        response = self.client.get(reverse('identidade:usuarios-importacao-modelo'))
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.headers['Content-Type'], 'application/vnd.oasis.opendocument.spreadsheet')
+        self.assertEqual(b''.join(response.streaming_content), b'fake ods spreadsheet content')
 
-        response = self.client.get('/identidade/usuarios/importacao/modelo/')
+    @patch('boto3.client')
+    def test_endpoint_download_modelo_falha_s3(self, mock_boto_client):
+        from unittest.mock import MagicMock
+        from botocore.exceptions import ClientError
+        mock_s3 = MagicMock()
+        mock_boto_client.return_value = mock_s3
+        mock_s3.download_fileobj.side_effect = ClientError(
+            error_response={'Error': {'Code': 'NoSuchKey', 'Message': 'Not Found'}},
+            operation_name='GetObject'
+        )
+        
+        response = self.client.get(reverse('identidade:usuarios-importacao-modelo'))
         self.assertEqual(response.status_code, 404)
 
 
@@ -759,7 +781,7 @@ class CancelarImportacaoViewTests(TestCase):
             arquivo='dummy.ods',
         )
 
-        response = self.client.post('/identidade/usuarios/importacao/cancelar/')
+        response = self.client.post(reverse('identidade:usuarios-importacao-cancelar'))
         
         self.assertEqual(response.status_code, 200)
         importacao.refresh_from_db()
@@ -767,7 +789,7 @@ class CancelarImportacaoViewTests(TestCase):
         self.assertIn('erro_fatal', importacao.resultado_json)
 
     def test_deve_retornar_erro_se_nao_ha_importacao_em_andamento(self):
-        response = self.client.post('/identidade/usuarios/importacao/cancelar/')
+        response = self.client.post(reverse('identidade:usuarios-importacao-cancelar'))
         self.assertEqual(response.status_code, 400)
 
 
@@ -777,7 +799,7 @@ class AutenticacaoUsuarioTest(APITestCase):
         from Identidade.matriculas.models import Matricula
         from Identidade.matriculas.choices import SituacaoMatricula
         self.User = get_user_model()
-        self.url = '/auth/token_jwt/'
+        self.url = reverse('auth:token-jwt:login')
 
         # Criar usuário com CPF e testar login
         self.usuario_cpf = self.User.objects.create_user(

@@ -47,7 +47,7 @@ logger = logging.getLogger(__name__)
     },
 )
 class ListarContatosView(IsOwnerOrAdminMixin, BasicGetAPIView):
-    """GET /identidade/usuarios/{usuario_pk}/contatos/"""
+    """GET /cortex/identidade/usuarios/{usuario_pk}/contatos/"""
     serializer_class = ContatoSerializer
     pagination_class = PaginacaoCustomizada
     mensagem_sucesso = 'Contatos listados com sucesso.'
@@ -84,7 +84,7 @@ class ListarContatosView(IsOwnerOrAdminMixin, BasicGetAPIView):
     },
 )
 class AdicionarContatoView(IsOwnerOrAdminMixin, BasicPostAPIView):
-    """POST /identidade/usuarios/{usuario_pk}/contatos/"""
+    """POST /cortexusuarios/{usuario_pk}/contatos/"""
     serializer_class = ContatoInputSerializer
     mensagem_sucesso = 'Contato adicionado com sucesso.'
 
@@ -122,7 +122,7 @@ class AdicionarContatoView(IsOwnerOrAdminMixin, BasicPostAPIView):
     },
 )
 class AtualizarContatoView(IsOwnerOrAdminMixin, BasicPatchAPIView):
-    """PATCH /identidade/usuarios/{usuario_pk}/contatos/{pk}/"""
+    """PATCH /cortex/identidade/usuarios/{usuario_pk}/contatos/{pk}/"""
     serializer_class = ContatoInputSerializer
     mensagem_sucesso = 'Contato atualizado com sucesso.'
 

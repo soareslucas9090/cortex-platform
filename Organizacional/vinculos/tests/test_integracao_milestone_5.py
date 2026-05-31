@@ -32,7 +32,7 @@ class ValidacaoIntegracaoMilestone5Test(APITestCase):
         self.funcao_monitor = Funcao.objects.create(sigla='MON', descricao='Monitor', ativo=True, exige_aluno=True)
         self.funcao_comum = Funcao.objects.create(sigla='AUX', descricao='Auxiliar Administrativo', ativo=True)
 
-        self.url_criar_vinculo = f'/organizacional/setores/{self.setor.pk}/vinculos/'
+        self.url_criar_vinculo = f'/cortex/organizacional/setores/{self.setor.pk}/vinculos/'
 
     def test_fluxo_servidor_responsavel_valido(self):
         """

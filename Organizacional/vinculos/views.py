@@ -49,7 +49,7 @@ logger = logging.getLogger(__name__)
     },
 )
 class ListarVinculosView(IsAdminMixin, BasicGetAPIView):
-    """GET /organizacional/setores/<setor_pk>/vinculos/"""
+    """GET /cortex/organizacional/setores/<setor_pk>/vinculos/"""
     pagination_class = PaginacaoCustomizada
     serializer_class = SetorVinculoSerializer
     mensagem_sucesso = 'Vínculos listados com sucesso.'
@@ -81,7 +81,7 @@ class ListarVinculosView(IsAdminMixin, BasicGetAPIView):
     },
 )
 class CriarVinculoView(IsAdminMixin, BasicPostAPIView):
-    """POST /organizacional/setores/<setor_pk>/vinculos/"""
+    """POST /cortex/organizacional/setores/<setor_pk>/vinculos/"""
     serializer_class = CriarVinculoSerializer
     mensagem_sucesso = 'Vínculo criado com sucesso.'
 
@@ -113,7 +113,7 @@ class CriarVinculoView(IsAdminMixin, BasicPostAPIView):
     },
 )
 class EncerrarVinculoView(IsAdminMixin, BasicPostAPIView):
-    """POST /organizacional/setores/<setor_pk>/vinculos/<pk>/encerrar/"""
+    """POST /cortex/organizacional/setores/<setor_pk>/vinculos/<pk>/encerrar/"""
     serializer_class = SerializerVazio
     mensagem_sucesso = 'Vínculo encerrado com sucesso.'
 
@@ -148,7 +148,7 @@ class EncerrarVinculoView(IsAdminMixin, BasicPostAPIView):
     },
 )
 class DefinirResponsavelView(IsAdminMixin, BasicPostAPIView):
-    """POST /organizacional/setores/<setor_pk>/vinculos/<pk>/definir-responsavel/"""
+    """POST /cortex/organizacional/setores/<setor_pk>/vinculos/<pk>/definir-responsavel/"""
     serializer_class = SerializerVazio
     mensagem_sucesso = 'Responsável definido com sucesso.'
 
@@ -173,7 +173,7 @@ class DefinirResponsavelView(IsAdminMixin, BasicPostAPIView):
     },
 )
 class RemoverResponsavelView(IsAdminMixin, BasicPostAPIView):
-    """POST /organizacional/setores/<setor_pk>/vinculos/<pk>/remover-responsavel/"""
+    """POST /cortex/organizacional/setores/<setor_pk>/vinculos/<pk>/remover-responsavel/"""
     serializer_class = SerializerVazio
     mensagem_sucesso = 'Responsabilidade removida com sucesso.'
 
@@ -198,7 +198,7 @@ class RemoverResponsavelView(IsAdminMixin, BasicPostAPIView):
     },
 )
 class AtualizarVinculoFuncaoView(IsAdminMixin, BasicPatchAPIView):
-    """PATCH /organizacional/setores/<setor_pk>/vinculos/<pk>/funcao/"""
+    """PATCH /cortex/organizacional/setores/<setor_pk>/vinculos/<pk>/funcao/"""
     serializer_class = AtualizarVinculoFuncaoSerializer
     mensagem_sucesso = 'Função do vínculo atualizada com sucesso.'
 

@@ -14,6 +14,7 @@ colorama==0.4.6
 coverage==7.13.5
 cron-descriptor==1.4.5
 cryptography==46.0.7
+debugpy==1.8.20
 Django==5.2.14
 django-allauth==65.16.0
 django-celery-beat==2.9.0
@@ -60,3 +61,5 @@ urllib3==2.6.3
 vine==5.1.0
 wcwidth==0.7.0
 whitenoise==6.11.0
+boto3==1.43.18
+

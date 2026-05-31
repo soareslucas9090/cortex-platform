@@ -68,7 +68,7 @@ logger = logging.getLogger(__name__)
     },
 )
 class ListarUsuariosView(IsAdminMixin, BasicGetAPIView):
-    """GET /identidade/usuarios/"""
+    """GET /cortex/identidade/usuarios/"""
     pagination_class = PaginacaoCustomizada
     serializer_class = UsuarioSerializer
     mensagem_sucesso = 'Usuários listados com sucesso.'
@@ -101,7 +101,7 @@ class ListarUsuariosView(IsAdminMixin, BasicGetAPIView):
     },
 )
 class CriarUsuarioView(IsAdminMixin, BasicPostAPIView):
-    """POST /identidade/usuarios/"""
+    """POST /cortex/identidade/usuarios/"""
     serializer_class = CriarUsuarioSerializer
     mensagem_sucesso = 'Usuário criado com sucesso.'
 
@@ -137,7 +137,7 @@ class CriarUsuarioView(IsAdminMixin, BasicPostAPIView):
     },
 )
 class DetalheUsuarioView(IsOwnerOrAdminMixin, BasicRetrieveAPIView):
-    """GET /identidade/usuarios/{pk}/"""
+    """GET /cortex/identidade/usuarios/{pk}/"""
     queryset = Usuario.objects.all()
     serializer_class = UsuarioSerializer
     mensagem_sucesso = 'Usuário obtido com sucesso.'
@@ -166,7 +166,7 @@ class DetalheUsuarioView(IsOwnerOrAdminMixin, BasicRetrieveAPIView):
     },
 )
 class AtualizarUsuarioView(IsOwnerOrAdminMixin, BasicPatchAPIView):
-    """PATCH /identidade/usuarios/{pk}/"""
+    """PATCH /cortex/identidade/usuarios/{pk}/"""
     queryset = Usuario.objects.all()
     serializer_class = AtualizarUsuarioSerializer
     mensagem_sucesso = 'Usuário atualizado com sucesso.'
@@ -200,7 +200,7 @@ class AtualizarUsuarioView(IsOwnerOrAdminMixin, BasicPatchAPIView):
     },
 )
 class DesativarUsuarioView(IsAdminMixin, BasicPostAPIView):
-    """POST /identidade/usuarios/{pk}/desativar/"""
+    """POST /cortex/identidade/usuarios/{pk}/desativar/"""
     serializer_class = SerializerVazio
     mensagem_sucesso = 'Usuário desativado com sucesso.'
     queryset = Usuario.objects.all()
@@ -227,7 +227,7 @@ class DesativarUsuarioView(IsAdminMixin, BasicPostAPIView):
     },
 )
 class ReativarUsuarioView(IsAdminMixin, BasicPostAPIView):
-    """POST /identidade/usuarios/{pk}/reativar/"""
+    """POST /cortex/identidade/usuarios/{pk}/reativar/"""
     serializer_class = SerializerVazio
     mensagem_sucesso = 'Usuário reativado com sucesso.'
     queryset = Usuario.objects.all()
@@ -252,23 +252,52 @@ class ReativarUsuarioView(IsAdminMixin, BasicPostAPIView):
     },
 )
 class BaixarModeloImportacaoUsuariosView(IsAdminMixin, BasicGetAPIView):
-    """GET /identidade/usuarios/importacao/modelo/"""
+    """GET /cortex/identidade/usuarios/importacao/modelo/"""
     serializer_class = SerializerVazio
     mensagem_sucesso = 'Modelo de importação localizado com sucesso.'
 
     def get(self, request, *args, **kwargs):
-        base_dir = Path(__file__).resolve().parents[2]
-        caminho_arquivo = base_dir / 'docs' / 'seeds' / 'import' / 'modelo-importacao-usuarios.ods'
+        import io
+        import boto3
+        from botocore.client import Config
+        from botocore.exceptions import ClientError
+        from django.conf import settings
 
-        if not caminho_arquivo.exists() or not caminho_arquivo.is_file():
-            raise Http404('Arquivo modelo de importação não encontrado.')
+        endpoint_url = getattr(settings, 'MODEL_STORAGE_ENDPOINT_URL', None)
+        bucket_name = getattr(settings, 'MODEL_STORAGE_BUCKET_NAME', None)
+        access_key = getattr(settings, 'MODEL_STORAGE_ACCESS_KEY_ID', None)
+        secret_key = getattr(settings, 'MODEL_STORAGE_SECRET_ACCESS_KEY', None)
 
-        return FileResponse(
-            open(caminho_arquivo, 'rb'),
-            as_attachment=True,
-            filename=os.path.basename(caminho_arquivo),
-            content_type='application/vnd.oasis.opendocument.spreadsheet',
-        )
+        if not all([endpoint_url, bucket_name, access_key, secret_key]):
+            logger.error("Credenciais de armazenamento do modelo não configuradas completamente.")
+            raise Http404("Configuração de armazenamento inválida.")
+
+        try:
+            s3_client = boto3.client(
+                's3',
+                endpoint_url=endpoint_url,
+                aws_access_key_id=access_key,
+                aws_secret_access_key=secret_key,
+                config=Config(signature_version='s3v4')
+            )
+            
+            file_obj = io.BytesIO()
+            s3_client.download_fileobj(bucket_name, 'Cortex/modelo-importacao-usuarios.ods', file_obj)
+            file_obj.seek(0)
+            
+            return FileResponse(
+                file_obj,
+                as_attachment=True,
+                filename='modelo-importacao-usuarios.ods',
+                content_type='application/vnd.oasis.opendocument.spreadsheet',
+            )
+
+        except ClientError as e:
+            logger.error(f"Erro ao baixar o modelo do bucket S3: {e}")
+            raise Http404("Arquivo modelo de importação não encontrado no bucket.")
+        except Exception as e:
+            logger.error(f"Erro inesperado ao baixar o modelo: {e}")
+            raise Http404("Erro interno ao recuperar o arquivo modelo.")
 
 
 @extend_schema(
@@ -301,7 +330,7 @@ class BaixarModeloImportacaoUsuariosView(IsAdminMixin, BasicGetAPIView):
     },
 )
 class PreVisualizarImportacaoUsuariosView(IsAdminMixin, BasicPostAPIView):
-    """POST /identidade/usuarios/importacao/pre-visualizar/"""
+    """POST /cortex/identidade/usuarios/importacao/pre-visualizar/"""
     parser_classes = (MultiPartParser,)
     serializer_class = ArquivoImportacaoUsuariosSerializer
     mensagem_sucesso = 'Pré-visualização concluída com sucesso.'
@@ -362,7 +391,7 @@ from rest_framework import parsers
     },
 )
 class ImportarUsuariosLoteView(IsAdminMixin, BasicPostAPIView):
-    """POST /identidade/usuarios/importacao/"""
+    """POST /cortex/identidade/usuarios/importacao/"""
     parser_classes = (MultiPartParser, parsers.FormParser)
     serializer_class = ArquivoImportacaoUsuariosSerializer
     mensagem_sucesso = 'Importação enviada para fila de processamento.'
@@ -405,7 +434,7 @@ class ImportarUsuariosLoteView(IsAdminMixin, BasicPostAPIView):
     },
 )
 class StatusImportacaoLoteView(IsAdminMixin, BasicGetAPIView):
-    """GET /identidade/usuarios/importacao/status/"""
+    """GET /cortex/identidade/usuarios/importacao/status/"""
     serializer_class = StatusImportacaoLoteSerializer
     mensagem_sucesso = 'Status retornado com sucesso.'
 
@@ -439,7 +468,7 @@ class StatusImportacaoLoteView(IsAdminMixin, BasicGetAPIView):
     },
 )
 class CancelarImportacaoView(IsAdminMixin, BasicPostAPIView):
-    """POST /identidade/usuarios/importacao/cancelar/"""
+    """POST /cortex/identidade/usuarios/importacao/cancelar/"""
     serializer_class = SerializerVazio
     mensagem_sucesso = 'Importação cancelada com sucesso.'
 
@@ -484,7 +513,7 @@ class CancelarImportacaoView(IsAdminMixin, BasicPostAPIView):
     },
 )
 class HistoricoImportacaoLoteView(IsAdminMixin, BasicGetAPIView):
-    """GET /identidade/usuarios/importacao/historico/"""
+    """GET /cortex/identidade/usuarios/importacao/historico/"""
     pagination_class = PaginacaoCustomizada
     serializer_class = StatusImportacaoLoteSerializer
     mensagem_sucesso = 'Histórico de importações listado com sucesso.'

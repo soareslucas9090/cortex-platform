@@ -52,7 +52,7 @@ logger = logging.getLogger(__name__)
     },
 )
 class ListarMatriculasView(IsOwnerOrAdminMixin, BasicGetAPIView):
-    """GET /identidade/usuarios/{usuario_pk}/matriculas/"""
+    """GET /cortex/identidade/usuarios/{usuario_pk}/matriculas/"""
     serializer_class = MatriculaSerializer
     pagination_class = PaginacaoCustomizada
     mensagem_sucesso = 'Matrículas listadas com sucesso.'
@@ -96,7 +96,7 @@ class ListarMatriculasView(IsOwnerOrAdminMixin, BasicGetAPIView):
     },
 )
 class AdicionarMatriculaView(IsAdminMixin, BasicPostAPIView):
-    """POST /identidade/usuarios/{usuario_pk}/matriculas/"""
+    """POST /cortex/identidade/usuarios/{usuario_pk}/matriculas/"""
     serializer_class = AdicionarMatriculaSerializer
     mensagem_sucesso = 'Matrícula adicionada com sucesso.'
 
@@ -129,7 +129,7 @@ class AdicionarMatriculaView(IsAdminMixin, BasicPostAPIView):
     },
 )
 class DesativarMatriculaView(IsAdminMixin, BasicPostAPIView):
-    """POST /identidade/usuarios/{usuario_pk}/matriculas/{pk}/desativar/"""
+    """POST /cortex/identidade/usuarios/{usuario_pk}/matriculas/{pk}/desativar/"""
     serializer_class = SerializerVazio
     mensagem_sucesso = 'Matrícula desativada com sucesso.'
 

@@ -53,7 +53,7 @@ logger = logging.getLogger(__name__)
     },
 )
 class ListarSetoresView(IsAdminMixin, BasicGetAPIView):
-    """GET /organizacional/setores/"""
+    """GET /cortex/organizacional/setores/"""
     pagination_class = PaginacaoCustomizada
     serializer_class = SetorSerializer
     mensagem_sucesso = 'Setores listados com sucesso.'
@@ -79,7 +79,7 @@ class ListarSetoresView(IsAdminMixin, BasicGetAPIView):
     },
 )
 class CriarSetorView(IsAdminMixin, BasicPostAPIView):
-    """POST /organizacional/setores/"""
+    """POST /cortex/organizacional/setores/"""
     serializer_class = CriarSetorSerializer
     mensagem_sucesso = 'Setor criado com sucesso.'
 
@@ -104,7 +104,7 @@ class CriarSetorView(IsAdminMixin, BasicPostAPIView):
     },
 )
 class DetalheSetorView(IsAdminMixin, BasicRetrieveAPIView):
-    """GET /organizacional/setores/<pk>/"""
+    """GET /cortex/organizacional/setores/<pk>/"""
     queryset = Setor.objects.all()
     serializer_class = SetorSerializer
     mensagem_sucesso = 'Setor obtido com sucesso.'
@@ -124,7 +124,7 @@ class DetalheSetorView(IsAdminMixin, BasicRetrieveAPIView):
     },
 )
 class AtualizarSetorView(IsAdminMixin, BasicPatchAPIView):
-    """PATCH /organizacional/setores/<pk>/"""
+    """PATCH /cortex/organizacional/setores/<pk>/"""
     queryset = Setor.objects.all()
     serializer_class = AtualizarSetorSerializer
     mensagem_sucesso = 'Setor atualizado com sucesso.'
@@ -151,7 +151,7 @@ class AtualizarSetorView(IsAdminMixin, BasicPatchAPIView):
     },
 )
 class DesativarSetorView(IsAdminMixin, BasicPostAPIView):
-    """POST /organizacional/setores/<pk>/desativar/"""
+    """POST /cortex/organizacional/setores/<pk>/desativar/"""
     serializer_class = SerializerVazio
     mensagem_sucesso = 'Setor desativado com sucesso.'
     queryset = Setor.objects.all()
@@ -174,7 +174,7 @@ class DesativarSetorView(IsAdminMixin, BasicPostAPIView):
     },
 )
 class ReativarSetorView(IsAdminMixin, BasicPostAPIView):
-    """POST /organizacional/setores/<pk>/reativar/"""
+    """POST /cortex/organizacional/setores/<pk>/reativar/"""
     serializer_class = SerializerVazio
     mensagem_sucesso = 'Setor reativado com sucesso.'
     queryset = Setor.objects.all()

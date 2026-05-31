@@ -53,7 +53,7 @@ logger = logging.getLogger(__name__)
     },
 )
 class ListarFuncoesView(IsAdminMixin, BasicGetAPIView):
-    """GET /organizacional/funcoes/"""
+    """GET /cortex/organizacional/funcoes/"""
     pagination_class = PaginacaoCustomizada
     serializer_class = FuncaoSerializer
     mensagem_sucesso = 'Funções listadas com sucesso.'
@@ -79,7 +79,7 @@ class ListarFuncoesView(IsAdminMixin, BasicGetAPIView):
     },
 )
 class CriarFuncaoView(IsAdminMixin, BasicPostAPIView):
-    """POST /organizacional/funcoes/"""
+    """POST /cortex/organizacional/funcoes/"""
     serializer_class = CriarFuncaoSerializer
     mensagem_sucesso = 'Função criada com sucesso.'
 
@@ -104,7 +104,7 @@ class CriarFuncaoView(IsAdminMixin, BasicPostAPIView):
     },
 )
 class DetalheFuncaoView(IsAdminMixin, BasicRetrieveAPIView):
-    """GET /organizacional/funcoes/<pk>/"""
+    """GET /cortex/organizacional/funcoes/<pk>/"""
     queryset = Funcao.objects.all()
     serializer_class = FuncaoSerializer
     mensagem_sucesso = 'Função obtida com sucesso.'
@@ -124,7 +124,7 @@ class DetalheFuncaoView(IsAdminMixin, BasicRetrieveAPIView):
     },
 )
 class AtualizarFuncaoView(IsAdminMixin, BasicPatchAPIView):
-    """PATCH /organizacional/funcoes/<pk>/"""
+    """PATCH /cortex/organizacional/funcoes/<pk>/"""
     queryset = Funcao.objects.all()
     serializer_class = AtualizarFuncaoSerializer
     mensagem_sucesso = 'Função atualizada com sucesso.'
@@ -151,7 +151,7 @@ class AtualizarFuncaoView(IsAdminMixin, BasicPatchAPIView):
     },
 )
 class DesativarFuncaoView(IsAdminMixin, BasicPostAPIView):
-    """POST /organizacional/funcoes/<pk>/desativar/"""
+    """POST /cortex/organizacional/funcoes/<pk>/desativar/"""
     serializer_class = SerializerVazio
     mensagem_sucesso = 'Função desativada com sucesso.'
     queryset = Funcao.objects.all()
@@ -174,7 +174,7 @@ class DesativarFuncaoView(IsAdminMixin, BasicPostAPIView):
     },
 )
 class ReativarFuncaoView(IsAdminMixin, BasicPostAPIView):
-    """POST /organizacional/funcoes/<pk>/reativar/"""
+    """POST /cortex/organizacional/funcoes/<pk>/reativar/"""
     serializer_class = SerializerVazio
     mensagem_sucesso = 'Função reativada com sucesso.'
     queryset = Funcao.objects.all()

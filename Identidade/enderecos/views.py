@@ -32,7 +32,7 @@ logger = logging.getLogger(__name__)
     },
 )
 class ObterEnderecoView(IsOwnerOrAdminMixin, BasicRetrieveAPIView):
-    """GET /identidade/usuarios/{usuario_pk}/endereco/"""
+    """GET /cortex/identidade/usuarios/{usuario_pk}/endereco/"""
     serializer_class = EnderecoSerializer
     mensagem_sucesso = 'Endereço obtido com sucesso.'
 
@@ -69,7 +69,7 @@ class ObterEnderecoView(IsOwnerOrAdminMixin, BasicRetrieveAPIView):
     },
 )
 class SalvarEnderecoView(IsOwnerOrAdminMixin, BasicPutAPIView):
-    """PUT /identidade/usuarios/{usuario_pk}/endereco/"""
+    """PUT /cortex/identidade/usuarios/{usuario_pk}/endereco/"""
     serializer_class = EnderecoInputSerializer
     mensagem_sucesso = 'Endereço salvo com sucesso.'
 

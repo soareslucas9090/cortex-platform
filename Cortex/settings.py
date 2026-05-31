@@ -244,3 +244,10 @@ CELERY_ACCEPT_CONTENT = ['json']
 CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_SERIALIZER = 'json'
 CELERY_TIMEZONE = TIME_ZONE
+
+# Configurações do armazenamento de modelos (S3)
+MODEL_STORAGE_ENDPOINT_URL = os.environ.get('MODEL_STORAGE_ENDPOINT_URL', 'https://t3.storageapi.dev')
+MODEL_STORAGE_BUCKET_NAME = os.environ.get('MODEL_STORAGE_BUCKET_NAME', 'organized-breadbox-jroiv0')
+MODEL_STORAGE_ACCESS_KEY_ID = os.environ.get('MODEL_STORAGE_ACCESS_KEY_ID', '')
+MODEL_STORAGE_SECRET_ACCESS_KEY = os.environ.get('MODEL_STORAGE_SECRET_ACCESS_KEY', '')
+

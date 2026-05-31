@@ -248,27 +248,27 @@ python manage.py spectacular --file schema.yaml
 
 | Método | URL                        | Descrição                      |
 | ------ | -------------------------- | ------------------------------ |
-| POST   | `/auth/token_jwt/`         | Login — obtém access + refresh |
-| POST   | `/auth/token_jwt/refresh/` | Renova o access token          |
-| POST   | `/auth/token_jwt/verify/`  | Verifica validade do token     |
+| POST   | `/cortex/auth/token_jwt/`         | Login — obtém access + refresh |
+| POST   | `/cortex/auth/token_jwt/refresh/` | Renova o access token          |
+| POST   | `/cortex/auth/token_jwt/verify/`  | Verifica validade do token     |
 
 ### Identidade — Usuários
 
 | Método | URL                                                    | Descrição                   |
 | ------ | ------------------------------------------------------ | --------------------------- |
-| GET    | `/identidade/usuarios/`                                | Listar usuários             |
-| POST   | `/identidade/usuarios/`                                | Criar usuário               |
-| GET    | `/identidade/usuarios/<pk>/`                           | Detalhar usuário            |
-| PATCH  | `/identidade/usuarios/<pk>/`                           | Atualizar usuário           |
-| POST   | `/identidade/usuarios/<pk>/desativar/`                 | Desativar usuário           |
-| POST   | `/identidade/usuarios/<pk>/reativar/`                  | Reativar usuário            |
-| GET    | `/identidade/usuarios/<pk>/contatos/`                  | Listar contatos             |
-| POST   | `/identidade/usuarios/<pk>/contatos/`                  | Adicionar contato           |
-| GET    | `/identidade/usuarios/<pk>/endereco/`                  | Obter endereço              |
-| PUT    | `/identidade/usuarios/<pk>/endereco/`                  | Criar ou atualizar endereço |
-| GET    | `/identidade/usuarios/<pk>/matriculas/`                | Listar matrículas           |
-| POST   | `/identidade/usuarios/<pk>/matriculas/`                | Adicionar matrícula         |
-| POST   | `/identidade/usuarios/<pk>/matriculas/<pk>/desativar/` | Desativar matrícula         |
+| GET    | `/cortex/identidade/usuarios/`                                | Listar usuários             |
+| POST   | `/cortex/identidade/usuarios/`                                | Criar usuário               |
+| GET    | `/cortex/identidade/usuarios/<pk>/`                           | Detalhar usuário            |
+| PATCH  | `/cortex/identidade/usuarios/<pk>/`                           | Atualizar usuário           |
+| POST   | `/cortex/identidade/usuarios/<pk>/desativar/`                 | Desativar usuário           |
+| POST   | `/cortex/identidade/usuarios/<pk>/reativar/`                  | Reativar usuário            |
+| GET    | `/cortex/identidade/usuarios/<pk>/contatos/`                  | Listar contatos             |
+| POST   | `/cortex/identidade/usuarios/<pk>/contatos/`                  | Adicionar contato           |
+| GET    | `/cortex/identidade/usuarios/<pk>/endereco/`                  | Obter endereço              |
+| PUT    | `/cortex/identidade/usuarios/<pk>/endereco/`                  | Criar ou atualizar endereço |
+| GET    | `/cortex/identidade/usuarios/<pk>/matriculas/`                | Listar matrículas           |
+| POST   | `/cortex/identidade/usuarios/<pk>/matriculas/`                | Adicionar matrícula         |
+| POST   | `/cortex/identidade/usuarios/<pk>/matriculas/<pk>/desativar/` | Desativar matrícula         |
 
 ---
 
