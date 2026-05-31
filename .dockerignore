@@ -5,10 +5,13 @@
 .venv
 venv
 env
+.vscode
 __pycache__
 *.pyc
 *.pyo
 *.pyd
+.env
+.env.docker
 db.sqlite3
 db.sqlite3-shm
 db.sqlite3-wal
