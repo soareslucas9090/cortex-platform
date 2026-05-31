@@ -3,9 +3,9 @@ info:
   title: Cortex
   version: 1.0.0
 paths:
-  /academico/aluno-cursos/:
+  /cortex/academico/aluno-cursos/:
     get:
-      operationId: academico_aluno_cursos_list
+      operationId: cortex_academico_aluno_cursos_list
       description: "\n    Lista os vínculos acadêmicos entre alunos e cursos.\n\n\
         \    **Permissões:** Apenas administradores.\n\n    **Paginação:** Suportada\
         \ via query param `paginacao` (padrão 10, máximo 100).\n\n    **Filtros:**\
@@ -63,7 +63,7 @@ paths:
                 description: Sem permissão.
           description: ''
     post:
-      operationId: academico_aluno_cursos_create
+      operationId: cortex_academico_aluno_cursos_create
       description: "\n    Cria um novo vínculo acadêmico entre um aluno e um curso.\n\
         \n    **Permissões:** Apenas administradores.\n\n    Não é possível criar\
         \ um segundo vínculo ativo do mesmo aluno no mesmo curso.\n    "
@@ -109,9 +109,9 @@ paths:
               schema:
                 description: Sem permissão.
           description: ''
-  /academico/aluno-cursos/{id}/:
+  /cortex/academico/aluno-cursos/{id}/:
     get:
-      operationId: academico_aluno_cursos_retrieve
+      operationId: cortex_academico_aluno_cursos_retrieve
       description: "\n    Exibe os detalhes de um vínculo acadêmico específico.\n\n\
         \    **Permissões:** Apenas administradores.\n    "
       summary: Detalhar vínculo aluno-curso
@@ -151,7 +151,7 @@ paths:
                 description: Vínculo não encontrado.
           description: ''
     patch:
-      operationId: academico_aluno_cursos_partial_update
+      operationId: cortex_academico_aluno_cursos_partial_update
       description: "\n    Atualiza parcialmente os dados de um vínculo acadêmico (ex:\
         \ ano_conclusao, ativo).\n\n    **Permissões:** Apenas administradores.\n\
         \    "
@@ -208,9 +208,9 @@ paths:
               schema:
                 description: Vínculo não encontrado.
           description: ''
-  /academico/aluno-cursos/{id}/encerrar/:
+  /cortex/academico/aluno-cursos/{id}/encerrar/:
     post:
-      operationId: academico_aluno_cursos_encerrar_create
+      operationId: cortex_academico_aluno_cursos_encerrar_create
       description: "\n    Encerra um vínculo acadêmico ativo, registrando o ano de\
         \ conclusão.\n\n    **Permissões:** Apenas administradores.\n    "
       summary: Encerrar vínculo aluno-curso
@@ -267,9 +267,9 @@ paths:
               schema:
                 description: Vínculo não encontrado.
           description: ''
-  /academico/alunos/:
+  /cortex/academico/alunos/:
     get:
-      operationId: academico_alunos_list
+      operationId: cortex_academico_alunos_list
       description: Retorna a lista de alunos cadastrados. Apenas administradores.
       summary: Listar alunos
       parameters:
@@ -307,7 +307,7 @@ paths:
                 $ref: '#/components/schemas/PaginatedAlunoList'
           description: ''
     post:
-      operationId: academico_alunos_create
+      operationId: cortex_academico_alunos_create
       description: Cria um novo perfil de aluno para um usuário existente. Apenas
         administradores.
       summary: Criar aluno
@@ -334,9 +334,9 @@ paths:
               schema:
                 $ref: '#/components/schemas/Aluno'
           description: ''
-  /academico/alunos/{usuario_id}/:
+  /cortex/academico/alunos/{usuario_id}/:
     get:
-      operationId: academico_alunos_retrieve
+      operationId: cortex_academico_alunos_retrieve
       description: Retorna os detalhes de um aluno. Apenas administradores.
       summary: Detalhar aluno
       parameters:
@@ -357,7 +357,7 @@ paths:
                 $ref: '#/components/schemas/Aluno'
           description: ''
     patch:
-      operationId: academico_alunos_partial_update
+      operationId: cortex_academico_alunos_partial_update
       description: Atualiza os dados de um aluno existente. Apenas administradores.
       summary: Atualizar aluno
       parameters:
@@ -388,9 +388,9 @@ paths:
               schema:
                 $ref: '#/components/schemas/Aluno'
           description: ''
-  /academico/cursos/:
+  /cortex/academico/cursos/:
     get:
-      operationId: academico_cursos_list
+      operationId: cortex_academico_cursos_list
       description: "\n    Lista todos os cursos cadastrados.\n\n    **Permissões:**\
         \ Apenas administradores.\n\n    **Paginação:** Suportada via query param\
         \ `paginacao` (padrão 10, máximo 100).\n\n    **Filtros:** Os query params\
@@ -449,7 +449,7 @@ paths:
                 description: Sem permissão.
           description: ''
     post:
-      operationId: academico_cursos_create
+      operationId: cortex_academico_cursos_create
       description: "\n    Cria um novo curso.\n\n    **Permissões:** Apenas administradores.\n\
         \    "
       summary: Criar curso
@@ -494,9 +494,9 @@ paths:
               schema:
                 description: Sem permissão.
           description: ''
-  /academico/cursos/{id}/:
+  /cortex/academico/cursos/{id}/:
     get:
-      operationId: academico_cursos_retrieve
+      operationId: cortex_academico_cursos_retrieve
       description: "\n    Exibe os detalhes de um curso específico.\n\n    **Permissões:**\
         \ Apenas administradores.\n    "
       summary: Detalhar curso
@@ -536,7 +536,7 @@ paths:
                 description: Curso não encontrado.
           description: ''
     patch:
-      operationId: academico_cursos_partial_update
+      operationId: cortex_academico_cursos_partial_update
       description: "\n    Atualiza parcialmente os dados de um curso existente.\n\n\
         \    **Permissões:** Apenas administradores.\n    "
       summary: Atualizar curso
@@ -592,9 +592,9 @@ paths:
               schema:
                 description: Curso não encontrado.
           description: ''
-  /academico/cursos/{id}/desativar/:
+  /cortex/academico/cursos/{id}/desativar/:
     post:
-      operationId: academico_cursos_desativar_create
+      operationId: cortex_academico_cursos_desativar_create
       description: "\n    Desativa um curso ativo.\n\n    **Permissões:** Apenas administradores.\n\
         \    "
       summary: Desativar curso
@@ -639,9 +639,9 @@ paths:
               schema:
                 description: Curso não encontrado.
           description: ''
-  /academico/cursos/{id}/reativar/:
+  /cortex/academico/cursos/{id}/reativar/:
     post:
-      operationId: academico_cursos_reativar_create
+      operationId: cortex_academico_cursos_reativar_create
       description: "\n    Reativa um curso inativo.\n\n    **Permissões:** Apenas\
         \ administradores.\n    "
       summary: Reativar curso
@@ -686,9 +686,9 @@ paths:
               schema:
                 description: Curso não encontrado.
           description: ''
-  /auth/token_jwt/:
+  /cortex/auth/token_jwt/:
     post:
-      operationId: auth_token_jwt_create
+      operationId: cortex_auth_token_jwt_create
       description: "\n        Autentica o usuário e retorna os tokens de acesso (access)\
         \ e renovação (refresh).\n\n        O campo ``login`` aceita **e-mail** ou\
         \ **CPF** (com ou sem máscara).\n\n        **Exemplos de identificador:**\n\
@@ -726,9 +726,9 @@ paths:
               schema:
                 description: Credenciais inválidas.
           description: ''
-  /auth/token_jwt/me/:
+  /cortex/auth/token_jwt/me/:
     get:
-      operationId: auth_token_jwt_me_retrieve
+      operationId: cortex_auth_token_jwt_me_retrieve
       description: Retorna as informações do usuário atual.
       summary: Dados do usuário logado
       tags:
@@ -748,9 +748,9 @@ paths:
               schema:
                 description: Não autenticado.
           description: ''
-  /auth/token_jwt/refresh/:
+  /cortex/auth/token_jwt/refresh/:
     post:
-      operationId: auth_token_jwt_refresh_create
+      operationId: cortex_auth_token_jwt_refresh_create
       description: Usa o refresh token para emitir um novo access token sem precisar
         de nova autenticação.
       summary: Renovar token de acesso
@@ -781,9 +781,9 @@ paths:
               schema:
                 description: Refresh token inválido ou expirado.
           description: ''
-  /auth/token_jwt/verify/:
+  /cortex/auth/token_jwt/verify/:
     post:
-      operationId: auth_token_jwt_verify_create
+      operationId: cortex_auth_token_jwt_verify_create
       description: Retorna 200 se o token for válido, 401 caso contrário.
       summary: Verificar validade do token
       tags:
@@ -813,9 +813,9 @@ paths:
               schema:
                 description: Token inválido ou expirado.
           description: ''
-  /identidade/usuarios/:
+  /cortex/identidade/usuarios/:
     get:
-      operationId: identidade_usuarios_list
+      operationId: cortex_identidade_usuarios_list
       description: "\n    Retorna a lista paginada de usuários do sistema.\n\n   \
         \ **Permissões:** Apenas administradores.\n\n    **Query params:**\n    -\
         \ `ativo` (bool, opcional): filtra por status — `true` (ativos) ou `false`\
@@ -866,7 +866,7 @@ paths:
                 description: Sem permissão de administrador.
           description: ''
     post:
-      operationId: identidade_usuarios_create
+      operationId: cortex_identidade_usuarios_create
       description: "\n    Cria um novo usuário no sistema.\n\n    **Permissões:**\
         \ Apenas administradores.\n\n    Não há auto-cadastro — usuários são sempre\
         \ criados por administradores,\n    individualmente ou em lote via JSON.\n\
@@ -913,9 +913,9 @@ paths:
               schema:
                 description: Sem permissão de administrador.
           description: ''
-  /identidade/usuarios/{id}/:
+  /cortex/identidade/usuarios/{id}/:
     get:
-      operationId: identidade_usuarios_retrieve
+      operationId: cortex_identidade_usuarios_retrieve
       description: "\n    Retorna os dados de um usuário específico.\n\n    **Permissões:**\
         \ O próprio usuário ou administradores.\n    "
       summary: Detalhe do usuário
@@ -955,7 +955,7 @@ paths:
                 description: Usuário não encontrado.
           description: ''
     patch:
-      operationId: identidade_usuarios_partial_update
+      operationId: cortex_identidade_usuarios_partial_update
       description: "\n    Atualiza parcialmente os dados básicos do usuário (nome,\
         \ e-mail, foto, deficiência).\n\n    **Permissões:** O próprio usuário ou\
         \ administradores.\n\n    CPF não é alterável neste endpoint.\n    "
@@ -1012,9 +1012,9 @@ paths:
               schema:
                 description: Usuário não encontrado.
           description: ''
-  /identidade/usuarios/{id}/desativar/:
+  /cortex/identidade/usuarios/{id}/desativar/:
     post:
-      operationId: identidade_usuarios_desativar_create
+      operationId: cortex_identidade_usuarios_desativar_create
       description: "\n    Desativa um usuário do sistema (não remove o registro).\n\
         \n    **Permissões:** Apenas administradores.\n    "
       summary: Desativar usuário
@@ -1059,9 +1059,9 @@ paths:
               schema:
                 description: Usuário não encontrado.
           description: ''
-  /identidade/usuarios/{id}/reativar/:
+  /cortex/identidade/usuarios/{id}/reativar/:
     post:
-      operationId: identidade_usuarios_reativar_create
+      operationId: cortex_identidade_usuarios_reativar_create
       description: "\n    Reativa um usuário previamente desativado.\n\n    **Permissões:**\
         \ Apenas administradores.\n    "
       summary: Reativar usuário
@@ -1106,9 +1106,9 @@ paths:
               schema:
                 description: Usuário não encontrado.
           description: ''
-  /identidade/usuarios/{usuario_pk}/contatos/:
+  /cortex/identidade/usuarios/{usuario_pk}/contatos/:
     get:
-      operationId: identidade_usuarios_contatos_list
+      operationId: cortex_identidade_usuarios_contatos_list
       description: "\n    Retorna a lista de contatos de um usuário específico.\n\n\
         \    **Permissões:** O próprio usuário ou administradores.\n\n    **Query\
         \ params:**\n    - `paginacao` (int, opcional): tamanho da página, entre 1\
@@ -1163,7 +1163,7 @@ paths:
                 description: Usuário não encontrado.
           description: ''
     post:
-      operationId: identidade_usuarios_contatos_create
+      operationId: cortex_identidade_usuarios_contatos_create
       description: "\n    Adiciona um novo contato (e-mail acadêmico, e-mail pessoal\
         \ ou telefone) ao usuário.\n\n    **Permissões:** O próprio usuário ou administradores.\n\
         \n    Informe ao menos um dos campos de contato.\n    "
@@ -1220,9 +1220,9 @@ paths:
               schema:
                 description: Usuário não encontrado.
           description: ''
-  /identidade/usuarios/{usuario_pk}/contatos/{id}/:
+  /cortex/identidade/usuarios/{usuario_pk}/contatos/{id}/:
     patch:
-      operationId: identidade_usuarios_contatos_partial_update
+      operationId: cortex_identidade_usuarios_contatos_partial_update
       description: "\n    Atualiza parcialmente os dados de um contato do usuário.\n\
         \n    **Permissões:** O próprio usuário ou administradores.\n    "
       summary: Atualizar contato
@@ -1283,9 +1283,9 @@ paths:
               schema:
                 description: Contato não encontrado.
           description: ''
-  /identidade/usuarios/{usuario_pk}/endereco/:
+  /cortex/identidade/usuarios/{usuario_pk}/endereco/:
     get:
-      operationId: identidade_usuarios_endereco_retrieve
+      operationId: cortex_identidade_usuarios_endereco_retrieve
       description: "\n    Retorna o endereço cadastrado do usuário.\n\n    **Permissões:**\
         \ O próprio usuário ou administradores.\n\n    Retorna 404 se o endereço ainda\
         \ não foi cadastrado.\n    "
@@ -1326,7 +1326,7 @@ paths:
                 description: Endereço não cadastrado.
           description: ''
     put:
-      operationId: identidade_usuarios_endereco_update
+      operationId: cortex_identidade_usuarios_endereco_update
       description: "\n    Cria ou atualiza o endereço do usuário (operação idempotente).\n\
         \n    **Permissões:** O próprio usuário ou administradores.\n    "
       summary: Salvar endereço do usuário
@@ -1383,9 +1383,9 @@ paths:
               schema:
                 description: Usuário não encontrado.
           description: ''
-  /identidade/usuarios/{usuario_pk}/matriculas/:
+  /cortex/identidade/usuarios/{usuario_pk}/matriculas/:
     get:
-      operationId: identidade_usuarios_matriculas_list
+      operationId: cortex_identidade_usuarios_matriculas_list
       description: "\n    Retorna a lista de matrículas de um usuário específico.\n\
         \n    **Permissões:** O próprio usuário ou administradores.\n\n    **Query\
         \ params:**\n    - `situacao` (int, opcional): filtra por situação — `1` (Ativa)\
@@ -1449,7 +1449,7 @@ paths:
                 description: Usuário não encontrado.
           description: ''
     post:
-      operationId: identidade_usuarios_matriculas_create
+      operationId: cortex_identidade_usuarios_matriculas_create
       description: "\n    Adiciona uma nova matrícula (número) ao usuário.\n\n   \
         \ **Permissões:** Apenas administradores.\n    "
       summary: Adicionar matrícula ao usuário
@@ -1506,9 +1506,9 @@ paths:
               schema:
                 description: Usuário não encontrado.
           description: ''
-  /identidade/usuarios/{usuario_pk}/matriculas/{id}/desativar/:
+  /cortex/identidade/usuarios/{usuario_pk}/matriculas/{id}/desativar/:
     post:
-      operationId: identidade_usuarios_matriculas_desativar_create
+      operationId: cortex_identidade_usuarios_matriculas_desativar_create
       description: "\n    Marca uma matrícula do usuário como inativa.\n\n    **Permissões:**\
         \ Apenas administradores.\n    "
       summary: Desativar matrícula
@@ -1552,9 +1552,9 @@ paths:
               schema:
                 description: Usuário ou matrícula não encontrados.
           description: ''
-  /identidade/usuarios/importacao/:
+  /cortex/identidade/usuarios/importacao/:
     post:
-      operationId: identidade_usuarios_importacao_create
+      operationId: cortex_identidade_usuarios_importacao_create
       description: "\n    Inicia o processo de importação em lote de usuários enviando\
         \ o arquivo `.ods`.\n    O processamento ocorre em background (Celery).\n\n\
         \    **Permissões:** Apenas administradores.\n    "
@@ -1600,9 +1600,9 @@ paths:
               schema:
                 description: Sem permissão de administrador.
           description: ''
-  /identidade/usuarios/importacao/cancelar/:
+  /cortex/identidade/usuarios/importacao/cancelar/:
     post:
-      operationId: identidade_usuarios_importacao_cancelar_create
+      operationId: cortex_identidade_usuarios_importacao_cancelar_create
       description: "\n    Cancela uma importação que esteja travada com status EM_ANDAMENTO.\n\
         \n    **Permissões:** Apenas administradores.\n    "
       summary: Cancelar importação em lote de usuários
@@ -1635,9 +1635,9 @@ paths:
               schema:
                 description: Sem permissão de administrador.
           description: ''
-  /identidade/usuarios/importacao/modelo/:
+  /cortex/identidade/usuarios/importacao/modelo/:
     get:
-      operationId: identidade_usuarios_importacao_modelo_retrieve
+      operationId: cortex_identidade_usuarios_importacao_modelo_retrieve
       description: "\n    Realiza o download do arquivo modelo `.ods` utilizado como\
         \ base para a importação em lote de usuários.\n\n    **Permissões:** Apenas\
         \ administradores.\n    "
@@ -1671,9 +1671,9 @@ paths:
               schema:
                 description: Arquivo modelo não encontrado.
           description: ''
-  /identidade/usuarios/importacao/pre-visualizar/:
+  /cortex/identidade/usuarios/importacao/pre-visualizar/:
     post:
-      operationId: identidade_usuarios_importacao_pre_visualizar_create
+      operationId: cortex_identidade_usuarios_importacao_pre_visualizar_create
       description: "\n    Recebe um arquivo `.ods` multiaba e executa a validação\
         \ estrutural e prévia da importação,\n    sem persistir dados no banco.\n\n\
         \    **Permissões:** Apenas administradores.\n    "
@@ -1719,9 +1719,9 @@ paths:
               schema:
                 description: Sem permissão de administrador.
           description: ''
-  /identidade/usuarios/importacao/status/:
+  /cortex/identidade/usuarios/importacao/status/:
     get:
-      operationId: identidade_usuarios_importacao_status_retrieve
+      operationId: cortex_identidade_usuarios_importacao_status_retrieve
       description: "\n    Retorna o status da importação atual ou da última importação\
         \ realizada.\n    Inclui a porcentagem de conclusão se estiver em andamento.\n\
         \n    **Permissões:** Apenas administradores.\n    "
@@ -1755,9 +1755,9 @@ paths:
               schema:
                 description: Nenhuma importação encontrada.
           description: ''
-  /organizacional/funcoes/:
+  /cortex/organizacional/funcoes/:
     get:
-      operationId: organizacional_funcoes_list
+      operationId: cortex_organizacional_funcoes_list
       description: "\n    Retorna a lista paginada de funções organizacionais.\n\n\
         \    **Permissões:** Apenas administradores.\n\n    **Query params apenas\
         \ reduzem o conjunto â€” nunca expandem o acesso.**\n    "
@@ -1803,7 +1803,7 @@ paths:
                 description: Sem permissão de administrador.
           description: ''
     post:
-      operationId: organizacional_funcoes_create
+      operationId: cortex_organizacional_funcoes_create
       description: |-
         Cria uma nova função organizacional. A sigla deve ser única.
 
@@ -1850,9 +1850,9 @@ paths:
               schema:
                 description: Sem permissão de administrador.
           description: ''
-  /organizacional/funcoes/{id}/:
+  /cortex/organizacional/funcoes/{id}/:
     get:
-      operationId: organizacional_funcoes_retrieve
+      operationId: cortex_organizacional_funcoes_retrieve
       description: |-
         Retorna os dados de uma função específica.
 
@@ -1894,7 +1894,7 @@ paths:
                 description: Função não encontrada.
           description: ''
     patch:
-      operationId: organizacional_funcoes_partial_update
+      operationId: cortex_organizacional_funcoes_partial_update
       description: |-
         Atualiza parcialmente os dados da função.
 
@@ -1952,9 +1952,9 @@ paths:
               schema:
                 description: Função não encontrada.
           description: ''
-  /organizacional/funcoes/{id}/desativar/:
+  /cortex/organizacional/funcoes/{id}/desativar/:
     post:
-      operationId: organizacional_funcoes_desativar_create
+      operationId: cortex_organizacional_funcoes_desativar_create
       description: |-
         Desativa uma função. Bloqueado se estiver em uso em vínculos.
 
@@ -2001,9 +2001,9 @@ paths:
               schema:
                 description: Função não encontrada.
           description: ''
-  /organizacional/funcoes/{id}/reativar/:
+  /cortex/organizacional/funcoes/{id}/reativar/:
     post:
-      operationId: organizacional_funcoes_reativar_create
+      operationId: cortex_organizacional_funcoes_reativar_create
       description: |-
         Reativa uma função previamente desativada.
 
@@ -2050,9 +2050,9 @@ paths:
               schema:
                 description: Função não encontrada.
           description: ''
-  /organizacional/setores/:
+  /cortex/organizacional/setores/:
     get:
-      operationId: organizacional_setores_list
+      operationId: cortex_organizacional_setores_list
       description: "\n    Retorna a lista paginada de setores da instituição.\n\n\
         \    **Permissões:** Apenas administradores.\n\n    **Query params apenas\
         \ reduzem o conjunto — nunca expandem o acesso.**\n    "
@@ -2098,7 +2098,7 @@ paths:
                 description: Sem permissão de administrador.
           description: ''
     post:
-      operationId: organizacional_setores_create
+      operationId: cortex_organizacional_setores_create
       description: |-
         Cria um novo setor. A sigla deve ser única.
 
@@ -2145,9 +2145,9 @@ paths:
               schema:
                 description: Sem permissão de administrador.
           description: ''
-  /organizacional/setores/{id}/:
+  /cortex/organizacional/setores/{id}/:
     get:
-      operationId: organizacional_setores_retrieve
+      operationId: cortex_organizacional_setores_retrieve
       description: |-
         Retorna os dados de um setor específico.
 
@@ -2189,7 +2189,7 @@ paths:
                 description: Setor não encontrado.
           description: ''
     patch:
-      operationId: organizacional_setores_partial_update
+      operationId: cortex_organizacional_setores_partial_update
       description: |-
         Atualiza parcialmente os dados do setor (nome e/ou sigla).
 
@@ -2247,9 +2247,9 @@ paths:
               schema:
                 description: Setor não encontrado.
           description: ''
-  /organizacional/setores/{id}/desativar/:
+  /cortex/organizacional/setores/{id}/desativar/:
     post:
-      operationId: organizacional_setores_desativar_create
+      operationId: cortex_organizacional_setores_desativar_create
       description: |-
         Desativa um setor. Bloqueado se houver vínculos ativos.
 
@@ -2296,9 +2296,9 @@ paths:
               schema:
                 description: Setor não encontrado.
           description: ''
-  /organizacional/setores/{id}/reativar/:
+  /cortex/organizacional/setores/{id}/reativar/:
     post:
-      operationId: organizacional_setores_reativar_create
+      operationId: cortex_organizacional_setores_reativar_create
       description: |-
         Reativa um setor previamente desativado.
 
@@ -2345,9 +2345,9 @@ paths:
               schema:
                 description: Setor não encontrado.
           description: ''
-  /organizacional/setores/{setor_pk}/vinculos/:
+  /cortex/organizacional/setores/{setor_pk}/vinculos/:
     get:
-      operationId: organizacional_setores_vinculos_list
+      operationId: cortex_organizacional_setores_vinculos_list
       description: "\n    Retorna a lista paginada de vínculos de um setor específico.\n\
         \n    **Permissões:** Apenas administradores.\n\n    **Query params apenas\
         \ reduzem o conjunto â€” nunca expandem o acesso.**\n    "
@@ -2399,7 +2399,7 @@ paths:
                 description: Setor não encontrado.
           description: ''
     post:
-      operationId: organizacional_setores_vinculos_create
+      operationId: cortex_organizacional_setores_vinculos_create
       description: "\n    Vincula um usuário ao setor com uma função obrigatória.\n\
         \n    **Regras:**\n    - Setor e função devem estar ativos.\n    - A combinação\
         \ (usuário, setor, função) deve ser única.\n    - Um usuário pode ter múltiplos\
@@ -2459,9 +2459,9 @@ paths:
               schema:
                 description: Setor não encontrado.
           description: ''
-  /organizacional/setores/{setor_pk}/vinculos/{id}/definir-responsavel/:
+  /cortex/organizacional/setores/{setor_pk}/vinculos/{id}/definir-responsavel/:
     post:
-      operationId: organizacional_setores_vinculos_definir_responsavel_create
+      operationId: cortex_organizacional_setores_vinculos_definir_responsavel_create
       description: "\n    Marca o vínculo como responsável pelo setor.\n\n    **Regras:**\n\
         \    - O setor deve estar ativo.\n    - O usuário do vínculo deve possuir\
         \ perfil de servidor ativo.\n\n    Apenas servidores ativos podem ocupar a\
@@ -2514,9 +2514,9 @@ paths:
               schema:
                 description: Vínculo não encontrado.
           description: ''
-  /organizacional/setores/{setor_pk}/vinculos/{id}/encerrar/:
+  /cortex/organizacional/setores/{setor_pk}/vinculos/{id}/encerrar/:
     post:
-      operationId: organizacional_setores_vinculos_encerrar_create
+      operationId: cortex_organizacional_setores_vinculos_encerrar_create
       description: |-
         Remove o vínculo do usuário com o setor. Bloqueado se for o único responsável.
 
@@ -2568,9 +2568,9 @@ paths:
               schema:
                 description: Vínculo não encontrado.
           description: ''
-  /organizacional/setores/{setor_pk}/vinculos/{id}/funcao/:
+  /cortex/organizacional/setores/{setor_pk}/vinculos/{id}/funcao/:
     patch:
-      operationId: organizacional_setores_vinculos_funcao_partial_update
+      operationId: cortex_organizacional_setores_vinculos_funcao_partial_update
       description: |-
         Substitui a função exercida no vínculo. A nova função deve estar ativa e a combinação não deve ser duplicada.
 
@@ -2633,9 +2633,9 @@ paths:
               schema:
                 description: Vínculo não encontrado.
           description: ''
-  /organizacional/setores/{setor_pk}/vinculos/{id}/remover-responsavel/:
+  /cortex/organizacional/setores/{setor_pk}/vinculos/{id}/remover-responsavel/:
     post:
-      operationId: organizacional_setores_vinculos_remover_responsavel_create
+      operationId: cortex_organizacional_setores_vinculos_remover_responsavel_create
       description: |-
         Remove a marcação de responsável do vínculo. Bloqueado se for o único responsável do setor.
 
@@ -2687,9 +2687,9 @@ paths:
               schema:
                 description: Vínculo não encontrado.
           description: ''
-  /pessoas-institucionais/cargos/:
+  /cortex/pessoas-institucionais/cargos/:
     get:
-      operationId: pessoas_institucionais_cargos_list
+      operationId: cortex_pessoas_institucionais_cargos_list
       description: "\n    Lista todos os cargos cadastrados.\n    \n    **Permissões:**\
         \ Apenas administradores.\n    "
       summary: Listar cargos
@@ -2722,7 +2722,7 @@ paths:
                 $ref: '#/components/schemas/PaginatedCargoList'
           description: ''
     post:
-      operationId: pessoas_institucionais_cargos_create
+      operationId: cortex_pessoas_institucionais_cargos_create
       description: "\n    Cria um novo cargo.\n    \n    **Permissões:** Apenas administradores.\n\
         \    "
       summary: Criar cargo
@@ -2749,9 +2749,9 @@ paths:
               schema:
                 $ref: '#/components/schemas/Cargo'
           description: ''
-  /pessoas-institucionais/cargos/{id}/:
+  /cortex/pessoas-institucionais/cargos/{id}/:
     get:
-      operationId: pessoas_institucionais_cargos_retrieve
+      operationId: cortex_pessoas_institucionais_cargos_retrieve
       description: "\n    Exibe os detalhes de um cargo específico.\n    \n    **Permissões:**\
         \ Apenas administradores.\n    "
       summary: Detalhar cargo
@@ -2773,7 +2773,7 @@ paths:
                 $ref: '#/components/schemas/Cargo'
           description: ''
     patch:
-      operationId: pessoas_institucionais_cargos_partial_update
+      operationId: cortex_pessoas_institucionais_cargos_partial_update
       description: "\n    Atualiza os dados de um cargo existente.\n    \n    **Permissões:**\
         \ Apenas administradores.\n    "
       summary: Atualizar cargo
@@ -2805,9 +2805,9 @@ paths:
               schema:
                 $ref: '#/components/schemas/Cargo'
           description: ''
-  /pessoas-institucionais/cargos/{id}/desativar/:
+  /cortex/pessoas-institucionais/cargos/{id}/desativar/:
     post:
-      operationId: pessoas_institucionais_cargos_desativar_create
+      operationId: cortex_pessoas_institucionais_cargos_desativar_create
       description: "\n    Desativa um cargo.\n    \n    **Permissões:** Apenas administradores.\n\
         \    "
       summary: Desativar cargo
@@ -2828,9 +2828,9 @@ paths:
               schema:
                 $ref: '#/components/schemas/Cargo'
           description: ''
-  /pessoas-institucionais/cargos/{id}/reativar/:
+  /cortex/pessoas-institucionais/cargos/{id}/reativar/:
     post:
-      operationId: pessoas_institucionais_cargos_reativar_create
+      operationId: cortex_pessoas_institucionais_cargos_reativar_create
       description: "\n    Reativa um cargo inativo.\n    \n    **Permissões:** Apenas\
         \ administradores.\n    "
       summary: Reativar cargo
@@ -2851,9 +2851,9 @@ paths:
               schema:
                 $ref: '#/components/schemas/Cargo'
           description: ''
-  /pessoas-institucionais/empresas/:
+  /cortex/pessoas-institucionais/empresas/:
     get:
-      operationId: pessoas_institucionais_empresas_list
+      operationId: cortex_pessoas_institucionais_empresas_list
       description: "\n    Lista todas as empresas/instituições cadastradas.\n\n  \
         \  **Permissões:** Apenas administradores.\n\n    Query params apenas reduzem\
         \ o conjunto, nunca expandem o acesso.\n    "
@@ -2887,7 +2887,7 @@ paths:
                 $ref: '#/components/schemas/PaginatedEmpresaInstituicaoList'
           description: ''
     post:
-      operationId: pessoas_institucionais_empresas_create
+      operationId: cortex_pessoas_institucionais_empresas_create
       description: "\n    Cria uma nova empresa/instituição.\n\n    **Permissões:**\
         \ Apenas administradores.\n    "
       summary: Criar empresa/instituição
@@ -2914,9 +2914,9 @@ paths:
               schema:
                 $ref: '#/components/schemas/EmpresaInstituicao'
           description: ''
-  /pessoas-institucionais/empresas/{id}/:
+  /cortex/pessoas-institucionais/empresas/{id}/:
     get:
-      operationId: pessoas_institucionais_empresas_retrieve
+      operationId: cortex_pessoas_institucionais_empresas_retrieve
       description: "\n    Exibe os detalhes de uma empresa/instituição específica.\n\
         \n    **Permissões:** Apenas administradores.\n    "
       summary: Detalhar empresa/instituição
@@ -2938,7 +2938,7 @@ paths:
                 $ref: '#/components/schemas/EmpresaInstituicao'
           description: ''
     patch:
-      operationId: pessoas_institucionais_empresas_partial_update
+      operationId: cortex_pessoas_institucionais_empresas_partial_update
       description: "\n    Atualiza os dados de uma empresa/instituição existente.\n\
         \n    **Permissões:** Apenas administradores.\n    "
       summary: Atualizar empresa/instituição
@@ -2970,9 +2970,9 @@ paths:
               schema:
                 $ref: '#/components/schemas/EmpresaInstituicao'
           description: ''
-  /pessoas-institucionais/empresas/{id}/desativar/:
+  /cortex/pessoas-institucionais/empresas/{id}/desativar/:
     post:
-      operationId: pessoas_institucionais_empresas_desativar_create
+      operationId: cortex_pessoas_institucionais_empresas_desativar_create
       description: "\n    Desativa uma empresa/instituição.\n\n    **Permissões:**\
         \ Apenas administradores.\n    "
       summary: Desativar empresa/instituição
@@ -2993,9 +2993,9 @@ paths:
               schema:
                 $ref: '#/components/schemas/EmpresaInstituicao'
           description: ''
-  /pessoas-institucionais/empresas/{id}/reativar/:
+  /cortex/pessoas-institucionais/empresas/{id}/reativar/:
     post:
-      operationId: pessoas_institucionais_empresas_reativar_create
+      operationId: cortex_pessoas_institucionais_empresas_reativar_create
       description: "\n    Reativa uma empresa/instituição inativa.\n\n    **Permissões:**\
         \ Apenas administradores.\n    "
       summary: Reativar empresa/instituição
@@ -3016,9 +3016,9 @@ paths:
               schema:
                 $ref: '#/components/schemas/EmpresaInstituicao'
           description: ''
-  /pessoas-institucionais/servidores/:
+  /cortex/pessoas-institucionais/servidores/:
     get:
-      operationId: pessoas_institucionais_servidores_list
+      operationId: cortex_pessoas_institucionais_servidores_list
       description: "\n    Lista todos os servidores cadastrados.\n\n    **Permissões:**\
         \ Apenas administradores.\n\n    Query params apenas reduzem o conjunto, nunca\
         \ expandem o acesso.\n    "
@@ -3065,7 +3065,7 @@ paths:
                 $ref: '#/components/schemas/PaginatedServidorList'
           description: ''
     post:
-      operationId: pessoas_institucionais_servidores_create
+      operationId: cortex_pessoas_institucionais_servidores_create
       description: "\n    Cria um novo perfil de servidor para um usuário existente.\n\
         \n    **Permissões:** Apenas administradores.\n\n    **Regras:**\n    - O\
         \ usuário informado deve existir e não possuir perfil de servidor.\n    -\
@@ -3094,9 +3094,9 @@ paths:
               schema:
                 $ref: '#/components/schemas/Servidor'
           description: ''
-  /pessoas-institucionais/servidores/{id}/:
+  /cortex/pessoas-institucionais/servidores/{id}/:
     get:
-      operationId: pessoas_institucionais_servidores_retrieve
+      operationId: cortex_pessoas_institucionais_servidores_retrieve
       description: "\n    Exibe os detalhes de um servidor específico.\n\n    **Permissões:**\
         \ Apenas administradores.\n    "
       summary: Detalhar servidor
@@ -3118,7 +3118,7 @@ paths:
                 $ref: '#/components/schemas/Servidor'
           description: ''
     patch:
-      operationId: pessoas_institucionais_servidores_partial_update
+      operationId: cortex_pessoas_institucionais_servidores_partial_update
       description: "\n    Atualiza os dados de um servidor existente.\n\n    **Permissões:**\
         \ Apenas administradores.\n    "
       summary: Atualizar servidor
@@ -3150,9 +3150,9 @@ paths:
               schema:
                 $ref: '#/components/schemas/Servidor'
           description: ''
-  /pessoas-institucionais/servidores/{id}/desativar/:
+  /cortex/pessoas-institucionais/servidores/{id}/desativar/:
     post:
-      operationId: pessoas_institucionais_servidores_desativar_create
+      operationId: cortex_pessoas_institucionais_servidores_desativar_create
       description: "\n    Desativa o perfil de um servidor.\n\n    **Permissões:**\
         \ Apenas administradores.\n    "
       summary: Desativar servidor
@@ -3173,9 +3173,9 @@ paths:
               schema:
                 $ref: '#/components/schemas/Servidor'
           description: ''
-  /pessoas-institucionais/servidores/{id}/reativar/:
+  /cortex/pessoas-institucionais/servidores/{id}/reativar/:
     post:
-      operationId: pessoas_institucionais_servidores_reativar_create
+      operationId: cortex_pessoas_institucionais_servidores_reativar_create
       description: "\n    Reativa o perfil de um servidor inativo.\n\n    **Permissões:**\
         \ Apenas administradores.\n    "
       summary: Reativar servidor
@@ -3196,9 +3196,9 @@ paths:
               schema:
                 $ref: '#/components/schemas/Servidor'
           description: ''
-  /pessoas-institucionais/terceirizados/:
+  /cortex/pessoas-institucionais/terceirizados/:
     get:
-      operationId: pessoas_institucionais_terceirizados_list
+      operationId: cortex_pessoas_institucionais_terceirizados_list
       description: "\n    Lista todos os terceirizados cadastrados.\n\n    **Permissões:**\
         \ Apenas administradores.\n\n    Query params apenas reduzem o conjunto, nunca\
         \ expandem o acesso.\n    "
@@ -3237,7 +3237,7 @@ paths:
                 $ref: '#/components/schemas/PaginatedTerceirizadoList'
           description: ''
     post:
-      operationId: pessoas_institucionais_terceirizados_create
+      operationId: cortex_pessoas_institucionais_terceirizados_create
       description: "\n    Cria um novo perfil de terceirizado para um usuário existente.\n\
         \n    **Permissões:** Apenas administradores.\n\n    **Regras:**\n    - O\
         \ usuário informado deve existir e não possuir perfil de terceirizado.\n \
@@ -3266,9 +3266,9 @@ paths:
               schema:
                 $ref: '#/components/schemas/Terceirizado'
           description: ''
-  /pessoas-institucionais/terceirizados/{id}/:
+  /cortex/pessoas-institucionais/terceirizados/{id}/:
     get:
-      operationId: pessoas_institucionais_terceirizados_retrieve
+      operationId: cortex_pessoas_institucionais_terceirizados_retrieve
       description: "\n    Exibe os detalhes de um terceirizado específico.\n\n   \
         \ **Permissões:** Apenas administradores.\n    "
       summary: Detalhar terceirizado
@@ -3290,7 +3290,7 @@ paths:
                 $ref: '#/components/schemas/Terceirizado'
           description: ''
     patch:
-      operationId: pessoas_institucionais_terceirizados_partial_update
+      operationId: cortex_pessoas_institucionais_terceirizados_partial_update
       description: "\n    Atualiza os dados de um terceirizado existente.\n\n    **Permissões:**\
         \ Apenas administradores.\n    "
       summary: Atualizar terceirizado
@@ -3322,9 +3322,9 @@ paths:
               schema:
                 $ref: '#/components/schemas/Terceirizado'
           description: ''
-  /pessoas-institucionais/terceirizados/{id}/desativar/:
+  /cortex/pessoas-institucionais/terceirizados/{id}/desativar/:
     post:
-      operationId: pessoas_institucionais_terceirizados_desativar_create
+      operationId: cortex_pessoas_institucionais_terceirizados_desativar_create
       description: "\n    Desativa o perfil de um terceirizado.\n\n    **Permissões:**\
         \ Apenas administradores.\n    "
       summary: Desativar terceirizado
@@ -3345,9 +3345,9 @@ paths:
               schema:
                 $ref: '#/components/schemas/Terceirizado'
           description: ''
-  /pessoas-institucionais/terceirizados/{id}/reativar/:
+  /cortex/pessoas-institucionais/terceirizados/{id}/reativar/:
     post:
-      operationId: pessoas_institucionais_terceirizados_reativar_create
+      operationId: cortex_pessoas_institucionais_terceirizados_reativar_create
       description: "\n    Reativa o perfil de um terceirizado inativo.\n\n    **Permissões:**\
         \ Apenas administradores.\n    "
       summary: Reativar terceirizado
@@ -3398,8 +3398,8 @@ components:
           allOf:
           - $ref: '#/components/schemas/SituacaoAlunoEnum'
           title: Situação
-          minimum: -9223372036854775808
-          maximum: 9223372036854775807
+          minimum: -2147483648
+          maximum: 2147483647
         situacao_display:
           type: string
           readOnly: true
@@ -3407,8 +3407,8 @@ components:
           allOf:
           - $ref: '#/components/schemas/FormaIngressoEnum'
           title: Forma de Ingresso
-          minimum: -9223372036854775808
-          maximum: 9223372036854775807
+          minimum: -2147483648
+          maximum: 2147483647
         forma_ingresso_display:
           type: string
           readOnly: true
@@ -3452,9 +3452,8 @@ components:
           readOnly: true
         ano_conclusao:
           type: integer
-          maximum: 9223372036854775807
-          minimum: -9223372036854775808
-          format: int64
+          maximum: 2147483647
+          minimum: -2147483648
           nullable: true
           title: Ano de Conclusão
         ativo:
@@ -3752,8 +3751,8 @@ components:
           maxLength: 50
         turno:
           nullable: true
-          minimum: -9223372036854775808
-          maximum: 9223372036854775807
+          minimum: -2147483648
+          maximum: 2147483647
           oneOf:
           - $ref: '#/components/schemas/TurnoEnum'
           - $ref: '#/components/schemas/NullEnum'
@@ -4005,8 +4004,8 @@ components:
           allOf:
           - $ref: '#/components/schemas/SituacaoMatriculaEnum'
           title: Situação
-          minimum: -9223372036854775808
-          maximum: 9223372036854775807
+          minimum: -2147483648
+          maximum: 2147483647
         situacao_display:
           type: string
           readOnly: true
@@ -4588,8 +4587,8 @@ components:
         categoria:
           allOf:
           - $ref: '#/components/schemas/CategoriaEnum'
-          minimum: -9223372036854775808
-          maximum: 9223372036854775807
+          minimum: -2147483648
+          maximum: 2147483647
         categoria_display:
           type: string
           readOnly: true
@@ -4717,15 +4716,13 @@ components:
           $ref: '#/components/schemas/StatusEnum'
         total_linhas:
           type: integer
-          maximum: 9223372036854775807
-          minimum: -9223372036854775808
-          format: int64
+          maximum: 2147483647
+          minimum: -2147483648
           title: Total de Linhas
         linhas_processadas:
           type: integer
-          maximum: 9223372036854775807
-          minimum: -9223372036854775808
-          format: int64
+          maximum: 2147483647
+          minimum: -2147483648
         porcentagem:
           type: number
           format: double
