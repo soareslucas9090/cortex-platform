@@ -62,7 +62,7 @@ class ListarTerceirizadosView(IsAdminMixin, BasicGetAPIView):
     mensagem_sucesso = 'Terceirizados listados com sucesso.'
 
     def get_queryset(self):
-        qs = Terceirizado.objects.select_related('usuario', 'empresa').all()
+        qs = Terceirizado.objects.select_related('usuario', 'empresa_instituicao').all()
 
         ativo = self.request.query_params.get('ativo')
         if ativo is not None and ativo.lower() in ('true', 'false'):
@@ -72,7 +72,7 @@ class ListarTerceirizadosView(IsAdminMixin, BasicGetAPIView):
         if empresa is not None:
             try:
                 empresa_int = int(empresa)
-                qs = qs.filter(empresa_id=empresa_int)
+                qs = qs.filter(empresa_instituicao_id=empresa_int)
             except (ValueError, TypeError):
                 pass
 
@@ -122,7 +122,7 @@ class CriarTerceirizadoView(IsAdminMixin, BasicPostAPIView):
     },
 )
 class DetalharTerceirizadoView(IsAdminMixin, BasicRetrieveAPIView):
-    queryset = Terceirizado.objects.select_related('usuario', 'empresa').all()
+    queryset = Terceirizado.objects.select_related('usuario', 'empresa_instituicao').all()
     serializer_class = TerceirizadoSerializer
     mensagem_sucesso = 'Terceirizado detalhado com sucesso.'
 
@@ -141,7 +141,7 @@ class DetalharTerceirizadoView(IsAdminMixin, BasicRetrieveAPIView):
     },
 )
 class AtualizarTerceirizadoView(IsAdminMixin, BasicPatchAPIView):
-    queryset = Terceirizado.objects.select_related('usuario', 'empresa').all()
+    queryset = Terceirizado.objects.select_related('usuario', 'empresa_instituicao').all()
     serializer_class = AtualizarTerceirizadoSerializer
     mensagem_sucesso = 'Terceirizado atualizado com sucesso.'
 
@@ -170,7 +170,7 @@ class AtualizarTerceirizadoView(IsAdminMixin, BasicPatchAPIView):
     },
 )
 class DesativarTerceirizadoView(IsAdminMixin, BasicPostAPIView):
-    queryset = Terceirizado.objects.select_related('usuario', 'empresa').all()
+    queryset = Terceirizado.objects.select_related('usuario', 'empresa_instituicao').all()
     serializer_class = SerializerVazio
     mensagem_sucesso = 'Terceirizado desativado com sucesso.'
 
@@ -199,7 +199,7 @@ class DesativarTerceirizadoView(IsAdminMixin, BasicPostAPIView):
     },
 )
 class ReativarTerceirizadoView(IsAdminMixin, BasicPostAPIView):
-    queryset = Terceirizado.objects.select_related('usuario', 'empresa').all()
+    queryset = Terceirizado.objects.select_related('usuario', 'empresa_instituicao').all()
     serializer_class = SerializerVazio
     mensagem_sucesso = 'Terceirizado reativado com sucesso.'
 
