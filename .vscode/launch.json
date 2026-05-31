@@ -12,6 +12,7 @@
             "django": true,
             "console": "integratedTerminal",
             "justMyCode": false,
+            "subProcess": true,
             "env": {
                 "PYDEVD_WARN_SLOW_RESOLVE_TIMEOUT": "15"
             }
@@ -36,14 +37,14 @@
             "type": "debugpy",
             "request": "attach",
             "connect": {
-            "host": "localhost",
-            "port": 5678
+                "host": "localhost",
+                "port": 5678
             },
             "pathMappings": [
-            {
-                "localRoot": "${workspaceFolder}",
-                "remoteRoot": "/app"
-            }
+                {
+                    "localRoot": "${workspaceFolder}",
+                    "remoteRoot": "/app"
+                }
             ],
             "django": true
         },
@@ -56,10 +57,10 @@
                 "port": 5679
             },
             "pathMappings": [
-            {
-                "localRoot": "${workspaceFolder}",
-                "remoteRoot": "/app"
-            }
+                {
+                    "localRoot": "${workspaceFolder}",
+                    "remoteRoot": "/app"
+                }
             ],
             "django": false,
             "subProcess": true
