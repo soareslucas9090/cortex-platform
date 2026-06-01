@@ -46,6 +46,9 @@ logger = logging.getLogger(__name__)
     **Query params:**
     - `ativo` (bool, opcional): filtra por status — `true` (ativos) ou `false` (inativos).
       Omitindo o parâmetro, retorna todos.
+    - `nome` (str, opcional): filtra por parte do nome (ignorando maiúsculas e minúsculas).
+    - `cpf` (str, opcional): filtra por parte do CPF.
+    - `email` (str, opcional): filtra por parte do e-mail (ignorando maiúsculas e minúsculas).
     - `paginacao` (int, opcional): tamanho da página, entre 1 e 100. Padrão: 10.
 
     **Segurança:** os query params apenas restringem o conjunto de resultados dentro do
@@ -55,6 +58,18 @@ logger = logging.getLogger(__name__)
         OpenApiParameter(
             'ativo', OpenApiTypes.BOOL, OpenApiParameter.QUERY,
             required=False, description='Filtra por status ativo (true) ou inativo (false).',
+        ),
+        OpenApiParameter(
+            'nome', OpenApiTypes.STR, OpenApiParameter.QUERY,
+            required=False, description='Filtra por parte do nome do usuário.',
+        ),
+        OpenApiParameter(
+            'cpf', OpenApiTypes.STR, OpenApiParameter.QUERY,
+            required=False, description='Filtra por parte do CPF do usuário.',
+        ),
+        OpenApiParameter(
+            'email', OpenApiTypes.STR, OpenApiParameter.QUERY,
+            required=False, description='Filtra por parte do e-mail do usuário.',
         ),
         OpenApiParameter(
             'paginacao', OpenApiTypes.INT, OpenApiParameter.QUERY,
@@ -75,9 +90,23 @@ class ListarUsuariosView(IsAdminMixin, BasicGetAPIView):
 
     def get_queryset(self):
         qs = Usuario.objects.all()
+        
         ativo = self.request.query_params.get('ativo')
         if ativo is not None and ativo.lower() in ('true', 'false'):
             qs = qs.filter(ativo=ativo.lower() == 'true')
+            
+        nome = self.request.query_params.get('nome')
+        if nome:
+            qs = qs.filter(nome__unaccent__icontains=nome)
+            
+        cpf = self.request.query_params.get('cpf')
+        if cpf:
+            qs = qs.filter(cpf__icontains=cpf)
+            
+        email = self.request.query_params.get('email')
+        if email:
+            qs = qs.filter(email__unaccent__icontains=email)
+            
         return qs
 
 
@@ -509,7 +538,22 @@ class CancelarImportacaoView(IsAdminMixin, BasicPostAPIView):
     Retorna a lista paginada do histórico de importações de usuários.
 
     **Permissões:** Apenas administradores.
+
+    **Query params:**
+    - `status` (str, opcional): filtra pelo status da importação. Valores: EM_ANDAMENTO, CONCLUIDA, ERRO.
+    - `paginacao` (int, opcional): tamanho da página, entre 1 e 100. Padrão: 10.
     ''',
+    parameters=[
+        OpenApiParameter(
+            'status', OpenApiTypes.STR, OpenApiParameter.QUERY,
+            required=False, description='Filtra pelo status (EM_ANDAMENTO, CONCLUIDA, ERRO).',
+            enum=['EM_ANDAMENTO', 'CONCLUIDA', 'ERRO'],
+        ),
+        OpenApiParameter(
+            'paginacao', OpenApiTypes.INT, OpenApiParameter.QUERY,
+            required=False, description='Tamanho da página (1–100, padrão 10).',
+        ),
+    ],
     responses={
         status.HTTP_200_OK: StatusImportacaoLoteSerializer(many=True),
         status.HTTP_401_UNAUTHORIZED: {'description': 'Não autenticado.'},
@@ -524,4 +568,8 @@ class HistoricoImportacaoLoteView(IsAdminMixin, BasicGetAPIView):
 
     def get_queryset(self):
         from .models import ImportacaoLote
-        return ImportacaoLote.objects.all()
+        qs = ImportacaoLote.objects.all()
+        status_param = self.request.query_params.get('status')
+        if status_param:
+            qs = qs.filter(status=status_param)
+        return qs

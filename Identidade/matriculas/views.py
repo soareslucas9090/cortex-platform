@@ -27,6 +27,7 @@ logger = logging.getLogger(__name__)
     **Query params:**
     - `situacao` (int, opcional): filtra por situação — `1` (Ativa) ou `2` (Inativa).
       Omitindo, retorna todas.
+    - `matricula` (str, opcional): filtra pela string da matrícula.
     - `paginacao` (int, opcional): tamanho da página, entre 1 e 100. Padrão: 10.
 
     **Segurança:** os resultados já estão restritos ao usuário da URL — query params
@@ -38,6 +39,10 @@ logger = logging.getLogger(__name__)
             required=False,
             description='Filtra por situação: 1 = Ativa, 2 = Inativa.',
             enum=[1, 2],
+        ),
+        OpenApiParameter(
+            'matricula', OpenApiTypes.STR, OpenApiParameter.QUERY,
+            required=False, description='Filtra pela string da matrícula.',
         ),
         OpenApiParameter(
             'paginacao', OpenApiTypes.INT, OpenApiParameter.QUERY,
@@ -75,6 +80,11 @@ class ListarMatriculasView(IsOwnerOrAdminMixin, BasicGetAPIView):
                     qs = qs.filter(situacao=situacao_int)
             except (ValueError, TypeError):
                 pass
+                
+        matricula = self.request.query_params.get('matricula')
+        if matricula:
+            qs = qs.filter(matricula__unaccent__icontains=matricula)
+            
         return qs
 
 

@@ -28,12 +28,27 @@ logger = logging.getLogger(__name__)
     **Permissões:** O próprio usuário ou administradores.
 
     **Query params:**
+    - `email_academico` (str, opcional): filtra por parte do e-mail acadêmico (ignorando maiúsculas e minúsculas).
+    - `email_pessoal` (str, opcional): filtra por parte do e-mail pessoal (ignorando maiúsculas e minúsculas).
+    - `telefone` (str, opcional): filtra por parte do telefone.
     - `paginacao` (int, opcional): tamanho da página, entre 1 e 100. Padrão: 10.
 
     **Segurança:** os resultados já estão restritos ao usuário da URL — query params
     apenas reduzem o conjunto, nunca expandem o acesso.
     ''',
     parameters=[
+        OpenApiParameter(
+            'email_academico', OpenApiTypes.STR, OpenApiParameter.QUERY,
+            required=False, description='Filtra por parte do e-mail acadêmico.',
+        ),
+        OpenApiParameter(
+            'email_pessoal', OpenApiTypes.STR, OpenApiParameter.QUERY,
+            required=False, description='Filtra por parte do e-mail pessoal.',
+        ),
+        OpenApiParameter(
+            'telefone', OpenApiTypes.STR, OpenApiParameter.QUERY,
+            required=False, description='Filtra por parte do telefone.',
+        ),
         OpenApiParameter(
             'paginacao', OpenApiTypes.INT, OpenApiParameter.QUERY,
             required=False, description='Tamanho da página (1–100, padrão 10).',
@@ -61,7 +76,21 @@ class ListarContatosView(IsOwnerOrAdminMixin, BasicGetAPIView):
         self.verificar_acesso_usuario(request, self.kwargs['usuario_pk'])
 
     def get_queryset(self):
-        return Contato.objects.filter(usuario_id=self.kwargs['usuario_pk'])
+        qs = Contato.objects.filter(usuario_id=self.kwargs['usuario_pk'])
+        
+        email_academico = self.request.query_params.get('email_academico')
+        if email_academico:
+            qs = qs.filter(email_academico__unaccent__icontains=email_academico)
+            
+        email_pessoal = self.request.query_params.get('email_pessoal')
+        if email_pessoal:
+            qs = qs.filter(email_pessoal__unaccent__icontains=email_pessoal)
+            
+        telefone = self.request.query_params.get('telefone')
+        if telefone:
+            qs = qs.filter(telefone__icontains=telefone)
+            
+        return qs
 
 
 @extend_schema(
