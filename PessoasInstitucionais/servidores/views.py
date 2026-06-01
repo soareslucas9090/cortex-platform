@@ -54,6 +54,21 @@ class SerializerVazio(Serializer):
             description='Filtra por ID do cargo.',
         ),
         OpenApiParameter(
+            'nome', OpenApiTypes.STR, OpenApiParameter.QUERY,
+            required=False,
+            description='Filtra por parte do nome do servidor (ignora acentos e maiúsculas).',
+        ),
+        OpenApiParameter(
+            'cpf', OpenApiTypes.STR, OpenApiParameter.QUERY,
+            required=False,
+            description='Filtra por parte do CPF do servidor.',
+        ),
+        OpenApiParameter(
+            'nome_cargo', OpenApiTypes.STR, OpenApiParameter.QUERY,
+            required=False,
+            description='Filtra por parte do nome do cargo (ignora acentos e maiúsculas).',
+        ),
+        OpenApiParameter(
             'paginacao', OpenApiTypes.INT, OpenApiParameter.QUERY,
             required=False,
             description='Tamanho da página (1–100, padrão 10).',
@@ -91,6 +106,18 @@ class ListarServidoresView(IsAdminMixin, BasicGetAPIView):
                 qs = qs.filter(cargo_id=cargo_int)
             except (ValueError, TypeError):
                 pass
+
+        nome = self.request.query_params.get('nome')
+        if nome:
+            qs = qs.filter(usuario__nome__unaccent__icontains=nome)
+
+        cpf = self.request.query_params.get('cpf')
+        if cpf:
+            qs = qs.filter(usuario__cpf__unaccent__icontains=cpf)
+
+        nome_cargo = self.request.query_params.get('nome_cargo')
+        if nome_cargo:
+            qs = qs.filter(cargo__nome__unaccent__icontains=nome_cargo)
 
         return qs
 

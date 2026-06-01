@@ -30,6 +30,10 @@ from .serializers import CargoSerializer, CriarCargoSerializer, AtualizarCargoSe
             required=False, description='Filtra por status: true = Ativo, false = Inativo.',
         ),
         OpenApiParameter(
+            'nome', OpenApiTypes.STR, OpenApiParameter.QUERY,
+            required=False, description='Filtra por parte do nome (ignora acentos e maiúsculas).',
+        ),
+        OpenApiParameter(
             'paginacao', OpenApiTypes.INT, OpenApiParameter.QUERY,
             required=False, description='Tamanho da página (1–100, padrão 10).',
         ),
@@ -45,9 +49,15 @@ class ListarCargosView(IsAdminMixin, BasicGetAPIView):
 
     def get_queryset(self):
         qs = Cargo.objects.all()
+        
         ativo = self.request.query_params.get('ativo')
         if ativo is not None and ativo.lower() in ('true', 'false'):
             qs = qs.filter(ativo=ativo.lower() == 'true')
+            
+        nome = self.request.query_params.get('nome')
+        if nome:
+            qs = qs.filter(nome__unaccent__icontains=nome)
+            
         return qs
 
 

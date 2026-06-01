@@ -47,6 +47,26 @@ class SerializerVazio(Serializer):
             description='Filtra por ID da empresa/instituição.',
         ),
         OpenApiParameter(
+            'nome', OpenApiTypes.STR, OpenApiParameter.QUERY,
+            required=False,
+            description='Filtra por parte do nome do terceirizado (ignora acentos e maiúsculas).',
+        ),
+        OpenApiParameter(
+            'cpf', OpenApiTypes.STR, OpenApiParameter.QUERY,
+            required=False,
+            description='Filtra por parte do CPF do terceirizado.',
+        ),
+        OpenApiParameter(
+            'cargo_funcao', OpenApiTypes.STR, OpenApiParameter.QUERY,
+            required=False,
+            description='Filtra por parte do cargo/função (ignora acentos e maiúsculas).',
+        ),
+        OpenApiParameter(
+            'nome_empresa', OpenApiTypes.STR, OpenApiParameter.QUERY,
+            required=False,
+            description='Filtra por parte do nome da empresa/instituição (ignora acentos e maiúsculas).',
+        ),
+        OpenApiParameter(
             'paginacao', OpenApiTypes.INT, OpenApiParameter.QUERY,
             required=False,
             description='Tamanho da página (1–100, padrão 10).',
@@ -75,6 +95,22 @@ class ListarTerceirizadosView(IsAdminMixin, BasicGetAPIView):
                 qs = qs.filter(empresa_instituicao_id=empresa_int)
             except (ValueError, TypeError):
                 pass
+
+        nome = self.request.query_params.get('nome')
+        if nome:
+            qs = qs.filter(usuario__nome__unaccent__icontains=nome)
+
+        cpf = self.request.query_params.get('cpf')
+        if cpf:
+            qs = qs.filter(usuario__cpf__unaccent__icontains=cpf)
+
+        cargo_funcao = self.request.query_params.get('cargo_funcao')
+        if cargo_funcao:
+            qs = qs.filter(cargo_funcao__unaccent__icontains=cargo_funcao)
+
+        nome_empresa = self.request.query_params.get('nome_empresa')
+        if nome_empresa:
+            qs = qs.filter(empresa_instituicao__nome__unaccent__icontains=nome_empresa)
 
         return qs
 

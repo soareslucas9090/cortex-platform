@@ -42,6 +42,16 @@ class SerializerVazio(Serializer):
             description='Filtra por status: true = Ativa, false = Inativa.',
         ),
         OpenApiParameter(
+            'nome', OpenApiTypes.STR, OpenApiParameter.QUERY,
+            required=False,
+            description='Filtra por parte do nome (ignora acentos e maiúsculas).',
+        ),
+        OpenApiParameter(
+            'cnpj', OpenApiTypes.STR, OpenApiParameter.QUERY,
+            required=False,
+            description='Filtra por parte do CNPJ.',
+        ),
+        OpenApiParameter(
             'paginacao', OpenApiTypes.INT, OpenApiParameter.QUERY,
             required=False,
             description='Tamanho da página (1–100, padrão 10).',
@@ -58,9 +68,19 @@ class ListarEmpresasView(IsAdminMixin, BasicGetAPIView):
 
     def get_queryset(self):
         qs = EmpresaInstituicao.objects.all()
+        
         ativo = self.request.query_params.get('ativo')
         if ativo is not None and ativo.lower() in ('true', 'false'):
             qs = qs.filter(ativo=ativo.lower() == 'true')
+            
+        nome = self.request.query_params.get('nome')
+        if nome:
+            qs = qs.filter(nome__unaccent__icontains=nome)
+            
+        cnpj = self.request.query_params.get('cnpj')
+        if cnpj:
+            qs = qs.filter(cnpj__unaccent__icontains=cnpj)
+            
         return qs
 
 
