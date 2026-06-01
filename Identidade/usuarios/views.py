@@ -49,6 +49,7 @@ logger = logging.getLogger(__name__)
     - `nome` (str, opcional): filtra por parte do nome (ignorando maiúsculas e minúsculas).
     - `cpf` (str, opcional): filtra por parte do CPF.
     - `email` (str, opcional): filtra por parte do e-mail (ignorando maiúsculas e minúsculas).
+    - `tipo_perfil` (str, opcional): filtra por tipo de perfil: `alunos` (ou `aluno`), `terceirizados` (ou `terceirizado`) ou `servidores` (ou `servidor`).
     - `paginacao` (int, opcional): tamanho da página, entre 1 e 100. Padrão: 10.
 
     **Segurança:** os query params apenas restringem o conjunto de resultados dentro do
@@ -70,6 +71,11 @@ logger = logging.getLogger(__name__)
         OpenApiParameter(
             'email', OpenApiTypes.STR, OpenApiParameter.QUERY,
             required=False, description='Filtra por parte do e-mail do usuário.',
+        ),
+        OpenApiParameter(
+            'tipo_perfil', OpenApiTypes.STR, OpenApiParameter.QUERY,
+            required=False, description='Filtra por tipo de perfil: alunos, terceirizados ou servidores.',
+            enum=['aluno', 'terceirizado', 'servidor'],
         ),
         OpenApiParameter(
             'paginacao', OpenApiTypes.INT, OpenApiParameter.QUERY,
@@ -107,6 +113,16 @@ class ListarUsuariosView(IsAdminMixin, BasicGetAPIView):
         if email:
             qs = qs.filter(email__unaccent__icontains=email)
             
+        tipo_perfil = self.request.query_params.get('tipo_perfil')
+        if tipo_perfil:
+            tipo_perfil = tipo_perfil.lower()
+            if tipo_perfil in ('aluno'):
+                qs = qs.filter(aluno__isnull=False)
+            elif tipo_perfil in ('terceirizado'):
+                qs = qs.filter(terceirizado__isnull=False)
+            elif tipo_perfil in ('servidor'):
+                qs = qs.filter(servidor__isnull=False)
+                
         return qs
 
 
