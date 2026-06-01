@@ -68,13 +68,6 @@ class FiltroPerfilUsuariosViewTest(APITestCase):
         self.assertIn(self.usuario_terceirizado.cpf, cpfs)
         self.assertIn(self.usuario_servidor.cpf, cpfs)
 
-    def test_filtro_alunos_plural(self):
-        resposta = self.client.get(self.url, {'tipo_perfil': 'alunos'})
-        self.assertEqual(resposta.status_code, status.HTTP_200_OK)
-        cpfs = [u['cpf'] for u in resposta.data['dados']]
-        self.assertEqual(len(cpfs), 1)
-        self.assertIn(self.usuario_aluno.cpf, cpfs)
-
     def test_filtro_alunos_singular(self):
         resposta = self.client.get(self.url, {'tipo_perfil': 'aluno'})
         self.assertEqual(resposta.status_code, status.HTTP_200_OK)
@@ -82,26 +75,12 @@ class FiltroPerfilUsuariosViewTest(APITestCase):
         self.assertEqual(len(cpfs), 1)
         self.assertIn(self.usuario_aluno.cpf, cpfs)
 
-    def test_filtro_terceirizados_plural(self):
-        resposta = self.client.get(self.url, {'tipo_perfil': 'terceirizados'})
-        self.assertEqual(resposta.status_code, status.HTTP_200_OK)
-        cpfs = [u['cpf'] for u in resposta.data['dados']]
-        self.assertEqual(len(cpfs), 1)
-        self.assertIn(self.usuario_terceirizado.cpf, cpfs)
-
     def test_filtro_terceirizados_singular(self):
         resposta = self.client.get(self.url, {'tipo_perfil': 'terceirizado'})
         self.assertEqual(resposta.status_code, status.HTTP_200_OK)
         cpfs = [u['cpf'] for u in resposta.data['dados']]
         self.assertEqual(len(cpfs), 1)
         self.assertIn(self.usuario_terceirizado.cpf, cpfs)
-
-    def test_filtro_servidores_plural(self):
-        resposta = self.client.get(self.url, {'tipo_perfil': 'servidores'})
-        self.assertEqual(resposta.status_code, status.HTTP_200_OK)
-        cpfs = [u['cpf'] for u in resposta.data['dados']]
-        self.assertEqual(len(cpfs), 1)
-        self.assertIn(self.usuario_servidor.cpf, cpfs)
 
     def test_filtro_servidores_singular(self):
         resposta = self.client.get(self.url, {'tipo_perfil': 'servidor'})
@@ -115,20 +94,20 @@ class FiltroPerfilUsuariosViewTest(APITestCase):
         self.usuario_aluno.ativo = False
         self.usuario_aluno.save()
 
-        resposta = self.client.get(self.url, {'tipo_perfil': 'alunos', 'ativo': 'true'})
+        resposta = self.client.get(self.url, {'tipo_perfil': 'aluno', 'ativo': 'true'})
         self.assertEqual(resposta.status_code, status.HTTP_200_OK)
         self.assertEqual(len(resposta.data['dados']), 0)
 
-        resposta = self.client.get(self.url, {'tipo_perfil': 'alunos', 'ativo': 'false'})
+        resposta = self.client.get(self.url, {'tipo_perfil': 'aluno', 'ativo': 'false'})
         self.assertEqual(resposta.status_code, status.HTTP_200_OK)
         self.assertEqual(len(resposta.data['dados']), 1)
         self.assertEqual(resposta.data['dados'][0]['cpf'], self.usuario_aluno.cpf)
 
     def test_filtro_perfil_combinado_com_nome(self):
-        resposta = self.client.get(self.url, {'tipo_perfil': 'servidores', 'nome': 'Servidor'})
+        resposta = self.client.get(self.url, {'tipo_perfil': 'servidor', 'nome': 'Servidor'})
         self.assertEqual(resposta.status_code, status.HTTP_200_OK)
         self.assertEqual(len(resposta.data['dados']), 1)
 
-        resposta = self.client.get(self.url, {'tipo_perfil': 'servidores', 'nome': 'Aluno'})
+        resposta = self.client.get(self.url, {'tipo_perfil': 'servidor', 'nome': 'Aluno'})
         self.assertEqual(resposta.status_code, status.HTTP_200_OK)
         self.assertEqual(len(resposta.data['dados']), 0)
