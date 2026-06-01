@@ -87,6 +87,7 @@ DEFAULT_ROOT_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'django.contrib.postgres',
     'corsheaders',
     'debug_toolbar',
     'rest_framework_simplejwt',
