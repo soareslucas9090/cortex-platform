@@ -320,10 +320,10 @@ class BaixarModeloImportacaoUsuariosView(IsAdminMixin, BasicGetAPIView):
         from botocore.exceptions import ClientError
         from django.conf import settings
 
-        endpoint_url = getattr(settings, 'MODEL_STORAGE_ENDPOINT_URL', None)
-        bucket_name = getattr(settings, 'MODEL_STORAGE_BUCKET_NAME', None)
-        access_key = getattr(settings, 'MODEL_STORAGE_ACCESS_KEY_ID', None)
-        secret_key = getattr(settings, 'MODEL_STORAGE_SECRET_ACCESS_KEY', None)
+        endpoint_url = getattr(settings, 'AWS_S3_ENDPOINT_URL', None)
+        bucket_name = getattr(settings, 'AWS_STORAGE_BUCKET_NAME', None)
+        access_key = getattr(settings, 'AWS_ACCESS_KEY_ID', None)
+        secret_key = getattr(settings, 'AWS_SECRET_ACCESS_KEY', None)
 
         if not all([endpoint_url, bucket_name, access_key, secret_key]):
             logger.error("Credenciais de armazenamento do modelo não configuradas completamente.")

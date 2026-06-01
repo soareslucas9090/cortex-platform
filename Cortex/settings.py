@@ -247,8 +247,8 @@ CELERY_RESULT_SERIALIZER = 'json'
 CELERY_TIMEZONE = TIME_ZONE
 
 # Configurações do armazenamento de modelos (S3)
-MODEL_STORAGE_ENDPOINT_URL = os.environ.get('MODEL_STORAGE_ENDPOINT_URL', 'https://t3.storageapi.dev')
-MODEL_STORAGE_BUCKET_NAME = os.environ.get('MODEL_STORAGE_BUCKET_NAME', 'organized-breadbox-jroiv0')
-MODEL_STORAGE_ACCESS_KEY_ID = os.environ.get('MODEL_STORAGE_ACCESS_KEY_ID', '')
-MODEL_STORAGE_SECRET_ACCESS_KEY = os.environ.get('MODEL_STORAGE_SECRET_ACCESS_KEY', '')
+AWS_S3_ENDPOINT_URL = os.environ.get('AWS_S3_ENDPOINT_URL', 'https://t3.storage.box')
+AWS_STORAGE_BUCKET_NAME = os.environ.get('AWS_STORAGE_BUCKET_NAME', 'bucket-name')
+AWS_ACCESS_KEY_ID = os.environ.get('AWS_ACCESS_KEY_ID', '')
+AWS_SECRET_ACCESS_KEY = os.environ.get('AWS_SECRET_ACCESS_KEY', '')
 
