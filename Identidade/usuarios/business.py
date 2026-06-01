@@ -4,7 +4,7 @@ from django.db import transaction
 
 from AppCore.core.business.business import ModelInstanceBusiness
 from AppCore.core.exceptions.exceptions import ValidationException, SystemErrorException
-from AppCore.common.util.util import normalizar_cpf
+from AppCore.common.util.util import normalizar_cpf, normalizar_cep
 
 from .rules import UsuarioRules
 from .helpers import UsuarioHelpers
@@ -345,10 +345,11 @@ class UsuarioBusiness(ModelInstanceBusiness):
                 UsuarioRules().usuario_referenciado_existe(usuario, 'endereço')
 
                 endereco = enderecos_existentes.get(usuario.id)
+                cep_normalizado = normalizar_cep(linha.cep)
                 if endereco:
                     endereco.logradouro = linha.endereco
                     endereco.bairro = linha.bairro
-                    endereco.cep = linha.cep
+                    endereco.cep = cep_normalizado
                     endereco.complemento = linha.complemento
                     endereco.numero = str(linha.numero or '')
                     endereco.cidade = linha.cidade
@@ -359,7 +360,7 @@ class UsuarioBusiness(ModelInstanceBusiness):
                     endereco = enderecos_to_create[usuario.id]
                     endereco.logradouro = linha.endereco
                     endereco.bairro = linha.bairro
-                    endereco.cep = linha.cep
+                    endereco.cep = cep_normalizado
                     endereco.complemento = linha.complemento
                     endereco.numero = str(linha.numero or '')
                     endereco.cidade = linha.cidade
@@ -368,7 +369,7 @@ class UsuarioBusiness(ModelInstanceBusiness):
                 else:
                     novo_endereco = Endereco(
                         usuario=usuario, logradouro=linha.endereco, bairro=linha.bairro,
-                        cep=linha.cep, complemento=linha.complemento, numero=str(linha.numero or ''),
+                        cep=cep_normalizado, complemento=linha.complemento, numero=str(linha.numero or ''),
                         cidade=linha.cidade, estado=linha.estado
                     )
                     novo_endereco._linha = linha
@@ -649,10 +650,11 @@ class UsuarioBusiness(ModelInstanceBusiness):
         from Identidade.enderecos.models import Endereco
 
         endereco = Endereco.objects.filter(usuario=usuario).first()
+        cep_normalizado = normalizar_cep(linha.cep)
         if endereco:
             endereco.logradouro = linha.endereco
             endereco.bairro = linha.bairro
-            endereco.cep = linha.cep
+            endereco.cep = cep_normalizado
             endereco.complemento = linha.complemento
             endereco.numero = str(linha.numero or '')
             endereco.cidade = linha.cidade
@@ -664,7 +666,7 @@ class UsuarioBusiness(ModelInstanceBusiness):
             usuario=usuario,
             logradouro=linha.endereco,
             bairro=linha.bairro,
-            cep=linha.cep,
+            cep=cep_normalizado,
             complemento=linha.complemento,
             numero=str(linha.numero or ''),
             cidade=linha.cidade,

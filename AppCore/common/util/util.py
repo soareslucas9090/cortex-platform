@@ -30,6 +30,19 @@ def normalizar_cpf(cpf: str) -> str:
     return re.sub(r'\D', '', cpf)
 
 
+def normalizar_cep(cep) -> str:
+    """Remove formatação do CEP, mantendo apenas os dígitos, e garante 8 dígitos se não estiver vazio."""
+    if not cep:
+        return ''
+    cep_str = str(cep).strip()
+    if cep_str.endswith('.0'):
+        cep_str = cep_str[:-2]
+    cep_limpo = re.sub(r'\D', '', cep_str)
+    if cep_limpo:
+        return cep_limpo.zfill(8)
+    return ''
+
+
 def formatar_cpf(cpf):
         """Formata o CPF (XXX.XXX.XXX-XX)."""
         if len(cpf) == 11:
