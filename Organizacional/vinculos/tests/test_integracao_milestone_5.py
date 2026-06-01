@@ -27,10 +27,10 @@ class ValidacaoIntegracaoMilestone5Test(APITestCase):
         self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {obter_tokens(self.admin)}')
 
         # Preparação do Domínio Organizacional (Catálogo Base)
-        self.setor = Setor.objects.create(sigla='CCTI', nome='Coordenação de TI', ativo=True)
-        self.funcao_chefe = Funcao.objects.create(sigla='CHEFE', descricao='Chefe de Setor', ativo=True, e_gratificada=True)
-        self.funcao_monitor = Funcao.objects.create(sigla='MON', descricao='Monitor', ativo=True, exige_aluno=True)
-        self.funcao_comum = Funcao.objects.create(sigla='AUX', descricao='Auxiliar Administrativo', ativo=True)
+        self.setor = Setor.objects.create(sigla='TEST_CCTI', nome='Coordenação de TI', ativo=True)
+        self.funcao_chefe = Funcao.objects.create(sigla='TEST_CHEFE', descricao='Chefe de Setor', ativo=True, e_gratificada=True)
+        self.funcao_monitor = Funcao.objects.create(sigla='TEST_MON', descricao='Monitor', ativo=True, exige_aluno=True)
+        self.funcao_comum = Funcao.objects.create(sigla='TEST_AUX', descricao='Auxiliar Administrativo', ativo=True)
 
         self.url_criar_vinculo = f'/cortex/organizacional/setores/{self.setor.pk}/vinculos/'
 
@@ -92,7 +92,13 @@ class ValidacaoIntegracaoMilestone5Test(APITestCase):
         """
         usuario_terceirizado = Usuario.objects.create_user(cpf='33333333333', password='123', nome='Terceiro Limpeza')
         empresa = EmpresaInstituicao.objects.create(nome='Limp LTDA', cnpj='00000000000100', ativo=True)
-        Terceirizado.objects.create(usuario=usuario_terceirizado, empresa=empresa, cargo_funcao='Zelador', data_inicio='2026-01-01')
+        cargo = Cargo.objects.create(nome='Zelador', ativo=True)
+        Terceirizado.objects.create(
+            usuario=usuario_terceirizado,
+            empresa_instituicao=empresa,
+            cargo=cargo,
+            data_inicio='2026-01-01',
+        )
 
         # 1. Terceirizado no setor (responsavel=False) -> DEVE PASSAR
         payload_valido = {

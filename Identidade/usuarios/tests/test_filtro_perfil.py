@@ -39,11 +39,13 @@ class FiltroPerfilUsuariosViewTest(APITestCase):
         self.usuario_terceirizado = criar_usuario('00000000004', nome='Terceirizado Teste')
         from PessoasInstitucionais.terceirizados.models import Terceirizado
         from PessoasInstitucionais.empresas_instituicoes.models import EmpresaInstituicao
+        from PessoasInstitucionais.cargos.models import Cargo
         self.empresa = EmpresaInstituicao.objects.create(nome="Empresa Teste", cnpj="12345678901234")
+        self.cargo_terc = Cargo.objects.create(nome="Serviços Gerais", ativo=True)
         Terceirizado.objects.create(
             usuario=self.usuario_terceirizado, 
             empresa_instituicao=self.empresa, 
-            cargo_funcao="Serviços Gerais"
+            cargo=self.cargo_terc,
         )
 
         # Usuário 4: Servidor

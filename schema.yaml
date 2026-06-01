@@ -3486,10 +3486,10 @@ paths:
             type: boolean
           description: "Filtra por status: true = Ativo, false = Inativo."
         - in: query
-          name: cargo_funcao
+          name: cargo
           schema:
-            type: string
-          description: Filtra por parte do cargo/função (ignora acentos e maiúsculas).
+            type: integer
+          description: Filtra por ID do cargo.
         - in: query
           name: cpf
           schema:
@@ -3505,6 +3505,11 @@ paths:
           schema:
             type: string
           description: Filtra por parte do nome do terceirizado (ignora acentos e maiúsculas).
+        - in: query
+          name: nome_cargo
+          schema:
+            type: string
+          description: Filtra por parte do nome do cargo (ignora acentos e maiúsculas).
         - in: query
           name: nome_empresa
           schema:
@@ -3832,7 +3837,7 @@ components:
           maxLength: 254
         telefone:
           type: string
-          maxLength: 50
+          maxLength: 100
       required:
         - id
     ContatoInput:
@@ -3975,9 +3980,9 @@ components:
           type: integer
         empresa_pk:
           type: integer
-        cargo_funcao:
-          type: string
-          maxLength: 255
+        cargo_pk:
+          type: integer
+          nullable: true
         data_inicio:
           type: string
           format: date
@@ -3989,7 +3994,6 @@ components:
           type: boolean
           default: true
       required:
-        - cargo_funcao
         - data_inicio
         - empresa_pk
         - usuario_pk
@@ -4827,9 +4831,9 @@ components:
       properties:
         empresa_pk:
           type: integer
-        cargo_funcao:
-          type: string
-          maxLength: 255
+        cargo_pk:
+          type: integer
+          nullable: true
         data_inicio:
           type: string
           format: date
@@ -5132,11 +5136,12 @@ components:
         empresa_nome:
           type: string
           readOnly: true
-        cargo_funcao:
+        cargo:
+          type: integer
+          nullable: true
+        cargo_nome:
           type: string
-          title: Cargo/Função
-          description: Cargo ou função exercida pelo terceirizado na instituição.
-          maxLength: 255
+          readOnly: true
         data_inicio:
           type: string
           format: date
@@ -5160,7 +5165,7 @@ components:
           format: date-time
           readOnly: true
       required:
-        - cargo_funcao
+        - cargo_nome
         - created_at
         - empresa_instituicao
         - empresa_nome

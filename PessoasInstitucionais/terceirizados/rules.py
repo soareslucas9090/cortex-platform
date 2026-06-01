@@ -18,6 +18,14 @@ class TerceirizadoRules(ModelInstanceRules):
             )
         return True
 
+    def cargo_ativo(self, cargo) -> bool:
+        """Valida que o cargo informado está ativo."""
+        if cargo and not cargo.ativo:
+            self.return_exception(
+                'Não é possível vincular um cargo inativo ao terceirizado.'
+            )
+        return True
+
     def pode_desativar(self) -> bool:
         """Terceirizado só pode ser desativado se estiver ativo."""
         if not self.object_instance.ativo:

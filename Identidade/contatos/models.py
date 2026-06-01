@@ -18,7 +18,7 @@ class Contato(ModelBusinessMixin, BasicModel):
     )
     email_academico = models.EmailField('E-mail acadêmico', blank=True)
     email_pessoal = models.EmailField('E-mail pessoal', blank=True)
-    telefone = models.CharField('Telefone', max_length=50, blank=True)
+    telefone = models.CharField('Telefone', max_length=100, blank=True)
 
     class Meta:
         verbose_name = 'Contato'

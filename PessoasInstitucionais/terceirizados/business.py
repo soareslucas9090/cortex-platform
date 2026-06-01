@@ -4,6 +4,7 @@ from AppCore.core.business.business import ModelInstanceBusiness
 from AppCore.core.exceptions.exceptions import (
     NotFoundException,
     SystemErrorException,
+    ValidationException,
 )
 
 from .rules import TerceirizadoRules
@@ -16,9 +17,9 @@ class TerceirizadoBusiness(ModelInstanceBusiness):
     def criar_terceirizado(
         self,
         usuario_pk: int,
-        empresa_pk: int,
-        cargo_funcao: str,
-        data_inicio,
+        empresa_pk: int = None,
+        data_inicio=None,
+        cargo_pk: int = None,
         data_fim=None,
         **kwargs,
     ):
@@ -42,18 +43,32 @@ class TerceirizadoBusiness(ModelInstanceBusiness):
         regras.usuario_sem_perfil_terceirizado(usuario_pk)
 
         # Validar e buscar a empresa/instituição
+        empresa_id = empresa_pk or kwargs.pop('empresa_instituicao_pk', None)
+        if not empresa_id:
+            raise ValidationException('O campo empresa/instituição é obrigatório.')
+
         try:
-            empresa = EmpresaInstituicao.objects.get(pk=empresa_pk)
+            empresa = EmpresaInstituicao.objects.get(pk=empresa_id)
         except EmpresaInstituicao.DoesNotExist:
             raise NotFoundException('Empresa/instituição não encontrada.')
 
         regras.empresa_ativa(empresa)
 
+        # Validar e buscar o cargo se informado
+        cargo = None
+        if cargo_pk is not None:
+            from PessoasInstitucionais.cargos.models import Cargo
+            try:
+                cargo = Cargo.objects.get(pk=cargo_pk)
+            except Cargo.DoesNotExist:
+                raise NotFoundException('Cargo não encontrado.')
+            regras.cargo_ativo(cargo)
+
         try:
             return Terceirizado.objects.create(
                 usuario=usuario,
-                empresa=empresa,
-                cargo_funcao=cargo_funcao,
+                empresa_instituicao=empresa,
+                cargo=cargo,
                 data_inicio=data_inicio,
                 data_fim=data_fim,
                 **kwargs,
@@ -63,18 +78,30 @@ class TerceirizadoBusiness(ModelInstanceBusiness):
             raise SystemErrorException('Não foi possível criar o terceirizado.')
 
     def atualizar_dados(self, dados: dict):
-        """Atualiza campos do terceirizado. Revalida empresa se estiver nos dados."""
+        """Atualiza campos do terceirizado. Revalida empresa e cargo se estiverem nos dados."""
         regras = TerceirizadoRules(object_instance=self.object_instance)
 
-        if 'empresa_pk' in dados:
+        if 'empresa_pk' in dados or 'empresa_instituicao_pk' in dados:
             from PessoasInstitucionais.empresas_instituicoes.models import EmpresaInstituicao
-            empresa_pk = dados.pop('empresa_pk')
+            empresa_pk = dados.pop('empresa_pk', None) or dados.pop('empresa_instituicao_pk', None)
             try:
                 empresa = EmpresaInstituicao.objects.get(pk=empresa_pk)
             except EmpresaInstituicao.DoesNotExist:
                 raise NotFoundException('Empresa/instituição não encontrada.')
             regras.empresa_ativa(empresa)
             self.object_instance.empresa_instituicao = empresa
+
+        if 'cargo_pk' in dados:
+            from PessoasInstitucionais.cargos.models import Cargo
+            cargo_pk = dados.pop('cargo_pk')
+            cargo = None
+            if cargo_pk is not None:
+                try:
+                    cargo = Cargo.objects.get(pk=cargo_pk)
+                except Cargo.DoesNotExist:
+                    raise NotFoundException('Cargo não encontrado.')
+                regras.cargo_ativo(cargo)
+            self.object_instance.cargo = cargo
 
         try:
             for attr, value in dados.items():

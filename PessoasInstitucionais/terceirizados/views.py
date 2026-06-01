@@ -57,9 +57,14 @@ class SerializerVazio(Serializer):
             description='Filtra por parte do CPF do terceirizado.',
         ),
         OpenApiParameter(
-            'cargo_funcao', OpenApiTypes.STR, OpenApiParameter.QUERY,
+            'cargo', OpenApiTypes.INT, OpenApiParameter.QUERY,
             required=False,
-            description='Filtra por parte do cargo/função (ignora acentos e maiúsculas).',
+            description='Filtra por ID do cargo.',
+        ),
+        OpenApiParameter(
+            'nome_cargo', OpenApiTypes.STR, OpenApiParameter.QUERY,
+            required=False,
+            description='Filtra por parte do nome do cargo (ignora acentos e maiúsculas).',
         ),
         OpenApiParameter(
             'nome_empresa', OpenApiTypes.STR, OpenApiParameter.QUERY,
@@ -82,7 +87,7 @@ class ListarTerceirizadosView(IsAdminMixin, BasicGetAPIView):
     mensagem_sucesso = 'Terceirizados listados com sucesso.'
 
     def get_queryset(self):
-        qs = Terceirizado.objects.select_related('usuario', 'empresa_instituicao').all()
+        qs = Terceirizado.objects.select_related('usuario', 'empresa_instituicao', 'cargo').all()
 
         ativo = self.request.query_params.get('ativo')
         if ativo is not None and ativo.lower() in ('true', 'false'):
@@ -104,9 +109,17 @@ class ListarTerceirizadosView(IsAdminMixin, BasicGetAPIView):
         if cpf:
             qs = qs.filter(usuario__cpf__unaccent__icontains=cpf)
 
-        cargo_funcao = self.request.query_params.get('cargo_funcao')
-        if cargo_funcao:
-            qs = qs.filter(cargo_funcao__unaccent__icontains=cargo_funcao)
+        cargo = self.request.query_params.get('cargo')
+        if cargo is not None:
+            try:
+                cargo_int = int(cargo)
+                qs = qs.filter(cargo_id=cargo_int)
+            except (ValueError, TypeError):
+                pass
+
+        nome_cargo = self.request.query_params.get('nome_cargo')
+        if nome_cargo:
+            qs = qs.filter(cargo__nome__unaccent__icontains=nome_cargo)
 
         nome_empresa = self.request.query_params.get('nome_empresa')
         if nome_empresa:

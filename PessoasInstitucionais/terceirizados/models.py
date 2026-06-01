@@ -26,10 +26,13 @@ class Terceirizado(ModelHelperMixin, ModelBusinessMixin, BasicModel):
         related_name='terceirizados',
         verbose_name='Empresa/Instituição',
     )
-    cargo_funcao = models.CharField(
-        'Cargo/Função',
-        max_length=255,
-        help_text='Cargo ou função exercida pelo terceirizado na instituição.',
+    cargo = models.ForeignKey(
+        'cargos.Cargo',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='terceirizados',
+        verbose_name='Cargo',
     )
     data_inicio = models.DateField(
         'Data de Início',
