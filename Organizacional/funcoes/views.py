@@ -1,4 +1,4 @@
-﻿import logging
+import logging
 
 from rest_framework import status
 
@@ -42,6 +42,14 @@ logger = logging.getLogger(__name__)
             required=False, description='Filtra por ativa (true) ou inativa (false).',
         ),
         OpenApiParameter(
+            'sigla', OpenApiTypes.STR, OpenApiParameter.QUERY,
+            required=False, description='Filtra por parte da sigla (ignora acentos e maiúsculas).',
+        ),
+        OpenApiParameter(
+            'descricao', OpenApiTypes.STR, OpenApiParameter.QUERY,
+            required=False, description='Filtra por parte da descrição (ignora acentos e maiúsculas).',
+        ),
+        OpenApiParameter(
             'paginacao', OpenApiTypes.INT, OpenApiParameter.QUERY,
             required=False, description='Tamanho da página (1â€“100, padrão 10).',
         ),
@@ -60,9 +68,19 @@ class ListarFuncoesView(IsAdminMixin, BasicGetAPIView):
 
     def get_queryset(self):
         qs = Funcao.objects.all()
+        
         ativo = self.request.query_params.get('ativo')
         if ativo is not None and ativo.lower() in ('true', 'false'):
             qs = qs.filter(ativo=ativo.lower() == 'true')
+            
+        sigla = self.request.query_params.get('sigla')
+        if sigla:
+            qs = qs.filter(sigla__unaccent__icontains=sigla)
+            
+        descricao = self.request.query_params.get('descricao')
+        if descricao:
+            qs = qs.filter(descricao__unaccent__icontains=descricao)
+            
         return qs
 
 

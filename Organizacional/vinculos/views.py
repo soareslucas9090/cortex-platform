@@ -37,6 +37,22 @@ logger = logging.getLogger(__name__)
     ''',
     parameters=[
         OpenApiParameter(
+            'nome_usuario', OpenApiTypes.STR, OpenApiParameter.QUERY,
+            required=False, description='Filtra por parte do nome do usuário (ignora acentos e maiúsculas).',
+        ),
+        OpenApiParameter(
+            'cpf_usuario', OpenApiTypes.STR, OpenApiParameter.QUERY,
+            required=False, description='Filtra por parte do CPF do usuário.',
+        ),
+        OpenApiParameter(
+            'sigla_funcao', OpenApiTypes.STR, OpenApiParameter.QUERY,
+            required=False, description='Filtra por parte da sigla da função (ignora acentos e maiúsculas).',
+        ),
+        OpenApiParameter(
+            'responsavel', OpenApiTypes.BOOL, OpenApiParameter.QUERY,
+            required=False, description='Filtra por vínculos marcados como responsável (true) ou não (false).',
+        ),
+        OpenApiParameter(
             'paginacao', OpenApiTypes.INT, OpenApiParameter.QUERY,
             required=False, description='Tamanho da página (1â€“100, padrão 10).',
         ),
@@ -55,7 +71,25 @@ class ListarVinculosView(IsAdminMixin, BasicGetAPIView):
     mensagem_sucesso = 'Vínculos listados com sucesso.'
 
     def get_queryset(self):
-        return SetorVinculo.objects.filter(setor_id=self.kwargs['setor_pk'])
+        qs = SetorVinculo.objects.filter(setor_id=self.kwargs['setor_pk'])
+        
+        nome_usuario = self.request.query_params.get('nome_usuario')
+        if nome_usuario:
+            qs = qs.filter(usuario__nome__unaccent__icontains=nome_usuario)
+            
+        cpf_usuario = self.request.query_params.get('cpf_usuario')
+        if cpf_usuario:
+            qs = qs.filter(usuario__cpf__unaccent__icontains=cpf_usuario)
+            
+        sigla_funcao = self.request.query_params.get('sigla_funcao')
+        if sigla_funcao:
+            qs = qs.filter(funcao__sigla__unaccent__icontains=sigla_funcao)
+            
+        responsavel = self.request.query_params.get('responsavel')
+        if responsavel is not None and responsavel.lower() in ('true', 'false'):
+            qs = qs.filter(responsavel=responsavel.lower() == 'true')
+            
+        return qs
 
 
 @extend_schema(

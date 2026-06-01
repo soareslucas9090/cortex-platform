@@ -42,6 +42,14 @@ logger = logging.getLogger(__name__)
             required=False, description='Filtra por ativo (true) ou inativo (false).',
         ),
         OpenApiParameter(
+            'nome', OpenApiTypes.STR, OpenApiParameter.QUERY,
+            required=False, description='Filtra por parte do nome (ignora acentos e maiúsculas).',
+        ),
+        OpenApiParameter(
+            'sigla', OpenApiTypes.STR, OpenApiParameter.QUERY,
+            required=False, description='Filtra por parte da sigla (ignora acentos e maiúsculas).',
+        ),
+        OpenApiParameter(
             'paginacao', OpenApiTypes.INT, OpenApiParameter.QUERY,
             required=False, description='Tamanho da página (1–100, padrão 10).',
         ),
@@ -60,9 +68,19 @@ class ListarSetoresView(IsAdminMixin, BasicGetAPIView):
 
     def get_queryset(self):
         qs = Setor.objects.all()
+        
         ativo = self.request.query_params.get('ativo')
         if ativo is not None and ativo.lower() in ('true', 'false'):
             qs = qs.filter(ativo=ativo.lower() == 'true')
+            
+        nome = self.request.query_params.get('nome')
+        if nome:
+            qs = qs.filter(nome__unaccent__icontains=nome)
+            
+        sigla = self.request.query_params.get('sigla')
+        if sigla:
+            qs = qs.filter(sigla__unaccent__icontains=sigla)
+            
         return qs
 
 
