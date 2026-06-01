@@ -47,6 +47,14 @@ from .serializers import (
             required=False, description='Filtra pelo ID do curso.',
         ),
         OpenApiParameter(
+            'nome_aluno', OpenApiTypes.STR, OpenApiParameter.QUERY,
+            required=False, description='Filtra por parte do nome do aluno (ignora acentos e maiúsculas).',
+        ),
+        OpenApiParameter(
+            'nome_curso', OpenApiTypes.STR, OpenApiParameter.QUERY,
+            required=False, description='Filtra por parte do nome do curso (ignora acentos e maiúsculas).',
+        ),
+        OpenApiParameter(
             'paginacao', OpenApiTypes.INT, OpenApiParameter.QUERY,
             required=False, description='Tamanho da página (1–100, padrão 10).',
         ),
@@ -82,6 +90,14 @@ class ListarAlunoCursosView(IsAdminMixin, BasicGetAPIView):
                 qs = qs.filter(curso_id=int(curso))
             except (ValueError, TypeError):
                 pass
+
+        nome_aluno = self.request.query_params.get('nome_aluno')
+        if nome_aluno:
+            qs = qs.filter(aluno__usuario__nome__unaccent__icontains=nome_aluno)
+
+        nome_curso = self.request.query_params.get('nome_curso')
+        if nome_curso:
+            qs = qs.filter(curso__nome__unaccent__icontains=nome_curso)
 
         return qs
 

@@ -27,6 +27,14 @@ from .serializers import AlunoSerializer, CriarAlunoSerializer, AtualizarAlunoSe
             'situacao', OpenApiTypes.INT, OpenApiParameter.QUERY,
             required=False, description='Filtra pela situação do aluno.'
         ),
+        OpenApiParameter(
+            'nome', OpenApiTypes.STR, OpenApiParameter.QUERY,
+            required=False, description='Filtra por parte do nome do aluno (ignora acentos e maiúsculas).'
+        ),
+        OpenApiParameter(
+            'cpf', OpenApiTypes.STR, OpenApiParameter.QUERY,
+            required=False, description='Filtra por parte do CPF do aluno.'
+        ),
     ]
 )
 class ListarAlunosView(IsAdminMixin, BasicGetAPIView):
@@ -46,6 +54,14 @@ class ListarAlunosView(IsAdminMixin, BasicGetAPIView):
                 qs = qs.filter(situacao=situacao_int)
             except (ValueError, TypeError):
                 pass
+                
+        nome = self.request.query_params.get('nome')
+        if nome:
+            qs = qs.filter(usuario__nome__unaccent__icontains=nome)
+            
+        cpf = self.request.query_params.get('cpf')
+        if cpf:
+            qs = qs.filter(usuario__cpf__unaccent__icontains=cpf)
                 
         return qs
 

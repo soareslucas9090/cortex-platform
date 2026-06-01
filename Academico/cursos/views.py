@@ -41,6 +41,14 @@ from .serializers import CursoSerializer, CriarCursoSerializer, AtualizarCursoSe
             enum=[t.value for t in TurnoCurso],
         ),
         OpenApiParameter(
+            'nome', OpenApiTypes.STR, OpenApiParameter.QUERY,
+            required=False, description='Filtra por parte do nome do curso (ignora acentos e maiúsculas).',
+        ),
+        OpenApiParameter(
+            'codigo_curso', OpenApiTypes.STR, OpenApiParameter.QUERY,
+            required=False, description='Filtra por parte do código do curso.',
+        ),
+        OpenApiParameter(
             'paginacao', OpenApiTypes.INT, OpenApiParameter.QUERY,
             required=False, description='Tamanho da página (1–100, padrão 10).',
         ),
@@ -71,6 +79,14 @@ class ListarCursosView(IsAdminMixin, BasicGetAPIView):
                     qs = qs.filter(turno=turno_int)
             except (ValueError, TypeError):
                 pass  # valor inválido: ignora silenciosamente
+
+        nome = self.request.query_params.get('nome')
+        if nome:
+            qs = qs.filter(nome__unaccent__icontains=nome)
+
+        codigo_curso = self.request.query_params.get('codigo_curso')
+        if codigo_curso:
+            qs = qs.filter(codigo_curso__unaccent__icontains=codigo_curso)
 
         return qs
 
