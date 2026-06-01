@@ -6,719 +6,733 @@ paths:
   /cortex/academico/aluno-cursos/:
     get:
       operationId: academico_aluno_cursos_list
-      description: "\n    Lista os vínculos acadêmicos entre alunos e cursos.\n\n
+      description:
+        "\n    Lista os vínculos acadêmicos entre alunos e cursos.\n\n
         \   **Permissões:** Apenas administradores.\n\n    **Paginação:** Suportada
         via query param `paginacao` (padrão 10, máximo 100).\n\n    **Filtros:** Os
         query params apenas reduzem o conjunto de resultados — nunca expandem o acesso
         além do que a permissão do usuário já permite.\n    "
       summary: Listar vínculos aluno-curso
       parameters:
-      - in: query
-        name: aluno
-        schema:
-          type: integer
-        description: Filtra pelo ID do aluno.
-      - in: query
-        name: ativo
-        schema:
-          type: boolean
-        description: 'Filtra por status: true = Ativo, false = Encerrado.'
-      - in: query
-        name: curso
-        schema:
-          type: integer
-        description: Filtra pelo ID do curso.
-      - in: query
-        name: nome_aluno
-        schema:
-          type: string
-        description: Filtra por parte do nome do aluno (ignora acentos e maiúsculas).
-      - in: query
-        name: nome_curso
-        schema:
-          type: string
-        description: Filtra por parte do nome do curso (ignora acentos e maiúsculas).
-      - name: page
-        required: false
-        in: query
-        description: Um número de página dentro do conjunto de resultados paginado.
-        schema:
-          type: integer
-      - in: query
-        name: paginacao
-        schema:
-          type: integer
-        description: Tamanho da página (1–100, padrão 10).
+        - in: query
+          name: aluno
+          schema:
+            type: integer
+          description: Filtra pelo ID do aluno.
+        - in: query
+          name: ativo
+          schema:
+            type: boolean
+          description: "Filtra por status: true = Ativo, false = Encerrado."
+        - in: query
+          name: curso
+          schema:
+            type: integer
+          description: Filtra pelo ID do curso.
+        - in: query
+          name: nome_aluno
+          schema:
+            type: string
+          description: Filtra por parte do nome do aluno (ignora acentos e maiúsculas).
+        - in: query
+          name: nome_curso
+          schema:
+            type: string
+          description: Filtra por parte do nome do curso (ignora acentos e maiúsculas).
+        - name: page
+          required: false
+          in: query
+          description: Um número de página dentro do conjunto de resultados paginado.
+          schema:
+            type: integer
+        - in: query
+          name: paginacao
+          schema:
+            type: integer
+          description: Tamanho da página (1–100, padrão 10).
       tags:
-      - Aluno-Cursos
+        - Aluno-Cursos
       security:
-      - jwtAuth: []
+        - jwtAuth: []
       responses:
-        '200':
+        "200":
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/PaginatedAlunoCursoList'
-          description: ''
-        '401':
+                $ref: "#/components/schemas/PaginatedAlunoCursoList"
+          description: ""
+        "401":
           content:
             application/json:
               schema:
                 description: Não autenticado.
-          description: ''
-        '403':
+          description: ""
+        "403":
           content:
             application/json:
               schema:
                 description: Sem permissão.
-          description: ''
+          description: ""
     post:
       operationId: academico_aluno_cursos_create
-      description: "\n    Cria um novo vínculo acadêmico entre um aluno e um curso.\n\n
+      description:
+        "\n    Cria um novo vínculo acadêmico entre um aluno e um curso.\n\n
         \   **Permissões:** Apenas administradores.\n\n    Não é possível criar um
         segundo vínculo ativo do mesmo aluno no mesmo curso.\n    "
       summary: Criar vínculo aluno-curso
       tags:
-      - Aluno-Cursos
+        - Aluno-Cursos
       requestBody:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/CriarAlunoCurso'
+              $ref: "#/components/schemas/CriarAlunoCurso"
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/CriarAlunoCurso'
+              $ref: "#/components/schemas/CriarAlunoCurso"
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/CriarAlunoCurso'
+              $ref: "#/components/schemas/CriarAlunoCurso"
         required: true
       security:
-      - jwtAuth: []
+        - jwtAuth: []
       responses:
-        '201':
+        "201":
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/AlunoCurso'
-          description: ''
-        '400':
+                $ref: "#/components/schemas/AlunoCurso"
+          description: ""
+        "400":
           content:
             application/json:
               schema:
                 description: Dados inválidos ou vínculo já existente.
-          description: ''
-        '401':
+          description: ""
+        "401":
           content:
             application/json:
               schema:
                 description: Não autenticado.
-          description: ''
-        '403':
+          description: ""
+        "403":
           content:
             application/json:
               schema:
                 description: Sem permissão.
-          description: ''
+          description: ""
   /cortex/academico/aluno-cursos/{id}/:
     get:
       operationId: academico_aluno_cursos_retrieve
-      description: "\n    Exibe os detalhes de um vínculo acadêmico específico.\n\n
+      description:
+        "\n    Exibe os detalhes de um vínculo acadêmico específico.\n\n
         \   **Permissões:** Apenas administradores.\n    "
       summary: Detalhar vínculo aluno-curso
       parameters:
-      - in: path
-        name: id
-        schema:
-          type: integer
-        required: true
+        - in: path
+          name: id
+          schema:
+            type: integer
+          required: true
       tags:
-      - Aluno-Cursos
+        - Aluno-Cursos
       security:
-      - jwtAuth: []
+        - jwtAuth: []
       responses:
-        '200':
+        "200":
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/AlunoCurso'
-          description: ''
-        '401':
+                $ref: "#/components/schemas/AlunoCurso"
+          description: ""
+        "401":
           content:
             application/json:
               schema:
                 description: Não autenticado.
-          description: ''
-        '403':
+          description: ""
+        "403":
           content:
             application/json:
               schema:
                 description: Sem permissão.
-          description: ''
-        '404':
+          description: ""
+        "404":
           content:
             application/json:
               schema:
                 description: Vínculo não encontrado.
-          description: ''
+          description: ""
     patch:
       operationId: academico_aluno_cursos_partial_update
-      description: "\n    Atualiza parcialmente os dados de um vínculo acadêmico (ex:
+      description:
+        "\n    Atualiza parcialmente os dados de um vínculo acadêmico (ex:
         ano_conclusao, ativo).\n\n    **Permissões:** Apenas administradores.\n    "
       summary: Atualizar vínculo aluno-curso
       parameters:
-      - in: path
-        name: id
-        schema:
-          type: integer
-        required: true
+        - in: path
+          name: id
+          schema:
+            type: integer
+          required: true
       tags:
-      - Aluno-Cursos
+        - Aluno-Cursos
       requestBody:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/PatchedAtualizarAlunoCurso'
+              $ref: "#/components/schemas/PatchedAtualizarAlunoCurso"
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/PatchedAtualizarAlunoCurso'
+              $ref: "#/components/schemas/PatchedAtualizarAlunoCurso"
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/PatchedAtualizarAlunoCurso'
+              $ref: "#/components/schemas/PatchedAtualizarAlunoCurso"
       security:
-      - jwtAuth: []
+        - jwtAuth: []
       responses:
-        '200':
+        "200":
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/AlunoCurso'
-          description: ''
-        '400':
+                $ref: "#/components/schemas/AlunoCurso"
+          description: ""
+        "400":
           content:
             application/json:
               schema:
                 description: Dados inválidos.
-          description: ''
-        '401':
+          description: ""
+        "401":
           content:
             application/json:
               schema:
                 description: Não autenticado.
-          description: ''
-        '403':
+          description: ""
+        "403":
           content:
             application/json:
               schema:
                 description: Sem permissão.
-          description: ''
-        '404':
+          description: ""
+        "404":
           content:
             application/json:
               schema:
                 description: Vínculo não encontrado.
-          description: ''
+          description: ""
   /cortex/academico/aluno-cursos/{id}/encerrar/:
     post:
       operationId: academico_aluno_cursos_encerrar_create
-      description: "\n    Encerra um vínculo acadêmico ativo, registrando o ano de
+      description:
+        "\n    Encerra um vínculo acadêmico ativo, registrando o ano de
         conclusão.\n\n    **Permissões:** Apenas administradores.\n    "
       summary: Encerrar vínculo aluno-curso
       parameters:
-      - in: path
-        name: id
-        schema:
-          type: integer
-        required: true
+        - in: path
+          name: id
+          schema:
+            type: integer
+          required: true
       tags:
-      - Aluno-Cursos
+        - Aluno-Cursos
       requestBody:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/EncerrarAlunoCurso'
+              $ref: "#/components/schemas/EncerrarAlunoCurso"
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/EncerrarAlunoCurso'
+              $ref: "#/components/schemas/EncerrarAlunoCurso"
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/EncerrarAlunoCurso'
+              $ref: "#/components/schemas/EncerrarAlunoCurso"
         required: true
       security:
-      - jwtAuth: []
+        - jwtAuth: []
       responses:
-        '200':
+        "200":
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/AlunoCurso'
-          description: ''
-        '400':
+                $ref: "#/components/schemas/AlunoCurso"
+          description: ""
+        "400":
           content:
             application/json:
               schema:
                 description: Vínculo já encerrado ou dados inválidos.
-          description: ''
-        '401':
+          description: ""
+        "401":
           content:
             application/json:
               schema:
                 description: Não autenticado.
-          description: ''
-        '403':
+          description: ""
+        "403":
           content:
             application/json:
               schema:
                 description: Sem permissão.
-          description: ''
-        '404':
+          description: ""
+        "404":
           content:
             application/json:
               schema:
                 description: Vínculo não encontrado.
-          description: ''
+          description: ""
   /cortex/academico/alunos/:
     get:
       operationId: academico_alunos_list
       description: Retorna a lista de alunos cadastrados. Apenas administradores.
       summary: Listar alunos
       parameters:
-      - in: query
-        name: ativo
-        schema:
-          type: boolean
-        description: Filtra alunos ativos/inativos.
-      - in: query
-        name: cpf
-        schema:
-          type: string
-        description: Filtra por parte do CPF do aluno.
-      - in: query
-        name: nome
-        schema:
-          type: string
-        description: Filtra por parte do nome do aluno (ignora acentos e maiúsculas).
-      - name: page
-        required: false
-        in: query
-        description: Um número de página dentro do conjunto de resultados paginado.
-        schema:
-          type: integer
-      - name: paginacao
-        required: false
-        in: query
-        description: Número de resultados a serem retornados por página.
-        schema:
-          type: integer
-      - in: query
-        name: situacao
-        schema:
-          type: integer
-        description: Filtra pela situação do aluno.
+        - in: query
+          name: ativo
+          schema:
+            type: boolean
+          description: Filtra alunos ativos/inativos.
+        - in: query
+          name: cpf
+          schema:
+            type: string
+          description: Filtra por parte do CPF do aluno.
+        - in: query
+          name: nome
+          schema:
+            type: string
+          description: Filtra por parte do nome do aluno (ignora acentos e maiúsculas).
+        - name: page
+          required: false
+          in: query
+          description: Um número de página dentro do conjunto de resultados paginado.
+          schema:
+            type: integer
+        - name: paginacao
+          required: false
+          in: query
+          description: Número de resultados a serem retornados por página.
+          schema:
+            type: integer
+        - in: query
+          name: situacao
+          schema:
+            type: integer
+          description: Filtra pela situação do aluno.
       tags:
-      - Alunos
+        - Alunos
       security:
-      - jwtAuth: []
+        - jwtAuth: []
       responses:
-        '200':
+        "200":
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/PaginatedAlunoList'
-          description: ''
+                $ref: "#/components/schemas/PaginatedAlunoList"
+          description: ""
     post:
       operationId: academico_alunos_create
-      description: Cria um novo perfil de aluno para um usuário existente. Apenas
+      description:
+        Cria um novo perfil de aluno para um usuário existente. Apenas
         administradores.
       summary: Criar aluno
       tags:
-      - Alunos
+        - Alunos
       requestBody:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/CriarAluno'
+              $ref: "#/components/schemas/CriarAluno"
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/CriarAluno'
+              $ref: "#/components/schemas/CriarAluno"
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/CriarAluno'
+              $ref: "#/components/schemas/CriarAluno"
         required: true
       security:
-      - jwtAuth: []
+        - jwtAuth: []
       responses:
-        '201':
+        "201":
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Aluno'
-          description: ''
+                $ref: "#/components/schemas/Aluno"
+          description: ""
   /cortex/academico/alunos/{usuario_id}/:
     get:
       operationId: academico_alunos_retrieve
       description: Retorna os detalhes de um aluno. Apenas administradores.
       summary: Detalhar aluno
       parameters:
-      - in: path
-        name: usuario_id
-        schema:
-          type: integer
-        required: true
+        - in: path
+          name: usuario_id
+          schema:
+            type: integer
+          required: true
       tags:
-      - Alunos
+        - Alunos
       security:
-      - jwtAuth: []
+        - jwtAuth: []
       responses:
-        '200':
+        "200":
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Aluno'
-          description: ''
+                $ref: "#/components/schemas/Aluno"
+          description: ""
     patch:
       operationId: academico_alunos_partial_update
       description: Atualiza os dados de um aluno existente. Apenas administradores.
       summary: Atualizar aluno
       parameters:
-      - in: path
-        name: usuario_id
-        schema:
-          type: integer
-        required: true
+        - in: path
+          name: usuario_id
+          schema:
+            type: integer
+          required: true
       tags:
-      - Alunos
+        - Alunos
       requestBody:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/PatchedAtualizarAluno'
+              $ref: "#/components/schemas/PatchedAtualizarAluno"
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/PatchedAtualizarAluno'
+              $ref: "#/components/schemas/PatchedAtualizarAluno"
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/PatchedAtualizarAluno'
+              $ref: "#/components/schemas/PatchedAtualizarAluno"
       security:
-      - jwtAuth: []
+        - jwtAuth: []
       responses:
-        '200':
+        "200":
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Aluno'
-          description: ''
+                $ref: "#/components/schemas/Aluno"
+          description: ""
   /cortex/academico/cursos/:
     get:
       operationId: academico_cursos_list
-      description: "\n    Lista todos os cursos cadastrados.\n\n    **Permissões:**
+      description:
+        "\n    Lista todos os cursos cadastrados.\n\n    **Permissões:**
         Apenas administradores.\n\n    **Paginação:** Suportada via query param `paginacao`
         (padrão 10, máximo 100).\n\n    **Filtros:** Os query params apenas reduzem
         o conjunto de resultados — nunca expandem o acesso além do que a permissão
         do usuário já permite.\n    "
       summary: Listar cursos
       parameters:
-      - in: query
-        name: ativo
-        schema:
-          type: boolean
-        description: 'Filtra por status: true = Ativo, false = Inativo.'
-      - in: query
-        name: codigo_curso
-        schema:
-          type: string
-        description: Filtra por parte do código do curso.
-      - in: query
-        name: nome
-        schema:
-          type: string
-        description: Filtra por parte do nome do curso (ignora acentos e maiúsculas).
-      - name: page
-        required: false
-        in: query
-        description: Um número de página dentro do conjunto de resultados paginado.
-        schema:
-          type: integer
-      - in: query
-        name: paginacao
-        schema:
-          type: integer
-        description: Tamanho da página (1–100, padrão 10).
-      - in: query
-        name: turno
-        schema:
-          type: integer
-          enum:
-          - 1
-          - 2
-          - 3
-          - 4
-        description: 'Filtra por turno: 1 = Matutino, 2 = Vespertino, 3 = Noturno,
-          4 = Integral.'
+        - in: query
+          name: ativo
+          schema:
+            type: boolean
+          description: "Filtra por status: true = Ativo, false = Inativo."
+        - in: query
+          name: codigo_curso
+          schema:
+            type: string
+          description: Filtra por parte do código do curso.
+        - in: query
+          name: nome
+          schema:
+            type: string
+          description: Filtra por parte do nome do curso (ignora acentos e maiúsculas).
+        - name: page
+          required: false
+          in: query
+          description: Um número de página dentro do conjunto de resultados paginado.
+          schema:
+            type: integer
+        - in: query
+          name: paginacao
+          schema:
+            type: integer
+          description: Tamanho da página (1–100, padrão 10).
+        - in: query
+          name: turno
+          schema:
+            type: integer
+            enum:
+              - 1
+              - 2
+              - 3
+              - 4
+          description:
+            "Filtra por turno: 1 = Matutino, 2 = Vespertino, 3 = Noturno,
+            4 = Integral."
       tags:
-      - Cursos
+        - Cursos
       security:
-      - jwtAuth: []
+        - jwtAuth: []
       responses:
-        '200':
+        "200":
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/PaginatedCursoList'
-          description: ''
-        '401':
+                $ref: "#/components/schemas/PaginatedCursoList"
+          description: ""
+        "401":
           content:
             application/json:
               schema:
                 description: Não autenticado.
-          description: ''
-        '403':
+          description: ""
+        "403":
           content:
             application/json:
               schema:
                 description: Sem permissão.
-          description: ''
+          description: ""
     post:
       operationId: academico_cursos_create
-      description: "\n    Cria um novo curso.\n\n    **Permissões:** Apenas administradores.\n
+      description:
+        "\n    Cria um novo curso.\n\n    **Permissões:** Apenas administradores.\n
         \   "
       summary: Criar curso
       tags:
-      - Cursos
+        - Cursos
       requestBody:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/CriarCurso'
+              $ref: "#/components/schemas/CriarCurso"
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/CriarCurso'
+              $ref: "#/components/schemas/CriarCurso"
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/CriarCurso'
+              $ref: "#/components/schemas/CriarCurso"
         required: true
       security:
-      - jwtAuth: []
+        - jwtAuth: []
       responses:
-        '201':
+        "201":
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Curso'
-          description: ''
-        '400':
+                $ref: "#/components/schemas/Curso"
+          description: ""
+        "400":
           content:
             application/json:
               schema:
                 description: Dados inválidos ou código de curso já em uso.
-          description: ''
-        '401':
+          description: ""
+        "401":
           content:
             application/json:
               schema:
                 description: Não autenticado.
-          description: ''
-        '403':
+          description: ""
+        "403":
           content:
             application/json:
               schema:
                 description: Sem permissão.
-          description: ''
+          description: ""
   /cortex/academico/cursos/{id}/:
     get:
       operationId: academico_cursos_retrieve
-      description: "\n    Exibe os detalhes de um curso específico.\n\n    **Permissões:**
+      description:
+        "\n    Exibe os detalhes de um curso específico.\n\n    **Permissões:**
         Apenas administradores.\n    "
       summary: Detalhar curso
       parameters:
-      - in: path
-        name: id
-        schema:
-          type: integer
-        required: true
+        - in: path
+          name: id
+          schema:
+            type: integer
+          required: true
       tags:
-      - Cursos
+        - Cursos
       security:
-      - jwtAuth: []
+        - jwtAuth: []
       responses:
-        '200':
+        "200":
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Curso'
-          description: ''
-        '401':
+                $ref: "#/components/schemas/Curso"
+          description: ""
+        "401":
           content:
             application/json:
               schema:
                 description: Não autenticado.
-          description: ''
-        '403':
+          description: ""
+        "403":
           content:
             application/json:
               schema:
                 description: Sem permissão.
-          description: ''
-        '404':
+          description: ""
+        "404":
           content:
             application/json:
               schema:
                 description: Curso não encontrado.
-          description: ''
+          description: ""
     patch:
       operationId: academico_cursos_partial_update
-      description: "\n    Atualiza parcialmente os dados de um curso existente.\n\n
+      description:
+        "\n    Atualiza parcialmente os dados de um curso existente.\n\n
         \   **Permissões:** Apenas administradores.\n    "
       summary: Atualizar curso
       parameters:
-      - in: path
-        name: id
-        schema:
-          type: integer
-        required: true
+        - in: path
+          name: id
+          schema:
+            type: integer
+          required: true
       tags:
-      - Cursos
+        - Cursos
       requestBody:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/PatchedAtualizarCurso'
+              $ref: "#/components/schemas/PatchedAtualizarCurso"
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/PatchedAtualizarCurso'
+              $ref: "#/components/schemas/PatchedAtualizarCurso"
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/PatchedAtualizarCurso'
+              $ref: "#/components/schemas/PatchedAtualizarCurso"
       security:
-      - jwtAuth: []
+        - jwtAuth: []
       responses:
-        '200':
+        "200":
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Curso'
-          description: ''
-        '400':
+                $ref: "#/components/schemas/Curso"
+          description: ""
+        "400":
           content:
             application/json:
               schema:
                 description: Dados inválidos ou código já em uso.
-          description: ''
-        '401':
+          description: ""
+        "401":
           content:
             application/json:
               schema:
                 description: Não autenticado.
-          description: ''
-        '403':
+          description: ""
+        "403":
           content:
             application/json:
               schema:
                 description: Sem permissão.
-          description: ''
-        '404':
+          description: ""
+        "404":
           content:
             application/json:
               schema:
                 description: Curso não encontrado.
-          description: ''
+          description: ""
   /cortex/academico/cursos/{id}/desativar/:
     post:
       operationId: academico_cursos_desativar_create
-      description: "\n    Desativa um curso ativo.\n\n    **Permissões:** Apenas administradores.\n
+      description:
+        "\n    Desativa um curso ativo.\n\n    **Permissões:** Apenas administradores.\n
         \   "
       summary: Desativar curso
       parameters:
-      - in: path
-        name: id
-        schema:
-          type: integer
-        required: true
+        - in: path
+          name: id
+          schema:
+            type: integer
+          required: true
       tags:
-      - Cursos
+        - Cursos
       security:
-      - jwtAuth: []
+        - jwtAuth: []
       responses:
-        '200':
+        "200":
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Curso'
-          description: ''
-        '400':
+                $ref: "#/components/schemas/Curso"
+          description: ""
+        "400":
           content:
             application/json:
               schema:
                 description: Curso já está inativo.
-          description: ''
-        '401':
+          description: ""
+        "401":
           content:
             application/json:
               schema:
                 description: Não autenticado.
-          description: ''
-        '403':
+          description: ""
+        "403":
           content:
             application/json:
               schema:
                 description: Sem permissão.
-          description: ''
-        '404':
+          description: ""
+        "404":
           content:
             application/json:
               schema:
                 description: Curso não encontrado.
-          description: ''
+          description: ""
   /cortex/academico/cursos/{id}/reativar/:
     post:
       operationId: academico_cursos_reativar_create
-      description: "\n    Reativa um curso inativo.\n\n    **Permissões:** Apenas
+      description:
+        "\n    Reativa um curso inativo.\n\n    **Permissões:** Apenas
         administradores.\n    "
       summary: Reativar curso
       parameters:
-      - in: path
-        name: id
-        schema:
-          type: integer
-        required: true
+        - in: path
+          name: id
+          schema:
+            type: integer
+          required: true
       tags:
-      - Cursos
+        - Cursos
       security:
-      - jwtAuth: []
+        - jwtAuth: []
       responses:
-        '200':
+        "200":
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Curso'
-          description: ''
-        '400':
+                $ref: "#/components/schemas/Curso"
+          description: ""
+        "400":
           content:
             application/json:
               schema:
                 description: Curso já está ativo.
-          description: ''
-        '401':
+          description: ""
+        "401":
           content:
             application/json:
               schema:
                 description: Não autenticado.
-          description: ''
-        '403':
+          description: ""
+        "403":
           content:
             application/json:
               schema:
                 description: Sem permissão.
-          description: ''
-        '404':
+          description: ""
+        "404":
           content:
             application/json:
               schema:
                 description: Curso não encontrado.
-          description: ''
+          description: ""
   /cortex/auth/token_jwt/:
     post:
       operationId: auth_token_jwt_create
-      description: "\n        Autentica o usuário e retorna os tokens de acesso (access)
+      description:
+        "\n        Autentica o usuário e retorna os tokens de acesso (access)
         e renovação (refresh).\n\n        O campo ``login`` aceita **e-mail** ou **CPF**
         (com ou sem máscara).\n\n        **Exemplos de identificador:**\n        -
         E-mail: `usuario@email.com`\n        - CPF sem máscara: `12345678901`\n        -
@@ -728,123 +742,125 @@ paths:
         (usuário inexistente, senha incorreta ou inativo).\n        "
       summary: Login — obter tokens JWT
       tags:
-      - Auth
+        - Auth
       requestBody:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/LoginInput'
+              $ref: "#/components/schemas/LoginInput"
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/LoginInput'
+              $ref: "#/components/schemas/LoginInput"
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/LoginInput'
+              $ref: "#/components/schemas/LoginInput"
         required: true
       responses:
-        '200':
+        "200":
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/LoginResponse'
-          description: ''
-        '401':
+                $ref: "#/components/schemas/LoginResponse"
+          description: ""
+        "401":
           content:
             application/json:
               schema:
                 description: Credenciais inválidas.
-          description: ''
+          description: ""
   /cortex/auth/token_jwt/me/:
     get:
       operationId: auth_token_jwt_me_retrieve
       description: Retorna as informações do usuário atual.
       summary: Dados do usuário logado
       tags:
-      - Auth
+        - Auth
       security:
-      - jwtAuth: []
+        - jwtAuth: []
       responses:
-        '200':
+        "200":
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Me'
-          description: ''
-        '401':
+                $ref: "#/components/schemas/Me"
+          description: ""
+        "401":
           content:
             application/json:
               schema:
                 description: Não autenticado.
-          description: ''
+          description: ""
   /cortex/auth/token_jwt/refresh/:
     post:
       operationId: auth_token_jwt_refresh_create
-      description: Usa o refresh token para emitir um novo access token sem precisar
+      description:
+        Usa o refresh token para emitir um novo access token sem precisar
         de nova autenticação.
       summary: Renovar token de acesso
       tags:
-      - Auth
+        - Auth
       requestBody:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/TokenRefresh'
+              $ref: "#/components/schemas/TokenRefresh"
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/TokenRefresh'
+              $ref: "#/components/schemas/TokenRefresh"
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/TokenRefresh'
+              $ref: "#/components/schemas/TokenRefresh"
         required: true
       responses:
-        '200':
+        "200":
           content:
             application/json:
               schema:
                 description: Novo access token gerado.
-          description: ''
-        '401':
+          description: ""
+        "401":
           content:
             application/json:
               schema:
                 description: Refresh token inválido ou expirado.
-          description: ''
+          description: ""
   /cortex/auth/token_jwt/verify/:
     post:
       operationId: auth_token_jwt_verify_create
       description: Retorna 200 se o token for válido, 401 caso contrário.
       summary: Verificar validade do token
       tags:
-      - Auth
+        - Auth
       requestBody:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/TokenVerify'
+              $ref: "#/components/schemas/TokenVerify"
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/TokenVerify'
+              $ref: "#/components/schemas/TokenVerify"
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/TokenVerify'
+              $ref: "#/components/schemas/TokenVerify"
         required: true
       responses:
-        '200':
+        "200":
           content:
             application/json:
               schema:
                 description: Token válido.
-          description: ''
-        '401':
+          description: ""
+        "401":
           content:
             application/json:
               schema:
                 description: Token inválido ou expirado.
-          description: ''
+          description: ""
   /cortex/identidade/usuarios/:
     get:
       operationId: identidade_usuarios_list
-      description: "\n    Retorna a lista paginada de usuários do sistema.\n\n    **Permissões:**
+      description:
+        "\n    Retorna a lista paginada de usuários do sistema.\n\n    **Permissões:**
         Apenas administradores.\n\n    **Query params:**\n    - `ativo` (bool, opcional):
         filtra por status — `true` (ativos) ou `false` (inativos).\n      Omitindo
         o parâmetro, retorna todos.\n    - `nome` (str, opcional): filtra por parte
@@ -859,313 +875,319 @@ paths:
         \   "
       summary: Listar usuários
       parameters:
-      - in: query
-        name: ativo
-        schema:
-          type: boolean
-        description: Filtra por status ativo (true) ou inativo (false).
-      - in: query
-        name: cpf
-        schema:
-          type: string
-        description: Filtra por parte do CPF do usuário.
-      - in: query
-        name: email
-        schema:
-          type: string
-        description: Filtra por parte do e-mail do usuário.
-      - in: query
-        name: nome
-        schema:
-          type: string
-        description: Filtra por parte do nome do usuário.
-      - name: page
-        required: false
-        in: query
-        description: Um número de página dentro do conjunto de resultados paginado.
-        schema:
-          type: integer
-      - in: query
-        name: paginacao
-        schema:
-          type: integer
-        description: Tamanho da página (1–100, padrão 10).
-      - in: query
-        name: tipo_perfil
-        schema:
-          type: string
-          enum:
-          - aluno
-          - servidor
-          - terceirizado
-        description: 'Filtra por tipo de perfil: alunos, terceirizados ou servidores.'
+        - in: query
+          name: ativo
+          schema:
+            type: boolean
+          description: Filtra por status ativo (true) ou inativo (false).
+        - in: query
+          name: cpf
+          schema:
+            type: string
+          description: Filtra por parte do CPF do usuário.
+        - in: query
+          name: email
+          schema:
+            type: string
+          description: Filtra por parte do e-mail do usuário.
+        - in: query
+          name: nome
+          schema:
+            type: string
+          description: Filtra por parte do nome do usuário.
+        - name: page
+          required: false
+          in: query
+          description: Um número de página dentro do conjunto de resultados paginado.
+          schema:
+            type: integer
+        - in: query
+          name: paginacao
+          schema:
+            type: integer
+          description: Tamanho da página (1–100, padrão 10).
+        - in: query
+          name: tipo_perfil
+          schema:
+            type: string
+            enum:
+              - aluno
+              - servidor
+              - terceirizado
+          description: "Filtra por tipo de perfil: alunos, terceirizados ou servidores."
       tags:
-      - Identidade
+        - Identidade
       security:
-      - jwtAuth: []
+        - jwtAuth: []
       responses:
-        '200':
+        "200":
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/PaginatedUsuarioList'
-          description: ''
-        '401':
+                $ref: "#/components/schemas/PaginatedUsuarioList"
+          description: ""
+        "401":
           content:
             application/json:
               schema:
                 description: Não autenticado.
-          description: ''
-        '403':
+          description: ""
+        "403":
           content:
             application/json:
               schema:
                 description: Sem permissão de administrador.
-          description: ''
+          description: ""
     post:
       operationId: identidade_usuarios_create
-      description: "\n    Cria um novo usuário no sistema.\n\n    **Permissões:**
+      description:
+        "\n    Cria um novo usuário no sistema.\n\n    **Permissões:**
         Apenas administradores.\n\n    Não há auto-cadastro — usuários são sempre
         criados por administradores,\n    individualmente ou em lote via JSON.\n    "
       summary: Criar usuário
       tags:
-      - Identidade
+        - Identidade
       requestBody:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/CriarUsuario'
+              $ref: "#/components/schemas/CriarUsuario"
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/CriarUsuario'
+              $ref: "#/components/schemas/CriarUsuario"
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/CriarUsuario'
+              $ref: "#/components/schemas/CriarUsuario"
         required: true
       security:
-      - jwtAuth: []
+        - jwtAuth: []
       responses:
-        '201':
+        "201":
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Usuario'
-          description: ''
-        '400':
+                $ref: "#/components/schemas/Usuario"
+          description: ""
+        "400":
           content:
             application/json:
               schema:
                 description: Dados inválidos ou CPF já cadastrado.
-          description: ''
-        '401':
+          description: ""
+        "401":
           content:
             application/json:
               schema:
                 description: Não autenticado.
-          description: ''
-        '403':
+          description: ""
+        "403":
           content:
             application/json:
               schema:
                 description: Sem permissão de administrador.
-          description: ''
+          description: ""
   /cortex/identidade/usuarios/{id}/:
     get:
       operationId: identidade_usuarios_retrieve
-      description: "\n    Retorna os dados de um usuário específico.\n\n    **Permissões:**
+      description:
+        "\n    Retorna os dados de um usuário específico.\n\n    **Permissões:**
         O próprio usuário ou administradores.\n    "
       summary: Detalhe do usuário
       parameters:
-      - in: path
-        name: id
-        schema:
-          type: integer
-        required: true
+        - in: path
+          name: id
+          schema:
+            type: integer
+          required: true
       tags:
-      - Identidade
+        - Identidade
       security:
-      - jwtAuth: []
+        - jwtAuth: []
       responses:
-        '200':
+        "200":
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Usuario'
-          description: ''
-        '401':
+                $ref: "#/components/schemas/Usuario"
+          description: ""
+        "401":
           content:
             application/json:
               schema:
                 description: Não autenticado.
-          description: ''
-        '403':
+          description: ""
+        "403":
           content:
             application/json:
               schema:
                 description: Sem permissão.
-          description: ''
-        '404':
+          description: ""
+        "404":
           content:
             application/json:
               schema:
                 description: Usuário não encontrado.
-          description: ''
+          description: ""
     patch:
       operationId: identidade_usuarios_partial_update
-      description: "\n    Atualiza parcialmente os dados básicos do usuário (nome,
+      description:
+        "\n    Atualiza parcialmente os dados básicos do usuário (nome,
         e-mail, foto, deficiência).\n\n    **Permissões:** O próprio usuário ou administradores.\n\n
         \   CPF não é alterável neste endpoint.\n    "
       summary: Atualizar dados do usuário
       parameters:
-      - in: path
-        name: id
-        schema:
-          type: integer
-        required: true
+        - in: path
+          name: id
+          schema:
+            type: integer
+          required: true
       tags:
-      - Identidade
+        - Identidade
       requestBody:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/PatchedAtualizarUsuario'
+              $ref: "#/components/schemas/PatchedAtualizarUsuario"
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/PatchedAtualizarUsuario'
+              $ref: "#/components/schemas/PatchedAtualizarUsuario"
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/PatchedAtualizarUsuario'
+              $ref: "#/components/schemas/PatchedAtualizarUsuario"
       security:
-      - jwtAuth: []
+        - jwtAuth: []
       responses:
-        '200':
+        "200":
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Usuario'
-          description: ''
-        '400':
+                $ref: "#/components/schemas/Usuario"
+          description: ""
+        "400":
           content:
             application/json:
               schema:
                 description: Dados inválidos.
-          description: ''
-        '401':
+          description: ""
+        "401":
           content:
             application/json:
               schema:
                 description: Não autenticado.
-          description: ''
-        '403':
+          description: ""
+        "403":
           content:
             application/json:
               schema:
                 description: Sem permissão.
-          description: ''
-        '404':
+          description: ""
+        "404":
           content:
             application/json:
               schema:
                 description: Usuário não encontrado.
-          description: ''
+          description: ""
   /cortex/identidade/usuarios/{id}/desativar/:
     post:
       operationId: identidade_usuarios_desativar_create
-      description: "\n    Desativa um usuário do sistema (não remove o registro).\n\n
+      description:
+        "\n    Desativa um usuário do sistema (não remove o registro).\n\n
         \   **Permissões:** Apenas administradores.\n    "
       summary: Desativar usuário
       parameters:
-      - in: path
-        name: id
-        schema:
-          type: integer
-        required: true
+        - in: path
+          name: id
+          schema:
+            type: integer
+          required: true
       tags:
-      - Identidade
+        - Identidade
       security:
-      - jwtAuth: []
+        - jwtAuth: []
       responses:
-        '200':
+        "200":
           content:
             application/json:
               schema:
                 description: Usuário desativado com sucesso.
-          description: ''
-        '400':
+          description: ""
+        "400":
           content:
             application/json:
               schema:
                 description: Usuário já está inativo.
-          description: ''
-        '401':
+          description: ""
+        "401":
           content:
             application/json:
               schema:
                 description: Não autenticado.
-          description: ''
-        '403':
+          description: ""
+        "403":
           content:
             application/json:
               schema:
                 description: Sem permissão de administrador.
-          description: ''
-        '404':
+          description: ""
+        "404":
           content:
             application/json:
               schema:
                 description: Usuário não encontrado.
-          description: ''
+          description: ""
   /cortex/identidade/usuarios/{id}/reativar/:
     post:
       operationId: identidade_usuarios_reativar_create
-      description: "\n    Reativa um usuário previamente desativado.\n\n    **Permissões:**
+      description:
+        "\n    Reativa um usuário previamente desativado.\n\n    **Permissões:**
         Apenas administradores.\n    "
       summary: Reativar usuário
       parameters:
-      - in: path
-        name: id
-        schema:
-          type: integer
-        required: true
+        - in: path
+          name: id
+          schema:
+            type: integer
+          required: true
       tags:
-      - Identidade
+        - Identidade
       security:
-      - jwtAuth: []
+        - jwtAuth: []
       responses:
-        '200':
+        "200":
           content:
             application/json:
               schema:
                 description: Usuário reativado com sucesso.
-          description: ''
-        '400':
+          description: ""
+        "400":
           content:
             application/json:
               schema:
                 description: Usuário já está ativo.
-          description: ''
-        '401':
+          description: ""
+        "401":
           content:
             application/json:
               schema:
                 description: Não autenticado.
-          description: ''
-        '403':
+          description: ""
+        "403":
           content:
             application/json:
               schema:
                 description: Sem permissão de administrador.
-          description: ''
-        '404':
+          description: ""
+        "404":
           content:
             application/json:
               schema:
                 description: Usuário não encontrado.
-          description: ''
+          description: ""
   /cortex/identidade/usuarios/{usuario_pk}/contatos/:
     get:
       operationId: identidade_usuarios_contatos_list
-      description: "\n    Retorna a lista de contatos de um usuário específico.\n\n
+      description:
+        "\n    Retorna a lista de contatos de um usuário específico.\n\n
         \   **Permissões:** O próprio usuário ou administradores.\n\n    **Query params:**\n
         \   - `email_academico` (str, opcional): filtra por parte do e-mail acadêmico
         (ignorando maiúsculas e minúsculas).\n    - `email_pessoal` (str, opcional):
@@ -1176,291 +1198,296 @@ paths:
         reduzem o conjunto, nunca expandem o acesso.\n    "
       summary: Listar contatos do usuário
       parameters:
-      - in: query
-        name: email_academico
-        schema:
-          type: string
-        description: Filtra por parte do e-mail acadêmico.
-      - in: query
-        name: email_pessoal
-        schema:
-          type: string
-        description: Filtra por parte do e-mail pessoal.
-      - name: page
-        required: false
-        in: query
-        description: Um número de página dentro do conjunto de resultados paginado.
-        schema:
-          type: integer
-      - in: query
-        name: paginacao
-        schema:
-          type: integer
-        description: Tamanho da página (1–100, padrão 10).
-      - in: query
-        name: telefone
-        schema:
-          type: string
-        description: Filtra por parte do telefone.
-      - in: path
-        name: usuario_pk
-        schema:
-          type: integer
-        required: true
+        - in: query
+          name: email_academico
+          schema:
+            type: string
+          description: Filtra por parte do e-mail acadêmico.
+        - in: query
+          name: email_pessoal
+          schema:
+            type: string
+          description: Filtra por parte do e-mail pessoal.
+        - name: page
+          required: false
+          in: query
+          description: Um número de página dentro do conjunto de resultados paginado.
+          schema:
+            type: integer
+        - in: query
+          name: paginacao
+          schema:
+            type: integer
+          description: Tamanho da página (1–100, padrão 10).
+        - in: query
+          name: telefone
+          schema:
+            type: string
+          description: Filtra por parte do telefone.
+        - in: path
+          name: usuario_pk
+          schema:
+            type: integer
+          required: true
       tags:
-      - Identidade
+        - Identidade
       security:
-      - jwtAuth: []
+        - jwtAuth: []
       responses:
-        '200':
+        "200":
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/PaginatedContatoList'
-          description: ''
-        '401':
+                $ref: "#/components/schemas/PaginatedContatoList"
+          description: ""
+        "401":
           content:
             application/json:
               schema:
                 description: Não autenticado.
-          description: ''
-        '403':
+          description: ""
+        "403":
           content:
             application/json:
               schema:
                 description: Sem permissão.
-          description: ''
-        '404':
+          description: ""
+        "404":
           content:
             application/json:
               schema:
                 description: Usuário não encontrado.
-          description: ''
+          description: ""
     post:
       operationId: identidade_usuarios_contatos_create
-      description: "\n    Adiciona um novo contato (e-mail acadêmico, e-mail pessoal
+      description:
+        "\n    Adiciona um novo contato (e-mail acadêmico, e-mail pessoal
         ou telefone) ao usuário.\n\n    **Permissões:** O próprio usuário ou administradores.\n\n
         \   Informe ao menos um dos campos de contato.\n    "
       summary: Adicionar contato ao usuário
       parameters:
-      - in: path
-        name: usuario_pk
-        schema:
-          type: integer
-        required: true
+        - in: path
+          name: usuario_pk
+          schema:
+            type: integer
+          required: true
       tags:
-      - Identidade
+        - Identidade
       requestBody:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/ContatoInput'
+              $ref: "#/components/schemas/ContatoInput"
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/ContatoInput'
+              $ref: "#/components/schemas/ContatoInput"
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/ContatoInput'
+              $ref: "#/components/schemas/ContatoInput"
       security:
-      - jwtAuth: []
+        - jwtAuth: []
       responses:
-        '201':
+        "201":
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Contato'
-          description: ''
-        '400':
+                $ref: "#/components/schemas/Contato"
+          description: ""
+        "400":
           content:
             application/json:
               schema:
                 description: Dados inválidos.
-          description: ''
-        '401':
+          description: ""
+        "401":
           content:
             application/json:
               schema:
                 description: Não autenticado.
-          description: ''
-        '403':
+          description: ""
+        "403":
           content:
             application/json:
               schema:
                 description: Sem permissão.
-          description: ''
-        '404':
+          description: ""
+        "404":
           content:
             application/json:
               schema:
                 description: Usuário não encontrado.
-          description: ''
+          description: ""
   /cortex/identidade/usuarios/{usuario_pk}/contatos/{id}/:
     patch:
       operationId: identidade_usuarios_contatos_partial_update
-      description: "\n    Atualiza parcialmente os dados de um contato do usuário.\n\n
+      description:
+        "\n    Atualiza parcialmente os dados de um contato do usuário.\n\n
         \   **Permissões:** O próprio usuário ou administradores.\n    "
       summary: Atualizar contato
       parameters:
-      - in: path
-        name: id
-        schema:
-          type: integer
-        required: true
-      - in: path
-        name: usuario_pk
-        schema:
-          type: integer
-        required: true
+        - in: path
+          name: id
+          schema:
+            type: integer
+          required: true
+        - in: path
+          name: usuario_pk
+          schema:
+            type: integer
+          required: true
       tags:
-      - Identidade
+        - Identidade
       requestBody:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/PatchedContatoInput'
+              $ref: "#/components/schemas/PatchedContatoInput"
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/PatchedContatoInput'
+              $ref: "#/components/schemas/PatchedContatoInput"
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/PatchedContatoInput'
+              $ref: "#/components/schemas/PatchedContatoInput"
       security:
-      - jwtAuth: []
+        - jwtAuth: []
       responses:
-        '200':
+        "200":
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Contato'
-          description: ''
-        '400':
+                $ref: "#/components/schemas/Contato"
+          description: ""
+        "400":
           content:
             application/json:
               schema:
                 description: Dados inválidos.
-          description: ''
-        '401':
+          description: ""
+        "401":
           content:
             application/json:
               schema:
                 description: Não autenticado.
-          description: ''
-        '403':
+          description: ""
+        "403":
           content:
             application/json:
               schema:
                 description: Sem permissão.
-          description: ''
-        '404':
+          description: ""
+        "404":
           content:
             application/json:
               schema:
                 description: Contato não encontrado.
-          description: ''
+          description: ""
   /cortex/identidade/usuarios/{usuario_pk}/endereco/:
     get:
       operationId: identidade_usuarios_endereco_retrieve
-      description: "\n    Retorna o endereço cadastrado do usuário.\n\n    **Permissões:**
+      description:
+        "\n    Retorna o endereço cadastrado do usuário.\n\n    **Permissões:**
         O próprio usuário ou administradores.\n\n    Retorna 404 se o endereço ainda
         não foi cadastrado.\n    "
       summary: Obter endereço do usuário
       parameters:
-      - in: path
-        name: usuario_pk
-        schema:
-          type: integer
-        required: true
+        - in: path
+          name: usuario_pk
+          schema:
+            type: integer
+          required: true
       tags:
-      - Identidade
+        - Identidade
       security:
-      - jwtAuth: []
+        - jwtAuth: []
       responses:
-        '200':
+        "200":
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Endereco'
-          description: ''
-        '401':
+                $ref: "#/components/schemas/Endereco"
+          description: ""
+        "401":
           content:
             application/json:
               schema:
                 description: Não autenticado.
-          description: ''
-        '403':
+          description: ""
+        "403":
           content:
             application/json:
               schema:
                 description: Sem permissão.
-          description: ''
-        '404':
+          description: ""
+        "404":
           content:
             application/json:
               schema:
                 description: Endereço não cadastrado.
-          description: ''
+          description: ""
     put:
       operationId: identidade_usuarios_endereco_update
-      description: "\n    Cria ou atualiza o endereço do usuário (operação idempotente).\n\n
+      description:
+        "\n    Cria ou atualiza o endereço do usuário (operação idempotente).\n\n
         \   **Permissões:** O próprio usuário ou administradores.\n    "
       summary: Salvar endereço do usuário
       parameters:
-      - in: path
-        name: usuario_pk
-        schema:
-          type: integer
-        required: true
+        - in: path
+          name: usuario_pk
+          schema:
+            type: integer
+          required: true
       tags:
-      - Identidade
+        - Identidade
       requestBody:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/EnderecoInput'
+              $ref: "#/components/schemas/EnderecoInput"
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/EnderecoInput'
+              $ref: "#/components/schemas/EnderecoInput"
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/EnderecoInput'
+              $ref: "#/components/schemas/EnderecoInput"
         required: true
       security:
-      - jwtAuth: []
+        - jwtAuth: []
       responses:
-        '200':
+        "200":
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Endereco'
-          description: ''
-        '400':
+                $ref: "#/components/schemas/Endereco"
+          description: ""
+        "400":
           content:
             application/json:
               schema:
                 description: Dados inválidos.
-          description: ''
-        '401':
+          description: ""
+        "401":
           content:
             application/json:
               schema:
                 description: Não autenticado.
-          description: ''
-        '403':
+          description: ""
+        "403":
           content:
             application/json:
               schema:
                 description: Sem permissão.
-          description: ''
-        '404':
+          description: ""
+        "404":
           content:
             application/json:
               schema:
                 description: Usuário não encontrado.
-          description: ''
+          description: ""
   /cortex/identidade/usuarios/{usuario_pk}/matriculas/:
     get:
       operationId: identidade_usuarios_matriculas_list
-      description: "\n    Retorna a lista de matrículas de um usuário específico.\n\n
+      description:
+        "\n    Retorna a lista de matrículas de um usuário específico.\n\n
         \   **Permissões:** O próprio usuário ou administradores.\n\n    **Query params:**\n
         \   - `situacao` (int, opcional): filtra por situação — `1` (Ativa) ou `2`
         (Inativa).\n      Omitindo, retorna todas.\n    - `matricula` (str, opcional):
@@ -1470,177 +1497,180 @@ paths:
         conjunto, nunca expandem o acesso.\n    "
       summary: Listar matrículas do usuário
       parameters:
-      - in: query
-        name: matricula
-        schema:
-          type: string
-        description: Filtra pela string da matrícula.
-      - name: page
-        required: false
-        in: query
-        description: Um número de página dentro do conjunto de resultados paginado.
-        schema:
-          type: integer
-      - in: query
-        name: paginacao
-        schema:
-          type: integer
-        description: Tamanho da página (1–100, padrão 10).
-      - in: query
-        name: situacao
-        schema:
-          type: integer
-          enum:
-          - 1
-          - 2
-        description: 'Filtra por situação: 1 = Ativa, 2 = Inativa.'
-      - in: path
-        name: usuario_pk
-        schema:
-          type: integer
-        required: true
+        - in: query
+          name: matricula
+          schema:
+            type: string
+          description: Filtra pela string da matrícula.
+        - name: page
+          required: false
+          in: query
+          description: Um número de página dentro do conjunto de resultados paginado.
+          schema:
+            type: integer
+        - in: query
+          name: paginacao
+          schema:
+            type: integer
+          description: Tamanho da página (1–100, padrão 10).
+        - in: query
+          name: situacao
+          schema:
+            type: integer
+            enum:
+              - 1
+              - 2
+          description: "Filtra por situação: 1 = Ativa, 2 = Inativa."
+        - in: path
+          name: usuario_pk
+          schema:
+            type: integer
+          required: true
       tags:
-      - Identidade
+        - Identidade
       security:
-      - jwtAuth: []
+        - jwtAuth: []
       responses:
-        '200':
+        "200":
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/PaginatedMatriculaList'
-          description: ''
-        '401':
+                $ref: "#/components/schemas/PaginatedMatriculaList"
+          description: ""
+        "401":
           content:
             application/json:
               schema:
                 description: Não autenticado.
-          description: ''
-        '403':
+          description: ""
+        "403":
           content:
             application/json:
               schema:
                 description: Sem permissão.
-          description: ''
-        '404':
+          description: ""
+        "404":
           content:
             application/json:
               schema:
                 description: Usuário não encontrado.
-          description: ''
+          description: ""
     post:
       operationId: identidade_usuarios_matriculas_create
-      description: "\n    Adiciona uma nova matrícula (número) ao usuário.\n\n    **Permissões:**
+      description:
+        "\n    Adiciona uma nova matrícula (número) ao usuário.\n\n    **Permissões:**
         Apenas administradores.\n    "
       summary: Adicionar matrícula ao usuário
       parameters:
-      - in: path
-        name: usuario_pk
-        schema:
-          type: integer
-        required: true
+        - in: path
+          name: usuario_pk
+          schema:
+            type: integer
+          required: true
       tags:
-      - Identidade
+        - Identidade
       requestBody:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/AdicionarMatricula'
+              $ref: "#/components/schemas/AdicionarMatricula"
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/AdicionarMatricula'
+              $ref: "#/components/schemas/AdicionarMatricula"
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/AdicionarMatricula'
+              $ref: "#/components/schemas/AdicionarMatricula"
         required: true
       security:
-      - jwtAuth: []
+        - jwtAuth: []
       responses:
-        '201':
+        "201":
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Matricula'
-          description: ''
-        '400':
+                $ref: "#/components/schemas/Matricula"
+          description: ""
+        "400":
           content:
             application/json:
               schema:
                 description: Matrícula duplicada ou dados inválidos.
-          description: ''
-        '401':
+          description: ""
+        "401":
           content:
             application/json:
               schema:
                 description: Não autenticado.
-          description: ''
-        '403':
+          description: ""
+        "403":
           content:
             application/json:
               schema:
                 description: Sem permissão de administrador.
-          description: ''
-        '404':
+          description: ""
+        "404":
           content:
             application/json:
               schema:
                 description: Usuário não encontrado.
-          description: ''
+          description: ""
   /cortex/identidade/usuarios/{usuario_pk}/matriculas/{id}/desativar/:
     post:
       operationId: identidade_usuarios_matriculas_desativar_create
-      description: "\n    Marca uma matrícula do usuário como inativa.\n\n    **Permissões:**
+      description:
+        "\n    Marca uma matrícula do usuário como inativa.\n\n    **Permissões:**
         Apenas administradores.\n    "
       summary: Desativar matrícula
       parameters:
-      - in: path
-        name: id
-        schema:
-          type: integer
-        required: true
-      - in: path
-        name: usuario_pk
-        schema:
-          type: integer
-        required: true
+        - in: path
+          name: id
+          schema:
+            type: integer
+          required: true
+        - in: path
+          name: usuario_pk
+          schema:
+            type: integer
+          required: true
       tags:
-      - Identidade
+        - Identidade
       security:
-      - jwtAuth: []
+        - jwtAuth: []
       responses:
-        '200':
+        "200":
           content:
             application/json:
               schema:
                 description: Matrícula desativada com sucesso.
-          description: ''
-        '401':
+          description: ""
+        "401":
           content:
             application/json:
               schema:
                 description: Não autenticado.
-          description: ''
-        '403':
+          description: ""
+        "403":
           content:
             application/json:
               schema:
                 description: Sem permissão de administrador.
-          description: ''
-        '404':
+          description: ""
+        "404":
           content:
             application/json:
               schema:
                 description: Usuário ou matrícula não encontrados.
-          description: ''
+          description: ""
   /cortex/identidade/usuarios/importacao/:
     post:
       operationId: identidade_usuarios_importacao_create
-      description: "\n    Inicia o processo de importação em lote de usuários enviando
+      description:
+        "\n    Inicia o processo de importação em lote de usuários enviando
         o arquivo `.ods`.\n    O processamento ocorre em background (Celery).\n\n
         \   **Permissões:** Apenas administradores.\n    "
       summary: Importar usuários em lote (Assíncrono)
       tags:
-      - Identidade
+        - Identidade
       requestBody:
         content:
           multipart/form-data:
@@ -1652,167 +1682,171 @@ paths:
                   format: binary
                   description: Arquivo para upload
               required:
-              - file
+                - file
       security:
-      - jwtAuth: []
+        - jwtAuth: []
       responses:
-        '202':
+        "202":
           content:
             application/json:
               schema:
                 description: Importação enviada para fila de processamento.
-          description: ''
-        '400':
+          description: ""
+        "400":
           content:
             application/json:
               schema:
                 description: Já existe uma importação em andamento ou arquivo inválido.
-          description: ''
-        '401':
+          description: ""
+        "401":
           content:
             application/json:
               schema:
                 description: Não autenticado.
-          description: ''
-        '403':
+          description: ""
+        "403":
           content:
             application/json:
               schema:
                 description: Sem permissão de administrador.
-          description: ''
+          description: ""
   /cortex/identidade/usuarios/importacao/cancelar/:
     post:
       operationId: identidade_usuarios_importacao_cancelar_create
-      description: "\n    Cancela uma importação que esteja travada com status EM_ANDAMENTO.\n\n
+      description:
+        "\n    Cancela uma importação que esteja travada com status EM_ANDAMENTO.\n\n
         \   **Permissões:** Apenas administradores.\n    "
       summary: Cancelar importação em lote de usuários
       tags:
-      - Identidade
+        - Identidade
       security:
-      - jwtAuth: []
+        - jwtAuth: []
       responses:
-        '200':
+        "200":
           content:
             application/json:
               schema:
                 description: Importação cancelada com sucesso.
-          description: ''
-        '400':
+          description: ""
+        "400":
           content:
             application/json:
               schema:
                 description: Não há importação em andamento.
-          description: ''
-        '401':
+          description: ""
+        "401":
           content:
             application/json:
               schema:
                 description: Não autenticado.
-          description: ''
-        '403':
+          description: ""
+        "403":
           content:
             application/json:
               schema:
                 description: Sem permissão de administrador.
-          description: ''
+          description: ""
   /cortex/identidade/usuarios/importacao/historico/:
     get:
       operationId: identidade_usuarios_importacao_historico_list
-      description: "\n    Retorna a lista paginada do histórico de importações de
+      description:
+        "\n    Retorna a lista paginada do histórico de importações de
         usuários.\n\n    **Permissões:** Apenas administradores.\n\n    **Query params:**\n
         \   - `status` (str, opcional): filtra pelo status da importação. Valores:
         EM_ANDAMENTO, CONCLUIDA, ERRO.\n    - `paginacao` (int, opcional): tamanho
         da página, entre 1 e 100. Padrão: 10.\n    "
       summary: Histórico de importações de usuários
       parameters:
-      - name: page
-        required: false
-        in: query
-        description: Um número de página dentro do conjunto de resultados paginado.
-        schema:
-          type: integer
-      - in: query
-        name: paginacao
-        schema:
-          type: integer
-        description: Tamanho da página (1–100, padrão 10).
-      - in: query
-        name: status
-        schema:
-          type: string
-          enum:
-          - CONCLUIDA
-          - EM_ANDAMENTO
-          - ERRO
-        description: Filtra pelo status (EM_ANDAMENTO, CONCLUIDA, ERRO).
+        - name: page
+          required: false
+          in: query
+          description: Um número de página dentro do conjunto de resultados paginado.
+          schema:
+            type: integer
+        - in: query
+          name: paginacao
+          schema:
+            type: integer
+          description: Tamanho da página (1–100, padrão 10).
+        - in: query
+          name: status
+          schema:
+            type: string
+            enum:
+              - CONCLUIDA
+              - EM_ANDAMENTO
+              - ERRO
+          description: Filtra pelo status (EM_ANDAMENTO, CONCLUIDA, ERRO).
       tags:
-      - Identidade
+        - Identidade
       security:
-      - jwtAuth: []
+        - jwtAuth: []
       responses:
-        '200':
+        "200":
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/PaginatedStatusImportacaoLoteList'
-          description: ''
-        '401':
+                $ref: "#/components/schemas/PaginatedStatusImportacaoLoteList"
+          description: ""
+        "401":
           content:
             application/json:
               schema:
                 description: Não autenticado.
-          description: ''
-        '403':
+          description: ""
+        "403":
           content:
             application/json:
               schema:
                 description: Sem permissão de administrador.
-          description: ''
+          description: ""
   /cortex/identidade/usuarios/importacao/modelo/:
     get:
       operationId: identidade_usuarios_importacao_modelo_retrieve
-      description: "\n    Realiza o download do arquivo modelo `.ods` utilizado como
+      description:
+        "\n    Realiza o download do arquivo modelo `.ods` utilizado como
         base para a importação em lote de usuários.\n\n    **Permissões:** Apenas
         administradores.\n    "
       summary: Baixar modelo da planilha de importação
       tags:
-      - Identidade
+        - Identidade
       security:
-      - jwtAuth: []
+        - jwtAuth: []
       responses:
-        '200':
+        "200":
           content:
             application/json:
               schema:
                 description: Arquivo retornado com sucesso.
-          description: ''
-        '401':
+          description: ""
+        "401":
           content:
             application/json:
               schema:
                 description: Não autenticado.
-          description: ''
-        '403':
+          description: ""
+        "403":
           content:
             application/json:
               schema:
                 description: Sem permissão de administrador.
-          description: ''
-        '404':
+          description: ""
+        "404":
           content:
             application/json:
               schema:
                 description: Arquivo modelo não encontrado.
-          description: ''
+          description: ""
   /cortex/identidade/usuarios/importacao/pre-visualizar/:
     post:
       operationId: identidade_usuarios_importacao_pre_visualizar_create
-      description: "\n    Recebe um arquivo `.ods` multiaba e executa a validação
+      description:
+        "\n    Recebe um arquivo `.ods` multiaba e executa a validação
         estrutural e prévia da importação,\n    sem persistir dados no banco.\n\n
         \   **Permissões:** Apenas administradores.\n    "
       summary: Pré-visualizar importação em lote de usuários
       tags:
-      - Identidade
+        - Identidade
       requestBody:
         content:
           multipart/form-data:
@@ -1824,127 +1858,129 @@ paths:
                   format: binary
                   description: Arquivo para upload
               required:
-              - file
+                - file
       security:
-      - jwtAuth: []
+        - jwtAuth: []
       responses:
-        '200':
+        "200":
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ImportacaoUsuariosPreviewResponse'
-          description: ''
-        '400':
+                $ref: "#/components/schemas/ImportacaoUsuariosPreviewResponse"
+          description: ""
+        "400":
           content:
             application/json:
               schema:
                 description: Arquivo inválido ou estrutura inconsistente.
-          description: ''
-        '401':
+          description: ""
+        "401":
           content:
             application/json:
               schema:
                 description: Não autenticado.
-          description: ''
-        '403':
+          description: ""
+        "403":
           content:
             application/json:
               schema:
                 description: Sem permissão de administrador.
-          description: ''
+          description: ""
   /cortex/identidade/usuarios/importacao/status/:
     get:
       operationId: identidade_usuarios_importacao_status_retrieve
-      description: "\n    Retorna o status da importação atual ou da última importação
+      description:
+        "\n    Retorna o status da importação atual ou da última importação
         realizada.\n    Inclui a porcentagem de conclusão se estiver em andamento.\n\n
         \   **Permissões:** Apenas administradores.\n    "
       summary: Consultar status da importação de usuários
       tags:
-      - Identidade
+        - Identidade
       security:
-      - jwtAuth: []
+        - jwtAuth: []
       responses:
-        '200':
+        "200":
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/StatusImportacaoLote'
-          description: ''
-        '401':
+                $ref: "#/components/schemas/StatusImportacaoLote"
+          description: ""
+        "401":
           content:
             application/json:
               schema:
                 description: Não autenticado.
-          description: ''
-        '403':
+          description: ""
+        "403":
           content:
             application/json:
               schema:
                 description: Sem permissão de administrador.
-          description: ''
-        '404':
+          description: ""
+        "404":
           content:
             application/json:
               schema:
                 description: Nenhuma importação encontrada.
-          description: ''
+          description: ""
   /cortex/organizacional/funcoes/:
     get:
       operationId: organizacional_funcoes_list
-      description: "\n    Retorna a lista paginada de funções organizacionais.\n\n
+      description:
+        "\n    Retorna a lista paginada de funções organizacionais.\n\n
         \   **Permissões:** Apenas administradores.\n\n    **Query params apenas reduzem
         o conjunto â€” nunca expandem o acesso.**\n    "
       summary: Listar funções
       parameters:
-      - in: query
-        name: ativo
-        schema:
-          type: boolean
-        description: Filtra por ativa (true) ou inativa (false).
-      - in: query
-        name: descricao
-        schema:
-          type: string
-        description: Filtra por parte da descrição (ignora acentos e maiúsculas).
-      - name: page
-        required: false
-        in: query
-        description: Um número de página dentro do conjunto de resultados paginado.
-        schema:
-          type: integer
-      - in: query
-        name: paginacao
-        schema:
-          type: integer
-        description: Tamanho da página (1â€“100, padrão 10).
-      - in: query
-        name: sigla
-        schema:
-          type: string
-        description: Filtra por parte da sigla (ignora acentos e maiúsculas).
+        - in: query
+          name: ativo
+          schema:
+            type: boolean
+          description: Filtra por ativa (true) ou inativa (false).
+        - in: query
+          name: descricao
+          schema:
+            type: string
+          description: Filtra por parte da descrição (ignora acentos e maiúsculas).
+        - name: page
+          required: false
+          in: query
+          description: Um número de página dentro do conjunto de resultados paginado.
+          schema:
+            type: integer
+        - in: query
+          name: paginacao
+          schema:
+            type: integer
+          description: Tamanho da página (1â€“100, padrão 10).
+        - in: query
+          name: sigla
+          schema:
+            type: string
+          description: Filtra por parte da sigla (ignora acentos e maiúsculas).
       tags:
-      - Funções
+        - Funções
       security:
-      - jwtAuth: []
+        - jwtAuth: []
       responses:
-        '200':
+        "200":
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/PaginatedFuncaoList'
-          description: ''
-        '401':
+                $ref: "#/components/schemas/PaginatedFuncaoList"
+          description: ""
+        "401":
           content:
             application/json:
               schema:
                 description: Não autenticado.
-          description: ''
-        '403':
+          description: ""
+        "403":
           content:
             application/json:
               schema:
                 description: Sem permissão de administrador.
-          description: ''
+          description: ""
     post:
       operationId: organizacional_funcoes_create
       description: |-
@@ -1953,46 +1989,46 @@ paths:
         **Permissões:** Apenas administradores.
       summary: Criar função
       tags:
-      - Funções
+        - Funções
       requestBody:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/CriarFuncao'
+              $ref: "#/components/schemas/CriarFuncao"
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/CriarFuncao'
+              $ref: "#/components/schemas/CriarFuncao"
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/CriarFuncao'
+              $ref: "#/components/schemas/CriarFuncao"
         required: true
       security:
-      - jwtAuth: []
+        - jwtAuth: []
       responses:
-        '201':
+        "201":
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Funcao'
-          description: ''
-        '400':
+                $ref: "#/components/schemas/Funcao"
+          description: ""
+        "400":
           content:
             application/json:
               schema:
                 description: Dados inválidos ou sigla já¡ cadastrada.
-          description: ''
-        '401':
+          description: ""
+        "401":
           content:
             application/json:
               schema:
                 description: Não autenticado.
-          description: ''
-        '403':
+          description: ""
+        "403":
           content:
             application/json:
               schema:
                 description: Sem permissão de administrador.
-          description: ''
+          description: ""
   /cortex/organizacional/funcoes/{id}/:
     get:
       operationId: organizacional_funcoes_retrieve
@@ -2002,40 +2038,40 @@ paths:
         **Permissões:** Apenas administradores.
       summary: Detalhe da função
       parameters:
-      - in: path
-        name: id
-        schema:
-          type: integer
-        required: true
+        - in: path
+          name: id
+          schema:
+            type: integer
+          required: true
       tags:
-      - Funções
+        - Funções
       security:
-      - jwtAuth: []
+        - jwtAuth: []
       responses:
-        '200':
+        "200":
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Funcao'
-          description: ''
-        '401':
+                $ref: "#/components/schemas/Funcao"
+          description: ""
+        "401":
           content:
             application/json:
               schema:
                 description: Não autenticado.
-          description: ''
-        '403':
+          description: ""
+        "403":
           content:
             application/json:
               schema:
                 description: Sem permissão de administrador.
-          description: ''
-        '404':
+          description: ""
+        "404":
           content:
             application/json:
               schema:
                 description: Função não encontrada.
-          description: ''
+          description: ""
     patch:
       operationId: organizacional_funcoes_partial_update
       description: |-
@@ -2044,57 +2080,57 @@ paths:
         **Permissões:** Apenas administradores.
       summary: Atualizar função
       parameters:
-      - in: path
-        name: id
-        schema:
-          type: integer
-        required: true
+        - in: path
+          name: id
+          schema:
+            type: integer
+          required: true
       tags:
-      - Funções
+        - Funções
       requestBody:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/PatchedAtualizarFuncao'
+              $ref: "#/components/schemas/PatchedAtualizarFuncao"
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/PatchedAtualizarFuncao'
+              $ref: "#/components/schemas/PatchedAtualizarFuncao"
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/PatchedAtualizarFuncao'
+              $ref: "#/components/schemas/PatchedAtualizarFuncao"
       security:
-      - jwtAuth: []
+        - jwtAuth: []
       responses:
-        '200':
+        "200":
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Funcao'
-          description: ''
-        '400':
+                $ref: "#/components/schemas/Funcao"
+          description: ""
+        "400":
           content:
             application/json:
               schema:
                 description: Dados inválidos ou sigla já¡ cadastrada.
-          description: ''
-        '401':
+          description: ""
+        "401":
           content:
             application/json:
               schema:
                 description: Não autenticado.
-          description: ''
-        '403':
+          description: ""
+        "403":
           content:
             application/json:
               schema:
                 description: Sem permissão de administrador.
-          description: ''
-        '404':
+          description: ""
+        "404":
           content:
             application/json:
               schema:
                 description: Função não encontrada.
-          description: ''
+          description: ""
   /cortex/organizacional/funcoes/{id}/desativar/:
     post:
       operationId: organizacional_funcoes_desativar_create
@@ -2104,46 +2140,46 @@ paths:
         **Permissões:** Apenas administradores.
       summary: Desativar função
       parameters:
-      - in: path
-        name: id
-        schema:
-          type: integer
-        required: true
+        - in: path
+          name: id
+          schema:
+            type: integer
+          required: true
       tags:
-      - Funções
+        - Funções
       security:
-      - jwtAuth: []
+        - jwtAuth: []
       responses:
-        '200':
+        "200":
           content:
             application/json:
               schema:
                 description: Função desativada com sucesso.
-          description: ''
-        '400':
+          description: ""
+        "400":
           content:
             application/json:
               schema:
                 description: Função já¡ inativa ou em uso.
-          description: ''
-        '401':
+          description: ""
+        "401":
           content:
             application/json:
               schema:
                 description: Não autenticado.
-          description: ''
-        '403':
+          description: ""
+        "403":
           content:
             application/json:
               schema:
                 description: Sem permissão de administrador.
-          description: ''
-        '404':
+          description: ""
+        "404":
           content:
             application/json:
               schema:
                 description: Função não encontrada.
-          description: ''
+          description: ""
   /cortex/organizacional/funcoes/{id}/reativar/:
     post:
       operationId: organizacional_funcoes_reativar_create
@@ -2153,103 +2189,104 @@ paths:
         **Permissões:** Apenas administradores.
       summary: Reativar função
       parameters:
-      - in: path
-        name: id
-        schema:
-          type: integer
-        required: true
+        - in: path
+          name: id
+          schema:
+            type: integer
+          required: true
       tags:
-      - Funções
+        - Funções
       security:
-      - jwtAuth: []
+        - jwtAuth: []
       responses:
-        '200':
+        "200":
           content:
             application/json:
               schema:
                 description: Função reativada com sucesso.
-          description: ''
-        '400':
+          description: ""
+        "400":
           content:
             application/json:
               schema:
                 description: Função já está ativa.
-          description: ''
-        '401':
+          description: ""
+        "401":
           content:
             application/json:
               schema:
                 description: Não autenticado.
-          description: ''
-        '403':
+          description: ""
+        "403":
           content:
             application/json:
               schema:
                 description: Sem permissão de administrador.
-          description: ''
-        '404':
+          description: ""
+        "404":
           content:
             application/json:
               schema:
                 description: Função não encontrada.
-          description: ''
+          description: ""
   /cortex/organizacional/setores/:
     get:
       operationId: organizacional_setores_list
-      description: "\n    Retorna a lista paginada de setores da instituição.\n\n
+      description:
+        "\n    Retorna a lista paginada de setores da instituição.\n\n
         \   **Permissões:** Apenas administradores.\n\n    **Query params apenas reduzem
         o conjunto — nunca expandem o acesso.**\n    "
       summary: Listar setores
       parameters:
-      - in: query
-        name: ativo
-        schema:
-          type: boolean
-        description: Filtra por ativo (true) ou inativo (false).
-      - in: query
-        name: nome
-        schema:
-          type: string
-        description: Filtra por parte do nome (ignora acentos e maiúsculas).
-      - name: page
-        required: false
-        in: query
-        description: Um número de página dentro do conjunto de resultados paginado.
-        schema:
-          type: integer
-      - in: query
-        name: paginacao
-        schema:
-          type: integer
-        description: Tamanho da página (1–100, padrão 10).
-      - in: query
-        name: sigla
-        schema:
-          type: string
-        description: Filtra por parte da sigla (ignora acentos e maiúsculas).
+        - in: query
+          name: ativo
+          schema:
+            type: boolean
+          description: Filtra por ativo (true) ou inativo (false).
+        - in: query
+          name: nome
+          schema:
+            type: string
+          description: Filtra por parte do nome (ignora acentos e maiúsculas).
+        - name: page
+          required: false
+          in: query
+          description: Um número de página dentro do conjunto de resultados paginado.
+          schema:
+            type: integer
+        - in: query
+          name: paginacao
+          schema:
+            type: integer
+          description: Tamanho da página (1–100, padrão 10).
+        - in: query
+          name: sigla
+          schema:
+            type: string
+          description: Filtra por parte da sigla (ignora acentos e maiúsculas).
       tags:
-      - Setores
+        - Setores
       security:
-      - jwtAuth: []
+        - jwtAuth: []
       responses:
-        '200':
+        "200":
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/PaginatedSetorList'
-          description: ''
-        '401':
+                $ref: "#/components/schemas/PaginatedSetorList"
+          description: ""
+        "401":
           content:
             application/json:
               schema:
                 description: Não autenticado.
-          description: ''
-        '403':
+          description: ""
+        "403":
           content:
             application/json:
               schema:
                 description: Sem permissão de administrador.
-          description: ''
+          description: ""
     post:
       operationId: organizacional_setores_create
       description: |-
@@ -2258,46 +2295,46 @@ paths:
         **Permissões:** Apenas administradores.
       summary: Criar setor
       tags:
-      - Setores
+        - Setores
       requestBody:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/CriarSetor'
+              $ref: "#/components/schemas/CriarSetor"
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/CriarSetor'
+              $ref: "#/components/schemas/CriarSetor"
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/CriarSetor'
+              $ref: "#/components/schemas/CriarSetor"
         required: true
       security:
-      - jwtAuth: []
+        - jwtAuth: []
       responses:
-        '201':
+        "201":
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Setor'
-          description: ''
-        '400':
+                $ref: "#/components/schemas/Setor"
+          description: ""
+        "400":
           content:
             application/json:
               schema:
                 description: Dados inválidos ou sigla já cadastrada.
-          description: ''
-        '401':
+          description: ""
+        "401":
           content:
             application/json:
               schema:
                 description: Não autenticado.
-          description: ''
-        '403':
+          description: ""
+        "403":
           content:
             application/json:
               schema:
                 description: Sem permissão de administrador.
-          description: ''
+          description: ""
   /cortex/organizacional/setores/{id}/:
     get:
       operationId: organizacional_setores_retrieve
@@ -2307,40 +2344,40 @@ paths:
         **Permissões:** Apenas administradores.
       summary: Detalhe do setor
       parameters:
-      - in: path
-        name: id
-        schema:
-          type: integer
-        required: true
+        - in: path
+          name: id
+          schema:
+            type: integer
+          required: true
       tags:
-      - Setores
+        - Setores
       security:
-      - jwtAuth: []
+        - jwtAuth: []
       responses:
-        '200':
+        "200":
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Setor'
-          description: ''
-        '401':
+                $ref: "#/components/schemas/Setor"
+          description: ""
+        "401":
           content:
             application/json:
               schema:
                 description: Não autenticado.
-          description: ''
-        '403':
+          description: ""
+        "403":
           content:
             application/json:
               schema:
                 description: Sem permissão de administrador.
-          description: ''
-        '404':
+          description: ""
+        "404":
           content:
             application/json:
               schema:
                 description: Setor não encontrado.
-          description: ''
+          description: ""
     patch:
       operationId: organizacional_setores_partial_update
       description: |-
@@ -2349,57 +2386,57 @@ paths:
         **Permissões:** Apenas administradores.
       summary: Atualizar setor
       parameters:
-      - in: path
-        name: id
-        schema:
-          type: integer
-        required: true
+        - in: path
+          name: id
+          schema:
+            type: integer
+          required: true
       tags:
-      - Setores
+        - Setores
       requestBody:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/PatchedAtualizarSetor'
+              $ref: "#/components/schemas/PatchedAtualizarSetor"
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/PatchedAtualizarSetor'
+              $ref: "#/components/schemas/PatchedAtualizarSetor"
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/PatchedAtualizarSetor'
+              $ref: "#/components/schemas/PatchedAtualizarSetor"
       security:
-      - jwtAuth: []
+        - jwtAuth: []
       responses:
-        '200':
+        "200":
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Setor'
-          description: ''
-        '400':
+                $ref: "#/components/schemas/Setor"
+          description: ""
+        "400":
           content:
             application/json:
               schema:
                 description: Dados inválidos ou sigla já cadastrada.
-          description: ''
-        '401':
+          description: ""
+        "401":
           content:
             application/json:
               schema:
                 description: Não autenticado.
-          description: ''
-        '403':
+          description: ""
+        "403":
           content:
             application/json:
               schema:
                 description: Sem permissão de administrador.
-          description: ''
-        '404':
+          description: ""
+        "404":
           content:
             application/json:
               schema:
                 description: Setor não encontrado.
-          description: ''
+          description: ""
   /cortex/organizacional/setores/{id}/desativar/:
     post:
       operationId: organizacional_setores_desativar_create
@@ -2409,46 +2446,46 @@ paths:
         **Permissões:** Apenas administradores.
       summary: Desativar setor
       parameters:
-      - in: path
-        name: id
-        schema:
-          type: integer
-        required: true
+        - in: path
+          name: id
+          schema:
+            type: integer
+          required: true
       tags:
-      - Setores
+        - Setores
       security:
-      - jwtAuth: []
+        - jwtAuth: []
       responses:
-        '200':
+        "200":
           content:
             application/json:
               schema:
                 description: Setor desativado com sucesso.
-          description: ''
-        '400':
+          description: ""
+        "400":
           content:
             application/json:
               schema:
                 description: Setor já inativo ou com vínculos ativos.
-          description: ''
-        '401':
+          description: ""
+        "401":
           content:
             application/json:
               schema:
                 description: Não autenticado.
-          description: ''
-        '403':
+          description: ""
+        "403":
           content:
             application/json:
               schema:
                 description: Sem permissão de administrador.
-          description: ''
-        '404':
+          description: ""
+        "404":
           content:
             application/json:
               schema:
                 description: Setor não encontrado.
-          description: ''
+          description: ""
   /cortex/organizacional/setores/{id}/reativar/:
     post:
       operationId: organizacional_setores_reativar_create
@@ -2458,234 +2495,237 @@ paths:
         **Permissões:** Apenas administradores.
       summary: Reativar setor
       parameters:
-      - in: path
-        name: id
-        schema:
-          type: integer
-        required: true
+        - in: path
+          name: id
+          schema:
+            type: integer
+          required: true
       tags:
-      - Setores
+        - Setores
       security:
-      - jwtAuth: []
+        - jwtAuth: []
       responses:
-        '200':
+        "200":
           content:
             application/json:
               schema:
                 description: Setor reativado com sucesso.
-          description: ''
-        '400':
+          description: ""
+        "400":
           content:
             application/json:
               schema:
                 description: Setor já está ativo.
-          description: ''
-        '401':
+          description: ""
+        "401":
           content:
             application/json:
               schema:
                 description: Não autenticado.
-          description: ''
-        '403':
+          description: ""
+        "403":
           content:
             application/json:
               schema:
                 description: Sem permissão de administrador.
-          description: ''
-        '404':
+          description: ""
+        "404":
           content:
             application/json:
               schema:
                 description: Setor não encontrado.
-          description: ''
+          description: ""
   /cortex/organizacional/setores/{setor_pk}/vinculos/:
     get:
       operationId: organizacional_setores_vinculos_list
-      description: "\n    Retorna a lista paginada de vínculos de um setor específico.\n\n
+      description:
+        "\n    Retorna a lista paginada de vínculos de um setor específico.\n\n
         \   **Permissões:** Apenas administradores.\n\n    **Query params apenas reduzem
         o conjunto â€” nunca expandem o acesso.**\n    "
       summary: Listar vínculos do setor
       parameters:
-      - in: query
-        name: cpf_usuario
-        schema:
-          type: string
-        description: Filtra por parte do CPF do usuário.
-      - in: query
-        name: nome_usuario
-        schema:
-          type: string
-        description: Filtra por parte do nome do usuário (ignora acentos e maiúsculas).
-      - name: page
-        required: false
-        in: query
-        description: Um número de página dentro do conjunto de resultados paginado.
-        schema:
-          type: integer
-      - in: query
-        name: paginacao
-        schema:
-          type: integer
-        description: Tamanho da página (1â€“100, padrão 10).
-      - in: query
-        name: responsavel
-        schema:
-          type: boolean
-        description: Filtra por vínculos marcados como responsável (true) ou não (false).
-      - in: path
-        name: setor_pk
-        schema:
-          type: integer
-        required: true
-      - in: query
-        name: sigla_funcao
-        schema:
-          type: string
-        description: Filtra por parte da sigla da função (ignora acentos e maiúsculas).
+        - in: query
+          name: cpf_usuario
+          schema:
+            type: string
+          description: Filtra por parte do CPF do usuário.
+        - in: query
+          name: nome_usuario
+          schema:
+            type: string
+          description: Filtra por parte do nome do usuário (ignora acentos e maiúsculas).
+        - name: page
+          required: false
+          in: query
+          description: Um número de página dentro do conjunto de resultados paginado.
+          schema:
+            type: integer
+        - in: query
+          name: paginacao
+          schema:
+            type: integer
+          description: Tamanho da página (1â€“100, padrão 10).
+        - in: query
+          name: responsavel
+          schema:
+            type: boolean
+          description: Filtra por vínculos marcados como responsável (true) ou não (false).
+        - in: path
+          name: setor_pk
+          schema:
+            type: integer
+          required: true
+        - in: query
+          name: sigla_funcao
+          schema:
+            type: string
+          description: Filtra por parte da sigla da função (ignora acentos e maiúsculas).
       tags:
-      - Vínculos de Setor
+        - Vínculos de Setor
       security:
-      - jwtAuth: []
+        - jwtAuth: []
       responses:
-        '200':
+        "200":
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/PaginatedSetorVinculoList'
-          description: ''
-        '401':
+                $ref: "#/components/schemas/PaginatedSetorVinculoList"
+          description: ""
+        "401":
           content:
             application/json:
               schema:
                 description: Não autenticado.
-          description: ''
-        '403':
+          description: ""
+        "403":
           content:
             application/json:
               schema:
                 description: Sem permissão de administrador.
-          description: ''
-        '404':
+          description: ""
+        "404":
           content:
             application/json:
               schema:
                 description: Setor não encontrado.
-          description: ''
+          description: ""
     post:
       operationId: organizacional_setores_vinculos_create
-      description: "\n    Vincula um usuário ao setor com uma função obrigatória.\n\n
+      description:
+        "\n    Vincula um usuário ao setor com uma função obrigatória.\n\n
         \   **Regras:**\n    - Setor e função devem estar ativos.\n    - A combinação
         (usuário, setor, função) deve ser única.\n    - Um usuário pode ter múltiplos
         vínculos com setores ou funções diferentes.\n\n    **Permissões:** Apenas
         administradores.\n    "
       summary: Criar vínculo no setor
       parameters:
-      - in: path
-        name: setor_pk
-        schema:
-          type: integer
-        required: true
+        - in: path
+          name: setor_pk
+          schema:
+            type: integer
+          required: true
       tags:
-      - Vínculos de Setor
+        - Vínculos de Setor
       requestBody:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/CriarVinculo'
+              $ref: "#/components/schemas/CriarVinculo"
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/CriarVinculo'
+              $ref: "#/components/schemas/CriarVinculo"
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/CriarVinculo'
+              $ref: "#/components/schemas/CriarVinculo"
         required: true
       security:
-      - jwtAuth: []
+        - jwtAuth: []
       responses:
-        '201':
+        "201":
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/SetorVinculo'
-          description: ''
-        '400':
+                $ref: "#/components/schemas/SetorVinculo"
+          description: ""
+        "400":
           content:
             application/json:
               schema:
                 description: Dados inválidos, setor/função inativo ou vínculo duplicado.
-          description: ''
-        '401':
+          description: ""
+        "401":
           content:
             application/json:
               schema:
                 description: Não autenticado.
-          description: ''
-        '403':
+          description: ""
+        "403":
           content:
             application/json:
               schema:
                 description: Sem permissão de administrador.
-          description: ''
-        '404':
+          description: ""
+        "404":
           content:
             application/json:
               schema:
                 description: Setor não encontrado.
-          description: ''
+          description: ""
   /cortex/organizacional/setores/{setor_pk}/vinculos/{id}/definir-responsavel/:
     post:
       operationId: organizacional_setores_vinculos_definir_responsavel_create
-      description: "\n    Marca o vínculo como responsável pelo setor.\n\n    **Regras:**\n
+      description:
+        "\n    Marca o vínculo como responsável pelo setor.\n\n    **Regras:**\n
         \   - O setor deve estar ativo.\n    - O usuário do vínculo deve possuir perfil
         de servidor ativo.\n\n    Apenas servidores ativos podem ocupar a responsabilidade
         principal de um setor.\n\n    **Permissões:** Apenas administradores.\n    "
       summary: Definir vínculo como responsável
       parameters:
-      - in: path
-        name: id
-        schema:
-          type: integer
-        required: true
-      - in: path
-        name: setor_pk
-        schema:
-          type: integer
-        required: true
+        - in: path
+          name: id
+          schema:
+            type: integer
+          required: true
+        - in: path
+          name: setor_pk
+          schema:
+            type: integer
+          required: true
       tags:
-      - Vínculos de Setor
+        - Vínculos de Setor
       security:
-      - jwtAuth: []
+        - jwtAuth: []
       responses:
-        '200':
+        "200":
           content:
             application/json:
               schema:
                 description: Responsável definido com sucesso.
-          description: ''
-        '400':
+          description: ""
+        "400":
           content:
             application/json:
               schema:
                 description: Setor inativo ou usuário não é servidor ativo.
-          description: ''
-        '401':
+          description: ""
+        "401":
           content:
             application/json:
               schema:
                 description: Não autenticado.
-          description: ''
-        '403':
+          description: ""
+        "403":
           content:
             application/json:
               schema:
                 description: Sem permissão de administrador.
-          description: ''
-        '404':
+          description: ""
+        "404":
           content:
             application/json:
               schema:
                 description: Vínculo não encontrado.
-          description: ''
+          description: ""
   /cortex/organizacional/setores/{setor_pk}/vinculos/{id}/encerrar/:
     post:
       operationId: organizacional_setores_vinculos_encerrar_create
@@ -2695,51 +2735,51 @@ paths:
         **Permissões:** Apenas administradores.
       summary: Encerrar vínculo
       parameters:
-      - in: path
-        name: id
-        schema:
-          type: integer
-        required: true
-      - in: path
-        name: setor_pk
-        schema:
-          type: integer
-        required: true
+        - in: path
+          name: id
+          schema:
+            type: integer
+          required: true
+        - in: path
+          name: setor_pk
+          schema:
+            type: integer
+          required: true
       tags:
-      - Vínculos de Setor
+        - Vínculos de Setor
       security:
-      - jwtAuth: []
+        - jwtAuth: []
       responses:
-        '200':
+        "200":
           content:
             application/json:
               schema:
                 description: Vínculo encerrado com sucesso.
-          description: ''
-        '400':
+          description: ""
+        "400":
           content:
             application/json:
               schema:
-                description: 'Operação bloqueada: setor perderia seu único responsável.'
-          description: ''
-        '401':
+                description: "Operação bloqueada: setor perderia seu único responsável."
+          description: ""
+        "401":
           content:
             application/json:
               schema:
                 description: Não autenticado.
-          description: ''
-        '403':
+          description: ""
+        "403":
           content:
             application/json:
               schema:
                 description: Sem permissão de administrador.
-          description: ''
-        '404':
+          description: ""
+        "404":
           content:
             application/json:
               schema:
                 description: Vínculo não encontrado.
-          description: ''
+          description: ""
   /cortex/organizacional/setores/{setor_pk}/vinculos/{id}/funcao/:
     patch:
       operationId: organizacional_setores_vinculos_funcao_partial_update
@@ -2749,62 +2789,62 @@ paths:
         **Permissões:** Apenas administradores.
       summary: Atualizar função do vínculo
       parameters:
-      - in: path
-        name: id
-        schema:
-          type: integer
-        required: true
-      - in: path
-        name: setor_pk
-        schema:
-          type: integer
-        required: true
+        - in: path
+          name: id
+          schema:
+            type: integer
+          required: true
+        - in: path
+          name: setor_pk
+          schema:
+            type: integer
+          required: true
       tags:
-      - Vínculos de Setor
+        - Vínculos de Setor
       requestBody:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/PatchedAtualizarVinculoFuncao'
+              $ref: "#/components/schemas/PatchedAtualizarVinculoFuncao"
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/PatchedAtualizarVinculoFuncao'
+              $ref: "#/components/schemas/PatchedAtualizarVinculoFuncao"
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/PatchedAtualizarVinculoFuncao'
+              $ref: "#/components/schemas/PatchedAtualizarVinculoFuncao"
       security:
-      - jwtAuth: []
+        - jwtAuth: []
       responses:
-        '200':
+        "200":
           content:
             application/json:
               schema:
                 description: Função do vínculo atualizada com sucesso.
-          description: ''
-        '400':
+          description: ""
+        "400":
           content:
             application/json:
               schema:
                 description: Função inativa ou vínculo duplicado resultante.
-          description: ''
-        '401':
+          description: ""
+        "401":
           content:
             application/json:
               schema:
                 description: Não autenticado.
-          description: ''
-        '403':
+          description: ""
+        "403":
           content:
             application/json:
               schema:
                 description: Sem permissão de administrador.
-          description: ''
-        '404':
+          description: ""
+        "404":
           content:
             application/json:
               schema:
                 description: Vínculo não encontrado.
-          description: ''
+          description: ""
   /cortex/organizacional/setores/{setor_pk}/vinculos/{id}/remover-responsavel/:
     post:
       operationId: organizacional_setores_vinculos_remover_responsavel_create
@@ -2814,783 +2854,808 @@ paths:
         **Permissões:** Apenas administradores.
       summary: Remover responsabilidade do vínculo
       parameters:
-      - in: path
-        name: id
-        schema:
-          type: integer
-        required: true
-      - in: path
-        name: setor_pk
-        schema:
-          type: integer
-        required: true
+        - in: path
+          name: id
+          schema:
+            type: integer
+          required: true
+        - in: path
+          name: setor_pk
+          schema:
+            type: integer
+          required: true
       tags:
-      - Vínculos de Setor
+        - Vínculos de Setor
       security:
-      - jwtAuth: []
+        - jwtAuth: []
       responses:
-        '200':
+        "200":
           content:
             application/json:
               schema:
                 description: Responsabilidade removida com sucesso.
-          description: ''
-        '400':
+          description: ""
+        "400":
           content:
             application/json:
               schema:
-                description: 'Operação bloqueada: setor perderia seu único responsável.'
-          description: ''
-        '401':
+                description: "Operação bloqueada: setor perderia seu único responsável."
+          description: ""
+        "401":
           content:
             application/json:
               schema:
                 description: Não autenticado.
-          description: ''
-        '403':
+          description: ""
+        "403":
           content:
             application/json:
               schema:
                 description: Sem permissão de administrador.
-          description: ''
-        '404':
+          description: ""
+        "404":
           content:
             application/json:
               schema:
                 description: Vínculo não encontrado.
-          description: ''
+          description: ""
   /cortex/pessoas-institucionais/cargos/:
     get:
       operationId: pessoas_institucionais_cargos_list
-      description: "\n    Lista todos os cargos cadastrados.\n    \n    **Permissões:**
+      description:
+        "\n    Lista todos os cargos cadastrados.\n    \n    **Permissões:**
         Apenas administradores.\n    "
       summary: Listar cargos
       parameters:
-      - in: query
-        name: ativo
-        schema:
-          type: boolean
-        description: 'Filtra por status: true = Ativo, false = Inativo.'
-      - in: query
-        name: nome
-        schema:
-          type: string
-        description: Filtra por parte do nome (ignora acentos e maiúsculas).
-      - name: page
-        required: false
-        in: query
-        description: Um número de página dentro do conjunto de resultados paginado.
-        schema:
-          type: integer
-      - in: query
-        name: paginacao
-        schema:
-          type: integer
-        description: Tamanho da página (1–100, padrão 10).
+        - in: query
+          name: ativo
+          schema:
+            type: boolean
+          description: "Filtra por status: true = Ativo, false = Inativo."
+        - in: query
+          name: nome
+          schema:
+            type: string
+          description: Filtra por parte do nome (ignora acentos e maiúsculas).
+        - name: page
+          required: false
+          in: query
+          description: Um número de página dentro do conjunto de resultados paginado.
+          schema:
+            type: integer
+        - in: query
+          name: paginacao
+          schema:
+            type: integer
+          description: Tamanho da página (1–100, padrão 10).
       tags:
-      - Cargos
+        - Cargos
       security:
-      - jwtAuth: []
+        - jwtAuth: []
       responses:
-        '200':
+        "200":
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/PaginatedCargoList'
-          description: ''
+                $ref: "#/components/schemas/PaginatedCargoList"
+          description: ""
     post:
       operationId: pessoas_institucionais_cargos_create
-      description: "\n    Cria um novo cargo.\n    \n    **Permissões:** Apenas administradores.\n
+      description:
+        "\n    Cria um novo cargo.\n    \n    **Permissões:** Apenas administradores.\n
         \   "
       summary: Criar cargo
       tags:
-      - Cargos
+        - Cargos
       requestBody:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/CriarCargo'
+              $ref: "#/components/schemas/CriarCargo"
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/CriarCargo'
+              $ref: "#/components/schemas/CriarCargo"
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/CriarCargo'
+              $ref: "#/components/schemas/CriarCargo"
         required: true
       security:
-      - jwtAuth: []
+        - jwtAuth: []
       responses:
-        '201':
+        "201":
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Cargo'
-          description: ''
+                $ref: "#/components/schemas/Cargo"
+          description: ""
   /cortex/pessoas-institucionais/cargos/{id}/:
     get:
       operationId: pessoas_institucionais_cargos_retrieve
-      description: "\n    Exibe os detalhes de um cargo específico.\n    \n    **Permissões:**
+      description:
+        "\n    Exibe os detalhes de um cargo específico.\n    \n    **Permissões:**
         Apenas administradores.\n    "
       summary: Detalhar cargo
       parameters:
-      - in: path
-        name: id
-        schema:
-          type: integer
-        required: true
+        - in: path
+          name: id
+          schema:
+            type: integer
+          required: true
       tags:
-      - Cargos
+        - Cargos
       security:
-      - jwtAuth: []
+        - jwtAuth: []
       responses:
-        '200':
+        "200":
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Cargo'
-          description: ''
+                $ref: "#/components/schemas/Cargo"
+          description: ""
     patch:
       operationId: pessoas_institucionais_cargos_partial_update
-      description: "\n    Atualiza os dados de um cargo existente.\n    \n    **Permissões:**
+      description:
+        "\n    Atualiza os dados de um cargo existente.\n    \n    **Permissões:**
         Apenas administradores.\n    "
       summary: Atualizar cargo
       parameters:
-      - in: path
-        name: id
-        schema:
-          type: integer
-        required: true
+        - in: path
+          name: id
+          schema:
+            type: integer
+          required: true
       tags:
-      - Cargos
+        - Cargos
       requestBody:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/PatchedAtualizarCargo'
+              $ref: "#/components/schemas/PatchedAtualizarCargo"
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/PatchedAtualizarCargo'
+              $ref: "#/components/schemas/PatchedAtualizarCargo"
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/PatchedAtualizarCargo'
+              $ref: "#/components/schemas/PatchedAtualizarCargo"
       security:
-      - jwtAuth: []
+        - jwtAuth: []
       responses:
-        '200':
+        "200":
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Cargo'
-          description: ''
+                $ref: "#/components/schemas/Cargo"
+          description: ""
   /cortex/pessoas-institucionais/cargos/{id}/desativar/:
     post:
       operationId: pessoas_institucionais_cargos_desativar_create
-      description: "\n    Desativa um cargo.\n    \n    **Permissões:** Apenas administradores.\n
+      description:
+        "\n    Desativa um cargo.\n    \n    **Permissões:** Apenas administradores.\n
         \   "
       summary: Desativar cargo
       parameters:
-      - in: path
-        name: id
-        schema:
-          type: integer
-        required: true
+        - in: path
+          name: id
+          schema:
+            type: integer
+          required: true
       tags:
-      - Cargos
+        - Cargos
       security:
-      - jwtAuth: []
+        - jwtAuth: []
       responses:
-        '200':
+        "200":
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Cargo'
-          description: ''
+                $ref: "#/components/schemas/Cargo"
+          description: ""
   /cortex/pessoas-institucionais/cargos/{id}/reativar/:
     post:
       operationId: pessoas_institucionais_cargos_reativar_create
-      description: "\n    Reativa um cargo inativo.\n    \n    **Permissões:** Apenas
+      description:
+        "\n    Reativa um cargo inativo.\n    \n    **Permissões:** Apenas
         administradores.\n    "
       summary: Reativar cargo
       parameters:
-      - in: path
-        name: id
-        schema:
-          type: integer
-        required: true
+        - in: path
+          name: id
+          schema:
+            type: integer
+          required: true
       tags:
-      - Cargos
+        - Cargos
       security:
-      - jwtAuth: []
+        - jwtAuth: []
       responses:
-        '200':
+        "200":
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Cargo'
-          description: ''
+                $ref: "#/components/schemas/Cargo"
+          description: ""
   /cortex/pessoas-institucionais/empresas/:
     get:
       operationId: pessoas_institucionais_empresas_list
-      description: "\n    Lista todas as empresas/instituições cadastradas.\n\n    **Permissões:**
+      description:
+        "\n    Lista todas as empresas/instituições cadastradas.\n\n    **Permissões:**
         Apenas administradores.\n\n    Query params apenas reduzem o conjunto, nunca
         expandem o acesso.\n    "
       summary: Listar empresas/instituições
       parameters:
-      - in: query
-        name: ativo
-        schema:
-          type: boolean
-        description: 'Filtra por status: true = Ativa, false = Inativa.'
-      - in: query
-        name: cnpj
-        schema:
-          type: string
-        description: Filtra por parte do CNPJ.
-      - in: query
-        name: nome
-        schema:
-          type: string
-        description: Filtra por parte do nome (ignora acentos e maiúsculas).
-      - name: page
-        required: false
-        in: query
-        description: Um número de página dentro do conjunto de resultados paginado.
-        schema:
-          type: integer
-      - in: query
-        name: paginacao
-        schema:
-          type: integer
-        description: Tamanho da página (1–100, padrão 10).
+        - in: query
+          name: ativo
+          schema:
+            type: boolean
+          description: "Filtra por status: true = Ativa, false = Inativa."
+        - in: query
+          name: cnpj
+          schema:
+            type: string
+          description: Filtra por parte do CNPJ.
+        - in: query
+          name: nome
+          schema:
+            type: string
+          description: Filtra por parte do nome (ignora acentos e maiúsculas).
+        - name: page
+          required: false
+          in: query
+          description: Um número de página dentro do conjunto de resultados paginado.
+          schema:
+            type: integer
+        - in: query
+          name: paginacao
+          schema:
+            type: integer
+          description: Tamanho da página (1–100, padrão 10).
       tags:
-      - Empresas/Instituições
+        - Empresas/Instituições
       security:
-      - jwtAuth: []
+        - jwtAuth: []
       responses:
-        '200':
+        "200":
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/PaginatedEmpresaInstituicaoList'
-          description: ''
+                $ref: "#/components/schemas/PaginatedEmpresaInstituicaoList"
+          description: ""
     post:
       operationId: pessoas_institucionais_empresas_create
-      description: "\n    Cria uma nova empresa/instituição.\n\n    **Permissões:**
+      description:
+        "\n    Cria uma nova empresa/instituição.\n\n    **Permissões:**
         Apenas administradores.\n    "
       summary: Criar empresa/instituição
       tags:
-      - Empresas/Instituições
+        - Empresas/Instituições
       requestBody:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/CriarEmpresaInstituicao'
+              $ref: "#/components/schemas/CriarEmpresaInstituicao"
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/CriarEmpresaInstituicao'
+              $ref: "#/components/schemas/CriarEmpresaInstituicao"
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/CriarEmpresaInstituicao'
+              $ref: "#/components/schemas/CriarEmpresaInstituicao"
         required: true
       security:
-      - jwtAuth: []
+        - jwtAuth: []
       responses:
-        '201':
+        "201":
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/EmpresaInstituicao'
-          description: ''
+                $ref: "#/components/schemas/EmpresaInstituicao"
+          description: ""
   /cortex/pessoas-institucionais/empresas/{id}/:
     get:
       operationId: pessoas_institucionais_empresas_retrieve
-      description: "\n    Exibe os detalhes de uma empresa/instituição específica.\n\n
+      description:
+        "\n    Exibe os detalhes de uma empresa/instituição específica.\n\n
         \   **Permissões:** Apenas administradores.\n    "
       summary: Detalhar empresa/instituição
       parameters:
-      - in: path
-        name: id
-        schema:
-          type: integer
-        required: true
+        - in: path
+          name: id
+          schema:
+            type: integer
+          required: true
       tags:
-      - Empresas/Instituições
+        - Empresas/Instituições
       security:
-      - jwtAuth: []
+        - jwtAuth: []
       responses:
-        '200':
+        "200":
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/EmpresaInstituicao'
-          description: ''
+                $ref: "#/components/schemas/EmpresaInstituicao"
+          description: ""
     patch:
       operationId: pessoas_institucionais_empresas_partial_update
-      description: "\n    Atualiza os dados de uma empresa/instituição existente.\n\n
+      description:
+        "\n    Atualiza os dados de uma empresa/instituição existente.\n\n
         \   **Permissões:** Apenas administradores.\n    "
       summary: Atualizar empresa/instituição
       parameters:
-      - in: path
-        name: id
-        schema:
-          type: integer
-        required: true
+        - in: path
+          name: id
+          schema:
+            type: integer
+          required: true
       tags:
-      - Empresas/Instituições
+        - Empresas/Instituições
       requestBody:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/PatchedAtualizarEmpresaInstituicao'
+              $ref: "#/components/schemas/PatchedAtualizarEmpresaInstituicao"
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/PatchedAtualizarEmpresaInstituicao'
+              $ref: "#/components/schemas/PatchedAtualizarEmpresaInstituicao"
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/PatchedAtualizarEmpresaInstituicao'
+              $ref: "#/components/schemas/PatchedAtualizarEmpresaInstituicao"
       security:
-      - jwtAuth: []
+        - jwtAuth: []
       responses:
-        '200':
+        "200":
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/EmpresaInstituicao'
-          description: ''
+                $ref: "#/components/schemas/EmpresaInstituicao"
+          description: ""
   /cortex/pessoas-institucionais/empresas/{id}/desativar/:
     post:
       operationId: pessoas_institucionais_empresas_desativar_create
-      description: "\n    Desativa uma empresa/instituição.\n\n    **Permissões:**
+      description:
+        "\n    Desativa uma empresa/instituição.\n\n    **Permissões:**
         Apenas administradores.\n    "
       summary: Desativar empresa/instituição
       parameters:
-      - in: path
-        name: id
-        schema:
-          type: integer
-        required: true
+        - in: path
+          name: id
+          schema:
+            type: integer
+          required: true
       tags:
-      - Empresas/Instituições
+        - Empresas/Instituições
       security:
-      - jwtAuth: []
+        - jwtAuth: []
       responses:
-        '200':
+        "200":
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/EmpresaInstituicao'
-          description: ''
+                $ref: "#/components/schemas/EmpresaInstituicao"
+          description: ""
   /cortex/pessoas-institucionais/empresas/{id}/reativar/:
     post:
       operationId: pessoas_institucionais_empresas_reativar_create
-      description: "\n    Reativa uma empresa/instituição inativa.\n\n    **Permissões:**
+      description:
+        "\n    Reativa uma empresa/instituição inativa.\n\n    **Permissões:**
         Apenas administradores.\n    "
       summary: Reativar empresa/instituição
       parameters:
-      - in: path
-        name: id
-        schema:
-          type: integer
-        required: true
+        - in: path
+          name: id
+          schema:
+            type: integer
+          required: true
       tags:
-      - Empresas/Instituições
+        - Empresas/Instituições
       security:
-      - jwtAuth: []
+        - jwtAuth: []
       responses:
-        '200':
+        "200":
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/EmpresaInstituicao'
-          description: ''
+                $ref: "#/components/schemas/EmpresaInstituicao"
+          description: ""
   /cortex/pessoas-institucionais/servidores/:
     get:
       operationId: pessoas_institucionais_servidores_list
-      description: "\n    Lista todos os servidores cadastrados.\n\n    **Permissões:**
+      description:
+        "\n    Lista todos os servidores cadastrados.\n\n    **Permissões:**
         Apenas administradores.\n\n    Query params apenas reduzem o conjunto, nunca
         expandem o acesso.\n    "
       summary: Listar servidores
       parameters:
-      - in: query
-        name: ativo
-        schema:
-          type: boolean
-        description: 'Filtra por status: true = Ativo, false = Inativo.'
-      - in: query
-        name: cargo
-        schema:
-          type: integer
-        description: Filtra por ID do cargo.
-      - in: query
-        name: categoria
-        schema:
-          type: integer
-          enum:
-          - 1
-          - 2
-        description: 'Filtra por categoria: 1 = Docente, 2 = Técnico-Administrativo.'
-      - in: query
-        name: cpf
-        schema:
-          type: string
-        description: Filtra por parte do CPF do servidor.
-      - in: query
-        name: nome
-        schema:
-          type: string
-        description: Filtra por parte do nome do servidor (ignora acentos e maiúsculas).
-      - in: query
-        name: nome_cargo
-        schema:
-          type: string
-        description: Filtra por parte do nome do cargo (ignora acentos e maiúsculas).
-      - name: page
-        required: false
-        in: query
-        description: Um número de página dentro do conjunto de resultados paginado.
-        schema:
-          type: integer
-      - in: query
-        name: paginacao
-        schema:
-          type: integer
-        description: Tamanho da página (1–100, padrão 10).
+        - in: query
+          name: ativo
+          schema:
+            type: boolean
+          description: "Filtra por status: true = Ativo, false = Inativo."
+        - in: query
+          name: cargo
+          schema:
+            type: integer
+          description: Filtra por ID do cargo.
+        - in: query
+          name: categoria
+          schema:
+            type: integer
+            enum:
+              - 1
+              - 2
+          description: "Filtra por categoria: 1 = Docente, 2 = Técnico-Administrativo."
+        - in: query
+          name: cpf
+          schema:
+            type: string
+          description: Filtra por parte do CPF do servidor.
+        - in: query
+          name: nome
+          schema:
+            type: string
+          description: Filtra por parte do nome do servidor (ignora acentos e maiúsculas).
+        - in: query
+          name: nome_cargo
+          schema:
+            type: string
+          description: Filtra por parte do nome do cargo (ignora acentos e maiúsculas).
+        - name: page
+          required: false
+          in: query
+          description: Um número de página dentro do conjunto de resultados paginado.
+          schema:
+            type: integer
+        - in: query
+          name: paginacao
+          schema:
+            type: integer
+          description: Tamanho da página (1–100, padrão 10).
       tags:
-      - Servidores
+        - Servidores
       security:
-      - jwtAuth: []
+        - jwtAuth: []
       responses:
-        '200':
+        "200":
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/PaginatedServidorList'
-          description: ''
+                $ref: "#/components/schemas/PaginatedServidorList"
+          description: ""
     post:
       operationId: pessoas_institucionais_servidores_create
-      description: "\n    Cria um novo perfil de servidor para um usuário existente.\n\n
+      description:
+        "\n    Cria um novo perfil de servidor para um usuário existente.\n\n
         \   **Permissões:** Apenas administradores.\n\n    **Regras:**\n    - O usuário
         informado deve existir e não possuir perfil de servidor.\n    - O cargo informado
         deve existir e estar ativo.\n    "
       summary: Criar servidor
       tags:
-      - Servidores
+        - Servidores
       requestBody:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/CriarServidor'
+              $ref: "#/components/schemas/CriarServidor"
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/CriarServidor'
+              $ref: "#/components/schemas/CriarServidor"
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/CriarServidor'
+              $ref: "#/components/schemas/CriarServidor"
         required: true
       security:
-      - jwtAuth: []
+        - jwtAuth: []
       responses:
-        '201':
+        "201":
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Servidor'
-          description: ''
+                $ref: "#/components/schemas/Servidor"
+          description: ""
   /cortex/pessoas-institucionais/servidores/{id}/:
     get:
       operationId: pessoas_institucionais_servidores_retrieve
-      description: "\n    Exibe os detalhes de um servidor específico.\n\n    **Permissões:**
+      description:
+        "\n    Exibe os detalhes de um servidor específico.\n\n    **Permissões:**
         Apenas administradores.\n    "
       summary: Detalhar servidor
       parameters:
-      - in: path
-        name: id
-        schema:
-          type: integer
-        required: true
+        - in: path
+          name: id
+          schema:
+            type: integer
+          required: true
       tags:
-      - Servidores
+        - Servidores
       security:
-      - jwtAuth: []
+        - jwtAuth: []
       responses:
-        '200':
+        "200":
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Servidor'
-          description: ''
+                $ref: "#/components/schemas/Servidor"
+          description: ""
     patch:
       operationId: pessoas_institucionais_servidores_partial_update
-      description: "\n    Atualiza os dados de um servidor existente.\n\n    **Permissões:**
+      description:
+        "\n    Atualiza os dados de um servidor existente.\n\n    **Permissões:**
         Apenas administradores.\n    "
       summary: Atualizar servidor
       parameters:
-      - in: path
-        name: id
-        schema:
-          type: integer
-        required: true
+        - in: path
+          name: id
+          schema:
+            type: integer
+          required: true
       tags:
-      - Servidores
+        - Servidores
       requestBody:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/PatchedAtualizarServidor'
+              $ref: "#/components/schemas/PatchedAtualizarServidor"
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/PatchedAtualizarServidor'
+              $ref: "#/components/schemas/PatchedAtualizarServidor"
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/PatchedAtualizarServidor'
+              $ref: "#/components/schemas/PatchedAtualizarServidor"
       security:
-      - jwtAuth: []
+        - jwtAuth: []
       responses:
-        '200':
+        "200":
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Servidor'
-          description: ''
+                $ref: "#/components/schemas/Servidor"
+          description: ""
   /cortex/pessoas-institucionais/servidores/{id}/desativar/:
     post:
       operationId: pessoas_institucionais_servidores_desativar_create
-      description: "\n    Desativa o perfil de um servidor.\n\n    **Permissões:**
+      description:
+        "\n    Desativa o perfil de um servidor.\n\n    **Permissões:**
         Apenas administradores.\n    "
       summary: Desativar servidor
       parameters:
-      - in: path
-        name: id
-        schema:
-          type: integer
-        required: true
+        - in: path
+          name: id
+          schema:
+            type: integer
+          required: true
       tags:
-      - Servidores
+        - Servidores
       security:
-      - jwtAuth: []
+        - jwtAuth: []
       responses:
-        '200':
+        "200":
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Servidor'
-          description: ''
+                $ref: "#/components/schemas/Servidor"
+          description: ""
   /cortex/pessoas-institucionais/servidores/{id}/reativar/:
     post:
       operationId: pessoas_institucionais_servidores_reativar_create
-      description: "\n    Reativa o perfil de um servidor inativo.\n\n    **Permissões:**
+      description:
+        "\n    Reativa o perfil de um servidor inativo.\n\n    **Permissões:**
         Apenas administradores.\n    "
       summary: Reativar servidor
       parameters:
-      - in: path
-        name: id
-        schema:
-          type: integer
-        required: true
+        - in: path
+          name: id
+          schema:
+            type: integer
+          required: true
       tags:
-      - Servidores
+        - Servidores
       security:
-      - jwtAuth: []
+        - jwtAuth: []
       responses:
-        '200':
+        "200":
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Servidor'
-          description: ''
+                $ref: "#/components/schemas/Servidor"
+          description: ""
   /cortex/pessoas-institucionais/terceirizados/:
     get:
       operationId: pessoas_institucionais_terceirizados_list
-      description: "\n    Lista todos os terceirizados cadastrados.\n\n    **Permissões:**
+      description:
+        "\n    Lista todos os terceirizados cadastrados.\n\n    **Permissões:**
         Apenas administradores.\n\n    Query params apenas reduzem o conjunto, nunca
         expandem o acesso.\n    "
       summary: Listar terceirizados
       parameters:
-      - in: query
-        name: ativo
-        schema:
-          type: boolean
-        description: 'Filtra por status: true = Ativo, false = Inativo.'
-      - in: query
-        name: cargo_funcao
-        schema:
-          type: string
-        description: Filtra por parte do cargo/função (ignora acentos e maiúsculas).
-      - in: query
-        name: cpf
-        schema:
-          type: string
-        description: Filtra por parte do CPF do terceirizado.
-      - in: query
-        name: empresa
-        schema:
-          type: integer
-        description: Filtra por ID da empresa/instituição.
-      - in: query
-        name: nome
-        schema:
-          type: string
-        description: Filtra por parte do nome do terceirizado (ignora acentos e maiúsculas).
-      - in: query
-        name: nome_empresa
-        schema:
-          type: string
-        description: Filtra por parte do nome da empresa/instituição (ignora acentos
-          e maiúsculas).
-      - name: page
-        required: false
-        in: query
-        description: Um número de página dentro do conjunto de resultados paginado.
-        schema:
-          type: integer
-      - in: query
-        name: paginacao
-        schema:
-          type: integer
-        description: Tamanho da página (1–100, padrão 10).
+        - in: query
+          name: ativo
+          schema:
+            type: boolean
+          description: "Filtra por status: true = Ativo, false = Inativo."
+        - in: query
+          name: cargo_funcao
+          schema:
+            type: string
+          description: Filtra por parte do cargo/função (ignora acentos e maiúsculas).
+        - in: query
+          name: cpf
+          schema:
+            type: string
+          description: Filtra por parte do CPF do terceirizado.
+        - in: query
+          name: empresa
+          schema:
+            type: integer
+          description: Filtra por ID da empresa/instituição.
+        - in: query
+          name: nome
+          schema:
+            type: string
+          description: Filtra por parte do nome do terceirizado (ignora acentos e maiúsculas).
+        - in: query
+          name: nome_empresa
+          schema:
+            type: string
+          description:
+            Filtra por parte do nome da empresa/instituição (ignora acentos
+            e maiúsculas).
+        - name: page
+          required: false
+          in: query
+          description: Um número de página dentro do conjunto de resultados paginado.
+          schema:
+            type: integer
+        - in: query
+          name: paginacao
+          schema:
+            type: integer
+          description: Tamanho da página (1–100, padrão 10).
       tags:
-      - Terceirizados
+        - Terceirizados
       security:
-      - jwtAuth: []
+        - jwtAuth: []
       responses:
-        '200':
+        "200":
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/PaginatedTerceirizadoList'
-          description: ''
+                $ref: "#/components/schemas/PaginatedTerceirizadoList"
+          description: ""
     post:
       operationId: pessoas_institucionais_terceirizados_create
-      description: "\n    Cria um novo perfil de terceirizado para um usuário existente.\n\n
+      description:
+        "\n    Cria um novo perfil de terceirizado para um usuário existente.\n\n
         \   **Permissões:** Apenas administradores.\n\n    **Regras:**\n    - O usuário
         informado deve existir e não possuir perfil de terceirizado.\n    - A empresa/instituição
         informada deve existir e estar ativa.\n    "
       summary: Criar terceirizado
       tags:
-      - Terceirizados
+        - Terceirizados
       requestBody:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/CriarTerceirizado'
+              $ref: "#/components/schemas/CriarTerceirizado"
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/CriarTerceirizado'
+              $ref: "#/components/schemas/CriarTerceirizado"
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/CriarTerceirizado'
+              $ref: "#/components/schemas/CriarTerceirizado"
         required: true
       security:
-      - jwtAuth: []
+        - jwtAuth: []
       responses:
-        '201':
+        "201":
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Terceirizado'
-          description: ''
+                $ref: "#/components/schemas/Terceirizado"
+          description: ""
   /cortex/pessoas-institucionais/terceirizados/{id}/:
     get:
       operationId: pessoas_institucionais_terceirizados_retrieve
-      description: "\n    Exibe os detalhes de um terceirizado específico.\n\n    **Permissões:**
+      description:
+        "\n    Exibe os detalhes de um terceirizado específico.\n\n    **Permissões:**
         Apenas administradores.\n    "
       summary: Detalhar terceirizado
       parameters:
-      - in: path
-        name: id
-        schema:
-          type: integer
-        required: true
+        - in: path
+          name: id
+          schema:
+            type: integer
+          required: true
       tags:
-      - Terceirizados
+        - Terceirizados
       security:
-      - jwtAuth: []
+        - jwtAuth: []
       responses:
-        '200':
+        "200":
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Terceirizado'
-          description: ''
+                $ref: "#/components/schemas/Terceirizado"
+          description: ""
     patch:
       operationId: pessoas_institucionais_terceirizados_partial_update
-      description: "\n    Atualiza os dados de um terceirizado existente.\n\n    **Permissões:**
+      description:
+        "\n    Atualiza os dados de um terceirizado existente.\n\n    **Permissões:**
         Apenas administradores.\n    "
       summary: Atualizar terceirizado
       parameters:
-      - in: path
-        name: id
-        schema:
-          type: integer
-        required: true
+        - in: path
+          name: id
+          schema:
+            type: integer
+          required: true
       tags:
-      - Terceirizados
+        - Terceirizados
       requestBody:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/PatchedAtualizarTerceirizado'
+              $ref: "#/components/schemas/PatchedAtualizarTerceirizado"
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/PatchedAtualizarTerceirizado'
+              $ref: "#/components/schemas/PatchedAtualizarTerceirizado"
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/PatchedAtualizarTerceirizado'
+              $ref: "#/components/schemas/PatchedAtualizarTerceirizado"
       security:
-      - jwtAuth: []
+        - jwtAuth: []
       responses:
-        '200':
+        "200":
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Terceirizado'
-          description: ''
+                $ref: "#/components/schemas/Terceirizado"
+          description: ""
   /cortex/pessoas-institucionais/terceirizados/{id}/desativar/:
     post:
       operationId: pessoas_institucionais_terceirizados_desativar_create
-      description: "\n    Desativa o perfil de um terceirizado.\n\n    **Permissões:**
+      description:
+        "\n    Desativa o perfil de um terceirizado.\n\n    **Permissões:**
         Apenas administradores.\n    "
       summary: Desativar terceirizado
       parameters:
-      - in: path
-        name: id
-        schema:
-          type: integer
-        required: true
+        - in: path
+          name: id
+          schema:
+            type: integer
+          required: true
       tags:
-      - Terceirizados
+        - Terceirizados
       security:
-      - jwtAuth: []
+        - jwtAuth: []
       responses:
-        '200':
+        "200":
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Terceirizado'
-          description: ''
+                $ref: "#/components/schemas/Terceirizado"
+          description: ""
   /cortex/pessoas-institucionais/terceirizados/{id}/reativar/:
     post:
       operationId: pessoas_institucionais_terceirizados_reativar_create
-      description: "\n    Reativa o perfil de um terceirizado inativo.\n\n    **Permissões:**
+      description:
+        "\n    Reativa o perfil de um terceirizado inativo.\n\n    **Permissões:**
         Apenas administradores.\n    "
       summary: Reativar terceirizado
       parameters:
-      - in: path
-        name: id
-        schema:
-          type: integer
-        required: true
+        - in: path
+          name: id
+          schema:
+            type: integer
+          required: true
       tags:
-      - Terceirizados
+        - Terceirizados
       security:
-      - jwtAuth: []
+        - jwtAuth: []
       responses:
-        '200':
+        "200":
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Terceirizado'
-          description: ''
+                $ref: "#/components/schemas/Terceirizado"
+          description: ""
 components:
   schemas:
     AdicionarMatricula:
@@ -3601,7 +3666,7 @@ components:
           description: Número da matrícula.
           maxLength: 50
       required:
-      - matricula
+        - matricula
     Aluno:
       type: object
       properties:
@@ -3619,7 +3684,7 @@ components:
           format: double
         situacao:
           allOf:
-          - $ref: '#/components/schemas/SituacaoAlunoEnum'
+            - $ref: "#/components/schemas/SituacaoAlunoEnum"
           title: Situação
           minimum: -2147483648
           maximum: 2147483647
@@ -3628,7 +3693,7 @@ components:
           readOnly: true
         forma_ingresso:
           allOf:
-          - $ref: '#/components/schemas/FormaIngressoEnum'
+            - $ref: "#/components/schemas/FormaIngressoEnum"
           title: Forma de Ingresso
           minimum: -2147483648
           maximum: 2147483647
@@ -3642,12 +3707,12 @@ components:
           format: date-time
           readOnly: true
       required:
-      - created_at
-      - forma_ingresso_display
-      - situacao_display
-      - usuario_cpf
-      - usuario_id
-      - usuario_nome
+        - created_at
+        - forma_ingresso_display
+        - situacao_display
+        - usuario_cpf
+        - usuario_id
+        - usuario_nome
     AlunoCurso:
       type: object
       properties:
@@ -3690,15 +3755,15 @@ components:
           format: date-time
           readOnly: true
       required:
-      - aluno_cpf
-      - aluno_id
-      - aluno_nome
-      - created_at
-      - curso_codigo
-      - curso_id
-      - curso_nome
-      - id
-      - updated_at
+        - aluno_cpf
+        - aluno_id
+        - aluno_nome
+        - created_at
+        - curso_codigo
+        - curso_id
+        - curso_nome
+        - id
+        - updated_at
     Cargo:
       type: object
       properties:
@@ -3719,14 +3784,14 @@ components:
           format: date-time
           readOnly: true
       required:
-      - created_at
-      - id
-      - nome
-      - updated_at
+        - created_at
+        - id
+        - nome
+        - updated_at
     CategoriaEnum:
       enum:
-      - 1
-      - 2
+        - 1
+        - 2
       type: integer
       description: |-
         * `1` - Professor
@@ -3751,21 +3816,21 @@ components:
           type: string
           maxLength: 50
       required:
-      - id
+        - id
     ContatoInput:
       type: object
       properties:
         email_academico:
           type: string
           format: email
-          default: ''
+          default: ""
         email_pessoal:
           type: string
           format: email
-          default: ''
+          default: ""
         telefone:
           type: string
-          default: ''
+          default: ""
           maxLength: 20
     CriarAluno:
       type: object
@@ -3776,14 +3841,14 @@ components:
           type: number
           format: double
         situacao:
-          $ref: '#/components/schemas/SituacaoAlunoEnum'
+          $ref: "#/components/schemas/SituacaoAlunoEnum"
         forma_ingresso:
-          $ref: '#/components/schemas/FormaIngressoEnum'
+          $ref: "#/components/schemas/FormaIngressoEnum"
         ativo:
           type: boolean
           default: true
       required:
-      - usuario
+        - usuario
     CriarAlunoCurso:
       type: object
       properties:
@@ -3795,8 +3860,8 @@ components:
           type: integer
           nullable: true
       required:
-      - aluno
-      - curso
+        - aluno
+        - curso
     CriarCargo:
       type: object
       properties:
@@ -3807,7 +3872,7 @@ components:
           type: boolean
           default: true
       required:
-      - nome
+        - nome
     CriarCurso:
       type: object
       properties:
@@ -3820,11 +3885,11 @@ components:
         turno:
           nullable: true
           oneOf:
-          - $ref: '#/components/schemas/TurnoEnum'
-          - $ref: '#/components/schemas/NullEnum'
+            - $ref: "#/components/schemas/TurnoEnum"
+            - $ref: "#/components/schemas/NullEnum"
       required:
-      - codigo_curso
-      - nome
+        - codigo_curso
+        - nome
     CriarEmpresaInstituicao:
       type: object
       properties:
@@ -3838,7 +3903,7 @@ components:
           type: boolean
           default: true
       required:
-      - nome
+        - nome
     CriarFuncao:
       type: object
       properties:
@@ -3855,8 +3920,8 @@ components:
           type: boolean
           default: false
       required:
-      - descricao
-      - sigla
+        - descricao
+        - sigla
     CriarServidor:
       type: object
       properties:
@@ -3865,14 +3930,14 @@ components:
         cargo_pk:
           type: integer
         categoria:
-          $ref: '#/components/schemas/CategoriaEnum'
+          $ref: "#/components/schemas/CategoriaEnum"
         ativo:
           type: boolean
           default: true
       required:
-      - cargo_pk
-      - categoria
-      - usuario_pk
+        - cargo_pk
+        - categoria
+        - usuario_pk
     CriarSetor:
       type: object
       properties:
@@ -3883,8 +3948,8 @@ components:
           type: string
           maxLength: 20
       required:
-      - nome
-      - sigla
+        - nome
+        - sigla
     CriarTerceirizado:
       type: object
       properties:
@@ -3906,18 +3971,19 @@ components:
           type: boolean
           default: true
       required:
-      - cargo_funcao
-      - data_inicio
-      - empresa_pk
-      - usuario_pk
+        - cargo_funcao
+        - data_inicio
+        - empresa_pk
+        - usuario_pk
     CriarUsuario:
       type: object
       properties:
         cpf:
           type: string
           nullable: true
-          description: 'CPF do usuário. Aceita com ou sem máscara (ex: 12345678901
-            ou 123.456.789-01).'
+          description:
+            "CPF do usuário. Aceita com ou sem máscara (ex: 12345678901
+            ou 123.456.789-01)."
           maxLength: 14
         matricula:
           type: string
@@ -3930,7 +3996,8 @@ components:
         password:
           type: string
           writeOnly: true
-          description: Senha (opcional). Se não for informada, será usada a senha
+          description:
+            Senha (opcional). Se não for informada, será usada a senha
             padrão (CPF ou matrícula).
         email:
           type: string
@@ -3939,10 +4006,10 @@ components:
           description: E-mail do usuário (opcional).
         deficiencia:
           type: string
-          default: ''
+          default: ""
           description: Descrição de deficiência ou necessidade especial (opcional).
       required:
-      - nome
+        - nome
     CriarVinculo:
       type: object
       properties:
@@ -3957,8 +4024,8 @@ components:
           default: false
           description: Define se o usuário será marcado como responsável pelo setor.
       required:
-      - funcao
-      - usuario
+        - funcao
+        - usuario
     Curso:
       type: object
       properties:
@@ -3977,8 +4044,8 @@ components:
           minimum: -2147483648
           maximum: 2147483647
           oneOf:
-          - $ref: '#/components/schemas/TurnoEnum'
-          - $ref: '#/components/schemas/NullEnum'
+            - $ref: "#/components/schemas/TurnoEnum"
+            - $ref: "#/components/schemas/NullEnum"
         turno_display:
           type: string
           readOnly: true
@@ -3993,12 +4060,12 @@ components:
           format: date-time
           readOnly: true
       required:
-      - codigo_curso
-      - created_at
-      - id
-      - nome
-      - turno_display
-      - updated_at
+        - codigo_curso
+        - created_at
+        - id
+        - nome
+        - turno_display
+        - updated_at
     EmpresaInstituicao:
       type: object
       properties:
@@ -4024,17 +4091,17 @@ components:
           format: date-time
           readOnly: true
       required:
-      - created_at
-      - id
-      - nome
-      - updated_at
+        - created_at
+        - id
+        - nome
+        - updated_at
     EncerrarAlunoCurso:
       type: object
       properties:
         ano_conclusao:
           type: integer
       required:
-      - ano_conclusao
+        - ano_conclusao
     Endereco:
       type: object
       properties:
@@ -4064,12 +4131,12 @@ components:
           type: string
           maxLength: 2
       required:
-      - cep
-      - cidade
-      - estado
-      - id
-      - logradouro
-      - numero
+        - cep
+        - cidade
+        - estado
+        - id
+        - logradouro
+        - numero
     EnderecoInput:
       type: object
       properties:
@@ -4081,11 +4148,11 @@ components:
           maxLength: 20
         complemento:
           type: string
-          default: ''
+          default: ""
           maxLength: 100
         bairro:
           type: string
-          default: ''
+          default: ""
           maxLength: 100
         cep:
           type: string
@@ -4097,17 +4164,17 @@ components:
           type: string
           maxLength: 2
       required:
-      - cep
-      - cidade
-      - estado
-      - logradouro
-      - numero
+        - cep
+        - cidade
+        - estado
+        - logradouro
+        - numero
     FormaIngressoEnum:
       enum:
-      - 1
-      - 2
-      - 3
-      - 4
+        - 1
+        - 2
+        - 3
+        - 4
       type: integer
       description: |-
         * `1` - Vestibular
@@ -4139,10 +4206,10 @@ components:
           format: date-time
           readOnly: true
       required:
-      - created_at
-      - descricao
-      - id
-      - sigla
+        - created_at
+        - descricao
+        - id
+        - sigla
     ImportacaoErroLinha:
       type: object
       properties:
@@ -4159,11 +4226,11 @@ components:
         mensagem:
           type: string
       required:
-      - aba
-      - campo
-      - codigo
-      - mensagem
-      - numero_linha
+        - aba
+        - campo
+        - codigo
+        - mensagem
+        - numero_linha
     ImportacaoUsuariosPreviewResponse:
       type: object
       properties:
@@ -4172,34 +4239,35 @@ components:
         mensagem:
           type: string
         resumo:
-          $ref: '#/components/schemas/ResumoImportacao'
+          $ref: "#/components/schemas/ResumoImportacao"
         erros:
           type: array
           items:
-            $ref: '#/components/schemas/ImportacaoErroLinha'
+            $ref: "#/components/schemas/ImportacaoErroLinha"
         metadados:
           type: object
           additionalProperties: {}
       required:
-      - erros
-      - mensagem
-      - resumo
-      - sucesso
+        - erros
+        - mensagem
+        - resumo
+        - sucesso
     LoginInput:
       type: object
       description: Documenta o input do login no Swagger.
       properties:
         login:
           type: string
-          description: 'E-mail ou CPF do usuário. Exemplos: "usuario@email.com", "12345678901"
+          description:
+            'E-mail ou CPF do usuário. Exemplos: "usuario@email.com", "12345678901"
             ou "123.456.789-01".'
         password:
           type: string
           writeOnly: true
           description: Senha do usuário.
       required:
-      - login
-      - password
+        - login
+        - password
     LoginResponse:
       type: object
       description: Documenta a resposta do login no Swagger.
@@ -4211,8 +4279,8 @@ components:
           type: string
           description: Token JWT de renovação (7 dias).
       required:
-      - access
-      - refresh
+        - access
+        - refresh
     Matricula:
       type: object
       properties:
@@ -4225,7 +4293,7 @@ components:
           maxLength: 50
         situacao:
           allOf:
-          - $ref: '#/components/schemas/SituacaoMatriculaEnum'
+            - $ref: "#/components/schemas/SituacaoMatriculaEnum"
           title: Situação
           minimum: -2147483648
           maximum: 2147483647
@@ -4233,9 +4301,9 @@ components:
           type: string
           readOnly: true
       required:
-      - id
-      - matricula
-      - situacao_display
+        - id
+        - matricula
+        - situacao_display
     Me:
       type: object
       description: |-
@@ -4253,7 +4321,8 @@ components:
         is_superuser:
           type: boolean
           title: Status de superusuário
-          description: Indica que este usuário tem todas as permissões sem atribuí-las
+          description:
+            Indica que este usuário tem todas as permissões sem atribuí-las
             explicitamente.
         nome:
           type: string
@@ -4294,18 +4363,18 @@ components:
           type: string
           title: Deficiência / necessidade especial
       required:
-      - created_at
-      - id
-      - nome
-      - updated_at
+        - created_at
+        - id
+        - nome
+        - updated_at
     NullEnum:
       enum:
-      - null
+        - null
     PaginatedAlunoCursoList:
       type: object
       required:
-      - count
-      - results
+        - count
+        - results
       properties:
         count:
           type: integer
@@ -4323,12 +4392,12 @@ components:
         results:
           type: array
           items:
-            $ref: '#/components/schemas/AlunoCurso'
+            $ref: "#/components/schemas/AlunoCurso"
     PaginatedAlunoList:
       type: object
       required:
-      - count
-      - results
+        - count
+        - results
       properties:
         count:
           type: integer
@@ -4346,12 +4415,12 @@ components:
         results:
           type: array
           items:
-            $ref: '#/components/schemas/Aluno'
+            $ref: "#/components/schemas/Aluno"
     PaginatedCargoList:
       type: object
       required:
-      - count
-      - results
+        - count
+        - results
       properties:
         count:
           type: integer
@@ -4369,12 +4438,12 @@ components:
         results:
           type: array
           items:
-            $ref: '#/components/schemas/Cargo'
+            $ref: "#/components/schemas/Cargo"
     PaginatedContatoList:
       type: object
       required:
-      - count
-      - results
+        - count
+        - results
       properties:
         count:
           type: integer
@@ -4392,12 +4461,12 @@ components:
         results:
           type: array
           items:
-            $ref: '#/components/schemas/Contato'
+            $ref: "#/components/schemas/Contato"
     PaginatedCursoList:
       type: object
       required:
-      - count
-      - results
+        - count
+        - results
       properties:
         count:
           type: integer
@@ -4415,12 +4484,12 @@ components:
         results:
           type: array
           items:
-            $ref: '#/components/schemas/Curso'
+            $ref: "#/components/schemas/Curso"
     PaginatedEmpresaInstituicaoList:
       type: object
       required:
-      - count
-      - results
+        - count
+        - results
       properties:
         count:
           type: integer
@@ -4438,12 +4507,12 @@ components:
         results:
           type: array
           items:
-            $ref: '#/components/schemas/EmpresaInstituicao'
+            $ref: "#/components/schemas/EmpresaInstituicao"
     PaginatedFuncaoList:
       type: object
       required:
-      - count
-      - results
+        - count
+        - results
       properties:
         count:
           type: integer
@@ -4461,12 +4530,12 @@ components:
         results:
           type: array
           items:
-            $ref: '#/components/schemas/Funcao'
+            $ref: "#/components/schemas/Funcao"
     PaginatedMatriculaList:
       type: object
       required:
-      - count
-      - results
+        - count
+        - results
       properties:
         count:
           type: integer
@@ -4484,12 +4553,12 @@ components:
         results:
           type: array
           items:
-            $ref: '#/components/schemas/Matricula'
+            $ref: "#/components/schemas/Matricula"
     PaginatedServidorList:
       type: object
       required:
-      - count
-      - results
+        - count
+        - results
       properties:
         count:
           type: integer
@@ -4507,12 +4576,12 @@ components:
         results:
           type: array
           items:
-            $ref: '#/components/schemas/Servidor'
+            $ref: "#/components/schemas/Servidor"
     PaginatedSetorList:
       type: object
       required:
-      - count
-      - results
+        - count
+        - results
       properties:
         count:
           type: integer
@@ -4530,12 +4599,12 @@ components:
         results:
           type: array
           items:
-            $ref: '#/components/schemas/Setor'
+            $ref: "#/components/schemas/Setor"
     PaginatedSetorVinculoList:
       type: object
       required:
-      - count
-      - results
+        - count
+        - results
       properties:
         count:
           type: integer
@@ -4553,12 +4622,12 @@ components:
         results:
           type: array
           items:
-            $ref: '#/components/schemas/SetorVinculo'
+            $ref: "#/components/schemas/SetorVinculo"
     PaginatedStatusImportacaoLoteList:
       type: object
       required:
-      - count
-      - results
+        - count
+        - results
       properties:
         count:
           type: integer
@@ -4576,12 +4645,12 @@ components:
         results:
           type: array
           items:
-            $ref: '#/components/schemas/StatusImportacaoLote'
+            $ref: "#/components/schemas/StatusImportacaoLote"
     PaginatedTerceirizadoList:
       type: object
       required:
-      - count
-      - results
+        - count
+        - results
       properties:
         count:
           type: integer
@@ -4599,12 +4668,12 @@ components:
         results:
           type: array
           items:
-            $ref: '#/components/schemas/Terceirizado'
+            $ref: "#/components/schemas/Terceirizado"
     PaginatedUsuarioList:
       type: object
       required:
-      - count
-      - results
+        - count
+        - results
       properties:
         count:
           type: integer
@@ -4622,7 +4691,7 @@ components:
         results:
           type: array
           items:
-            $ref: '#/components/schemas/Usuario'
+            $ref: "#/components/schemas/Usuario"
     PatchedAtualizarAluno:
       type: object
       properties:
@@ -4630,9 +4699,9 @@ components:
           type: number
           format: double
         situacao:
-          $ref: '#/components/schemas/SituacaoAlunoEnum'
+          $ref: "#/components/schemas/SituacaoAlunoEnum"
         forma_ingresso:
-          $ref: '#/components/schemas/FormaIngressoEnum'
+          $ref: "#/components/schemas/FormaIngressoEnum"
         ativo:
           type: boolean
     PatchedAtualizarAlunoCurso:
@@ -4663,8 +4732,8 @@ components:
         turno:
           nullable: true
           oneOf:
-          - $ref: '#/components/schemas/TurnoEnum'
-          - $ref: '#/components/schemas/NullEnum'
+            - $ref: "#/components/schemas/TurnoEnum"
+            - $ref: "#/components/schemas/NullEnum"
     PatchedAtualizarEmpresaInstituicao:
       type: object
       properties:
@@ -4695,7 +4764,7 @@ components:
         cargo_pk:
           type: integer
         categoria:
-          $ref: '#/components/schemas/CategoriaEnum'
+          $ref: "#/components/schemas/CategoriaEnum"
         ativo:
           type: boolean
     PatchedAtualizarSetor:
@@ -4752,14 +4821,14 @@ components:
         email_academico:
           type: string
           format: email
-          default: ''
+          default: ""
         email_pessoal:
           type: string
           format: email
-          default: ''
+          default: ""
         telefone:
           type: string
-          default: ''
+          default: ""
           maxLength: 20
     ResumoImportacao:
       type: object
@@ -4797,22 +4866,22 @@ components:
         lotacoes_criadas:
           type: integer
       required:
-      - alunos_criados
-      - contatos_atualizados
-      - contatos_criados
-      - enderecos_atualizados
-      - enderecos_criados
-      - lotacoes_criadas
-      - matriculas_atualizadas
-      - matriculas_criadas
-      - servidores_criados
-      - terceirizados_criados
-      - total_abas_processadas
-      - total_linhas_com_erro
-      - total_linhas_processadas
-      - usuarios_atualizados
-      - usuarios_criados
-      - vinculos_aluno_curso_criados
+        - alunos_criados
+        - contatos_atualizados
+        - contatos_criados
+        - enderecos_atualizados
+        - enderecos_criados
+        - lotacoes_criadas
+        - matriculas_atualizadas
+        - matriculas_criadas
+        - servidores_criados
+        - terceirizados_criados
+        - total_abas_processadas
+        - total_linhas_com_erro
+        - total_linhas_processadas
+        - usuarios_atualizados
+        - usuarios_criados
+        - vinculos_aluno_curso_criados
     Servidor:
       type: object
       properties:
@@ -4832,7 +4901,7 @@ components:
           readOnly: true
         categoria:
           allOf:
-          - $ref: '#/components/schemas/CategoriaEnum'
+            - $ref: "#/components/schemas/CategoriaEnum"
           minimum: -2147483648
           maximum: 2147483647
         categoria_display:
@@ -4849,15 +4918,15 @@ components:
           format: date-time
           readOnly: true
       required:
-      - cargo
-      - cargo_nome
-      - categoria
-      - categoria_display
-      - created_at
-      - pk
-      - updated_at
-      - usuario_cpf
-      - usuario_nome
+        - cargo
+        - cargo_nome
+        - categoria
+        - categoria_display
+        - created_at
+        - pk
+        - updated_at
+        - usuario_cpf
+        - usuario_nome
     Setor:
       type: object
       properties:
@@ -4877,10 +4946,10 @@ components:
           format: date-time
           readOnly: true
       required:
-      - created_at
-      - id
-      - nome
-      - sigla
+        - created_at
+        - id
+        - nome
+        - sigla
     SetorVinculo:
       type: object
       properties:
@@ -4913,20 +4982,20 @@ components:
           format: date-time
           readOnly: true
       required:
-      - created_at
-      - funcao_descricao
-      - funcao_sigla
-      - id
-      - setor
-      - usuario
-      - usuario_nome
+        - created_at
+        - funcao_descricao
+        - funcao_sigla
+        - id
+        - setor
+        - usuario
+        - usuario_nome
     SituacaoAlunoEnum:
       enum:
-      - 1
-      - 2
-      - 3
-      - 4
-      - 5
+        - 1
+        - 2
+        - 3
+        - 4
+        - 5
       type: integer
       description: |-
         * `1` - Matriculado
@@ -4936,17 +5005,17 @@ components:
         * `5` - Transferido
     SituacaoMatriculaEnum:
       enum:
-      - 1
-      - 2
+        - 1
+        - 2
       type: integer
       description: |-
         * `1` - Ativa
         * `2` - Inativa
     StatusEnum:
       enum:
-      - EM_ANDAMENTO
-      - CONCLUIDA
-      - ERRO
+        - EM_ANDAMENTO
+        - CONCLUIDA
+        - ERRO
       type: string
       description: |-
         * `EM_ANDAMENTO` - Em Andamento
@@ -4959,7 +5028,7 @@ components:
           type: integer
           readOnly: true
         status:
-          $ref: '#/components/schemas/StatusEnum'
+          $ref: "#/components/schemas/StatusEnum"
         total_linhas:
           type: integer
           maximum: 2147483647
@@ -4985,11 +5054,11 @@ components:
           format: date-time
           readOnly: true
       required:
-      - created_at
-      - id
-      - porcentagem
-      - resultado_json
-      - updated_at
+        - created_at
+        - id
+        - porcentagem
+        - resultado_json
+        - updated_at
     Terceirizado:
       type: object
       properties:
@@ -5036,14 +5105,14 @@ components:
           format: date-time
           readOnly: true
       required:
-      - cargo_funcao
-      - created_at
-      - empresa_instituicao
-      - empresa_nome
-      - pk
-      - updated_at
-      - usuario_cpf
-      - usuario_nome
+        - cargo_funcao
+        - created_at
+        - empresa_instituicao
+        - empresa_nome
+        - pk
+        - updated_at
+        - usuario_cpf
+        - usuario_nome
     TokenRefresh:
       type: object
       properties:
@@ -5054,8 +5123,8 @@ components:
           type: string
           writeOnly: true
       required:
-      - access
-      - refresh
+        - access
+        - refresh
     TokenVerify:
       type: object
       properties:
@@ -5063,13 +5132,13 @@ components:
           type: string
           writeOnly: true
       required:
-      - token
+        - token
     TurnoEnum:
       enum:
-      - 1
-      - 2
-      - 3
-      - 4
+        - 1
+        - 2
+        - 3
+        - 4
       type: integer
       description: |-
         * `1` - Matutino
@@ -5120,10 +5189,10 @@ components:
           readOnly: true
           title: Criado em
       required:
-      - created_at
-      - id
-      - nome
-      - tem_perfil_aluno
+        - created_at
+        - id
+        - nome
+        - tem_perfil_aluno
   securitySchemes:
     jwtAuth:
       type: http
