@@ -38,6 +38,15 @@ class UsuarioManager(BaseManagerUser):
         return self.create_user(cpf, password, **extra_fields)
 
 
+class TipoDeficiencia(models.TextChoices):
+    DEFICIENCIA_INTELECTUAL = 'deficiencia_intelectual', 'Deficiência Intelectual'
+    BAIXA_VISAO = 'baixa_visao', 'Baixa Visão'
+    DEFICIENCIA_AUDITIVA = 'deficiencia_auditiva', 'Deficiência Auditiva'
+    SURDEZ = 'surdez', 'Surdez'
+    DEFICIENCIA_MULTIPLA = 'deficiencia_multipla', 'Deficiência Múltipla'
+    DEFICIENCIA_FISICA = 'deficiencia_fisica', 'Deficiência Física'
+
+
 class Usuario(ModelHelperMixin, ModelBusinessMixin, AbstractBaseAppUser):
     from .business import UsuarioBusiness
     from .helpers import UsuarioHelpers
@@ -64,9 +73,12 @@ class Usuario(ModelHelperMixin, ModelBusinessMixin, AbstractBaseAppUser):
         null=True,
         blank=True,
     )
-    deficiencia = models.TextField(
+    deficiencia = models.CharField(
         'Deficiência / necessidade especial',
+        max_length=50,
+        choices=TipoDeficiencia.choices,
         blank=True,
+        null=True,
     )
 
     objects = UsuarioManager()
@@ -77,6 +89,23 @@ class Usuario(ModelHelperMixin, ModelBusinessMixin, AbstractBaseAppUser):
     def save(self, *args, **kwargs):
         if self.cpf == '':
             self.cpf = None
+
+        if self.deficiencia:
+            import unicodedata
+            # 1. Remover acentos
+            val_sem_acento = unicodedata.normalize('NFKD', str(self.deficiencia)).encode('ascii', 'ignore').decode('utf-8')
+            # 2. Caixa baixa e substituir espaços por _
+            val_normalizado = '_'.join(word for word in val_sem_acento.lower().split() if word)
+            
+            # 3. Mapear nos choices
+            valid_choices = [choice[0] for choice in TipoDeficiencia.choices]
+            if val_normalizado in valid_choices:
+                self.deficiencia = val_normalizado
+            else:
+                self.deficiencia = None
+        else:
+            self.deficiencia = None
+
         super().save(*args, **kwargs)
 
     class Meta:

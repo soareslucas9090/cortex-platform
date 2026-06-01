@@ -54,6 +54,7 @@ class CriarUsuarioSerializer(serializers.Serializer):
     deficiencia = serializers.CharField(
         required=False,
         allow_blank=True,
+        allow_null=True,
         default='',
         help_text='Descrição de deficiência ou necessidade especial (opcional).',
     )
@@ -83,7 +84,7 @@ class AtualizarUsuarioSerializer(serializers.Serializer):
     nome = serializers.CharField(max_length=255, required=False)
     email = serializers.EmailField(required=False, allow_null=True)
     foto = serializers.ImageField(required=False, allow_null=True)
-    deficiencia = serializers.CharField(required=False, allow_blank=True)
+    deficiencia = serializers.CharField(required=False, allow_blank=True, allow_null=True)
 
 
 class ArquivoImportacaoUsuariosSerializer(serializers.Serializer):
