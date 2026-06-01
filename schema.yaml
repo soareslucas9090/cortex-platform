@@ -943,7 +943,15 @@ paths:
       description:
         "\n    Cria um novo usuário no sistema.\n\n    **Permissões:**
         Apenas administradores.\n\n    Não há auto-cadastro — usuários são sempre
-        criados por administradores,\n    individualmente ou em lote via JSON.\n    "
+        criados por administradores,\n    individualmente ou em lote via JSON.\n\n
+        \   **Normalização de Deficiência (campo `deficiencia`):**\n    O campo é
+        normalizado automaticamente no save (removendo acentos, convertendo para caixa
+        baixa e substituindo espaços por `_`).\n    - Opções válidas resultantes:
+        `deficiencia_intelectual`, `baixa_visao`, `deficiencia_auditiva`, `surdez`,
+        `deficiencia_multipla`, `deficiencia_fisica`.\n    - Se a string enviada (ex:
+        \"Deficiência Múltipla\") equivaler a uma das chaves após a normalização,
+        ela será associada.\n    - Se não houver correspondência, o valor será gravado
+        como `null`.\n    "
       summary: Criar usuário
       tags:
         - Identidade
@@ -1033,7 +1041,14 @@ paths:
       description:
         "\n    Atualiza parcialmente os dados básicos do usuário (nome,
         e-mail, foto, deficiência).\n\n    **Permissões:** O próprio usuário ou administradores.\n\n
-        \   CPF não é alterável neste endpoint.\n    "
+        \   CPF não é alterável neste endpoint.\n\n    **Normalização de Deficiência
+        (campo `deficiencia`):**\n    O campo é normalizado automaticamente no save
+        (removendo acentos, convertendo para caixa baixa e substituindo espaços por
+        `_`).\n    - Opções válidas resultantes: `deficiencia_intelectual`, `baixa_visao`,
+        `deficiencia_auditiva`, `surdez`, `deficiencia_multipla`, `deficiencia_fisica`.\n
+        \   - Se a string enviada (ex: \"Deficiência Múltipla\") equivaler a uma das
+        chaves após a normalização, ela será associada.\n    - Se não houver correspondência,
+        o valor será gravado como `null`.\n    "
       summary: Atualizar dados do usuário
       parameters:
         - in: path
@@ -3764,6 +3779,9 @@ components:
         - curso_nome
         - id
         - updated_at
+    BlankEnum:
+      enum:
+        - ""
     Cargo:
       type: object
       properties:
@@ -4006,8 +4024,16 @@ components:
           description: E-mail do usuário (opcional).
         deficiencia:
           type: string
+          nullable: true
           default: ""
-          description: Descrição de deficiência ou necessidade especial (opcional).
+          description:
+            'Descrição de deficiência ou necessidade especial (opcional).
+            Opções válidas: deficiencia_intelectual (Deficiência Intelectual), baixa_visao
+            (Baixa Visão), deficiencia_auditiva (Deficiência Auditiva), surdez (Surdez),
+            deficiencia_multipla (Deficiência Múltipla), deficiencia_fisica (Deficiência
+            Física). Qualquer outro valor não correspondente será normalizado como
+            null. Strings equivalentes (ex: "Deficiência Múltipla") serão normalizadas
+            automaticamente para sua chave de escolha.'
       required:
         - nome
     CriarVinculo:
@@ -4066,6 +4092,22 @@ components:
         - nome
         - turno_display
         - updated_at
+    DeficienciaEnum:
+      enum:
+        - deficiencia_intelectual
+        - baixa_visao
+        - deficiencia_auditiva
+        - surdez
+        - deficiencia_multipla
+        - deficiencia_fisica
+      type: string
+      description: |-
+        * `deficiencia_intelectual` - Deficiência Intelectual
+        * `baixa_visao` - Baixa Visão
+        * `deficiencia_auditiva` - Deficiência Auditiva
+        * `surdez` - Surdez
+        * `deficiencia_multipla` - Deficiência Múltipla
+        * `deficiencia_fisica` - Deficiência Física
     EmpresaInstituicao:
       type: object
       properties:
@@ -4360,8 +4402,12 @@ components:
           format: uri
           nullable: true
         deficiencia:
-          type: string
+          nullable: true
           title: Deficiência / necessidade especial
+          oneOf:
+            - $ref: "#/components/schemas/DeficienciaEnum"
+            - $ref: "#/components/schemas/BlankEnum"
+            - $ref: "#/components/schemas/NullEnum"
       required:
         - created_at
         - id
@@ -4809,6 +4855,15 @@ components:
           nullable: true
         deficiencia:
           type: string
+          nullable: true
+          description:
+            'Descrição de deficiência ou necessidade especial (opcional).
+            Opções válidas: deficiencia_intelectual (Deficiência Intelectual), baixa_visao
+            (Baixa Visão), deficiencia_auditiva (Deficiência Auditiva), surdez (Surdez),
+            deficiencia_multipla (Deficiência Múltipla), deficiencia_fisica (Deficiência
+            Física). Qualquer outro valor não correspondente será normalizado como
+            null. Strings equivalentes (ex: "Deficiência Múltipla") serão normalizadas
+            automaticamente para sua chave de escolha.'
     PatchedAtualizarVinculoFuncao:
       type: object
       properties:
@@ -5174,8 +5229,12 @@ components:
           format: uri
           nullable: true
         deficiencia:
-          type: string
+          nullable: true
           title: Deficiência / necessidade especial
+          oneOf:
+            - $ref: "#/components/schemas/DeficienciaEnum"
+            - $ref: "#/components/schemas/BlankEnum"
+            - $ref: "#/components/schemas/NullEnum"
         tem_perfil_aluno:
           type: boolean
           description: |-

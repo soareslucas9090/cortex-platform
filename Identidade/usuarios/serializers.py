@@ -56,7 +56,15 @@ class CriarUsuarioSerializer(serializers.Serializer):
         allow_blank=True,
         allow_null=True,
         default='',
-        help_text='Descrição de deficiência ou necessidade especial (opcional).',
+        help_text=(
+            'Descrição de deficiência ou necessidade especial (opcional). '
+            'Opções válidas: deficiencia_intelectual (Deficiência Intelectual), '
+            'baixa_visao (Baixa Visão), deficiencia_auditiva (Deficiência Auditiva), '
+            'surdez (Surdez), deficiencia_multipla (Deficiência Múltipla), '
+            'deficiencia_fisica (Deficiência Física). Qualquer outro valor não correspondente '
+            'será normalizado como null. Strings equivalentes (ex: "Deficiência Múltipla") '
+            'serão normalizadas automaticamente para sua chave de escolha.'
+        ),
     )
 
     def validate(self, attrs):
@@ -84,7 +92,20 @@ class AtualizarUsuarioSerializer(serializers.Serializer):
     nome = serializers.CharField(max_length=255, required=False)
     email = serializers.EmailField(required=False, allow_null=True)
     foto = serializers.ImageField(required=False, allow_null=True)
-    deficiencia = serializers.CharField(required=False, allow_blank=True, allow_null=True)
+    deficiencia = serializers.CharField(
+        required=False,
+        allow_blank=True,
+        allow_null=True,
+        help_text=(
+            'Descrição de deficiência ou necessidade especial (opcional). '
+            'Opções válidas: deficiencia_intelectual (Deficiência Intelectual), '
+            'baixa_visao (Baixa Visão), deficiencia_auditiva (Deficiência Auditiva), '
+            'surdez (Surdez), deficiencia_multipla (Deficiência Múltipla), '
+            'deficiencia_fisica (Deficiência Física). Qualquer outro valor não correspondente '
+            'será normalizado como null. Strings equivalentes (ex: "Deficiência Múltipla") '
+            'serão normalizadas automaticamente para sua chave de escolha.'
+        ),
+    )
 
 
 class ArquivoImportacaoUsuariosSerializer(serializers.Serializer):
