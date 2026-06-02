@@ -139,7 +139,7 @@ class ListarUsuariosView(IsAdminMixin, BasicGetAPIView):
 
     **Normalização de Deficiência (campo `deficiencia`):**
     O campo é normalizado automaticamente no save (removendo acentos, convertendo para caixa baixa e substituindo espaços por `_`).
-    - Opções válidas resultantes: `deficiencia_intelectual`, `baixa_visao`, `deficiencia_auditiva`, `surdez`, `deficiencia_multipla`, `deficiencia_fisica`.
+    - Opções válidas resultantes: `deficiencia_intelectual`, `deficiencia_visual`, `deficiencia_auditiva`, `deficiencia_multipla`, `deficiencia_fisica`.
     - Se a string enviada (ex: "Deficiência Múltipla") equivaler a uma das chaves após a normalização, ela será associada.
     - Se não houver correspondência, o valor será gravado como `null`.
     ''',
@@ -209,7 +209,7 @@ class DetalheUsuarioView(IsOwnerOrAdminMixin, BasicRetrieveAPIView):
 
     **Normalização de Deficiência (campo `deficiencia`):**
     O campo é normalizado automaticamente no save (removendo acentos, convertendo para caixa baixa e substituindo espaços por `_`).
-    - Opções válidas resultantes: `deficiencia_intelectual`, `baixa_visao`, `deficiencia_auditiva`, `surdez`, `deficiencia_multipla`, `deficiencia_fisica`.
+    - Opções válidas resultantes: `deficiencia_intelectual`, `deficiencia_visual`, `deficiencia_auditiva`, `deficiencia_multipla`, `deficiencia_fisica`.
     - Se a string enviada (ex: "Deficiência Múltipla") equivaler a uma das chaves após a normalização, ela será associada.
     - Se não houver correspondência, o valor será gravado como `null`.
     ''',

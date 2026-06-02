@@ -947,11 +947,10 @@ paths:
         \   **Normalização de Deficiência (campo `deficiencia`):**\n    O campo é
         normalizado automaticamente no save (removendo acentos, convertendo para caixa
         baixa e substituindo espaços por `_`).\n    - Opções válidas resultantes:
-        `deficiencia_intelectual`, `baixa_visao`, `deficiencia_auditiva`, `surdez`,
-        `deficiencia_multipla`, `deficiencia_fisica`.\n    - Se a string enviada (ex:
-        \"Deficiência Múltipla\") equivaler a uma das chaves após a normalização,
-        ela será associada.\n    - Se não houver correspondência, o valor será gravado
-        como `null`.\n    "
+        `deficiencia_intelectual`, `deficiencia_visual`, `deficiencia_auditiva`, `deficiencia_multipla`,
+        `deficiencia_fisica`.\n    - Se a string enviada (ex: \"Deficiência Múltipla\")
+        equivaler a uma das chaves após a normalização, ela será associada.\n    -
+        Se não houver correspondência, o valor será gravado como `null`.\n    "
       summary: Criar usuário
       tags:
         - Identidade
@@ -1044,10 +1043,10 @@ paths:
         \   CPF não é alterável neste endpoint.\n\n    **Normalização de Deficiência
         (campo `deficiencia`):**\n    O campo é normalizado automaticamente no save
         (removendo acentos, convertendo para caixa baixa e substituindo espaços por
-        `_`).\n    - Opções válidas resultantes: `deficiencia_intelectual`, `baixa_visao`,
-        `deficiencia_auditiva`, `surdez`, `deficiencia_multipla`, `deficiencia_fisica`.\n
-        \   - Se a string enviada (ex: \"Deficiência Múltipla\") equivaler a uma das
-        chaves após a normalização, ela será associada.\n    - Se não houver correspondência,
+        `_`).\n    - Opções válidas resultantes: `deficiencia_intelectual`, `deficiencia_visual`,
+        `deficiencia_auditiva`, `deficiencia_multipla`, `deficiencia_fisica`.\n    -
+        Se a string enviada (ex: \"Deficiência Múltipla\") equivaler a uma das chaves
+        após a normalização, ela será associada.\n    - Se não houver correspondência,
         o valor será gravado como `null`.\n    "
       summary: Atualizar dados do usuário
       parameters:
@@ -4032,12 +4031,12 @@ components:
           default: ""
           description:
             'Descrição de deficiência ou necessidade especial (opcional).
-            Opções válidas: deficiencia_intelectual (Deficiência Intelectual), baixa_visao
-            (Baixa Visão), deficiencia_auditiva (Deficiência Auditiva), surdez (Surdez),
-            deficiencia_multipla (Deficiência Múltipla), deficiencia_fisica (Deficiência
-            Física). Qualquer outro valor não correspondente será normalizado como
-            null. Strings equivalentes (ex: "Deficiência Múltipla") serão normalizadas
-            automaticamente para sua chave de escolha.'
+            Opções válidas: deficiencia_intelectual (Deficiência Intelectual), deficiencia_visual
+            (Deficiência Visual), deficiencia_auditiva (Deficiência Auditiva), deficiencia_multipla
+            (Deficiência Múltipla), deficiencia_fisica (Deficiência Física). Qualquer
+            outro valor não correspondente será normalizado como null. Strings equivalentes
+            (ex: "Deficiência Múltipla") serão normalizadas automaticamente para sua
+            chave de escolha.'
       required:
         - nome
     CriarVinculo:
@@ -4099,17 +4098,15 @@ components:
     DeficienciaEnum:
       enum:
         - deficiencia_intelectual
-        - baixa_visao
+        - deficiencia_visual
         - deficiencia_auditiva
-        - surdez
         - deficiencia_multipla
         - deficiencia_fisica
       type: string
       description: |-
         * `deficiencia_intelectual` - Deficiência Intelectual
-        * `baixa_visao` - Baixa Visão
+        * `deficiencia_visual` - Deficiência Visual
         * `deficiencia_auditiva` - Deficiência Auditiva
-        * `surdez` - Surdez
         * `deficiencia_multipla` - Deficiência Múltipla
         * `deficiencia_fisica` - Deficiência Física
     EmpresaInstituicao:
@@ -4862,12 +4859,12 @@ components:
           nullable: true
           description:
             'Descrição de deficiência ou necessidade especial (opcional).
-            Opções válidas: deficiencia_intelectual (Deficiência Intelectual), baixa_visao
-            (Baixa Visão), deficiencia_auditiva (Deficiência Auditiva), surdez (Surdez),
-            deficiencia_multipla (Deficiência Múltipla), deficiencia_fisica (Deficiência
-            Física). Qualquer outro valor não correspondente será normalizado como
-            null. Strings equivalentes (ex: "Deficiência Múltipla") serão normalizadas
-            automaticamente para sua chave de escolha.'
+            Opções válidas: deficiencia_intelectual (Deficiência Intelectual), deficiencia_visual
+            (Deficiência Visual), deficiencia_auditiva (Deficiência Auditiva), deficiencia_multipla
+            (Deficiência Múltipla), deficiencia_fisica (Deficiência Física). Qualquer
+            outro valor não correspondente será normalizado como null. Strings equivalentes
+            (ex: "Deficiência Múltipla") serão normalizadas automaticamente para sua
+            chave de escolha.'
     PatchedAtualizarVinculoFuncao:
       type: object
       properties:

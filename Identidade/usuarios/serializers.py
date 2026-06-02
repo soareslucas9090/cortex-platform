@@ -59,8 +59,8 @@ class CriarUsuarioSerializer(serializers.Serializer):
         help_text=(
             'Descrição de deficiência ou necessidade especial (opcional). '
             'Opções válidas: deficiencia_intelectual (Deficiência Intelectual), '
-            'baixa_visao (Baixa Visão), deficiencia_auditiva (Deficiência Auditiva), '
-            'surdez (Surdez), deficiencia_multipla (Deficiência Múltipla), '
+            'deficiencia_visual (Deficiência Visual), deficiencia_auditiva (Deficiência Auditiva), '
+            'deficiencia_multipla (Deficiência Múltipla), '
             'deficiencia_fisica (Deficiência Física). Qualquer outro valor não correspondente '
             'será normalizado como null. Strings equivalentes (ex: "Deficiência Múltipla") '
             'serão normalizadas automaticamente para sua chave de escolha.'
@@ -99,8 +99,8 @@ class AtualizarUsuarioSerializer(serializers.Serializer):
         help_text=(
             'Descrição de deficiência ou necessidade especial (opcional). '
             'Opções válidas: deficiencia_intelectual (Deficiência Intelectual), '
-            'baixa_visao (Baixa Visão), deficiencia_auditiva (Deficiência Auditiva), '
-            'surdez (Surdez), deficiencia_multipla (Deficiência Múltipla), '
+            'deficiencia_visual (Deficiência Visual), deficiencia_auditiva (Deficiência Auditiva), '
+            'deficiencia_multipla (Deficiência Múltipla), '
             'deficiencia_fisica (Deficiência Física). Qualquer outro valor não correspondente '
             'será normalizado como null. Strings equivalentes (ex: "Deficiência Múltipla") '
             'serão normalizadas automaticamente para sua chave de escolha.'

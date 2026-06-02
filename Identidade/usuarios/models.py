@@ -40,9 +40,8 @@ class UsuarioManager(BaseManagerUser):
 
 class TipoDeficiencia(models.TextChoices):
     DEFICIENCIA_INTELECTUAL = 'deficiencia_intelectual', 'Deficiência Intelectual'
-    BAIXA_VISAO = 'baixa_visao', 'Baixa Visão'
+    DEFICIENCIA_VISUAL = 'deficiencia_visual', 'Deficiência Visual'
     DEFICIENCIA_AUDITIVA = 'deficiencia_auditiva', 'Deficiência Auditiva'
-    SURDEZ = 'surdez', 'Surdez'
     DEFICIENCIA_MULTIPLA = 'deficiencia_multipla', 'Deficiência Múltipla'
     DEFICIENCIA_FISICA = 'deficiencia_fisica', 'Deficiência Física'
 
