@@ -74,6 +74,11 @@ class CriarUsuarioSerializer(serializers.Serializer):
             raise serializers.ValidationError('É necessário informar o CPF ou a Matrícula.')
         return attrs
 
+    def validate_deficiencia(self, value):
+        from Identidade.usuarios.utils import normalizar_deficiencia
+
+        return normalizar_deficiencia(value)
+
     def validate_password(self, value):
         if len(value) < 8:
             raise serializers.ValidationError('A senha deve ter pelo menos 8 caracteres.')
@@ -106,6 +111,11 @@ class AtualizarUsuarioSerializer(serializers.Serializer):
             'serão normalizadas automaticamente para sua chave de escolha.'
         ),
     )
+
+    def validate_deficiencia(self, value):
+        from Identidade.usuarios.utils import normalizar_deficiencia
+
+        return normalizar_deficiencia(value)
 
 
 class ArquivoImportacaoUsuariosSerializer(serializers.Serializer):

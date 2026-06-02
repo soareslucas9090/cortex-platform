@@ -29,29 +29,31 @@ class UsuarioBusiness(ModelInstanceBusiness):
     # Operações de criação (sem object_instance)
     # ------------------------------------------------------------------
 
-    def criar_usuario(self, cpf: str = None, matricula: str = None, nome: str = None, password: str = None, **kwargs):
-        """Cria um novo usuário no sistema após validar CPF ou matrícula."""
-        from .models import Usuario
-        from Identidade.matriculas.models import Matricula
-        from Identidade.matriculas.choices import SituacaoMatricula
-        
-        regras = UsuarioRules()
-        
-        cpf_normalizado = None
-        if cpf:
-            cpf_normalizado = normalizar_cpf(cpf)
-            regras.cpf_formato_valido(cpf_normalizado)
-            regras.cpf_unico(cpf_normalizado)
-        else:
-            if not matricula:
-                raise ValidationException('A matrícula é obrigatória caso o CPF não seja informado.')
-            if Matricula.objects.filter(matricula=matricula).exists():
-                raise ValidationException('Já existe um usuário cadastrado com esta matrícula.')
-
-        # Senha padrão: CPF (se houver) ou matrícula
-        senha_final = password if password else (cpf_normalizado if cpf_normalizado else matricula)
-        
+    def criar_usuario(
+        self, cpf: str = None, matricula: str = None, nome: str = None, password: str = None, **kwargs
+    ):
         try:
+            """Cria um novo usuário no sistema após validar CPF ou matrícula."""
+            from .models import Usuario
+            from Identidade.matriculas.models import Matricula
+            from Identidade.matriculas.choices import SituacaoMatricula
+            
+            regras = UsuarioRules()
+            
+            cpf_normalizado = None
+            if cpf:
+                cpf_normalizado = normalizar_cpf(cpf)
+                regras.cpf_formato_valido(cpf_normalizado)
+                regras.cpf_unico(cpf_normalizado)
+            else:
+                if not matricula:
+                    raise ValidationException('A matrícula é obrigatória caso o CPF não seja informado.')
+                if Matricula.objects.filter(matricula=matricula).exists():
+                    raise ValidationException('Já existe um usuário cadastrado com esta matrícula.')
+
+            # Senha padrão: CPF (se houver) ou matrícula
+            senha_final = password if password else (cpf_normalizado if cpf_normalizado else matricula)
+
             with transaction.atomic():
                 user = Usuario.objects.create_user(
                     cpf=cpf_normalizado,

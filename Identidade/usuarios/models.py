@@ -89,22 +89,6 @@ class Usuario(ModelHelperMixin, ModelBusinessMixin, AbstractBaseAppUser):
         if self.cpf == '':
             self.cpf = None
 
-        if self.deficiencia:
-            import unicodedata
-            # 1. Remover acentos
-            val_sem_acento = unicodedata.normalize('NFKD', str(self.deficiencia)).encode('ascii', 'ignore').decode('utf-8')
-            # 2. Caixa baixa e substituir espaços por _
-            val_normalizado = '_'.join(word for word in val_sem_acento.lower().split() if word)
-            
-            # 3. Mapear nos choices
-            valid_choices = [choice[0] for choice in TipoDeficiencia.choices]
-            if val_normalizado in valid_choices:
-                self.deficiencia = val_normalizado
-            else:
-                self.deficiencia = None
-        else:
-            self.deficiencia = None
-
         super().save(*args, **kwargs)
 
     class Meta:
