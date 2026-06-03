@@ -7,6 +7,9 @@ from .models import Usuario
 
 class UsuarioSerializer(serializers.ModelSerializer):
     tem_perfil_aluno = serializers.SerializerMethodField()
+    servidor = serializers.SerializerMethodField()
+    terceirizado = serializers.SerializerMethodField()
+    vinculos = serializers.SerializerMethodField()
 
     def get_tem_perfil_aluno(self, obj) -> bool:
         """
@@ -16,11 +19,66 @@ class UsuarioSerializer(serializers.ModelSerializer):
         """
         return hasattr(obj, 'aluno') and obj.aluno is not None
 
+    def get_servidor(self, obj):
+        try:
+            serv = obj.servidor
+            if serv:
+                return {
+                    'pk': serv.pk,
+                    'cargo': serv.cargo_id,
+                    'cargo_nome': serv.cargo.nome if serv.cargo else None,
+                    'categoria': serv.categoria,
+                    'categoria_display': serv.get_categoria_display(),
+                    'ativo': serv.ativo,
+                }
+        except Exception:
+            pass
+        return None
+
+    def get_terceirizado(self, obj):
+        try:
+            terc = obj.terceirizado
+            if terc:
+                return {
+                    'pk': terc.pk,
+                    'empresa_instituicao': terc.empresa_instituicao_id,
+                    'empresa_nome': terc.empresa_instituicao.nome if terc.empresa_instituicao else None,
+                    'cargo': terc.cargo_id,
+                    'cargo_nome': terc.cargo.nome if terc.cargo else None,
+                    'data_inicio': terc.data_inicio.isoformat() if terc.data_inicio else None,
+                    'data_fim': terc.data_fim.isoformat() if terc.data_fim else None,
+                    'ativo': terc.ativo,
+                }
+        except Exception:
+            pass
+        return None
+
+    def get_vinculos(self, obj):
+        try:
+            qs = obj.setor_vinculos.select_related('setor', 'funcao').all()
+            return [
+                {
+                    'id': v.id,
+                    'setor': v.setor_id,
+                    'setor_sigla': v.setor.sigla,
+                    'setor_nome': v.setor.nome,
+                    'funcao': v.funcao_id if v.funcao else None,
+                    'funcao_sigla': v.funcao.sigla if v.funcao else None,
+                    'funcao_descricao': v.funcao.descricao if v.funcao else None,
+                    'responsavel': v.responsavel,
+                    'created_at': v.created_at.isoformat() if v.created_at else None,
+                }
+                for v in qs
+            ]
+        except Exception:
+            return []
+
     class Meta:
         model = Usuario
         fields = [
             'id', 'cpf', 'nome', 'email', 'ativo', 'is_admin',
             'foto', 'deficiencia', 'tem_perfil_aluno', 'created_at',
+            'servidor', 'terceirizado', 'vinculos',
         ]
 
 
