@@ -35,7 +35,7 @@ Login com tipo de usuário (ex: motorista vs empresa):
 
 from rest_framework import serializers
 
-from AppCore.basics.auth.serializers import BaseHybridLoginSerializer
+from AppCore.basics.auth.serializers import BaseHybridLoginSerializer, BaseMeSerializer
 
 
 # Serializer padrão — sobrescreva conforme o domínio do projeto.
@@ -55,7 +55,18 @@ class LoginSerializer(BaseHybridLoginSerializer):
         return {
             'nome': user.nome,
             'tem_perfil_aluno': hasattr(user, 'aluno') and user.aluno is not None,
+            'permissoes': user.permissoes,
         }
+
+
+class ProjectMeSerializer(BaseMeSerializer):
+    """
+    Serializer do endpoint /me/ customizado para incluir permissões do usuário.
+    """
+    permissoes = serializers.SerializerMethodField()
+
+    def get_permissoes(self, obj):
+        return obj.permissoes
 
 
 # Serializers para documentação Swagger
@@ -79,3 +90,8 @@ class LoginResponseSerializer(serializers.Serializer):
 
     access = serializers.CharField(help_text='Token JWT de acesso (30 min).')
     refresh = serializers.CharField(help_text='Token JWT de renovação (7 dias).')
+    nome = serializers.CharField(help_text='Nome do usuário autenticado.')
+    tem_perfil_aluno = serializers.BooleanField(help_text='Indica se o usuário possui perfil de aluno.')
+    permissoes = serializers.JSONField(
+        help_text='Dicionário de permissões por módulo (ex: {"cortex": "EDITAR_EU"}).'
+    )

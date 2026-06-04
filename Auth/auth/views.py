@@ -13,10 +13,15 @@ from AppCore.basics.auth.views import (
     BaseLoginView,
     AtualizarTokenView,
     VerificarTokenView,
-    MeView,
+    BaseMeView,
 )
 
-from Auth.auth.serializers import LoginSerializer, LoginInputSerializer, LoginResponseSerializer
+from Auth.auth.serializers import (
+    LoginSerializer,
+    LoginInputSerializer,
+    LoginResponseSerializer,
+    ProjectMeSerializer,
+)
 
 
 class LoginView(BaseLoginView):
@@ -56,6 +61,25 @@ class LoginView(BaseLoginView):
     )
     def post(self, request, *args, **kwargs):
         return super().post(request, *args, **kwargs)
+
+
+class MeView(BaseMeView):
+    """
+    Retorna os dados do usuário atualmente autenticado, incluindo permissões do frontend.
+    """
+    serializer_class = ProjectMeSerializer
+
+    @extend_schema(
+        tags=['Auth'],
+        summary='Dados do usuário logado',
+        description='Retorna as informações do usuário atual, incluindo suas permissões.',
+        responses={
+            status.HTTP_200_OK: ProjectMeSerializer,
+            status.HTTP_401_UNAUTHORIZED: {'description': 'Não autenticado.'},
+        },
+    )
+    def get(self, request, *args, **kwargs):
+        return super().get(request, *args, **kwargs)
 
 
 # Re-exporta para usar nas urls sem import adicional

@@ -5,6 +5,8 @@ from AppCore.basics.models.user_model import AbstractBaseAppUser
 from AppCore.common.util.util import normalizar_cpf
 from AppCore.core.business.business_mixin import ModelBusinessMixin
 from AppCore.core.helpers.helpers_mixin import ModelHelperMixin
+from AppCore.core.users_permissions.user_permission_mixin import UserModelPermissionMixin
+from .permissions import UsuarioPermissions
 
 
 def _normalizar_email(email):
@@ -46,12 +48,13 @@ class TipoDeficiencia(models.TextChoices):
     DEFICIENCIA_FISICA = 'deficiencia_fisica', 'Deficiência Física'
 
 
-class Usuario(ModelHelperMixin, ModelBusinessMixin, AbstractBaseAppUser):
+class Usuario(ModelHelperMixin, ModelBusinessMixin, UserModelPermissionMixin, AbstractBaseAppUser):
     from .business import UsuarioBusiness
     from .helpers import UsuarioHelpers
 
     business_class = UsuarioBusiness
     helper_class = UsuarioHelpers
+    user_permissions_class = UsuarioPermissions
 
     email = models.EmailField(
         'E-mail',

@@ -853,3 +853,79 @@ class AutenticacaoUsuarioTest(APITestCase):
         }
         resposta = self.client.post(self.url, payload)
         self.assertEqual(resposta.status_code, status.HTTP_401_UNAUTHORIZED)
+
+
+class UsuarioPermissoesTest(APITestCase):
+
+    def setUp(self):
+        from PessoasInstitucionais.cargos.models import Cargo
+        from PessoasInstitucionais.empresas_instituicoes.models import EmpresaInstituicao
+
+        # Criar objetos básicos para os perfis
+        self.cargo = Cargo.objects.create(nome='Cargo de Teste')
+        self.empresa = EmpresaInstituicao.objects.create(nome='Empresa de Teste')
+
+    def test_usuario_somente_aluno_tem_permissao_editar_eu(self):
+        from Academico.alunos.models import Aluno
+
+        user = criar_usuario('11111111111', nome='Aluno Teste')
+        Aluno.objects.create(usuario=user, ativo=True)
+
+        self.assertEqual(user.permissoes, {'cortex': 'EDITAR_EU'})
+
+    def test_usuario_servidor_ativo_tem_permissao_ler_tudo(self):
+        from PessoasInstitucionais.servidores.models import Servidor
+
+        user = criar_usuario('22222222222', nome='Servidor Teste')
+        Servidor.objects.create(usuario=user, cargo=self.cargo, categoria=1, ativo=True)
+
+        self.assertEqual(user.permissoes, {'cortex': 'LER_TUDO'})
+
+    def test_usuario_servidor_inativo_e_aluno_tem_permissao_editar_eu(self):
+        from Academico.alunos.models import Aluno
+        from PessoasInstitucionais.servidores.models import Servidor
+
+        user = criar_usuario('33333333333', nome='Servidor Inativo')
+        Aluno.objects.create(usuario=user, ativo=True)
+        Servidor.objects.create(usuario=user, cargo=self.cargo, categoria=1, ativo=False)
+
+        self.assertEqual(user.permissoes, {'cortex': 'EDITAR_EU'})
+
+    def test_usuario_terceirizado_ativo_tem_permissao_ler_tudo(self):
+        from PessoasInstitucionais.terceirizados.models import Terceirizado
+
+        user = criar_usuario('44444444444', nome='Terceirizado Teste')
+        Terceirizado.objects.create(usuario=user, empresa_instituicao=self.empresa, cargo=self.cargo, ativo=True)
+
+        self.assertEqual(user.permissoes, {'cortex': 'LER_TUDO'})
+
+    def test_usuario_staff_tem_permissao_editar_tudo(self):
+        user = criar_usuario('55555555555', nome='Staff Teste')
+        user.is_staff = True
+        user.save()
+
+        self.assertEqual(user.permissoes, {'cortex': 'EDITAR_TUDO'})
+
+    def test_login_retorna_permissoes_no_payload(self):
+        user = criar_usuario('66666666666', nome='Login Perms Teste', password='Password123')
+        user.is_staff = True
+        user.save()
+
+        url_login = reverse('auth:token-jwt:login')
+        resposta = self.client.post(url_login, {'login': '66666666666', 'password': 'Password123'})
+        self.assertEqual(resposta.status_code, status.HTTP_200_OK)
+        self.assertIn('permissoes', resposta.data)
+        self.assertEqual(resposta.data['permissoes'], {'cortex': 'EDITAR_TUDO'})
+
+    def test_endpoint_me_retorna_permissoes(self):
+        user = criar_usuario('77777777777', nome='Me Perms Teste', password='Password123')
+        token = obter_tokens(user)
+
+        url_me = reverse('auth:token-jwt:me')
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {token}')
+        resposta = self.client.get(url_me)
+        self.assertEqual(resposta.status_code, status.HTTP_200_OK)
+        
+        data = resposta.data['dados'] if 'dados' in resposta.data else resposta.data
+        self.assertIn('permissoes', data)
+        self.assertEqual(data['permissoes'], {'cortex': 'EDITAR_EU'})

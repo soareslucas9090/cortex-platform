@@ -15,15 +15,15 @@ from rest_framework_simplejwt.views import (
     TokenVerifyView,
 )
 
-from AppCore.basics.auth.serializers import BaseLoginSerializer, MeSerializer
+from AppCore.basics.auth.serializers import BaseLoginSerializer, BaseMeSerializer
 
 
-class MeView(RetrieveAPIView):
+class BaseMeView(RetrieveAPIView):
     """
     Retorna os dados do usuário atualmente autenticado.
     """
     permission_classes = [IsAuthenticated]
-    serializer_class = MeSerializer
+    serializer_class = BaseMeSerializer
 
     def get_object(self):
         return self.request.user
@@ -33,7 +33,7 @@ class MeView(RetrieveAPIView):
         summary='Dados do usuário logado',
         description='Retorna as informações do usuário atual.',
         responses={
-            status.HTTP_200_OK: MeSerializer,
+            status.HTTP_200_OK: BaseMeSerializer,
             status.HTTP_401_UNAUTHORIZED: {'description': 'Não autenticado.'},
         },
     )

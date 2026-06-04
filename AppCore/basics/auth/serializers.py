@@ -54,14 +54,14 @@ from rest_framework_simplejwt.settings import api_settings
 
 User = get_user_model()
 
-class MeSerializer(serializers.ModelSerializer):
+class BaseMeSerializer(serializers.ModelSerializer):
     """
     Serializer padrão para retornar os dados do usuário autenticado.
     Remove campos sensíveis como senha e permissões detalhadas.
     """
     class Meta:
         model = User
-        exclude = ('password', 'groups', 'user_permissions')
+        exclude = ('password', 'groups')
 
 
 class BaseLoginSerializer(TokenObtainPairSerializer):

@@ -1,4 +1,4 @@
-import os
+import os, sys
 from pathlib import Path
 
 from django.core.exceptions import ImproperlyConfigured
@@ -66,6 +66,12 @@ DATABASES = {
         'PORT': os.environ.get('DATABASE_PORT', '5432'),
     }
 }
+
+if 'test' in sys.argv:
+    DATABASES['default'] = {
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': ':memory:',
+    }
 
 DEFAULT_FROM_EMAIL = os.environ.get("DEFAULT_FROM_EMAIL")
 
