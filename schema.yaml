@@ -4769,7 +4769,6 @@ components:
           type: integer
           readOnly: true
         permissoes:
-          type: string
           readOnly: true
         last_login:
           type: string
@@ -5042,7 +5041,7 @@ components:
           format: double
           readOnly: true
         resultado_json:
-          type: string
+          nullable: true
           readOnly: true
         created_at:
           type: string
@@ -5193,13 +5192,17 @@ components:
           readOnly: true
           title: Criado em
         servidor:
-          type: string
+          allOf:
+          - $ref: '#/components/schemas/UsuarioServidor'
           readOnly: true
         terceirizado:
-          type: string
+          allOf:
+          - $ref: '#/components/schemas/UsuarioTerceirizado'
           readOnly: true
         vinculos:
-          type: string
+          type: array
+          items:
+            $ref: '#/components/schemas/UsuarioVinculo'
           readOnly: true
       required:
       - created_at
@@ -5209,6 +5212,99 @@ components:
       - tem_perfil_aluno
       - terceirizado
       - vinculos
+    UsuarioServidor:
+      type: object
+      properties:
+        pk:
+          type: integer
+        cargo:
+          type: integer
+          nullable: true
+        cargo_nome:
+          type: string
+          nullable: true
+        categoria:
+          type: integer
+        categoria_display:
+          type: string
+        ativo:
+          type: boolean
+      required:
+      - ativo
+      - cargo
+      - cargo_nome
+      - categoria
+      - categoria_display
+      - pk
+    UsuarioTerceirizado:
+      type: object
+      properties:
+        pk:
+          type: integer
+        empresa_instituicao:
+          type: integer
+          nullable: true
+        empresa_nome:
+          type: string
+          nullable: true
+        cargo:
+          type: integer
+          nullable: true
+        cargo_nome:
+          type: string
+          nullable: true
+        data_inicio:
+          type: string
+          nullable: true
+        data_fim:
+          type: string
+          nullable: true
+        ativo:
+          type: boolean
+      required:
+      - ativo
+      - cargo
+      - cargo_nome
+      - data_fim
+      - data_inicio
+      - empresa_instituicao
+      - empresa_nome
+      - pk
+    UsuarioVinculo:
+      type: object
+      properties:
+        id:
+          type: integer
+        setor:
+          type: integer
+        setor_sigla:
+          type: string
+        setor_nome:
+          type: string
+        funcao:
+          type: integer
+          nullable: true
+        funcao_sigla:
+          type: string
+          nullable: true
+        funcao_descricao:
+          type: string
+          nullable: true
+        responsavel:
+          type: boolean
+        created_at:
+          type: string
+          nullable: true
+      required:
+      - created_at
+      - funcao
+      - funcao_descricao
+      - funcao_sigla
+      - id
+      - responsavel
+      - setor
+      - setor_nome
+      - setor_sigla
   securitySchemes:
     jwtAuth:
       type: http

@@ -1,8 +1,41 @@
 import re
 
 from rest_framework import serializers
+from drf_spectacular.utils import extend_schema_field
 
 from .models import Usuario
+
+
+class UsuarioServidorSerializer(serializers.Serializer):
+    pk = serializers.IntegerField()
+    cargo = serializers.IntegerField(allow_null=True)
+    cargo_nome = serializers.CharField(allow_null=True)
+    categoria = serializers.IntegerField()
+    categoria_display = serializers.CharField()
+    ativo = serializers.BooleanField()
+
+
+class UsuarioTerceirizadoSerializer(serializers.Serializer):
+    pk = serializers.IntegerField()
+    empresa_instituicao = serializers.IntegerField(allow_null=True)
+    empresa_nome = serializers.CharField(allow_null=True)
+    cargo = serializers.IntegerField(allow_null=True)
+    cargo_nome = serializers.CharField(allow_null=True)
+    data_inicio = serializers.CharField(allow_null=True)
+    data_fim = serializers.CharField(allow_null=True)
+    ativo = serializers.BooleanField()
+
+
+class UsuarioVinculoSerializer(serializers.Serializer):
+    id = serializers.IntegerField()
+    setor = serializers.IntegerField()
+    setor_sigla = serializers.CharField()
+    setor_nome = serializers.CharField()
+    funcao = serializers.IntegerField(allow_null=True)
+    funcao_sigla = serializers.CharField(allow_null=True)
+    funcao_descricao = serializers.CharField(allow_null=True)
+    responsavel = serializers.BooleanField()
+    created_at = serializers.CharField(allow_null=True)
 
 
 class UsuarioSerializer(serializers.ModelSerializer):
@@ -19,6 +52,7 @@ class UsuarioSerializer(serializers.ModelSerializer):
         """
         return hasattr(obj, 'aluno') and obj.aluno is not None
 
+    @extend_schema_field(UsuarioServidorSerializer)
     def get_servidor(self, obj):
         try:
             serv = obj.servidor
@@ -35,6 +69,7 @@ class UsuarioSerializer(serializers.ModelSerializer):
             pass
         return None
 
+    @extend_schema_field(UsuarioTerceirizadoSerializer)
     def get_terceirizado(self, obj):
         try:
             terc = obj.terceirizado
@@ -53,6 +88,7 @@ class UsuarioSerializer(serializers.ModelSerializer):
             pass
         return None
 
+    @extend_schema_field(UsuarioVinculoSerializer(many=True))
     def get_vinculos(self, obj):
         try:
             qs = obj.setor_vinculos.select_related('setor', 'funcao').all()
@@ -248,6 +284,7 @@ class StatusImportacaoLoteSerializer(serializers.ModelSerializer):
             return 0.0
         return round((obj.linhas_processadas / obj.total_linhas) * 100, 2)
 
+    @extend_schema_field(serializers.JSONField(allow_null=True))
     def get_resultado_json(self, obj):
         res = obj.resultado_json
         if res and isinstance(res, dict) and 'erros' in res:

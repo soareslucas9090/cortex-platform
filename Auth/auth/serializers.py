@@ -34,6 +34,7 @@ Login com tipo de usuário (ex: motorista vs empresa):
 """
 
 from rest_framework import serializers
+from drf_spectacular.utils import extend_schema_field
 
 from AppCore.basics.auth.serializers import BaseHybridLoginSerializer, BaseMeSerializer
 
@@ -65,6 +66,7 @@ class ProjectMeSerializer(BaseMeSerializer):
     """
     permissoes = serializers.SerializerMethodField()
 
+    @extend_schema_field(serializers.JSONField())
     def get_permissoes(self, obj):
         return obj.permissoes
 
