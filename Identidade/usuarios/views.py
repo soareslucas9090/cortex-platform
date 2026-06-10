@@ -88,7 +88,7 @@ logger = logging.getLogger(__name__)
         status.HTTP_403_FORBIDDEN: {'description': 'Sem permissão de administrador.'},
     },
 )
-class ListarUsuariosView(IsAdminMixin, BasicGetAPIView):
+class ListarUsuariosView(IsOwnerOrAdminMixin, BasicGetAPIView):
     """GET /cortex/identidade/usuarios/"""
     pagination_class = PaginacaoCustomizada
     serializer_class = UsuarioSerializer
@@ -96,7 +96,10 @@ class ListarUsuariosView(IsAdminMixin, BasicGetAPIView):
 
     def get_queryset(self):
         qs = Usuario.objects.all()
-        
+
+        if not self.request.user.is_staff:
+            return qs.filter(id=self.request.user.id)
+
         ativo = self.request.query_params.get('ativo')
         if ativo is not None and ativo.lower() in ('true', 'false'):
             qs = qs.filter(ativo=ativo.lower() == 'true')

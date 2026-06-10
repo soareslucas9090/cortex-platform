@@ -42,6 +42,9 @@ class ListarAlunosView(IsAdminMixin, BasicGetAPIView):
     
     def get_queryset(self):
         qs = Aluno.objects.all().select_related('usuario')
+
+        if not self.request.user.is_staff:
+            return qs.filter(usuario__id=self.request.user.id)
         
         ativo = self.request.query_params.get('ativo')
         if ativo is not None and ativo.lower() in ('true', 'false'):

@@ -89,6 +89,9 @@ class ListarTerceirizadosView(IsAdminMixin, BasicGetAPIView):
     def get_queryset(self):
         qs = Terceirizado.objects.select_related('usuario', 'empresa_instituicao', 'cargo').all()
 
+        if not self.request.user.is_staff:
+            return qs.filter(usuario__id=self.request.user.id)
+
         ativo = self.request.query_params.get('ativo')
         if ativo is not None and ativo.lower() in ('true', 'false'):
             qs = qs.filter(ativo=ativo.lower() == 'true')

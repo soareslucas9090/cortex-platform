@@ -33,10 +33,11 @@ Login com tipo de usuário (ex: motorista vs empresa):
             return {'nome': user.nome}
 """
 
-from rest_framework import serializers
 from drf_spectacular.utils import extend_schema_field
+from rest_framework import serializers
 
-from AppCore.basics.auth.serializers import BaseHybridLoginSerializer, BaseMeSerializer
+from AppCore.basics.auth.serializers import (BaseHybridLoginSerializer,
+                                             BaseMeSerializer)
 
 
 # Serializer padrão — sobrescreva conforme o domínio do projeto.
@@ -56,7 +57,7 @@ class LoginSerializer(BaseHybridLoginSerializer):
         return {
             'nome': user.nome,
             'tem_perfil_aluno': hasattr(user, 'aluno') and user.aluno is not None,
-            'permissoes': user.permissoes,
+            'eh_admin_frontend': user.is_staff,
         }
 
 
@@ -91,9 +92,11 @@ class LoginResponseSerializer(serializers.Serializer):
     """Documenta a resposta do login no Swagger."""
 
     access = serializers.CharField(help_text='Token JWT de acesso (30 min).')
-    refresh = serializers.CharField(help_text='Token JWT de renovação (7 dias).')
+    refresh = serializers.CharField(
+        help_text='Token JWT de renovação (7 dias).')
     nome = serializers.CharField(help_text='Nome do usuário autenticado.')
-    tem_perfil_aluno = serializers.BooleanField(help_text='Indica se o usuário possui perfil de aluno.')
+    tem_perfil_aluno = serializers.BooleanField(
+        help_text='Indica se o usuário possui perfil de aluno.')
     permissoes = serializers.JSONField(
         help_text='Dicionário de permissões por módulo (ex: {"cortex": "EDITAR_EU"}).'
     )
