@@ -70,6 +70,7 @@ class TestEmpresaInstituicaoBusiness(APITestCase):
 class TestEmpresaInstituicaoAPI(APITestCase):
 
     def setUp(self):
+        EmpresaInstituicao.objects.all().delete()
         self.admin = criar_admin()
         self.token = obter_tokens(self.admin)
         self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token}')

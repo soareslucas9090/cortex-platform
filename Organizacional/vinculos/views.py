@@ -45,8 +45,8 @@ logger = logging.getLogger(__name__)
             required=False, description='Filtra por parte do CPF do usuário.',
         ),
         OpenApiParameter(
-            'sigla_funcao', OpenApiTypes.STR, OpenApiParameter.QUERY,
-            required=False, description='Filtra por parte da sigla da função (ignora acentos e maiúsculas).',
+            'papel_funcao', OpenApiTypes.STR, OpenApiParameter.QUERY,
+            required=False, description='Filtra por parte do papel/função (ignora acentos e maiúsculas).',
         ),
         OpenApiParameter(
             'responsavel', OpenApiTypes.BOOL, OpenApiParameter.QUERY,
@@ -81,9 +81,9 @@ class ListarVinculosView(IsAdminMixin, BasicGetAPIView):
         if cpf_usuario:
             qs = qs.filter(usuario__cpf__unaccent__icontains=cpf_usuario)
             
-        sigla_funcao = self.request.query_params.get('sigla_funcao')
-        if sigla_funcao:
-            qs = qs.filter(funcao__sigla__unaccent__icontains=sigla_funcao)
+        papel_funcao = self.request.query_params.get('papel_funcao')
+        if papel_funcao:
+            qs = qs.filter(funcao__papel_funcao__unaccent__icontains=papel_funcao)
             
         responsavel = self.request.query_params.get('responsavel')
         if responsavel is not None and responsavel.lower() in ('true', 'false'):

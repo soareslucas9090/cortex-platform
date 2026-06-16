@@ -178,7 +178,7 @@ class ServidorBusinessTestCase(APITestCase):
             cargo_pk=self.cargo.pk,
             categoria=CategoriaServidor.DOCENTE,
         )
-        funcao = Funcao.objects.create(sigla='CH', descricao='Chefe')
+        funcao = Funcao.objects.create(papel_funcao='CH', descricao='Chefe')
         setor = Setor.objects.create(nome='TI', sigla='TI')
         SetorVinculo.objects.create(
             usuario=self.usuario,
@@ -201,7 +201,7 @@ class ServidorBusinessTestCase(APITestCase):
             cargo_pk=self.cargo.pk,
             categoria=CategoriaServidor.DOCENTE,
         )
-        funcao = Funcao.objects.create(sigla='CH2', descricao='Chefe 2')
+        funcao = Funcao.objects.create(papel_funcao='CH2', descricao='Chefe 2')
         setor = Setor.objects.create(nome='RH', sigla='RH')
         vinculo = SetorVinculo.objects.create(
             usuario=self.usuario,

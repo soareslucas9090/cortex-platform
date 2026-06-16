@@ -78,6 +78,7 @@ class ListarSetoresViewTest(APITestCase):
         self.assertEqual(resposta.status_code, status.HTTP_200_OK)
 
     def test_retorna_lista_vazia_sem_setores(self):
+        Setor.objects.all().delete()
         self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token_admin}')
         resposta = self.client.get(self.url)
         self.assertEqual(resposta.status_code, status.HTTP_200_OK)
@@ -261,7 +262,7 @@ class DesativarSetorViewTest(APITestCase):
     def test_setor_com_vinculos_ativos_retorna_400(self):
         from Organizacional.funcoes.models import Funcao
         from Organizacional.vinculos.models import SetorVinculo
-        funcao = Funcao.objects.create(sigla='AUX', descricao='Auxiliar')
+        funcao = Funcao.objects.create(papel_funcao='AUX', descricao='Auxiliar')
         SetorVinculo.objects.create(
             usuario=self.admin, setor=self.setor, funcao=funcao, responsavel=False,
         )

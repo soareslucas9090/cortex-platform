@@ -773,7 +773,7 @@ Tipo
 
 Descrição
 
-sigla
+papel_funcao
 
 String (PK)
 
@@ -800,7 +800,7 @@ Status
 ### Dados raízes
 
 
-|sigla (String, PK)|funcao (String)|descricao (String)|ativo (boolean)|
+|papel_funcao (String, PK)|funcao (String)|descricao (String)|ativo (boolean)|
 
 |---|---|---|---|
 

@@ -3,7 +3,7 @@ import logging
 from django.db import transaction
 
 from AppCore.core.business.business import ModelInstanceBusiness
-from AppCore.core.exceptions.exceptions import ValidationException, SystemErrorException
+from AppCore.core.exceptions.exceptions import ValidationException, SystemErrorException, BusinessRuleException
 from AppCore.common.util.util import normalizar_cpf, normalizar_cep
 
 from .rules import UsuarioRules
@@ -68,6 +68,8 @@ class UsuarioBusiness(ModelInstanceBusiness):
                         situacao=SituacaoMatricula.ATIVA,
                     )
                 return user
+        except (ValidationException, BusinessRuleException):
+            raise
         except Exception as e:
             logger.exception('Erro ao criar usuário: %s', e)
             raise SystemErrorException('Não foi possível criar o usuário.')
@@ -500,9 +502,9 @@ class UsuarioBusiness(ModelInstanceBusiness):
         from Organizacional.setores.models import Setor
         from Organizacional.funcoes.models import Funcao
         setores_ids = {l.setor_id_planilha for l in estrutura.setores_lotacao if l.setor_id_planilha}
-        funcoes_siglas = {l.funcao_id_planilha for l in estrutura.setores_lotacao if l.funcao_id_planilha}
+        funcoes_papeis = {l.funcao_id_planilha for l in estrutura.setores_lotacao if l.funcao_id_planilha}
         mapa_setores_db = {s.id: s for s in Setor.objects.filter(id__in=setores_ids)} if setores_ids else {}
-        mapa_funcoes_db = {f.sigla: f for f in Funcao.objects.filter(sigla__in=funcoes_siglas)} if funcoes_siglas else {}
+        mapa_funcoes_db = {f.papel_funcao: f for f in Funcao.objects.filter(papel_funcao__in=funcoes_papeis)} if funcoes_papeis else {}
 
         for linha in estrutura.setores_lotacao:
             _incrementar_progresso()

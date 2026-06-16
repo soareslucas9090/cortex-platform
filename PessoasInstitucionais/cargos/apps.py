@@ -4,4 +4,4 @@ from django.apps import AppConfig
 class CargosConfig(AppConfig):
     default_auto_field = 'django.db.models.BigAutoField'
     name = 'PessoasInstitucionais.cargos'
-    verbose_name = 'Cargos'
+    verbose_name = 'Pessoas · Cargos'

@@ -42,7 +42,7 @@ def criar_usuario(cpf, nome='Usuário Teste', password='Senha@123', is_admin=Fal
 class ListarUsuariosViewTest(APITestCase):
 
     def setUp(self):
-        self.admin = criar_usuario('00000000001', nome='Admin', is_admin=True)
+        self.admin = criar_usuario('00000000001', nome='Admin', is_admin=True, is_staff=True)
         self.usuario_comum = criar_usuario('00000000002', nome='Comum')
         self.token_admin = obter_tokens(self.admin)
         self.token_comum = obter_tokens(self.usuario_comum)

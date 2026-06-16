@@ -63,7 +63,7 @@ Sugestão de seed inicial mínima:
 
 ### Campos importantes
 
-- `sigla`
+- `papel_funcao`
 - `descricao`
 - `e_gratificada`
 - `ativo`

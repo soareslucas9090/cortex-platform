@@ -10,14 +10,14 @@ logger = logging.getLogger(__name__)
 
 class FuncaoBusiness(ModelInstanceBusiness):
 
-    def criar_funcao(self, sigla: str, descricao: str, e_gratificada: bool = False, exige_aluno: bool = False, **kwargs):
-        """Cria uma nova função validando unicidade de sigla."""
+    def criar_funcao(self, papel_funcao: str, descricao: str, e_gratificada: bool = False, exige_aluno: bool = False, **kwargs):
+        """Cria uma nova função validando unicidade de papel/função."""
         from .models import Funcao
         regras = FuncaoRules()
-        regras.sigla_unica(sigla)
+        regras.papel_funcao_unico(papel_funcao)
         try:
             return Funcao.objects.create(
-                sigla=sigla,
+                papel_funcao=papel_funcao,
                 descricao=descricao,
                 e_gratificada=e_gratificada,
                 exige_aluno=exige_aluno,
@@ -28,10 +28,10 @@ class FuncaoBusiness(ModelInstanceBusiness):
             raise SystemErrorException('Não foi possível criar a função.')
 
     def atualizar_dados(self, dados: dict):
-        """Atualiza campos da função. Revalida sigla se estiver nos dados."""
-        if 'sigla' in dados:
+        """Atualiza campos da função. Revalida papel_função se estiver nos dados."""
+        if 'papel_funcao' in dados:
             regras = FuncaoRules(object_instance=self.object_instance)
-            regras.sigla_unica(dados['sigla'], excluir_id=self.object_instance.pk)
+            regras.papel_funcao_unico(dados['papel_funcao'], excluir_id=self.object_instance.pk)
         try:
             for attr, value in dados.items():
                 setattr(self.object_instance, attr, value)

@@ -53,6 +53,6 @@ class UsuarioHelpers(ModelInstanceHelpers):
         from Organizacional.setores.models import Setor
         return Setor.objects.filter(pk=setor_id).first()
 
-    def obter_funcao_por_sigla_seed(self, sigla: str):
+    def obter_funcao_por_papel_seed(self, papel_funcao: str):
         from Organizacional.funcoes.models import Funcao
-        return Funcao.objects.filter(sigla=sigla).first()
+        return Funcao.objects.filter(papel_funcao=papel_funcao).first()

@@ -28,9 +28,9 @@ class ValidacaoIntegracaoMilestone5Test(APITestCase):
 
         # Preparação do Domínio Organizacional (Catálogo Base)
         self.setor = Setor.objects.create(sigla='TEST_CCTI', nome='Coordenação de TI', ativo=True)
-        self.funcao_chefe = Funcao.objects.create(sigla='TEST_CHEFE', descricao='Chefe de Setor', ativo=True, e_gratificada=True)
-        self.funcao_monitor = Funcao.objects.create(sigla='TEST_MON', descricao='Monitor', ativo=True, exige_aluno=True)
-        self.funcao_comum = Funcao.objects.create(sigla='TEST_AUX', descricao='Auxiliar Administrativo', ativo=True)
+        self.funcao_chefe = Funcao.objects.create(papel_funcao='TEST_CHEFE', descricao='Chefe de Setor', ativo=True, e_gratificada=True)
+        self.funcao_monitor = Funcao.objects.create(papel_funcao='TEST_MON', descricao='Monitor', ativo=True, exige_aluno=True)
+        self.funcao_comum = Funcao.objects.create(papel_funcao='TEST_AUX', descricao='Auxiliar Administrativo', ativo=True)
 
         self.url_criar_vinculo = f'/cortex/organizacional/setores/{self.setor.pk}/vinculos/'
 

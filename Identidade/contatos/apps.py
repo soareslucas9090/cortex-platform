@@ -4,4 +4,4 @@ from django.apps import AppConfig
 class ContatosConfig(AppConfig):
     default_auto_field = 'django.db.models.BigAutoField'
     name = 'Identidade.contatos'
-    verbose_name = 'Contatos'
+    verbose_name = 'Identidade · Contatos'

@@ -3,14 +3,14 @@ from AppCore.core.rules.rules import ModelInstanceRules
 
 class FuncaoRules(ModelInstanceRules):
 
-    def sigla_unica(self, sigla: str, excluir_id=None) -> bool:
-        """Valida que a sigla não está em uso por outra função."""
+    def papel_funcao_unico(self, papel_funcao: str, excluir_id=None) -> bool:
+        """Valida que o papel/função não está em uso por outra função."""
         from .models import Funcao
-        qs = Funcao.objects.filter(sigla=sigla)
+        qs = Funcao.objects.filter(papel_funcao=papel_funcao)
         if excluir_id is not None:
             qs = qs.exclude(pk=excluir_id)
         if qs.exists():
-            self.return_exception('Já existe uma função cadastrada com essa sigla.')
+            self.return_exception('Já existe uma função cadastrada com esse papel/função.')
         return True
 
     def pode_desativar(self) -> bool:

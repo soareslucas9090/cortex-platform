@@ -31,8 +31,8 @@ def criar_setor(sigla='TI', nome='Tecnologia da Informação', ativo=True):
     return Setor.objects.create(sigla=sigla, nome=nome, ativo=ativo)
 
 
-def criar_funcao(sigla='AUX', descricao='Auxiliar Técnico', ativo=True, exige_aluno=False):
-    return Funcao.objects.create(sigla=sigla, descricao=descricao, ativo=ativo, exige_aluno=exige_aluno)
+def criar_funcao(papel_funcao='AUX', descricao='Auxiliar Técnico', ativo=True, exige_aluno=False):
+    return Funcao.objects.create(papel_funcao=papel_funcao, descricao=descricao, ativo=ativo, exige_aluno=exige_aluno)
 
 
 def criar_vinculo(usuario, setor, funcao, responsavel=False):
@@ -142,7 +142,7 @@ class CriarVinculoViewTest(APITestCase):
         self.assertEqual(resposta.status_code, status.HTTP_400_BAD_REQUEST)
 
     def test_funcao_inativa_retorna_400(self):
-        funcao_inativa = criar_funcao(sigla='IN', descricao='Inativa', ativo=False)
+        funcao_inativa = criar_funcao(papel_funcao='IN', descricao='Inativa', ativo=False)
         payload = {'usuario': self.comum.pk, 'funcao': funcao_inativa.pk}
         self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token_admin}')
         resposta = self.client.post(self.url, payload)
@@ -155,7 +155,7 @@ class CriarVinculoViewTest(APITestCase):
         self.assertEqual(resposta.status_code, status.HTTP_400_BAD_REQUEST)
 
     def test_mesmo_usuario_pode_ter_vinculos_com_funcoes_diferentes(self):
-        outra_funcao = criar_funcao(sigla='ADM', descricao='Administrador')
+        outra_funcao = criar_funcao(papel_funcao='ADM', descricao='Administrador')
         criar_vinculo(self.comum, self.setor, self.funcao)
         self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token_admin}')
         payload = {'usuario': self.comum.pk, 'funcao': outra_funcao.pk}
@@ -189,7 +189,7 @@ class CriarVinculoViewTest(APITestCase):
         self.assertEqual(resposta.status_code, status.HTTP_400_BAD_REQUEST)
 
     def test_cria_vinculo_com_funcao_que_exige_aluno_falha_se_nao_aluno(self):
-        funcao_aluno = criar_funcao(sigla='MON', descricao='Monitor', exige_aluno=True)
+        funcao_aluno = criar_funcao(papel_funcao='MON', descricao='Monitor', exige_aluno=True)
         payload = {'usuario': self.comum.pk, 'funcao': funcao_aluno.pk}
         self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token_admin}')
         resposta = self.client.post(self.url, payload)
@@ -197,7 +197,7 @@ class CriarVinculoViewTest(APITestCase):
 
     def test_cria_vinculo_com_funcao_que_exige_aluno_sucesso(self):
         Aluno.objects.create(usuario=self.comum, ativo=True)
-        funcao_aluno = criar_funcao(sigla='MON', descricao='Monitor', exige_aluno=True)
+        funcao_aluno = criar_funcao(papel_funcao='MON', descricao='Monitor', exige_aluno=True)
         payload = {'usuario': self.comum.pk, 'funcao': funcao_aluno.pk}
         self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token_admin}')
         resposta = self.client.post(self.url, payload)
@@ -251,7 +251,7 @@ class EncerrarVinculoViewTest(APITestCase):
         self.assertEqual(resposta.status_code, status.HTTP_400_BAD_REQUEST)
 
     def test_encerra_responsavel_quando_ha_outro_responsavel(self):
-        outra_funcao = criar_funcao(sigla='ADM', descricao='Administrador')
+        outra_funcao = criar_funcao(papel_funcao='ADM', descricao='Administrador')
         outro_vinculo = criar_vinculo(self.admin, self.setor, outra_funcao, responsavel=True)
         self.vinculo.responsavel = True
         self.vinculo.save()
@@ -355,7 +355,7 @@ class RemoverResponsavelViewTest(APITestCase):
         self.setor = criar_setor()
         self.funcao = criar_funcao()
         # Criar dois vínculos responsáveis para que a remoção seja permitida
-        outra_funcao = criar_funcao(sigla='ADM', descricao='Administrador')
+        outra_funcao = criar_funcao(papel_funcao='ADM', descricao='Administrador')
         self.vinculo = criar_vinculo(self.comum, self.setor, self.funcao, responsavel=True)
         self.outro_vinculo = criar_vinculo(self.admin, self.setor, outra_funcao, responsavel=True)
         self.url = reverse(
@@ -415,8 +415,8 @@ class AtualizarVinculoFuncaoViewTest(APITestCase):
         self.token_admin = obter_tokens(self.admin)
         self.token_comum = obter_tokens(self.comum)
         self.setor = criar_setor()
-        self.funcao = criar_funcao(sigla='AUX', descricao='Auxiliar')
-        self.nova_funcao = criar_funcao(sigla='ADM', descricao='Administrador')
+        self.funcao = criar_funcao(papel_funcao='AUX', descricao='Auxiliar')
+        self.nova_funcao = criar_funcao(papel_funcao='ADM', descricao='Administrador')
         self.vinculo = criar_vinculo(self.comum, self.setor, self.funcao)
         self.url = reverse(
             'organizacional:vinculo-atualizar-funcao',
@@ -440,7 +440,7 @@ class AtualizarVinculoFuncaoViewTest(APITestCase):
         self.assertEqual(resposta.status_code, status.HTTP_401_UNAUTHORIZED)
 
     def test_funcao_inativa_retorna_400(self):
-        funcao_inativa = criar_funcao(sigla='IN', descricao='Inativa', ativo=False)
+        funcao_inativa = criar_funcao(papel_funcao='IN', descricao='Inativa', ativo=False)
         self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token_admin}')
         resposta = self.client.patch(self.url, {'funcao': funcao_inativa.pk})
         self.assertEqual(resposta.status_code, status.HTTP_400_BAD_REQUEST)
@@ -477,14 +477,14 @@ class AtualizarVinculoFuncaoViewTest(APITestCase):
         self.assertEqual(resposta.status_code, status.HTTP_404_NOT_FOUND)
 
     def test_atualizar_para_funcao_que_exige_aluno_falha_se_nao_aluno(self):
-        funcao_aluno = criar_funcao(sigla='MON', descricao='Monitor', exige_aluno=True)
+        funcao_aluno = criar_funcao(papel_funcao='MON', descricao='Monitor', exige_aluno=True)
         self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token_admin}')
         resposta = self.client.patch(self.url, {'funcao': funcao_aluno.pk})
         self.assertEqual(resposta.status_code, status.HTTP_400_BAD_REQUEST)
 
     def test_atualizar_para_funcao_que_exige_aluno_sucesso(self):
         Aluno.objects.create(usuario=self.comum, ativo=True)
-        funcao_aluno = criar_funcao(sigla='MON', descricao='Monitor', exige_aluno=True)
+        funcao_aluno = criar_funcao(papel_funcao='MON', descricao='Monitor', exige_aluno=True)
         self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token_admin}')
         resposta = self.client.patch(self.url, {'funcao': funcao_aluno.pk})
         self.assertEqual(resposta.status_code, status.HTTP_200_OK)

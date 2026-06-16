@@ -15,7 +15,7 @@ Garantir que as entidades institucionais de referência existam no banco antes d
 - Cargo: `nome`
 - Empresa_Instituicao: `nome`
 - Setor: `sigla`
-- Funcao: `sigla`
+- Funcao: `papel_funcao`
 
 ## Regras
 - migrações devem ser idempotentes;

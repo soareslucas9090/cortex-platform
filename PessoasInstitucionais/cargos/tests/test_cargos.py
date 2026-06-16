@@ -69,6 +69,7 @@ class CargoBusinessTestCase(APITestCase):
 class CargosAPITestCase(APITestCase):
 
     def setUp(self):
+        Cargo.objects.all().delete()
         self.admin = criar_admin()
         self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {obter_token(self.admin)}')
         self.cargo = Cargo.objects.create(nome='Professor')

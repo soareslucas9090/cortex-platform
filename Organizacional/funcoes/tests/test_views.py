@@ -22,15 +22,16 @@ def criar_usuario_comum(cpf='00000000002', nome='Comum'):
     return Usuario.objects.create_user(cpf=cpf, password='Senha@123', nome=nome)
 
 
-def criar_funcao(sigla='TI', descricao='Técnico de Informática', e_gratificada=False, exige_aluno=False, ativo=True):
+def criar_funcao(papel_funcao='TI', descricao='Técnico de Informática', e_gratificada=False, exige_aluno=False, ativo=True):
     return Funcao.objects.create(
-        sigla=sigla, descricao=descricao, e_gratificada=e_gratificada, exige_aluno=exige_aluno, ativo=ativo,
+        papel_funcao=papel_funcao, descricao=descricao, e_gratificada=e_gratificada, exige_aluno=exige_aluno, ativo=ativo,
     )
 
 
 class ListarFuncoesViewTest(APITestCase):
 
     def setUp(self):
+        Funcao.objects.all().delete()
         self.admin = criar_admin()
         self.comum = criar_usuario_comum()
         self.token_admin = obter_tokens(self.admin)
@@ -55,24 +56,24 @@ class ListarFuncoesViewTest(APITestCase):
         self.assertEqual(resposta.status_code, status.HTTP_401_UNAUTHORIZED)
 
     def test_filtro_ativo_true_retorna_somente_ativas(self):
-        criar_funcao(sigla='TI', descricao='Ativa', ativo=True)
-        criar_funcao(sigla='RH', descricao='Inativa', ativo=False)
+        criar_funcao(papel_funcao='TI', descricao='Ativa', ativo=True)
+        criar_funcao(papel_funcao='RH', descricao='Inativa', ativo=False)
         self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token_admin}')
         resposta = self.client.get(self.url, {'ativo': 'true'})
         self.assertEqual(resposta.status_code, status.HTTP_200_OK)
-        siglas = [f['sigla'] for f in resposta.data['dados']]
-        self.assertIn('TI', siglas)
-        self.assertNotIn('RH', siglas)
+        papeis = [f['papel_funcao'] for f in resposta.data['dados']]
+        self.assertIn('TI', papeis)
+        self.assertNotIn('RH', papeis)
 
     def test_filtro_ativo_false_retorna_somente_inativas(self):
-        criar_funcao(sigla='TI', descricao='Ativa', ativo=True)
-        criar_funcao(sigla='RH', descricao='Inativa', ativo=False)
+        criar_funcao(papel_funcao='TI', descricao='Ativa', ativo=True)
+        criar_funcao(papel_funcao='RH', descricao='Inativa', ativo=False)
         self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token_admin}')
         resposta = self.client.get(self.url, {'ativo': 'false'})
         self.assertEqual(resposta.status_code, status.HTTP_200_OK)
-        siglas = [f['sigla'] for f in resposta.data['dados']]
-        self.assertNotIn('TI', siglas)
-        self.assertIn('RH', siglas)
+        papeis = [f['papel_funcao'] for f in resposta.data['dados']]
+        self.assertNotIn('TI', papeis)
+        self.assertIn('RH', papeis)
 
     def test_filtro_ativo_invalido_e_ignorado(self):
         self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token_admin}')
@@ -95,7 +96,7 @@ class CriarFuncaoViewTest(APITestCase):
         self.token_comum = obter_tokens(self.comum)
         self.url = reverse('organizacional:funcoes')
         self.payload_valido = {
-            'sigla': 'TI',
+            'papel_funcao': 'TI',
             'descricao': 'Técnico de Informática',
         }
 
@@ -104,7 +105,7 @@ class CriarFuncaoViewTest(APITestCase):
         resposta = self.client.post(self.url, self.payload_valido)
         self.assertEqual(resposta.status_code, status.HTTP_201_CREATED)
         self.assertIn('dados', resposta.data)
-        self.assertEqual(resposta.data['dados']['sigla'], 'TI')
+        self.assertEqual(resposta.data['dados']['papel_funcao'], 'TI')
 
     def test_funcao_criada_e_ativa_por_padrao(self):
         self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token_admin}')
@@ -148,19 +149,19 @@ class CriarFuncaoViewTest(APITestCase):
         self.assertEqual(resposta.status_code, status.HTTP_401_UNAUTHORIZED)
 
     def test_sigla_duplicada_retorna_400(self):
-        criar_funcao(sigla='TI', descricao='Existente')
+        criar_funcao(papel_funcao='TI', descricao='Existente')
         self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token_admin}')
         resposta = self.client.post(self.url, self.payload_valido)
         self.assertEqual(resposta.status_code, status.HTTP_400_BAD_REQUEST)
 
     def test_sigla_obrigatoria_retorna_400(self):
         self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token_admin}')
-        resposta = self.client.post(self.url, {'descricao': 'Sem sigla'})
+        resposta = self.client.post(self.url, {'descricao': 'Sem papel/função'})
         self.assertEqual(resposta.status_code, status.HTTP_400_BAD_REQUEST)
 
     def test_descricao_obrigatoria_retorna_400(self):
         self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token_admin}')
-        resposta = self.client.post(self.url, {'sigla': 'TI'})
+        resposta = self.client.post(self.url, {'papel_funcao': 'TI'})
         self.assertEqual(resposta.status_code, status.HTTP_400_BAD_REQUEST)
 
 
@@ -179,7 +180,7 @@ class DetalheFuncaoViewTest(APITestCase):
         resposta = self.client.get(self.url)
         self.assertEqual(resposta.status_code, status.HTTP_200_OK)
         self.assertEqual(resposta.data['status'], 'success')
-        self.assertEqual(resposta.data['dados']['sigla'], self.funcao.sigla)
+        self.assertEqual(resposta.data['dados']['papel_funcao'], self.funcao.papel_funcao)
 
     def test_usuario_comum_nao_pode_acessar(self):
         self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token_comum}')
@@ -204,7 +205,7 @@ class AtualizarFuncaoViewTest(APITestCase):
         self.comum = criar_usuario_comum()
         self.token_admin = obter_tokens(self.admin)
         self.token_comum = obter_tokens(self.comum)
-        self.funcao = criar_funcao(sigla='TI', descricao='Descrição Original')
+        self.funcao = criar_funcao(papel_funcao='TI', descricao='Descrição Original')
         self.url = reverse('organizacional:funcao-detalhe', kwargs={'pk': self.funcao.pk})
 
     def test_admin_atualiza_descricao_com_sucesso(self):
@@ -215,9 +216,9 @@ class AtualizarFuncaoViewTest(APITestCase):
 
     def test_admin_atualiza_sigla_com_sucesso(self):
         self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token_admin}')
-        resposta = self.client.patch(self.url, {'sigla': 'IT'})
+        resposta = self.client.patch(self.url, {'papel_funcao': 'IT'})
         self.assertEqual(resposta.status_code, status.HTTP_200_OK)
-        self.assertEqual(resposta.data['dados']['sigla'], 'IT')
+        self.assertEqual(resposta.data['dados']['papel_funcao'], 'IT')
 
     def test_retorna_dados_atualizados_na_resposta(self):
         self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token_admin}')
@@ -235,14 +236,14 @@ class AtualizarFuncaoViewTest(APITestCase):
         self.assertEqual(resposta.status_code, status.HTTP_401_UNAUTHORIZED)
 
     def test_sigla_duplicada_retorna_400(self):
-        criar_funcao(sigla='RH', descricao='Recursos Humanos')
+        criar_funcao(papel_funcao='RH', descricao='Recursos Humanos')
         self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token_admin}')
-        resposta = self.client.patch(self.url, {'sigla': 'RH'})
+        resposta = self.client.patch(self.url, {'papel_funcao': 'RH'})
         self.assertEqual(resposta.status_code, status.HTTP_400_BAD_REQUEST)
 
     def test_atualizar_com_mesma_sigla_nao_retorna_erro(self):
         self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token_admin}')
-        resposta = self.client.patch(self.url, {'sigla': 'TI'})
+        resposta = self.client.patch(self.url, {'papel_funcao': 'TI'})
         self.assertEqual(resposta.status_code, status.HTTP_200_OK)
 
     def test_funcao_inexistente_retorna_404(self):

@@ -88,7 +88,7 @@ logger = logging.getLogger(__name__)
         status.HTTP_403_FORBIDDEN: {'description': 'Sem permissão de administrador.'},
     },
 )
-class ListarUsuariosView(IsOwnerOrAdminMixin, BasicGetAPIView):
+class ListarUsuariosView(IsAdminMixin, BasicGetAPIView):
     """GET /cortex/identidade/usuarios/"""
     pagination_class = PaginacaoCustomizada
     serializer_class = UsuarioSerializer

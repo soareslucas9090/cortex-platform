@@ -178,7 +178,7 @@ Representa a função exercida por um usuário dentro de um setor.
 
 ### Atributos principais
 
-- `sigla`
+- `papel_funcao`
 - `descricao`
 - `e_gratificada`
 - `ativo`

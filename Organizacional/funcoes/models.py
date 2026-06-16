@@ -12,7 +12,7 @@ class Funcao(ModelHelperMixin, ModelBusinessMixin, BasicModel):
     business_class = FuncaoBusiness
     helper_class = FuncaoHelpers
 
-    sigla = models.CharField('Sigla', max_length=20, unique=True)
+    papel_funcao = models.CharField('Papel/Função', max_length=255, unique=True)
     descricao = models.CharField('Descrição', max_length=255)
     e_gratificada = models.BooleanField('É gratificada', default=False)
     exige_aluno = models.BooleanField('Exige Aluno', default=False)
@@ -21,7 +21,7 @@ class Funcao(ModelHelperMixin, ModelBusinessMixin, BasicModel):
     class Meta:
         verbose_name = 'Função'
         verbose_name_plural = 'Funções'
-        ordering = ['sigla']
+        ordering = ['papel_funcao']
 
     def __str__(self):
-        return f'{self.sigla} — {self.descricao}'
+        return self.papel_funcao

@@ -8,14 +8,14 @@ from .models import SetorVinculo
 
 class SetorVinculoSerializer(serializers.ModelSerializer):
     usuario_nome = serializers.CharField(source='usuario.nome', read_only=True)
-    funcao_sigla = serializers.CharField(source='funcao.sigla', read_only=True)
+    papel_funcao = serializers.CharField(source='funcao.papel_funcao', read_only=True)
     funcao_descricao = serializers.CharField(source='funcao.descricao', read_only=True)
 
     class Meta:
         model = SetorVinculo
         fields = [
             'id', 'usuario', 'usuario_nome', 'setor',
-            'funcao', 'funcao_sigla', 'funcao_descricao',
+            'funcao', 'papel_funcao', 'funcao_descricao',
             'responsavel', 'created_at',
         ]
 

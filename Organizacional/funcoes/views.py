@@ -42,8 +42,8 @@ logger = logging.getLogger(__name__)
             required=False, description='Filtra por ativa (true) ou inativa (false).',
         ),
         OpenApiParameter(
-            'sigla', OpenApiTypes.STR, OpenApiParameter.QUERY,
-            required=False, description='Filtra por parte da sigla (ignora acentos e maiúsculas).',
+            'papel_funcao', OpenApiTypes.STR, OpenApiParameter.QUERY,
+            required=False, description='Filtra por parte do papel/função (ignora acentos e maiúsculas).',
         ),
         OpenApiParameter(
             'descricao', OpenApiTypes.STR, OpenApiParameter.QUERY,
@@ -73,9 +73,9 @@ class ListarFuncoesView(IsAdminMixin, BasicGetAPIView):
         if ativo is not None and ativo.lower() in ('true', 'false'):
             qs = qs.filter(ativo=ativo.lower() == 'true')
             
-        sigla = self.request.query_params.get('sigla')
-        if sigla:
-            qs = qs.filter(sigla__unaccent__icontains=sigla)
+        papel_funcao = self.request.query_params.get('papel_funcao')
+        if papel_funcao:
+            qs = qs.filter(papel_funcao__unaccent__icontains=papel_funcao)
             
         descricao = self.request.query_params.get('descricao')
         if descricao:
@@ -87,11 +87,11 @@ class ListarFuncoesView(IsAdminMixin, BasicGetAPIView):
 @extend_schema(
     tags=['Funções'],
     summary='Criar função',
-    description='Cria uma nova função organizacional. A sigla deve ser única.\n\n**Permissões:** Apenas administradores.',
+    description='Cria uma nova função organizacional. O papel/função deve ser único.\n\n**Permissões:** Apenas administradores.',
     request=CriarFuncaoSerializer,
     responses={
         status.HTTP_201_CREATED: FuncaoSerializer,
-        status.HTTP_400_BAD_REQUEST: {'description': 'Dados inválidos ou sigla já¡ cadastrada.'},
+        status.HTTP_400_BAD_REQUEST: {'description': 'Dados inválidos ou papel/função já cadastrado.'},
         status.HTTP_401_UNAUTHORIZED: {'description': 'Não autenticado.'},
         status.HTTP_403_FORBIDDEN: {'description': 'Sem permissão de administrador.'},
     },
@@ -135,7 +135,7 @@ class DetalheFuncaoView(IsAdminMixin, BasicRetrieveAPIView):
     request=AtualizarFuncaoSerializer,
     responses={
         status.HTTP_200_OK: FuncaoSerializer,
-        status.HTTP_400_BAD_REQUEST: {'description': 'Dados inválidos ou sigla já¡ cadastrada.'},
+        status.HTTP_400_BAD_REQUEST: {'description': 'Dados inválidos ou papel/função já cadastrado.'},
         status.HTTP_401_UNAUTHORIZED: {'description': 'Não autenticado.'},
         status.HTTP_403_FORBIDDEN: {'description': 'Sem permissão de administrador.'},
         status.HTTP_404_NOT_FOUND: {'description': 'Função não encontrada.'},

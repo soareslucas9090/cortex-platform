@@ -88,6 +88,7 @@ class CursoBusinessTestCase(APITestCase):
 class CursosAPITestCase(APITestCase):
 
     def setUp(self):
+        Curso.objects.all().delete()
         self.admin = criar_admin()
         self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {obter_token(self.admin)}')
         self.curso = criar_curso()

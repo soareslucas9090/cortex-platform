@@ -32,7 +32,7 @@ class UsuarioVinculoSerializer(serializers.Serializer):
     setor_sigla = serializers.CharField()
     setor_nome = serializers.CharField()
     funcao = serializers.IntegerField(allow_null=True)
-    funcao_sigla = serializers.CharField(allow_null=True)
+    funcao_papel_funcao = serializers.CharField(allow_null=True)
     funcao_descricao = serializers.CharField(allow_null=True)
     responsavel = serializers.BooleanField()
     created_at = serializers.CharField(allow_null=True)
@@ -99,7 +99,7 @@ class UsuarioSerializer(serializers.ModelSerializer):
                     'setor_sigla': v.setor.sigla,
                     'setor_nome': v.setor.nome,
                     'funcao': v.funcao_id if v.funcao else None,
-                    'funcao_sigla': v.funcao.sigla if v.funcao else None,
+                    'funcao_papel_funcao': v.funcao.papel_funcao if v.funcao else None,
                     'funcao_descricao': v.funcao.descricao if v.funcao else None,
                     'responsavel': v.responsavel,
                     'created_at': v.created_at.isoformat() if v.created_at else None,

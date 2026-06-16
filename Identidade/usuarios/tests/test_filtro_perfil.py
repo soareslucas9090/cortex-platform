@@ -22,7 +22,7 @@ class FiltroPerfilUsuariosViewTest(APITestCase):
 
     def setUp(self):
         # Admin para realizar as consultas
-        self.admin = criar_usuario('00000000001', nome='Admin', is_admin=True)
+        self.admin = criar_usuario('00000000001', nome='Admin', is_admin=True, is_staff=True)
         self.token_admin = obter_tokens(self.admin)
         self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token_admin}')
         self.url = reverse('identidade:usuario-list')
