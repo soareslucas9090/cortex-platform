@@ -161,7 +161,11 @@ class CriarUsuarioViewTest(APITestCase):
         self.assertEqual(resposta.status_code, status.HTTP_400_BAD_REQUEST)
 
     @patch('Identidade.usuarios.models.Usuario.objects.create_user')
-    def test_database_integrity_error_does_not_mask_with_transaction_management_error(self, mock_create_user):
+    @patch('Identidade.usuarios.business.logger')
+    @patch('AppCore.basics.decorators.decorators.logger')
+    def test_database_integrity_error_does_not_mask_with_transaction_management_error(
+        self, mock_decorator_logger, mock_business_logger, mock_create_user
+    ):
         from django.db.utils import IntegrityError
         mock_create_user.side_effect = IntegrityError("Unique constraint violation")
 
@@ -745,7 +749,8 @@ class ImportacaoUsuariosApiTests(TestCase):
         self.assertEqual(b''.join(response.streaming_content), b'fake ods spreadsheet content')
 
     @patch('boto3.client')
-    def test_endpoint_download_modelo_falha_s3(self, mock_boto_client):
+    @patch('Identidade.usuarios.views.logger')
+    def test_endpoint_download_modelo_falha_s3(self, mock_views_logger, mock_boto_client):
         from unittest.mock import MagicMock
         from botocore.exceptions import ClientError
         mock_s3 = MagicMock()
