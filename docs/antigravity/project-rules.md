@@ -674,7 +674,7 @@ from drf_spectacular.utils import extend_schema, OpenApiExample
     description='''
     Descrição detalhada da operação.
 
-    **Permissões:** Quem pode acessar
+    **Permissões:** Nível Cortex exigido (obrigatório — ver ADR-002)
     **Paginação:** Informações sobre paginação (se aplicável)
 
     **Retorno:**
@@ -698,6 +698,21 @@ from drf_spectacular.utils import extend_schema, OpenApiExample
 class MinhaView(BasicGetAPIView):
     ...
 ```
+
+### Bloco **Permissões:** (obrigatório)
+
+Toda view deve incluir na `description` do `@extend_schema` um bloco **`**Permissões:**`** declarando o nível de acesso. Ver [ADR-002](../decisions/ADR-002-permissoes-cortex-niveis.md).
+
+| Situação | Texto sugerido |
+|----------|----------------|
+| Endpoint público | `Público (AllowAny — não requer autenticação).` |
+| Catálogo (leitura autenticada) | `Qualquer usuário autenticado (catálogo de referência). Escrita apenas L3 (EDITAR_TUDO).` |
+| Recurso com dono (listagem) | `Autenticado. L2+ (LER_TUDO) lista todos; L1 (EDITAR_EU) vê apenas o próprio registro.` |
+| Recurso com dono (detalhe) | `L2+ (LER_TUDO) ou dono do registro (L1).` |
+| Escrita administrativa | `L3 (EDITAR_TUDO) — administradores.` |
+| Qualquer autenticado (ex.: `/me`) | `Qualquer usuário autenticado (L1–L3).` |
+
+Alterar mixin, escopo ou regra de acesso exige atualizar o bloco `**Permissões:**` no mesmo PR/commit.
 
 ### Padrões de Tags
 

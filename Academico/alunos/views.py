@@ -17,7 +17,13 @@ from .serializers import AlunoSerializer, CriarAlunoSerializer, AtualizarAlunoSe
 @extend_schema(
     tags=['Alunos'],
     summary='Listar alunos',
-    description='Retorna a lista de alunos cadastrados. Autenticado: L2+ lista todos; L1 vê apenas o próprio.',
+    description='''
+    Retorna a lista de alunos cadastrados.
+
+    **Permissões:** Autenticado. L2+ (LER_TUDO) lista todos; L1 (EDITAR_EU) vê apenas o próprio.
+
+    **Filtros:** Os query params apenas reduzem o conjunto de resultados — nunca expandem o acesso.
+    ''',
     responses={200: AlunoSerializer(many=True)},
     parameters=[
         OpenApiParameter(
@@ -71,7 +77,11 @@ class ListarAlunosView(IsOwnerOrAdminMixin, BasicGetAPIView):
 @extend_schema(
     tags=['Alunos'],
     summary='Criar aluno',
-    description='Cria um novo perfil de aluno para um usuário existente. Apenas administradores.',
+    description='''
+    Cria um novo perfil de aluno para um usuário existente.
+
+    **Permissões:** L3 (EDITAR_TUDO) — administradores.
+    ''',
     request=CriarAlunoSerializer,
     responses={201: AlunoSerializer},
 )
@@ -91,7 +101,11 @@ class CriarAlunoView(IsAdminMixin, BasicPostAPIView):
 @extend_schema(
     tags=['Alunos'],
     summary='Detalhar aluno',
-    description='Retorna os detalhes de um aluno. L2+ ou dono do registro.',
+    description='''
+    Retorna os detalhes de um aluno.
+
+    **Permissões:** L2+ (LER_TUDO) ou dono do registro (L1).
+    ''',
     responses={200: AlunoSerializer},
 )
 class DetalharAlunoView(IsOwnerOrAdminMixin, BasicRetrieveAPIView):
@@ -107,7 +121,11 @@ class DetalharAlunoView(IsOwnerOrAdminMixin, BasicRetrieveAPIView):
 @extend_schema(
     tags=['Alunos'],
     summary='Atualizar aluno',
-    description='Atualiza os dados de um aluno existente. Apenas administradores.',
+    description='''
+    Atualiza os dados de um aluno existente.
+
+    **Permissões:** L3 (EDITAR_TUDO) — administradores.
+    ''',
     request=AtualizarAlunoSerializer,
     responses={200: AlunoSerializer},
 )

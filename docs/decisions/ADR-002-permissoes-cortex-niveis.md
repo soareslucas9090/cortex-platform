@@ -55,6 +55,31 @@ Novos produtos adicionam `permissoes_sigec()` em `UsuarioPermissions` e apps Dja
 - Implementação: `PermissaoDocumentacao.compilar_documentacao()` em `Identidade.usuarios.documentacao`, espelhando `permissoes_*` com métodos `documentacao_<modulo>()`.
 - **Regra de manutenção:** toda alteração de regra de permissão deve atualizar o `documentacao_<modulo>()` correspondente no mesmo PR/commit.
 
+### Documentação de permissão em toda view (Swagger)
+
+Toda view exposta na API **deve** declarar, na `description` do `@extend_schema`, um bloco **`**Permissões:**`** informando quem pode acessar o endpoint.
+
+**Formato obrigatório:**
+
+- Usar o vocabulário Cortex quando aplicável: **L1** (`EDITAR_EU`), **L2** (`LER_TUDO`), **L3** (`EDITAR_TUDO`).
+- Endpoints públicos: `**Permissões:** Público (AllowAny — não requer autenticação).`
+- Endpoints com leitura e escrita distintas: documentar ambos (ex.: leitura autenticada; escrita apenas L3).
+- Endpoints com escopo por dono: indicar L2+ vs L1 (ex.: L2+ lista todos; L1 vê apenas o próprio).
+
+**Exemplos:**
+
+```
+**Permissões:** Qualquer usuário autenticado (catálogo de referência). Escrita apenas L3 (EDITAR_TUDO).
+
+**Permissões:** Autenticado. L2+ (LER_TUDO) lista todos; L1 (EDITAR_EU) vê apenas o próprio registro.
+
+**Permissões:** L3 (EDITAR_TUDO) — administradores.
+
+**Permissões:** Público (AllowAny — não requer autenticação).
+```
+
+**Regra de manutenção:** alterar mixin, escopo ou regra de acesso exige atualizar o bloco `**Permissões:**` da view no mesmo PR/commit.
+
 ## Consequências
 
 - AppCore permanece genérico (duck-typing nos hooks do user).

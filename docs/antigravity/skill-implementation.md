@@ -31,6 +31,7 @@ Aplicar a cada arquivo gerado ou modificado **antes de considerar a implementaç
 ### Views
 
 - [ ] Toda view herda de uma view base do AppCore (`BasicPostAPIView`, `BasicGetAPIView`, `BasicRetrieveAPIView`, `BasicPutAPIView`, `BasicPatchAPIView`, `BasicDeleteAPIView`) — `GenericAPIView` direto é exceção justificada, não o padrão
+- [ ] `@extend_schema` inclui bloco **`**Permissões:**`** com nível Cortex (L1/L2/L3) ou `Público (AllowAny)` — ver ADR-002
 - [ ] Nenhum hook `do_action_*` contém queries ORM (`Model.objects.get(...)`, `.filter(...)`, `.create(...)`, etc.) — toda query vai para o Business
 - [ ] `do_action_post` recebe `serializer_data` (dict), não o serializer inteiro
 - [ ] Nenhum hook retorna `Response` diretamente — retorna `dict` opcional ou `None`

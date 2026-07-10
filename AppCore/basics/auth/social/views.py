@@ -69,7 +69,7 @@ class GoogleLoginView(AllowAnyMixin, APIView):
         **Pré-requisito no cliente**: Obtenha o ``access_token`` do Google usando o
         Google Identity Services SDK antes de chamar este endpoint.
 
-        **Permissões**: Público (não requer autenticação prévia).
+        **Permissões:** Público (AllowAny — não requer autenticação prévia).
         ''',
         request=SocialTokenInputSerializer,
         responses={

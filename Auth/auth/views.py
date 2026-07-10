@@ -40,6 +40,8 @@ class LoginView(BaseLoginView):
         description='''
         Autentica o usuário e retorna os tokens de acesso (access) e renovação (refresh).
 
+        **Permissões:** Público (AllowAny — não requer autenticação).
+
         O campo ``login`` aceita **e-mail** ou **CPF** (com ou sem máscara).
 
         **Exemplos de identificador:**
@@ -72,7 +74,11 @@ class MeView(BaseMeView):
     @extend_schema(
         tags=['Auth'],
         summary='Dados do usuário logado',
-        description='Retorna as informações do usuário atual, incluindo suas permissões.',
+        description='''
+        Retorna as informações do usuário atual, incluindo suas permissões.
+
+        **Permissões:** Qualquer usuário autenticado (L1–L3).
+        ''',
         responses={
             status.HTTP_200_OK: ProjectMeSerializer,
             status.HTTP_401_UNAUTHORIZED: {'description': 'Não autenticado.'},
