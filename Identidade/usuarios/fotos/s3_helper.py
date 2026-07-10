@@ -16,7 +16,7 @@ TIPOS_IMAGEM_PERMITIDOS = {
     'image/webp',
 }
 EXTENSOES_PERMITIDAS = {'jpg', 'jpeg', 'png', 'webp'}
-TAMANHO_MAXIMO_BYTES = 5 * 1024 * 1024
+TAMANHO_MAXIMO_FOTO_SECUNDARIA_BYTES = 3 * 1024 * 1024
 
 
 def _obter_extensao(arquivo) -> str:

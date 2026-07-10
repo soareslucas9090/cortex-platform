@@ -222,7 +222,7 @@ class AtualizarFotoPrimariaSerializer(serializers.Serializer):
 
 class AtualizarFotoSecundariaSerializer(serializers.Serializer):
     foto = serializers.ImageField(
-        help_text='Arquivo de imagem (JPEG, PNG ou WebP, até 5 MB).',
+        help_text='Arquivo de imagem (JPEG, PNG ou WebP, até 3 MB).',
     )
 
 

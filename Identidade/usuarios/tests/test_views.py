@@ -1153,6 +1153,16 @@ class AtualizarFotoSecundariaViewTest(APITestCase):
         resposta = self.client.post(self.url, {'foto': self.arquivo_imagem}, format='multipart')
         self.assertEqual(resposta.status_code, status.HTTP_403_FORBIDDEN)
 
+    def test_rejeita_foto_secundaria_acima_de_3mb(self):
+        from Identidade.usuarios.fotos.s3_helper import TAMANHO_MAXIMO_FOTO_SECUNDARIA_BYTES
+
+        arquivo_grande = criar_arquivo_imagem_teste(nome='foto_grande.png')
+        arquivo_grande.size = TAMANHO_MAXIMO_FOTO_SECUNDARIA_BYTES + 1
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token_usuario}')
+        resposta = self.client.post(self.url, {'foto': arquivo_grande}, format='multipart')
+        self.assertEqual(resposta.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('3 MB', str(resposta.data))
+
     @patch('Identidade.usuarios.fotos.s3_helper.remover_foto_secundaria_do_s3')
     def test_dono_remove_foto_secundaria(self, mock_remover):
         self.usuario.foto_secundaria = self.url_secundaria

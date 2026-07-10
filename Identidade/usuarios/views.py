@@ -320,6 +320,8 @@ class AtualizarFotoPrimariaView(IsAdminMixin, BasicPatchAPIView):
 
     **Permissões:** O próprio usuário ou administradores.
 
+    **Limites do arquivo:** JPEG, PNG ou WebP, com tamanho máximo de 3 MB.
+
     Para exibição no frontend, prefira `foto_secundaria` quando preenchida; caso contrário, use `foto`.
     ''',
     request={
@@ -329,7 +331,7 @@ class AtualizarFotoPrimariaView(IsAdminMixin, BasicPatchAPIView):
                 'foto': {
                     'type': 'string',
                     'format': 'binary',
-                    'description': 'Arquivo de imagem (JPEG, PNG ou WebP, até 5 MB).',
+                    'description': 'Arquivo de imagem (JPEG, PNG ou WebP, até 3 MB).',
                 }
             },
             'required': ['foto'],

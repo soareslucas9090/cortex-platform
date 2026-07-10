@@ -3,7 +3,10 @@ from urllib.parse import urlparse
 
 from AppCore.core.rules.rules import ModelInstanceRules
 from AppCore.core.exceptions.exceptions import ValidationException
-from Identidade.usuarios.fotos.s3_helper import TAMANHO_MAXIMO_BYTES, TIPOS_IMAGEM_PERMITIDOS
+from Identidade.usuarios.fotos.s3_helper import (
+    TAMANHO_MAXIMO_FOTO_SECUNDARIA_BYTES,
+    TIPOS_IMAGEM_PERMITIDOS,
+)
 
 
 class UsuarioRules(ModelInstanceRules):
@@ -95,6 +98,6 @@ class UsuarioRules(ModelInstanceRules):
             raise ValidationException('Formato de imagem não suportado. Use JPEG, PNG ou WebP.')
 
         tamanho = getattr(arquivo, 'size', None)
-        if tamanho is not None and tamanho > TAMANHO_MAXIMO_BYTES:
-            raise ValidationException('A imagem deve ter no máximo 5 MB.')
+        if tamanho is not None and tamanho > TAMANHO_MAXIMO_FOTO_SECUNDARIA_BYTES:
+            raise ValidationException('A imagem deve ter no máximo 3 MB.')
         return True
