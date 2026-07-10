@@ -87,7 +87,7 @@ class UsuarioAdmin(DjangoUserAdmin, CortexModelAdmin):
 
     fieldsets = (
         (None, {'fields': ('cpf', 'password')}),
-        ('Dados pessoais', {'fields': ('nome', 'email', 'foto', 'deficiencia')}),
+        ('Dados pessoais', {'fields': ('nome', 'email', 'foto', 'foto_secundaria', 'deficiencia')}),
         (
             'Permissões',
             {

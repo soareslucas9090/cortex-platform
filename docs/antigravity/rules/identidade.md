@@ -50,3 +50,9 @@ class Usuario(AbstractBaseUser, BasicModel):
 - Usuários são criados por administradores via endpoint específico.
 - Suporte a criação individual ou em lote via JSON.
 - Não há fluxo de auto-cadastro com envio de email.
+
+### 3. Fotos do Usuário
+- **`foto` (primária):** URL pública vinda de sistemas externos; atualizada por administradores via `PATCH /usuarios/{pk}/foto-primaria/`.
+- **`foto_secundaria`:** upload pelo próprio usuário ou administrador via `POST /usuarios/{pk}/foto-secundaria/`; armazenada no S3.
+- **Limites da foto secundária:** formatos JPEG, PNG ou WebP; tamanho máximo de **3 MB**. Arquivos acima do limite retornam `400 Bad Request`.
+- Para exibição no frontend, prefira `foto_secundaria` quando preenchida; caso contrário, use `foto`.

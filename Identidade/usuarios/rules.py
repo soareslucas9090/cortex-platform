@@ -1,7 +1,12 @@
 import re
+from urllib.parse import urlparse
 
 from AppCore.core.rules.rules import ModelInstanceRules
 from AppCore.core.exceptions.exceptions import ValidationException
+from Identidade.usuarios.fotos.s3_helper import (
+    TAMANHO_MAXIMO_FOTO_SECUNDARIA_BYTES,
+    TIPOS_IMAGEM_PERMITIDOS,
+)
 
 
 class UsuarioRules(ModelInstanceRules):
@@ -73,4 +78,26 @@ class UsuarioRules(ModelInstanceRules):
         """Verifica se o usuário pode ser reativado."""
         if self.object_instance.ativo:
             self.return_exception('O usuário já está ativo.')
+        return True
+
+    def validar_url_foto(self, url: str | None) -> bool:
+        if url in (None, ''):
+            return True
+
+        parsed = urlparse(url)
+        if parsed.scheme not in ('http', 'https') or not parsed.netloc:
+            raise ValidationException('A URL da foto deve usar o esquema http ou https.')
+        return True
+
+    def validar_arquivo_foto(self, arquivo) -> bool:
+        if arquivo is None:
+            raise ValidationException('É necessário enviar um arquivo de imagem.')
+
+        content_type = getattr(arquivo, 'content_type', '') or ''
+        if content_type and content_type not in TIPOS_IMAGEM_PERMITIDOS:
+            raise ValidationException('Formato de imagem não suportado. Use JPEG, PNG ou WebP.')
+
+        tamanho = getattr(arquivo, 'size', None)
+        if tamanho is not None and tamanho > TAMANHO_MAXIMO_FOTO_SECUNDARIA_BYTES:
+            raise ValidationException('A imagem deve ter no máximo 3 MB.')
         return True

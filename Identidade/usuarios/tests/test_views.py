@@ -39,6 +39,18 @@ def criar_usuario(cpf, nome='Usuário Teste', password='Senha@123', is_admin=Fal
     return usuario
 
 
+def criar_arquivo_imagem_teste(nome='foto.png'):
+    """Retorna um arquivo de imagem válido para testes de upload."""
+    from io import BytesIO
+
+    from PIL import Image
+
+    buffer = BytesIO()
+    Image.new('RGB', (1, 1), color='red').save(buffer, format='PNG')
+    buffer.seek(0)
+    return SimpleUploadedFile(nome, buffer.read(), content_type='image/png')
+
+
 class ListarUsuariosViewTest(APITestCase):
 
     def setUp(self):
@@ -1035,3 +1047,148 @@ class DocumentarPermissoesViewTest(APITestCase):
     def test_nao_autenticado_retorna_401(self):
         resposta = self.client.get(self.url)
         self.assertEqual(resposta.status_code, status.HTTP_401_UNAUTHORIZED)
+
+
+class AtualizarFotoPrimariaViewTest(APITestCase):
+
+    def setUp(self):
+        from PessoasInstitucionais.cargos.models import Cargo
+        from PessoasInstitucionais.servidores.models import Servidor
+
+        self.admin = criar_usuario('10000000001', nome='Admin Foto', is_admin=True)
+        self.usuario = criar_usuario('10000000002', nome='Usuario Foto')
+        self.outro = criar_usuario('10000000003', nome='Outro Foto')
+
+        cargo = Cargo.objects.create(nome='Cargo Foto')
+        self.servidor = criar_usuario('10000000004', nome='Servidor Foto')
+        Servidor.objects.create(usuario=self.servidor, cargo=cargo, categoria=1, ativo=True)
+
+        self.token_admin = obter_tokens(self.admin)
+        self.token_usuario = obter_tokens(self.usuario)
+        self.token_outro = obter_tokens(self.outro)
+        self.token_servidor = obter_tokens(self.servidor)
+        self.url = reverse('identidade:usuario-foto-primaria', kwargs={'pk': self.usuario.pk})
+        self.url_primaria_valida = 'https://sistema-externo.example/fotos/usuario.jpg'
+
+    def test_admin_atualiza_foto_primaria(self):
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token_admin}')
+        resposta = self.client.patch(self.url, {'foto': self.url_primaria_valida}, format='json')
+        self.assertEqual(resposta.status_code, status.HTTP_200_OK)
+        self.assertEqual(resposta.data['dados']['foto'], self.url_primaria_valida)
+        self.usuario.refresh_from_db()
+        self.assertEqual(self.usuario.foto, self.url_primaria_valida)
+
+    def test_admin_pode_limpar_foto_primaria(self):
+        self.usuario.foto = self.url_primaria_valida
+        self.usuario.save()
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token_admin}')
+        resposta = self.client.patch(self.url, {'foto': None}, format='json')
+        self.assertEqual(resposta.status_code, status.HTTP_200_OK)
+        self.usuario.refresh_from_db()
+        self.assertIsNone(self.usuario.foto)
+
+    def test_usuario_comum_nao_pode_atualizar_foto_primaria(self):
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token_usuario}')
+        resposta = self.client.patch(self.url, {'foto': self.url_primaria_valida}, format='json')
+        self.assertEqual(resposta.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_servidor_l2_nao_pode_atualizar_foto_primaria(self):
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token_servidor}')
+        resposta = self.client.patch(self.url, {'foto': self.url_primaria_valida}, format='json')
+        self.assertEqual(resposta.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_url_invalida_retorna_400(self):
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token_admin}')
+        resposta = self.client.patch(self.url, {'foto': 'nao-e-uma-url'}, format='json')
+        self.assertEqual(resposta.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_get_detalhe_retorna_foto_primaria(self):
+        self.usuario.foto = self.url_primaria_valida
+        self.usuario.save()
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token_usuario}')
+        url_detalhe = reverse('identidade:usuario-detail', kwargs={'pk': self.usuario.pk})
+        resposta = self.client.get(url_detalhe)
+        self.assertEqual(resposta.status_code, status.HTTP_200_OK)
+        self.assertEqual(resposta.data['dados']['foto'], self.url_primaria_valida)
+
+
+class AtualizarFotoSecundariaViewTest(APITestCase):
+
+    def setUp(self):
+        self.admin = criar_usuario('20000000001', nome='Admin Foto 2', is_admin=True)
+        self.usuario = criar_usuario('20000000002', nome='Usuario Foto 2')
+        self.outro = criar_usuario('20000000003', nome='Outro Foto 2')
+        self.token_admin = obter_tokens(self.admin)
+        self.token_usuario = obter_tokens(self.usuario)
+        self.token_outro = obter_tokens(self.outro)
+        self.url = reverse('identidade:usuario-foto-secundaria', kwargs={'pk': self.usuario.pk})
+        self.url_primaria = 'https://sistema-externo.example/fotos/usuario.jpg'
+        self.url_secundaria = 'https://bucket.example/Cortex/usuarios/fotos/2/abc.jpg'
+        self.arquivo_imagem = criar_arquivo_imagem_teste()
+
+    def _mock_upload(self, usuario_id, arquivo):
+        return self.url_secundaria
+
+    @patch('Identidade.usuarios.fotos.s3_helper.upload_foto_secundaria')
+    def test_dono_envia_foto_secundaria(self, mock_upload):
+        mock_upload.side_effect = self._mock_upload
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token_usuario}')
+        resposta = self.client.post(self.url, {'foto': self.arquivo_imagem}, format='multipart')
+        self.assertEqual(resposta.status_code, status.HTTP_200_OK)
+        self.assertEqual(resposta.data['dados']['foto_secundaria'], self.url_secundaria)
+        self.usuario.refresh_from_db()
+        self.assertEqual(self.usuario.foto_secundaria, self.url_secundaria)
+        mock_upload.assert_called_once()
+
+    @patch('Identidade.usuarios.fotos.s3_helper.upload_foto_secundaria')
+    def test_admin_pode_enviar_foto_secundaria_de_outro_usuario(self, mock_upload):
+        mock_upload.side_effect = self._mock_upload
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token_admin}')
+        resposta = self.client.post(self.url, {'foto': self.arquivo_imagem}, format='multipart')
+        self.assertEqual(resposta.status_code, status.HTTP_200_OK)
+        self.assertEqual(resposta.data['dados']['foto_secundaria'], self.url_secundaria)
+
+    def test_outro_usuario_nao_pode_enviar_foto_secundaria(self):
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token_outro}')
+        resposta = self.client.post(self.url, {'foto': self.arquivo_imagem}, format='multipart')
+        self.assertEqual(resposta.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_rejeita_foto_secundaria_acima_de_3mb(self):
+        from Identidade.usuarios.fotos.s3_helper import TAMANHO_MAXIMO_FOTO_SECUNDARIA_BYTES
+
+        arquivo_grande = criar_arquivo_imagem_teste(nome='foto_grande.png')
+        arquivo_grande.size = TAMANHO_MAXIMO_FOTO_SECUNDARIA_BYTES + 1
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token_usuario}')
+        resposta = self.client.post(self.url, {'foto': arquivo_grande}, format='multipart')
+        self.assertEqual(resposta.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('3 MB', str(resposta.data))
+
+    @patch('Identidade.usuarios.fotos.s3_helper.remover_foto_secundaria_do_s3')
+    def test_dono_remove_foto_secundaria(self, mock_remover):
+        self.usuario.foto_secundaria = self.url_secundaria
+        self.usuario.save()
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token_usuario}')
+        resposta = self.client.delete(self.url)
+        self.assertEqual(resposta.status_code, status.HTTP_204_NO_CONTENT)
+        self.usuario.refresh_from_db()
+        self.assertIsNone(self.usuario.foto_secundaria)
+        mock_remover.assert_called_once_with(self.url_secundaria)
+
+    def test_get_detalhe_retorna_ambas_fotos(self):
+        self.usuario.foto = self.url_primaria
+        self.usuario.foto_secundaria = self.url_secundaria
+        self.usuario.save()
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token_usuario}')
+        url_detalhe = reverse('identidade:usuario-detail', kwargs={'pk': self.usuario.pk})
+        resposta = self.client.get(url_detalhe)
+        self.assertEqual(resposta.status_code, status.HTTP_200_OK)
+        self.assertEqual(resposta.data['dados']['foto'], self.url_primaria)
+        self.assertEqual(resposta.data['dados']['foto_secundaria'], self.url_secundaria)
+
+    def test_patch_usuario_nao_atualiza_campo_foto(self):
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token_usuario}')
+        url_detalhe = reverse('identidade:usuario-detail', kwargs={'pk': self.usuario.pk})
+        resposta = self.client.patch(url_detalhe, {'foto': self.url_primaria}, format='json')
+        self.assertIn(resposta.status_code, (status.HTTP_200_OK, status.HTTP_400_BAD_REQUEST))
+        self.usuario.refresh_from_db()
+        self.assertIsNone(self.usuario.foto)

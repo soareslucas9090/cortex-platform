@@ -31,7 +31,11 @@ class BaseMeView(RetrieveAPIView):
     @extend_schema(
         tags=['Auth'],
         summary='Dados do usuário logado',
-        description='Retorna as informações do usuário atual.',
+        description='''
+        Retorna as informações do usuário atual.
+
+        **Permissões:** Qualquer usuário autenticado (L1–L3).
+        ''',
         responses={
             status.HTTP_200_OK: BaseMeSerializer,
             status.HTTP_401_UNAUTHORIZED: {'description': 'Não autenticado.'},
@@ -60,6 +64,8 @@ class BaseLoginView(TokenObtainPairView):
         description='''
         Autentica o usuário e retorna os tokens de acesso (access) e renovação (refresh).
 
+        **Permissões:** Público (AllowAny — não requer autenticação).
+
         O campo de identificação e o formato da requisição dependem do serializer
         configurado no projeto (ex: ``login`` com e-mail ou CPF ao usar ``BaseHybridLoginSerializer``).
 
@@ -86,7 +92,11 @@ class AtualizarTokenView(TokenRefreshView):
     @extend_schema(
         tags=['Auth'],
         summary='Renovar token de acesso',
-        description='Usa o refresh token para emitir um novo access token sem precisar de nova autenticação.',
+        description='''
+        Usa o refresh token para emitir um novo access token sem precisar de nova autenticação.
+
+        **Permissões:** Público (AllowAny — não requer autenticação).
+        ''',
         responses={
             status.HTTP_200_OK: {'description': 'Novo access token gerado.'},
             status.HTTP_401_UNAUTHORIZED: {'description': 'Refresh token inválido ou expirado.'},
@@ -104,7 +114,11 @@ class VerificarTokenView(TokenVerifyView):
     @extend_schema(
         tags=['Auth'],
         summary='Verificar validade do token',
-        description='Retorna 200 se o token for válido, 401 caso contrário.',
+        description='''
+        Retorna 200 se o token for válido, 401 caso contrário.
+
+        **Permissões:** Público (AllowAny — não requer autenticação).
+        ''',
         responses={
             status.HTTP_200_OK: {'description': 'Token válido.'},
             status.HTTP_401_UNAUTHORIZED: {'description': 'Token inválido ou expirado.'},

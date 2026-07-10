@@ -195,8 +195,8 @@ Quando a view herda de `GenericAPIView` diretamente (sem usar `BasicPostAPIView`
 #### Documentação Swagger (`@extend_schema`)
 
 - [ ] **Toda view** possui `@extend_schema` com `tags`, `summary`, `description`, `responses`.
+- [ ] `description` contém bloco **`**Permissões:**`** com nível Cortex (L1/L2/L3) ou `Público (AllowAny)` — ver ADR-002.
 - [ ] `tags` usa PascalCase consistente com o módulo (ex: `['Identidade']`).
-- [ ] `description` menciona as permissões necessárias.
 - [ ] `responses` lista pelo menos os códigos `200/201`, `401`, `403`, `404` quando aplicável.
 - [ ] Query params estão declarados em `parameters=[OpenApiParameter(...)]`.
 - [ ] A descrição de query params menciona que **"apenas reduzem o conjunto, nunca expandem o acesso"**.

@@ -17,12 +17,15 @@ from AppCore.basics.views.basic_views import (
     BasicPatchAPIView,
     BasicPostAPIView,
     BasicRetrieveAPIView,
+    BasicDeleteAPIView,
 )
 
 from .business import UsuarioBusiness
 from .models import Usuario
 from .serializers import (
     AtualizarUsuarioSerializer,
+    AtualizarFotoPrimariaSerializer,
+    AtualizarFotoSecundariaSerializer,
     CriarUsuarioSerializer,
     SerializerVazio,
     UsuarioSerializer,
@@ -238,7 +241,7 @@ class DetalheUsuarioView(IsOwnerOrAdminMixin, BasicRetrieveAPIView):
     tags=['Identidade'],
     summary='Atualizar dados do usuário',
     description='''
-    Atualiza parcialmente os dados básicos do usuário (nome, e-mail, foto, deficiência).
+    Atualiza parcialmente os dados básicos do usuário (nome, e-mail, deficiência).
 
     **Permissões:** O próprio usuário ou administradores.
 
@@ -274,6 +277,120 @@ class AtualizarUsuarioView(IsOwnerOrAdminMixin, BasicPatchAPIView):
             'mensagem': self.mensagem_sucesso,
             'dados': UsuarioSerializer(self.object).data,
         }
+
+
+@extend_schema(
+    tags=['Identidade'],
+    summary='Atualizar foto primária do usuário',
+    description='''
+    Atualiza a URL da foto primária do usuário (origem em outros sistemas).
+
+    **Permissões:** Apenas L3 (`EDITAR_TUDO`) / administradores.
+
+    Para exibição no frontend, prefira `foto_secundaria` quando preenchida; caso contrário, use `foto`.
+    ''',
+    request=AtualizarFotoPrimariaSerializer,
+    responses={
+        status.HTTP_200_OK: UsuarioSerializer,
+        status.HTTP_400_BAD_REQUEST: {'description': 'URL inválida.'},
+        status.HTTP_401_UNAUTHORIZED: {'description': 'Não autenticado.'},
+        status.HTTP_403_FORBIDDEN: {'description': 'Sem permissão.'},
+        status.HTTP_404_NOT_FOUND: {'description': 'Usuário não encontrado.'},
+    },
+)
+class AtualizarFotoPrimariaView(IsAdminMixin, BasicPatchAPIView):
+    """PATCH /cortex/identidade/usuarios/{pk}/foto-primaria/"""
+    queryset = Usuario.objects.all()
+    serializer_class = AtualizarFotoPrimariaSerializer
+    mensagem_sucesso = 'Foto primária atualizada com sucesso.'
+
+    def do_action_patch(self, serializer_data, request, **kwargs):
+        self.object.business.atualizar_foto_primaria(serializer_data.get('foto'))
+        return {
+            'mensagem': self.mensagem_sucesso,
+            'dados': UsuarioSerializer(self.object).data,
+        }
+
+
+@extend_schema(
+    tags=['Identidade'],
+    summary='Enviar foto secundária do usuário',
+    description='''
+    Faz upload da foto secundária para o S3 e persiste a URL pública no usuário.
+
+    **Permissões:** O próprio usuário ou administradores.
+
+    **Limites do arquivo:** JPEG, PNG ou WebP, com tamanho máximo de 3 MB.
+
+    Para exibição no frontend, prefira `foto_secundaria` quando preenchida; caso contrário, use `foto`.
+    ''',
+    request={
+        'multipart/form-data': {
+            'type': 'object',
+            'properties': {
+                'foto': {
+                    'type': 'string',
+                    'format': 'binary',
+                    'description': 'Arquivo de imagem (JPEG, PNG ou WebP, até 3 MB).',
+                }
+            },
+            'required': ['foto'],
+        }
+    },
+    responses={
+        status.HTTP_200_OK: UsuarioSerializer,
+        status.HTTP_400_BAD_REQUEST: {'description': 'Arquivo inválido.'},
+        status.HTTP_401_UNAUTHORIZED: {'description': 'Não autenticado.'},
+        status.HTTP_403_FORBIDDEN: {'description': 'Sem permissão.'},
+        status.HTTP_404_NOT_FOUND: {'description': 'Usuário não encontrado.'},
+    },
+)
+class AtualizarFotoSecundariaView(IsOwnerOrAdminMixin, BasicPostAPIView):
+    """POST /cortex/identidade/usuarios/{pk}/foto-secundaria/"""
+    queryset = Usuario.objects.all()
+    parser_classes = (MultiPartParser,)
+    serializer_class = AtualizarFotoSecundariaSerializer
+    mensagem_sucesso = 'Foto secundária atualizada com sucesso.'
+
+    def obter_usuario_dono(self, obj):
+        return obj
+
+    def do_action_post(self, serializer_data, request, **kwargs):
+        usuario = self.get_object()
+        usuario.business.atualizar_foto_secundaria(serializer_data['foto'])
+        return {
+            'mensagem': self.mensagem_sucesso,
+            'dados': UsuarioSerializer(usuario).data,
+        }
+
+
+@extend_schema(
+    tags=['Identidade'],
+    summary='Remover foto secundária do usuário',
+    description='''
+    Remove a foto secundária do usuário e tenta apagar o arquivo correspondente no S3.
+
+    **Permissões:** O próprio usuário ou administradores.
+    ''',
+    request=None,
+    responses={
+        status.HTTP_204_NO_CONTENT: {'description': 'Foto secundária removida com sucesso.'},
+        status.HTTP_401_UNAUTHORIZED: {'description': 'Não autenticado.'},
+        status.HTTP_403_FORBIDDEN: {'description': 'Sem permissão.'},
+        status.HTTP_404_NOT_FOUND: {'description': 'Usuário não encontrado.'},
+    },
+)
+class RemoverFotoSecundariaView(IsOwnerOrAdminMixin, BasicDeleteAPIView):
+    """DELETE /cortex/identidade/usuarios/{pk}/foto-secundaria/"""
+    queryset = Usuario.objects.all()
+    serializer_class = SerializerVazio
+    mensagem_sucesso = 'Foto secundária removida com sucesso.'
+
+    def obter_usuario_dono(self, obj):
+        return obj
+
+    def do_action_delete(self, request, *args, **kwargs):
+        self.object.business.remover_foto_secundaria()
 
 
 @extend_schema(

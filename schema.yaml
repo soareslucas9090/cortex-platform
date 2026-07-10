@@ -280,8 +280,10 @@ paths:
   /cortex/academico/alunos/:
     get:
       operationId: academico_alunos_list
-      description: 'Retorna a lista de alunos cadastrados. Autenticado: L2+ lista
-        todos; L1 vê apenas o próprio.'
+      description: "\n    Retorna a lista de alunos cadastrados.\n\n    **Permissões:**
+        Autenticado. L2+ (LER_TUDO) lista todos; L1 (EDITAR_EU) vê apenas o próprio.\n\n
+        \   **Filtros:** Os query params apenas reduzem o conjunto de resultados —
+        nunca expandem o acesso.\n    "
       summary: Listar alunos
       parameters:
       - in: query
@@ -329,8 +331,8 @@ paths:
           description: ''
     post:
       operationId: academico_alunos_create
-      description: Cria um novo perfil de aluno para um usuário existente. Apenas
-        administradores.
+      description: "\n    Cria um novo perfil de aluno para um usuário existente.\n\n
+        \   **Permissões:** L3 (EDITAR_TUDO) — administradores.\n    "
       summary: Criar aluno
       tags:
       - Alunos
@@ -358,7 +360,8 @@ paths:
   /cortex/academico/alunos/{usuario_id}/:
     get:
       operationId: academico_alunos_retrieve
-      description: Retorna os detalhes de um aluno. L2+ ou dono do registro.
+      description: "\n    Retorna os detalhes de um aluno.\n\n    **Permissões:**
+        L2+ (LER_TUDO) ou dono do registro (L1).\n    "
       summary: Detalhar aluno
       parameters:
       - in: path
@@ -379,7 +382,8 @@ paths:
           description: ''
     patch:
       operationId: academico_alunos_partial_update
-      description: Atualiza os dados de um aluno existente. Apenas administradores.
+      description: "\n    Atualiza os dados de um aluno existente.\n\n    **Permissões:**
+        L3 (EDITAR_TUDO) — administradores.\n    "
       summary: Atualizar aluno
       parameters:
       - in: path
@@ -726,7 +730,8 @@ paths:
     post:
       operationId: auth_token_jwt_create
       description: "\n        Autentica o usuário e retorna os tokens de acesso (access)
-        e renovação (refresh).\n\n        O campo ``login`` aceita **e-mail** ou **CPF**
+        e renovação (refresh).\n\n        **Permissões:** Público (AllowAny — não
+        requer autenticação).\n\n        O campo ``login`` aceita **e-mail** ou **CPF**
         (com ou sem máscara).\n\n        **Exemplos de identificador:**\n        -
         E-mail: `usuario@email.com`\n        - CPF sem máscara: `12345678901`\n        -
         CPF com máscara: `123.456.789-01`\n\n        **Token de acesso:** válido por
@@ -764,7 +769,9 @@ paths:
   /cortex/auth/token_jwt/me/:
     get:
       operationId: auth_token_jwt_me_retrieve
-      description: Retorna as informações do usuário atual, incluindo suas permissões.
+      description: "\n        Retorna as informações do usuário atual, incluindo suas
+        permissões.\n\n        **Permissões:** Qualquer usuário autenticado (L1–L3).\n
+        \       "
       summary: Dados do usuário logado
       tags:
       - Auth
@@ -786,8 +793,9 @@ paths:
   /cortex/auth/token_jwt/refresh/:
     post:
       operationId: auth_token_jwt_refresh_create
-      description: Usa o refresh token para emitir um novo access token sem precisar
-        de nova autenticação.
+      description: "\n        Usa o refresh token para emitir um novo access token
+        sem precisar de nova autenticação.\n\n        **Permissões:** Público (AllowAny
+        — não requer autenticação).\n        "
       summary: Renovar token de acesso
       tags:
       - Auth
@@ -819,7 +827,8 @@ paths:
   /cortex/auth/token_jwt/verify/:
     post:
       operationId: auth_token_jwt_verify_create
-      description: Retorna 200 se o token for válido, 401 caso contrário.
+      description: "\n        Retorna 200 se o token for válido, 401 caso contrário.\n\n
+        \       **Permissões:** Público (AllowAny — não requer autenticação).\n        "
       summary: Verificar validade do token
       tags:
       - Auth
@@ -1055,7 +1064,7 @@ paths:
     patch:
       operationId: identidade_usuarios_partial_update
       description: "\n    Atualiza parcialmente os dados básicos do usuário (nome,
-        e-mail, foto, deficiência).\n\n    **Permissões:** O próprio usuário ou administradores.\n\n
+        e-mail, deficiência).\n\n    **Permissões:** O próprio usuário ou administradores.\n\n
         \   CPF não é alterável neste endpoint.\n\n    **Normalização de Deficiência
         (campo `deficiencia`):**\n    O campo é normalizado automaticamente no save
         (removendo acentos, convertendo para caixa baixa e substituindo espaços por
@@ -1145,6 +1154,169 @@ paths:
             application/json:
               schema:
                 description: Usuário já está inativo.
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                description: Não autenticado.
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                description: Sem permissão.
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                description: Usuário não encontrado.
+          description: ''
+  /cortex/identidade/usuarios/{id}/foto-primaria/:
+    patch:
+      operationId: identidade_usuarios_foto_primaria_partial_update
+      description: "\n    Atualiza a URL da foto primária do usuário (origem em outros
+        sistemas).\n\n    **Permissões:** Apenas L3 (`EDITAR_TUDO`) / administradores.\n\n
+        \   Para exibição no frontend, prefira `foto_secundaria` quando preenchida;
+        caso contrário, use `foto`.\n    "
+      summary: Atualizar foto primária do usuário
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - Identidade
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedAtualizarFotoPrimaria'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedAtualizarFotoPrimaria'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedAtualizarFotoPrimaria'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Usuario'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                description: URL inválida.
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                description: Não autenticado.
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                description: Sem permissão.
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                description: Usuário não encontrado.
+          description: ''
+  /cortex/identidade/usuarios/{id}/foto-secundaria/:
+    post:
+      operationId: identidade_usuarios_foto_secundaria_create
+      description: "\n    Faz upload da foto secundária para o S3 e persiste a URL
+        pública no usuário.\n\n    **Permissões:** O próprio usuário ou administradores.\n\n
+        \   **Limites do arquivo:** JPEG, PNG ou WebP, com tamanho máximo de 3 MB.\n\n
+        \   Para exibição no frontend, prefira `foto_secundaria` quando preenchida;
+        caso contrário, use `foto`.\n    "
+      summary: Enviar foto secundária do usuário
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - Identidade
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                foto:
+                  type: string
+                  format: binary
+                  description: Arquivo de imagem (JPEG, PNG ou WebP, até 3 MB).
+              required:
+              - foto
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Usuario'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                description: Arquivo inválido.
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                description: Não autenticado.
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                description: Sem permissão.
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                description: Usuário não encontrado.
+          description: ''
+    delete:
+      operationId: identidade_usuarios_foto_secundaria_destroy
+      description: "\n    Remove a foto secundária do usuário e tenta apagar o arquivo
+        correspondente no S3.\n\n    **Permissões:** O próprio usuário ou administradores.\n
+        \   "
+      summary: Remover foto secundária do usuário
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - Identidade
+      security:
+      - jwtAuth: []
+      responses:
+        '204':
+          content:
+            application/json:
+              schema:
+                description: Foto secundária removida com sucesso.
           description: ''
         '401':
           content:
@@ -4712,6 +4884,14 @@ components:
           maxLength: 14
         ativo:
           type: boolean
+    PatchedAtualizarFotoPrimaria:
+      type: object
+      properties:
+        foto:
+          type: string
+          format: uri
+          nullable: true
+          description: URL pública da foto primária vinda de sistemas externos.
     PatchedAtualizarFuncao:
       type: object
       properties:
@@ -4769,10 +4949,6 @@ components:
         email:
           type: string
           format: email
-          nullable: true
-        foto:
-          type: string
-          format: uri
           nullable: true
         deficiencia:
           type: string
@@ -4860,6 +5036,16 @@ components:
           type: string
           format: uri
           nullable: true
+          title: Foto primária
+          description: URL pública da foto vinda de sistemas externos.
+          maxLength: 500
+        foto_secundaria:
+          type: string
+          format: uri
+          nullable: true
+          title: Foto secundária
+          description: URL pública da foto enviada pelo próprio usuário no S3.
+          maxLength: 500
         deficiencia:
           nullable: true
           title: Deficiência / necessidade especial
@@ -5217,6 +5403,16 @@ components:
           type: string
           format: uri
           nullable: true
+          title: Foto primária
+          description: URL pública da foto vinda de sistemas externos.
+          maxLength: 500
+        foto_secundaria:
+          type: string
+          format: uri
+          nullable: true
+          title: Foto secundária
+          description: URL pública da foto enviada pelo próprio usuário no S3.
+          maxLength: 500
         deficiencia:
           nullable: true
           title: Deficiência / necessidade especial

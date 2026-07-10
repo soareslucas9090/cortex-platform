@@ -88,6 +88,56 @@ class UsuarioBusiness(ModelInstanceBusiness):
             logger.exception('Erro ao atualizar dados do usuário: %s', e)
             raise SystemErrorException('Não foi possível atualizar os dados do usuário.')
 
+    def atualizar_foto_primaria(self, url: str | None):
+        """Atualiza a URL da foto primária do usuário."""
+        regras = UsuarioRules(object_instance=self.object_instance)
+        regras.validar_url_foto(url)
+        try:
+            self.object_instance.foto = url or None
+            self.object_instance.save(update_fields=['foto'])
+        except Exception as e:
+            logger.exception('Erro ao atualizar foto primária do usuário: %s', e)
+            raise SystemErrorException('Não foi possível atualizar a foto primária.')
+
+    def atualizar_foto_secundaria(self, arquivo):
+        """Envia a foto secundária para o S3 e persiste a URL pública."""
+        from Identidade.usuarios.fotos.s3_helper import (
+            remover_foto_secundaria_do_s3,
+            upload_foto_secundaria,
+        )
+
+        regras = UsuarioRules(object_instance=self.object_instance)
+        regras.validar_arquivo_foto(arquivo)
+
+        url_antiga = self.object_instance.foto_secundaria
+        try:
+            nova_url = upload_foto_secundaria(self.object_instance.pk, arquivo)
+            self.object_instance.foto_secundaria = nova_url
+            self.object_instance.save(update_fields=['foto_secundaria'])
+            if url_antiga and url_antiga != nova_url:
+                remover_foto_secundaria_do_s3(url_antiga)
+        except ValidationException:
+            raise
+        except ValueError as e:
+            raise ValidationException(str(e))
+        except Exception as e:
+            logger.exception('Erro ao atualizar foto secundária do usuário: %s', e)
+            raise SystemErrorException('Não foi possível atualizar a foto secundária.')
+
+    def remover_foto_secundaria(self):
+        """Remove a foto secundária do usuário e tenta apagar o objeto no S3."""
+        from Identidade.usuarios.fotos.s3_helper import remover_foto_secundaria_do_s3
+
+        url_antiga = self.object_instance.foto_secundaria
+        try:
+            self.object_instance.foto_secundaria = None
+            self.object_instance.save(update_fields=['foto_secundaria'])
+            if url_antiga:
+                remover_foto_secundaria_do_s3(url_antiga)
+        except Exception as e:
+            logger.exception('Erro ao remover foto secundária do usuário: %s', e)
+            raise SystemErrorException('Não foi possível remover a foto secundária.')
+
     def atualizar_cpf(self, novo_cpf: str):
         """Atualiza o CPF do usuário com validação de formato e unicidade."""
         cpf_normalizado = normalizar_cpf(novo_cpf)
@@ -606,6 +656,8 @@ class UsuarioBusiness(ModelInstanceBusiness):
             usuario.nome = linha.nome
             usuario.deficiencia = linha.deficiencia
             usuario.ativo = linha.ativo
+            if linha.foto:
+                usuario.foto = linha.foto
             if linha.ultimo_login:
                 usuario.last_login = linha.ultimo_login
             usuario.save()
@@ -620,6 +672,7 @@ class UsuarioBusiness(ModelInstanceBusiness):
             nome=linha.nome,
             deficiencia=linha.deficiencia,
             ativo=linha.ativo,
+            foto=linha.foto or None,
             last_login=linha.ultimo_login,
         )
 
