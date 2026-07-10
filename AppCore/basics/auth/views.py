@@ -31,9 +31,11 @@ class BaseMeView(RetrieveAPIView):
     @extend_schema(
         tags=['Auth'],
         summary='Dados do usuário logado',
-        description='Retorna as informações do usuário atual.
+        description='''
+        Retorna as informações do usuário atual.
 
-        **Permissões:** Qualquer usuário autenticado (L1–L3).',
+        **Permissões:** Qualquer usuário autenticado (L1–L3).
+        ''',
         responses={
             status.HTTP_200_OK: BaseMeSerializer,
             status.HTTP_401_UNAUTHORIZED: {'description': 'Não autenticado.'},
