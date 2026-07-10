@@ -3,7 +3,7 @@ from drf_spectacular.types import OpenApiTypes
 from rest_framework import status
 from rest_framework.serializers import Serializer
 
-from AppCore.basics.mixins.mixins import IsAdminMixin
+from AppCore.basics.mixins.mixins import IsOwnerOrAdminMixin, IsAdminMixin
 from AppCore.basics.pagination.pagination import PaginacaoCustomizada
 from AppCore.basics.views.basic_views import (
     BasicGetAPIView,
@@ -11,6 +11,7 @@ from AppCore.basics.views.basic_views import (
     BasicRetrieveAPIView,
     BasicPatchAPIView,
 )
+from Identidade.usuarios.access import escopar_queryset_cortex
 
 from .models import AlunoCurso
 from .serializers import (
@@ -27,7 +28,7 @@ from .serializers import (
     description='''
     Lista os vínculos acadêmicos entre alunos e cursos.
 
-    **Permissões:** Apenas administradores.
+    **Permissões:** Autenticado. L2+ lista todos; L1 vê apenas vínculos do próprio usuário.
 
     **Paginação:** Suportada via query param `paginacao` (padrão 10, máximo 100).
 
@@ -65,16 +66,14 @@ from .serializers import (
         status.HTTP_403_FORBIDDEN: {'description': 'Sem permissão.'},
     }
 )
-class ListarAlunoCursosView(IsAdminMixin, BasicGetAPIView):
+class ListarAlunoCursosView(IsOwnerOrAdminMixin, BasicGetAPIView):
     pagination_class = PaginacaoCustomizada
     serializer_class = AlunoCursoSerializer
     mensagem_sucesso = 'Vínculos listados com sucesso.'
 
     def get_queryset(self):
         qs = AlunoCurso.objects.all().select_related('aluno__usuario', 'curso')
-
-        if not self.request.user.is_staff:
-            return qs.filter(aluno__usuario__id=self.request.user.id)
+        qs = escopar_queryset_cortex(self.request.user, qs, campo_dono='aluno__usuario')
 
         ativo = self.request.query_params.get('ativo')
         if ativo is not None and ativo.lower() in ('true', 'false'):
@@ -146,7 +145,7 @@ class CriarAlunoCursoView(IsAdminMixin, BasicPostAPIView):
     description='''
     Exibe os detalhes de um vínculo acadêmico específico.
 
-    **Permissões:** Apenas administradores.
+    **Permissões:** L2+ ou dono do vínculo (aluno vinculado).
     ''',
     responses={
         status.HTTP_200_OK: AlunoCursoSerializer,
@@ -155,10 +154,13 @@ class CriarAlunoCursoView(IsAdminMixin, BasicPostAPIView):
         status.HTTP_404_NOT_FOUND: {'description': 'Vínculo não encontrado.'},
     }
 )
-class DetalharAlunoCursoView(IsAdminMixin, BasicRetrieveAPIView):
+class DetalharAlunoCursoView(IsOwnerOrAdminMixin, BasicRetrieveAPIView):
     queryset = AlunoCurso.objects.all().select_related('aluno__usuario', 'curso')
     serializer_class = AlunoCursoSerializer
     mensagem_sucesso = 'Vínculo detalhado com sucesso.'
+
+    def obter_usuario_dono(self, obj):
+        return obj.aluno.usuario
 
 
 @extend_schema(

@@ -46,10 +46,10 @@ class ListarFuncoesViewTest(APITestCase):
         self.assertEqual(resposta.data['status'], 'success')
         self.assertIn('dados', resposta.data)
 
-    def test_usuario_comum_nao_pode_listar(self):
+    def test_usuario_comum_pode_listar_catalogo(self):
         self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token_comum}')
         resposta = self.client.get(self.url)
-        self.assertEqual(resposta.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(resposta.status_code, status.HTTP_200_OK)
 
     def test_nao_autenticado_retorna_401(self):
         resposta = self.client.get(self.url)
@@ -182,10 +182,10 @@ class DetalheFuncaoViewTest(APITestCase):
         self.assertEqual(resposta.data['status'], 'success')
         self.assertEqual(resposta.data['dados']['papel_funcao'], self.funcao.papel_funcao)
 
-    def test_usuario_comum_nao_pode_acessar(self):
+    def test_usuario_comum_pode_detalhar_catalogo(self):
         self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token_comum}')
         resposta = self.client.get(self.url)
-        self.assertEqual(resposta.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(resposta.status_code, status.HTTP_200_OK)
 
     def test_nao_autenticado_retorna_401(self):
         resposta = self.client.get(self.url)

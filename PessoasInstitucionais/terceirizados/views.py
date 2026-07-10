@@ -3,7 +3,7 @@ from drf_spectacular.types import OpenApiTypes
 from rest_framework import status
 from rest_framework.serializers import Serializer
 
-from AppCore.basics.mixins.mixins import IsAdminMixin
+from AppCore.basics.mixins.mixins import IsAdminMixin, IsOwnerOrAdminMixin
 from AppCore.basics.pagination.pagination import PaginacaoCustomizada
 from AppCore.basics.views.basic_views import (
     BasicGetAPIView,
@@ -11,6 +11,7 @@ from AppCore.basics.views.basic_views import (
     BasicRetrieveAPIView,
     BasicPatchAPIView,
 )
+from Identidade.usuarios.access import escopar_queryset_cortex
 
 from .models import Terceirizado
 from .serializers import (
@@ -31,7 +32,7 @@ class SerializerVazio(Serializer):
     description='''
     Lista todos os terceirizados cadastrados.
 
-    **Permissões:** Apenas administradores.
+    **Permissões:** Autenticado. L2+ lista todos; L1 vê apenas o próprio registro.
 
     Query params apenas reduzem o conjunto, nunca expandem o acesso.
     ''',
@@ -81,16 +82,14 @@ class SerializerVazio(Serializer):
         status.HTTP_200_OK: TerceirizadoSerializer(many=True),
     },
 )
-class ListarTerceirizadosView(IsAdminMixin, BasicGetAPIView):
+class ListarTerceirizadosView(IsOwnerOrAdminMixin, BasicGetAPIView):
     pagination_class = PaginacaoCustomizada
     serializer_class = TerceirizadoSerializer
     mensagem_sucesso = 'Terceirizados listados com sucesso.'
 
     def get_queryset(self):
         qs = Terceirizado.objects.select_related('usuario', 'empresa_instituicao', 'cargo').all()
-
-        if not self.request.user.is_staff:
-            return qs.filter(usuario__id=self.request.user.id)
+        qs = escopar_queryset_cortex(self.request.user, qs, campo_dono='usuario')
 
         ativo = self.request.query_params.get('ativo')
         if ativo is not None and ativo.lower() in ('true', 'false'):
@@ -137,7 +136,7 @@ class ListarTerceirizadosView(IsAdminMixin, BasicGetAPIView):
     description='''
     Cria um novo perfil de terceirizado para um usuário existente.
 
-    **Permissões:** Apenas administradores.
+    **Permissões:** Autenticado. L2+ lista todos; L1 vê apenas o próprio registro.
 
     **Regras:**
     - O usuário informado deve existir e não possuir perfil de terceirizado.
@@ -167,16 +166,19 @@ class CriarTerceirizadoView(IsAdminMixin, BasicPostAPIView):
     description='''
     Exibe os detalhes de um terceirizado específico.
 
-    **Permissões:** Apenas administradores.
+    **Permissões:** L2+ ou dono do registro.
     ''',
     responses={
         status.HTTP_200_OK: TerceirizadoSerializer,
     },
 )
-class DetalharTerceirizadoView(IsAdminMixin, BasicRetrieveAPIView):
+class DetalharTerceirizadoView(IsOwnerOrAdminMixin, BasicRetrieveAPIView):
     queryset = Terceirizado.objects.select_related('usuario', 'empresa_instituicao').all()
     serializer_class = TerceirizadoSerializer
     mensagem_sucesso = 'Terceirizado detalhado com sucesso.'
+
+    def obter_usuario_dono(self, obj):
+        return obj.usuario
 
 
 @extend_schema(
@@ -185,7 +187,7 @@ class DetalharTerceirizadoView(IsAdminMixin, BasicRetrieveAPIView):
     description='''
     Atualiza os dados de um terceirizado existente.
 
-    **Permissões:** Apenas administradores.
+    **Permissões:** Autenticado. L2+ lista todos; L1 vê apenas o próprio registro.
     ''',
     request=AtualizarTerceirizadoSerializer,
     responses={
@@ -214,7 +216,7 @@ class AtualizarTerceirizadoView(IsAdminMixin, BasicPatchAPIView):
     description='''
     Desativa o perfil de um terceirizado.
 
-    **Permissões:** Apenas administradores.
+    **Permissões:** Autenticado. L2+ lista todos; L1 vê apenas o próprio registro.
     ''',
     request=SerializerVazio,
     responses={
@@ -243,7 +245,7 @@ class DesativarTerceirizadoView(IsAdminMixin, BasicPostAPIView):
     description='''
     Reativa o perfil de um terceirizado inativo.
 
-    **Permissões:** Apenas administradores.
+    **Permissões:** Autenticado. L2+ lista todos; L1 vê apenas o próprio registro.
     ''',
     request=SerializerVazio,
     responses={

@@ -5,7 +5,7 @@
             "name": "Django",
             "type": "debugpy",
             "request": "launch",
-            "program": "${workspaceFolder}/cortex-plataform/manage.py",
+            "program": "${workspaceFolder}/manage.py",
             "args": [
                 "runserver"
             ],

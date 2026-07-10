@@ -3,7 +3,7 @@ from drf_spectacular.types import OpenApiTypes
 from rest_framework import status
 from rest_framework.serializers import Serializer
 
-from AppCore.basics.mixins.mixins import IsAdminMixin
+from AppCore.basics.mixins.mixins import IsAdminMixin, IsAuthenticatedMixin
 from AppCore.basics.pagination.pagination import PaginacaoCustomizada
 from AppCore.basics.views.basic_views import (
     BasicGetAPIView,
@@ -22,7 +22,7 @@ from .serializers import CargoSerializer, CriarCargoSerializer, AtualizarCargoSe
     description='''
     Lista todos os cargos cadastrados.
     
-    **Permissões:** Apenas administradores.
+    **Permissões:** Qualquer usuário autenticado (catálogo de referência). Escrita apenas L3 (EDITAR_TUDO).
     ''',
     parameters=[
         OpenApiParameter(
@@ -42,7 +42,7 @@ from .serializers import CargoSerializer, CriarCargoSerializer, AtualizarCargoSe
         status.HTTP_200_OK: CargoSerializer(many=True),
     }
 )
-class ListarCargosView(IsAdminMixin, BasicGetAPIView):
+class ListarCargosView(IsAuthenticatedMixin, BasicGetAPIView):
     pagination_class = PaginacaoCustomizada
     serializer_class = CargoSerializer
     mensagem_sucesso = 'Cargos listados com sucesso.'
@@ -67,7 +67,7 @@ class ListarCargosView(IsAdminMixin, BasicGetAPIView):
     description='''
     Cria um novo cargo.
     
-    **Permissões:** Apenas administradores.
+    **Permissões:** Qualquer usuário autenticado (catálogo de referência). Escrita apenas L3 (EDITAR_TUDO).
     ''',
     request=CriarCargoSerializer,
     responses={
@@ -93,13 +93,13 @@ class CriarCargoView(IsAdminMixin, BasicPostAPIView):
     description='''
     Exibe os detalhes de um cargo específico.
     
-    **Permissões:** Apenas administradores.
+    **Permissões:** Qualquer usuário autenticado (catálogo de referência). Escrita apenas L3 (EDITAR_TUDO).
     ''',
     responses={
         status.HTTP_200_OK: CargoSerializer,
     }
 )
-class DetalharCargoView(IsAdminMixin, BasicRetrieveAPIView):
+class DetalharCargoView(IsAuthenticatedMixin, BasicRetrieveAPIView):
     queryset = Cargo.objects.all()
     serializer_class = CargoSerializer
     mensagem_sucesso = 'Cargo detalhado com sucesso.'
@@ -110,8 +110,8 @@ class DetalharCargoView(IsAdminMixin, BasicRetrieveAPIView):
     summary='Atualizar cargo',
     description='''
     Atualiza os dados de um cargo existente.
-    
-    **Permissões:** Apenas administradores.
+
+    **Permissões:** Apenas L3 (EDITAR_TUDO) / administradores.
     ''',
     request=AtualizarCargoSerializer,
     responses={
@@ -145,7 +145,7 @@ class SerializerVazio(Serializer):
     description='''
     Desativa um cargo.
     
-    **Permissões:** Apenas administradores.
+    **Permissões:** Qualquer usuário autenticado (catálogo de referência). Escrita apenas L3 (EDITAR_TUDO).
     ''',
     request=SerializerVazio,
     responses={
@@ -174,7 +174,7 @@ class DesativarCargoView(IsAdminMixin, BasicPostAPIView):
     description='''
     Reativa um cargo inativo.
     
-    **Permissões:** Apenas administradores.
+    **Permissões:** Qualquer usuário autenticado (catálogo de referência). Escrita apenas L3 (EDITAR_TUDO).
     ''',
     request=SerializerVazio,
     responses={

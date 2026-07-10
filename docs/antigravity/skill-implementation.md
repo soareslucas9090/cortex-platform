@@ -139,13 +139,24 @@ from AppCore.basics.views.basic_views import (
 ### Permissões (Mixins de View)
 
 ```python
-from AppCore.basics.mixins.mixins import AllowAnyMixin, IsOwnerOrAdminMixin, IsAdminMixin
+from AppCore.basics.mixins.mixins import (
+    AllowAnyMixin,
+    IsAuthenticatedMixin,
+    IsOwnerOrAdminMixin,
+    IsAdminMixin,
+)
 
-# AllowAnyMixin       → endpoints públicos (sem autenticação)
-# IsAdminMixin        → apenas is_admin=True ou superusuário
-# IsOwnerOrAdminMixin → dono do recurso ou admin
-#   ↳ obrigatório implementar: obter_usuario_dono(self, obj) → retorna o usuário dono
+# AllowAnyMixin          → endpoints públicos (sem autenticação)
+# IsAuthenticatedMixin   → qualquer autenticado (catálogos de referência)
+# IsAdminMixin           → escrita L3 (EDITAR_TUDO), is_admin ou superusuário
+# IsOwnerOrAdminMixin    → dono, L2+ em leitura de objeto, ou L3
+#   ↳ obrigatório implementar: obter_usuario_dono(self, obj) quando há dono
+#   ↳ listagens com dono: escopar_queryset_cortex em Identidade.usuarios.access
 ```
+
+Níveis Cortex (L1 `EDITAR_EU`, L2 `LER_TUDO`, L3 `EDITAR_TUDO`): ver ADR-002.
+
+Documentação narrativa: `GET /cortex/identidade/permissoes/documentacao/` — manter `documentacao_<modulo>()` sincronizado com regras.
 
 ### Paginação
 

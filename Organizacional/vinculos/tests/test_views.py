@@ -72,10 +72,15 @@ class ListarVinculosViewTest(APITestCase):
         self.assertIn(self.admin.pk, ids_usuarios)
         self.assertNotIn(self.comum.pk, ids_usuarios)
 
-    def test_usuario_comum_nao_pode_listar(self):
+    def test_usuario_comum_ve_apenas_proprios_vinculos(self):
+        funcao = criar_funcao()
+        criar_vinculo(self.comum, self.setor, funcao)
+        criar_vinculo(self.admin, self.setor, funcao)
         self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token_comum}')
         resposta = self.client.get(self.url)
-        self.assertEqual(resposta.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(resposta.status_code, status.HTTP_200_OK)
+        ids_usuarios = [v['usuario'] for v in resposta.data['dados']]
+        self.assertEqual(ids_usuarios, [self.comum.pk])
 
     def test_nao_autenticado_retorna_401(self):
         resposta = self.client.get(self.url)

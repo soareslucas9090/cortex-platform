@@ -7,6 +7,7 @@ from .views import (
     CriarUsuarioView,
     DetalheUsuarioView,
     DesativarUsuarioView,
+    DocumentarPermissoesView,
     ListarUsuariosView,
     ReativarUsuarioView,
     BaixarModeloImportacaoUsuariosView,
@@ -18,6 +19,11 @@ from .views import (
 )
 
 urlpatterns = [
+    path(
+        'permissoes/documentacao/',
+        DocumentarPermissoesView.as_view(),
+        name='permissoes-documentacao',
+    ),
     path('usuarios/', roteador_por_metodo(GET=ListarUsuariosView, POST=CriarUsuarioView), name='usuario-list'),
     path('usuarios/<int:pk>/', roteador_por_metodo(GET=DetalheUsuarioView, PATCH=AtualizarUsuarioView), name='usuario-detail'),
     path('usuarios/<int:pk>/desativar/', DesativarUsuarioView.as_view(), name='usuario-desativar'),

@@ -64,6 +64,19 @@ class ListarContatosViewTest(APITestCase):
         resposta = self.client.get(url)
         self.assertEqual(resposta.status_code, status.HTTP_404_NOT_FOUND)
 
+    def test_servidor_l2_pode_ler_contatos_de_outro_usuario(self):
+        from PessoasInstitucionais.cargos.models import Cargo
+        from PessoasInstitucionais.servidores.models import Servidor
+
+        cargo = Cargo.objects.create(nome='Cargo L2')
+        servidor_user = criar_usuario('44444444444', nome='Servidor L2')
+        Servidor.objects.create(usuario=servidor_user, cargo=cargo, categoria=1, ativo=True)
+        token_servidor = obter_tokens(servidor_user)
+
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {token_servidor}')
+        resposta = self.client.get(self.url)
+        self.assertEqual(resposta.status_code, status.HTTP_200_OK)
+
 
 class AdicionarContatoViewTest(APITestCase):
 
@@ -106,6 +119,19 @@ class AdicionarContatoViewTest(APITestCase):
         url = reverse('identidade:contatos', kwargs={'usuario_pk': 99999})
         resposta = self.client.post(url, self.payload_valido)
         self.assertEqual(resposta.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_servidor_l2_nao_pode_adicionar_contato_de_outro_usuario(self):
+        from PessoasInstitucionais.cargos.models import Cargo
+        from PessoasInstitucionais.servidores.models import Servidor
+
+        cargo = Cargo.objects.create(nome='Cargo L2 Post')
+        servidor_user = criar_usuario('55555555555', nome='Servidor L2 Post')
+        Servidor.objects.create(usuario=servidor_user, cargo=cargo, categoria=1, ativo=True)
+        token_servidor = obter_tokens(servidor_user)
+
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {token_servidor}')
+        resposta = self.client.post(self.url, self.payload_valido)
+        self.assertEqual(resposta.status_code, status.HTTP_403_FORBIDDEN)
 
 
 class AtualizarContatoViewTest(APITestCase):
