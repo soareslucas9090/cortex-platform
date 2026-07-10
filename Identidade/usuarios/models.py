@@ -82,7 +82,7 @@ class Usuario(ModelHelperMixin, ModelBusinessMixin, UserModelPermissionMixin, Ab
         max_length=500,
         null=True,
         blank=True,
-        help_text='URL pública da foto enviada pelo próprio usuário no S3.',
+        help_text='Chave S3 da foto enviada pelo próprio usuário (servida via proxy da API).',
     )
     deficiencia = models.CharField(
         'Deficiência / necessidade especial',

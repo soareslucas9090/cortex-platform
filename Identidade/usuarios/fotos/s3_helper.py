@@ -1,10 +1,12 @@
 import logging
 import mimetypes
 import uuid
+from collections.abc import Iterator
 from urllib.parse import urlparse
 
 from botocore.exceptions import ClientError
 from django.conf import settings
+from django.urls import reverse
 
 from Identidade.usuarios.importacao.s3_helper import _get_s3_client
 
@@ -17,6 +19,7 @@ TIPOS_IMAGEM_PERMITIDOS = {
 }
 EXTENSOES_PERMITIDAS = {'jpg', 'jpeg', 'png', 'webp'}
 TAMANHO_MAXIMO_FOTO_SECUNDARIA_BYTES = 3 * 1024 * 1024
+PREFIXO_S3_FOTO_SECUNDARIA = 'Cortex/usuarios/fotos'
 
 
 def _obter_extensao(arquivo) -> str:
@@ -34,30 +37,63 @@ def _obter_extensao(arquivo) -> str:
     return mapa.get(content_type, '')
 
 
-def _montar_url_publica(s3_key: str) -> str:
-    base_url = getattr(settings, 'AWS_S3_PUBLIC_BASE_URL', '')
-    if not base_url:
-        raise ValueError('AWS_S3_PUBLIC_BASE_URL não configurada.')
-    return f'{base_url}/{s3_key}'
-
-
-def _extrair_s3_key_da_url(url: str) -> str | None:
-    if not url:
+def normalizar_s3_key(valor: str | None) -> str | None:
+    """
+    Aceita chave S3 pura ou URL e retorna a chave do objeto.
+    """
+    if not valor:
         return None
 
-    base_url = getattr(settings, 'AWS_S3_PUBLIC_BASE_URL', '').rstrip('/')
-    if base_url and url.startswith(base_url + '/'):
-        return url[len(base_url) + 1:]
+    valor = valor.strip()
+    if not valor.startswith(('http://', 'https://')):
+        return valor
 
-    parsed = urlparse(url)
+    parsed = urlparse(valor)
     if not parsed.path:
         return None
-    return parsed.path.lstrip('/')
+
+    path = parsed.path.lstrip('/')
+    if path.startswith(f'{PREFIXO_S3_FOTO_SECUNDARIA}/'):
+        return path
+
+    bucket_name = getattr(settings, 'AWS_STORAGE_BUCKET_NAME', '')
+    if bucket_name and path.startswith(f'{bucket_name}/{PREFIXO_S3_FOTO_SECUNDARIA}/'):
+        return path[len(bucket_name) + 1:]
+
+    return path
+
+
+def montar_url_proxy_foto_secundaria(
+    usuario_id: int,
+    s3_key: str | None,
+    request=None,
+) -> str | None:
+    """
+    Monta a URL pública do proxy da API para a foto secundária do usuário.
+    Inclui parâmetro de versão para invalidar cache após novo upload.
+    """
+    if not s3_key:
+        return None
+
+    if request is not None:
+        base_url = request.build_absolute_uri(
+            reverse('identidade:usuario-foto-secundaria', kwargs={'pk': usuario_id})
+        )
+    else:
+        public_base = getattr(settings, 'CORTEX_PUBLIC_BASE_URL', '').rstrip('/')
+        if not public_base:
+            return None
+        base_url = f'{public_base}/cortex/identidade/usuarios/{usuario_id}/foto-secundaria/'
+
+    # cache bust: uuid do arquivo na chave S3
+    nome_arquivo = s3_key.rsplit('/', 1)[-1]
+    versao = nome_arquivo.rsplit('.', 1)[0]
+    return f'{base_url}?v={versao}'
 
 
 def upload_foto_secundaria(usuario_id: int, arquivo) -> str:
     """
-    Envia a foto secundária para o bucket S3 e retorna a URL pública.
+    Envia a foto secundária para o bucket S3 e retorna a chave do objeto.
     """
     s3_client, bucket_name = _get_s3_client()
     if not s3_client:
@@ -71,7 +107,7 @@ def upload_foto_secundaria(usuario_id: int, arquivo) -> str:
     if content_type == 'application/octet-stream' and extensao == 'jpg':
         content_type = 'image/jpeg'
 
-    s3_key = f'Cortex/usuarios/fotos/{usuario_id}/{uuid.uuid4().hex}.{extensao}'
+    s3_key = f'{PREFIXO_S3_FOTO_SECUNDARIA}/{usuario_id}/{uuid.uuid4().hex}.{extensao}'
 
     if hasattr(arquivo, 'seek'):
         arquivo.seek(0)
@@ -79,15 +115,45 @@ def upload_foto_secundaria(usuario_id: int, arquivo) -> str:
     extra_args = {'ContentType': content_type}
     s3_client.upload_fileobj(arquivo, bucket_name, s3_key, ExtraArgs=extra_args)
 
-    return _montar_url_publica(s3_key)
+    return s3_key
 
 
-def remover_foto_secundaria_do_s3(url: str) -> None:
+def iterar_foto_secundaria_do_s3(s3_key: str) -> tuple[Iterator[bytes], str]:
+    """
+    Obtém o stream e o content-type da foto secundária no S3.
+    """
+    s3_client, bucket_name = _get_s3_client()
+    if not s3_client:
+        raise ValueError('Configuração de armazenamento S3 inválida.')
+
+    try:
+        response = s3_client.get_object(Bucket=bucket_name, Key=s3_key)
+    except ClientError as exc:
+        logger.warning('Foto secundária não encontrada no S3 (%s): %s', s3_key, exc)
+        raise
+
+    body = response['Body']
+    content_type = (
+        response.get('ContentType')
+        or mimetypes.guess_type(s3_key)[0]
+        or 'application/octet-stream'
+    )
+
+    def _iterar_chunks():
+        try:
+            yield from body.iter_chunks()
+        finally:
+            body.close()
+
+    return _iterar_chunks(), content_type
+
+
+def remover_foto_secundaria_do_s3(valor: str) -> None:
     """
     Remove a foto secundária do S3 de forma best-effort.
     Falhas são registradas em log e não interrompem a operação no banco.
     """
-    s3_key = _extrair_s3_key_da_url(url)
+    s3_key = normalizar_s3_key(valor)
     if not s3_key:
         return
 
