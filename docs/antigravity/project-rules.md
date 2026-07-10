@@ -439,10 +439,25 @@ As views básicas **capturam automaticamente** e retornam HTTP adequado:
 Use os mixins de `AppCore.basics.mixins.mixins`:
 
 - `AllowAnyMixin` — endpoints públicos (sem autenticação)
-- `IsOwnerOrAdminMixin` — dono do recurso ou admin
-  - Usa `getattr(user, 'is_admin', False)` — campo `is_admin` é opcional no model
-  - Requer implementar `obter_usuario_dono(obj)` na view
-- `IsAdminMixin` — apenas superusuários ou `is_admin=True`
+- `IsAuthenticatedMixin` — qualquer usuário autenticado (catálogos de referência)
+- `IsOwnerOrAdminMixin` — dono do recurso, L2+ em leitura de objeto, ou L3
+  - Requer implementar `obter_usuario_dono(obj)` na view quando há dono
+  - Em listagens com dono, usar `escopar_queryset_cortex` de `Identidade.usuarios.access`
+- `IsAdminMixin` — escrita administrativa (superuser, `is_admin=True` ou L3 `EDITAR_TUDO`)
+
+### Níveis Cortex (módulo `cortex`)
+
+Ver [ADR-002](../decisions/ADR-002-permissoes-cortex-niveis.md).
+
+| Nível | Constante | Leitura | Escrita |
+|-------|-----------|---------|---------|
+| 1 | `EDITAR_EU` | Próprio / catálogos | Próprio |
+| 2 | `LER_TUDO` | Ampla | Bloqueada (exceto próprio) |
+| 3 | `EDITAR_TUDO` | Total | Total |
+
+Constantes em `Identidade.usuarios.choices`. Helpers em `Identidade.usuarios.access`.
+
+**Documentação para o frontend:** `GET /cortex/identidade/permissoes/documentacao/` retorna texto e estrutura por módulo (`documentacao_<modulo>()` em `Identidade.usuarios.documentacao`). Ao alterar regras, atualize o método de documentação junto.
 
 Permissões padrão do DRF: `IsAuthenticated` (configurado no REST_FRAMEWORK).
 
@@ -881,6 +896,8 @@ usuarios/
 - Ao criar um novo app, ele deve ser colocado dentro do módulo de domínio adequado.
 - Mesmo que um módulo de domínio tenha apenas um app inicialmente, ele deve ser estruturado de forma a permitir crescimento futuro.
 - A organização física deve seguir a linguagem do domínio do projeto.
+
+**Produtos futuros (ex.: Sigec):** cada produto é um módulo na raiz (`Sigec/`), com `urls.py` agregador e apps internos por subdomínio (`Sigec/contratos/`, `Sigec/processos/`). Permissões do produto via `permissoes_sigec()` em `UsuarioPermissions`.
 
 ### Convenção de nomenclatura no `apps.py`
 

@@ -7,6 +7,7 @@ Este diretório contém a documentação técnica, decisões arquiteturais, plan
 ### 📝 Decisions
 Contém registros de decisões arquiteturais (ADRs - Architecture Decision Records).
 - [ADR-001: Modularização por Domínio](decisions/ADR-001-modularizacao-por-dominio.md)
+- [ADR-002: Permissões Cortex por Nível (L1–L3)](decisions/ADR-002-permissoes-cortex-niveis.md)
 
 ### 📊 Diagrams
 Diagramas e visões gerais do sistema e produto.

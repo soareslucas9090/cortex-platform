@@ -3,7 +3,7 @@ from drf_spectacular.types import OpenApiTypes
 from rest_framework import status
 from rest_framework.serializers import Serializer
 
-from AppCore.basics.mixins.mixins import IsAdminMixin
+from AppCore.basics.mixins.mixins import IsAdminMixin, IsAuthenticatedMixin
 from AppCore.basics.pagination.pagination import PaginacaoCustomizada
 from AppCore.basics.views.basic_views import (
     BasicGetAPIView,
@@ -23,7 +23,7 @@ from .serializers import CursoSerializer, CriarCursoSerializer, AtualizarCursoSe
     description='''
     Lista todos os cursos cadastrados.
 
-    **Permissões:** Apenas administradores.
+    **Permissões:** Qualquer usuário autenticado (catálogo de referência). Escrita apenas L3 (EDITAR_TUDO).
 
     **Paginação:** Suportada via query param `paginacao` (padrão 10, máximo 100).
 
@@ -59,7 +59,7 @@ from .serializers import CursoSerializer, CriarCursoSerializer, AtualizarCursoSe
         status.HTTP_403_FORBIDDEN: {'description': 'Sem permissão.'},
     }
 )
-class ListarCursosView(IsAdminMixin, BasicGetAPIView):
+class ListarCursosView(IsAuthenticatedMixin, BasicGetAPIView):
     pagination_class = PaginacaoCustomizada
     serializer_class = CursoSerializer
     mensagem_sucesso = 'Cursos listados com sucesso.'
@@ -97,7 +97,7 @@ class ListarCursosView(IsAdminMixin, BasicGetAPIView):
     description='''
     Cria um novo curso.
 
-    **Permissões:** Apenas administradores.
+    **Permissões:** Qualquer usuário autenticado (catálogo de referência). Escrita apenas L3 (EDITAR_TUDO).
     ''',
     request=CriarCursoSerializer,
     responses={
@@ -126,7 +126,7 @@ class CriarCursoView(IsAdminMixin, BasicPostAPIView):
     description='''
     Exibe os detalhes de um curso específico.
 
-    **Permissões:** Apenas administradores.
+    **Permissões:** Qualquer usuário autenticado (catálogo de referência). Escrita apenas L3 (EDITAR_TUDO).
     ''',
     responses={
         status.HTTP_200_OK: CursoSerializer,
@@ -135,7 +135,7 @@ class CriarCursoView(IsAdminMixin, BasicPostAPIView):
         status.HTTP_404_NOT_FOUND: {'description': 'Curso não encontrado.'},
     }
 )
-class DetalharCursoView(IsAdminMixin, BasicRetrieveAPIView):
+class DetalharCursoView(IsAuthenticatedMixin, BasicRetrieveAPIView):
     queryset = Curso.objects.all()
     serializer_class = CursoSerializer
     mensagem_sucesso = 'Curso detalhado com sucesso.'
@@ -147,7 +147,7 @@ class DetalharCursoView(IsAdminMixin, BasicRetrieveAPIView):
     description='''
     Atualiza parcialmente os dados de um curso existente.
 
-    **Permissões:** Apenas administradores.
+    **Permissões:** Qualquer usuário autenticado (catálogo de referência). Escrita apenas L3 (EDITAR_TUDO).
     ''',
     request=AtualizarCursoSerializer,
     responses={
@@ -184,7 +184,7 @@ class SerializerVazio(Serializer):
     description='''
     Desativa um curso ativo.
 
-    **Permissões:** Apenas administradores.
+    **Permissões:** Qualquer usuário autenticado (catálogo de referência). Escrita apenas L3 (EDITAR_TUDO).
     ''',
     request=SerializerVazio,
     responses={
@@ -217,7 +217,7 @@ class DesativarCursoView(IsAdminMixin, BasicPostAPIView):
     description='''
     Reativa um curso inativo.
 
-    **Permissões:** Apenas administradores.
+    **Permissões:** Qualquer usuário autenticado (catálogo de referência). Escrita apenas L3 (EDITAR_TUDO).
     ''',
     request=SerializerVazio,
     responses={

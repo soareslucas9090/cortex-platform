@@ -5,7 +5,8 @@ from rest_framework import status
 from drf_spectacular.utils import extend_schema, OpenApiParameter
 from drf_spectacular.types import OpenApiTypes
 
-from AppCore.basics.mixins.mixins import IsAdminMixin
+from AppCore.basics.mixins.mixins import IsAdminMixin, IsOwnerOrAdminMixin
+from Identidade.usuarios.access import escopar_queryset_cortex
 from AppCore.basics.pagination.pagination import PaginacaoCustomizada
 from AppCore.basics.views.basic_views import (
     BasicGetAPIView,
@@ -31,7 +32,7 @@ logger = logging.getLogger(__name__)
     description='''
     Retorna a lista paginada de vínculos de um setor específico.
 
-    **Permissões:** Apenas administradores.
+    **Permissões:** Autenticado. L2+ lista todos os vínculos do setor; L1 vê apenas os próprios.
 
     **Query params apenas reduzem o conjunto â€” nunca expandem o acesso.**
     ''',
@@ -64,7 +65,7 @@ logger = logging.getLogger(__name__)
         status.HTTP_404_NOT_FOUND: {'description': 'Setor não encontrado.'},
     },
 )
-class ListarVinculosView(IsAdminMixin, BasicGetAPIView):
+class ListarVinculosView(IsOwnerOrAdminMixin, BasicGetAPIView):
     """GET /cortex/organizacional/setores/<setor_pk>/vinculos/"""
     pagination_class = PaginacaoCustomizada
     serializer_class = SetorVinculoSerializer
@@ -72,6 +73,7 @@ class ListarVinculosView(IsAdminMixin, BasicGetAPIView):
 
     def get_queryset(self):
         qs = SetorVinculo.objects.filter(setor_id=self.kwargs['setor_pk'])
+        qs = escopar_queryset_cortex(self.request.user, qs, campo_dono='usuario')
         
         nome_usuario = self.request.query_params.get('nome_usuario')
         if nome_usuario:
@@ -103,7 +105,7 @@ class ListarVinculosView(IsAdminMixin, BasicGetAPIView):
     - A combinação (usuário, setor, função) deve ser única.
     - Um usuário pode ter múltiplos vínculos com setores ou funções diferentes.
 
-    **Permissões:** Apenas administradores.
+    **Permissões:** Autenticado. L2+ lista todos os vínculos do setor; L1 vê apenas os próprios.
     ''',
     request=CriarVinculoSerializer,
     responses={
@@ -170,7 +172,7 @@ class EncerrarVinculoView(IsAdminMixin, BasicPostAPIView):
 
     Apenas servidores ativos podem ocupar a responsabilidade principal de um setor.
 
-    **Permissões:** Apenas administradores.
+    **Permissões:** Autenticado. L2+ lista todos os vínculos do setor; L1 vê apenas os próprios.
     ''',
     request=None,
     responses={

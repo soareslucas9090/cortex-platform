@@ -3,7 +3,7 @@ from drf_spectacular.types import OpenApiTypes
 from rest_framework import status
 from rest_framework.serializers import Serializer
 
-from AppCore.basics.mixins.mixins import IsAdminMixin
+from AppCore.basics.mixins.mixins import IsAdminMixin, IsAuthenticatedMixin
 from AppCore.basics.pagination.pagination import PaginacaoCustomizada
 from AppCore.basics.views.basic_views import (
     BasicGetAPIView,
@@ -11,6 +11,7 @@ from AppCore.basics.views.basic_views import (
     BasicRetrieveAPIView,
     BasicPatchAPIView,
 )
+from Identidade.usuarios.access import escopar_queryset_cortex
 
 from .models import EmpresaInstituicao
 from .serializers import (
@@ -31,7 +32,7 @@ class SerializerVazio(Serializer):
     description='''
     Lista todas as empresas/instituições cadastradas.
 
-    **Permissões:** Apenas administradores.
+    **Permissões:** Autenticado. L2+ lista todas; L1 não vê empresas.
 
     Query params apenas reduzem o conjunto, nunca expandem o acesso.
     ''',
@@ -61,13 +62,14 @@ class SerializerVazio(Serializer):
         status.HTTP_200_OK: EmpresaInstituicaoSerializer(many=True),
     },
 )
-class ListarEmpresasView(IsAdminMixin, BasicGetAPIView):
+class ListarEmpresasView(IsAuthenticatedMixin, BasicGetAPIView):
     pagination_class = PaginacaoCustomizada
     serializer_class = EmpresaInstituicaoSerializer
     mensagem_sucesso = 'Empresas/instituições listadas com sucesso.'
 
     def get_queryset(self):
         qs = EmpresaInstituicao.objects.all()
+        qs = escopar_queryset_cortex(self.request.user, qs, campo_dono=None)
         
         ativo = self.request.query_params.get('ativo')
         if ativo is not None and ativo.lower() in ('true', 'false'):
@@ -90,7 +92,7 @@ class ListarEmpresasView(IsAdminMixin, BasicGetAPIView):
     description='''
     Cria uma nova empresa/instituição.
 
-    **Permissões:** Apenas administradores.
+    **Permissões:** Autenticado. L2+ lista todas; L1 não vê empresas.
     ''',
     request=CriarEmpresaInstituicaoSerializer,
     responses={
@@ -116,16 +118,22 @@ class CriarEmpresaView(IsAdminMixin, BasicPostAPIView):
     description='''
     Exibe os detalhes de uma empresa/instituição específica.
 
-    **Permissões:** Apenas administradores.
+    **Permissões:** Autenticado. L2+ lista todas; L1 não vê empresas.
     ''',
     responses={
         status.HTTP_200_OK: EmpresaInstituicaoSerializer,
     },
 )
-class DetalharEmpresaView(IsAdminMixin, BasicRetrieveAPIView):
-    queryset = EmpresaInstituicao.objects.all()
+class DetalharEmpresaView(IsAuthenticatedMixin, BasicRetrieveAPIView):
     serializer_class = EmpresaInstituicaoSerializer
     mensagem_sucesso = 'Empresa/instituição detalhada com sucesso.'
+
+    def get_queryset(self):
+        return escopar_queryset_cortex(
+            self.request.user,
+            EmpresaInstituicao.objects.all(),
+            campo_dono=None,
+        )
 
 
 @extend_schema(
@@ -134,7 +142,7 @@ class DetalharEmpresaView(IsAdminMixin, BasicRetrieveAPIView):
     description='''
     Atualiza os dados de uma empresa/instituição existente.
 
-    **Permissões:** Apenas administradores.
+    **Permissões:** Autenticado. L2+ lista todas; L1 não vê empresas.
     ''',
     request=AtualizarEmpresaInstituicaoSerializer,
     responses={
@@ -163,7 +171,7 @@ class AtualizarEmpresaView(IsAdminMixin, BasicPatchAPIView):
     description='''
     Desativa uma empresa/instituição.
 
-    **Permissões:** Apenas administradores.
+    **Permissões:** Autenticado. L2+ lista todas; L1 não vê empresas.
     ''',
     request=SerializerVazio,
     responses={
@@ -192,7 +200,7 @@ class DesativarEmpresaView(IsAdminMixin, BasicPostAPIView):
     description='''
     Reativa uma empresa/instituição inativa.
 
-    **Permissões:** Apenas administradores.
+    **Permissões:** Autenticado. L2+ lista todas; L1 não vê empresas.
     ''',
     request=SerializerVazio,
     responses={

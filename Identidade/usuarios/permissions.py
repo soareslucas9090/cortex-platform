@@ -1,5 +1,11 @@
 from AppCore.core.users_permissions.user_permission import UserModelPermission
 
+from .choices import (
+    PERMISSAO_CORTEX_EDITAR_EU,
+    PERMISSAO_CORTEX_EDITAR_TUDO,
+    PERMISSAO_CORTEX_LER_TUDO,
+)
+
 
 class UsuarioPermissions(UserModelPermission):
     """
@@ -16,12 +22,11 @@ class UsuarioPermissions(UserModelPermission):
         """
         user = self.object_instance
         if not user:
-            return {'cortex': 'EDITAR_EU'}
+            return {'cortex': PERMISSAO_CORTEX_EDITAR_EU}
 
         if user.is_staff or user.is_admin or user.is_superuser:
-            cortex_perm = 'EDITAR_TUDO'
+            cortex_perm = PERMISSAO_CORTEX_EDITAR_TUDO
         else:
-            # Verifica se possui vínculo ativo de servidor
             tem_servidor_ativo = False
             try:
                 tem_servidor_ativo = (
@@ -32,7 +37,6 @@ class UsuarioPermissions(UserModelPermission):
             except Exception:
                 pass
 
-            # Verifica se possui vínculo ativo de terceirizado
             tem_terceirizado_ativo = False
             try:
                 tem_terceirizado_ativo = (
@@ -44,9 +48,9 @@ class UsuarioPermissions(UserModelPermission):
                 pass
 
             if tem_servidor_ativo or tem_terceirizado_ativo:
-                cortex_perm = 'LER_TUDO'
+                cortex_perm = PERMISSAO_CORTEX_LER_TUDO
             else:
-                cortex_perm = 'EDITAR_EU'
+                cortex_perm = PERMISSAO_CORTEX_EDITAR_EU
 
         return {
             'cortex': cortex_perm,

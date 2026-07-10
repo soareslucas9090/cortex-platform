@@ -5,7 +5,7 @@ from rest_framework import status
 from drf_spectacular.utils import extend_schema, OpenApiParameter
 from drf_spectacular.types import OpenApiTypes
 
-from AppCore.basics.mixins.mixins import IsAdminMixin
+from AppCore.basics.mixins.mixins import IsAdminMixin, IsAuthenticatedMixin
 from AppCore.basics.pagination.pagination import PaginacaoCustomizada
 from AppCore.basics.views.basic_views import (
     BasicGetAPIView,
@@ -32,7 +32,7 @@ logger = logging.getLogger(__name__)
     description='''
     Retorna a lista paginada de funções organizacionais.
 
-    **Permissões:** Apenas administradores.
+    **Permissões:** Qualquer usuário autenticado (catálogo de referência). Escrita apenas L3 (EDITAR_TUDO).
 
     **Query params apenas reduzem o conjunto â€” nunca expandem o acesso.**
     ''',
@@ -60,7 +60,7 @@ logger = logging.getLogger(__name__)
         status.HTTP_403_FORBIDDEN: {'description': 'Sem permissão de administrador.'},
     },
 )
-class ListarFuncoesView(IsAdminMixin, BasicGetAPIView):
+class ListarFuncoesView(IsAuthenticatedMixin, BasicGetAPIView):
     """GET /cortex/organizacional/funcoes/"""
     pagination_class = PaginacaoCustomizada
     serializer_class = FuncaoSerializer
@@ -113,7 +113,7 @@ class CriarFuncaoView(IsAdminMixin, BasicPostAPIView):
 @extend_schema(
     tags=['Funções'],
     summary='Detalhe da função',
-    description='Retorna os dados de uma função específica.\n\n**Permissões:** Apenas administradores.',
+    description='Retorna os dados de uma função específica.\n\n**Permissões:** Qualquer usuário autenticado (catálogo de referência).',
     responses={
         status.HTTP_200_OK: FuncaoSerializer,
         status.HTTP_401_UNAUTHORIZED: {'description': 'Não autenticado.'},
@@ -121,7 +121,7 @@ class CriarFuncaoView(IsAdminMixin, BasicPostAPIView):
         status.HTTP_404_NOT_FOUND: {'description': 'Função não encontrada.'},
     },
 )
-class DetalheFuncaoView(IsAdminMixin, BasicRetrieveAPIView):
+class DetalheFuncaoView(IsAuthenticatedMixin, BasicRetrieveAPIView):
     """GET /cortex/organizacional/funcoes/<pk>/"""
     queryset = Funcao.objects.all()
     serializer_class = FuncaoSerializer

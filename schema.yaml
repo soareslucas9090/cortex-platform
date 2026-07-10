@@ -7,10 +7,11 @@ paths:
     get:
       operationId: academico_aluno_cursos_list
       description: "\n    Lista os vínculos acadêmicos entre alunos e cursos.\n\n
-        \   **Permissões:** Apenas administradores.\n\n    **Paginação:** Suportada
-        via query param `paginacao` (padrão 10, máximo 100).\n\n    **Filtros:** Os
-        query params apenas reduzem o conjunto de resultados — nunca expandem o acesso
-        além do que a permissão do usuário já permite.\n    "
+        \   **Permissões:** Autenticado. L2+ lista todos; L1 vê apenas vínculos do
+        próprio usuário.\n\n    **Paginação:** Suportada via query param `paginacao`
+        (padrão 10, máximo 100).\n\n    **Filtros:** Os query params apenas reduzem
+        o conjunto de resultados — nunca expandem o acesso além do que a permissão
+        do usuário já permite.\n    "
       summary: Listar vínculos aluno-curso
       parameters:
       - in: query
@@ -123,7 +124,7 @@ paths:
     get:
       operationId: academico_aluno_cursos_retrieve
       description: "\n    Exibe os detalhes de um vínculo acadêmico específico.\n\n
-        \   **Permissões:** Apenas administradores.\n    "
+        \   **Permissões:** L2+ ou dono do vínculo (aluno vinculado).\n    "
       summary: Detalhar vínculo aluno-curso
       parameters:
       - in: path
@@ -279,7 +280,8 @@ paths:
   /cortex/academico/alunos/:
     get:
       operationId: academico_alunos_list
-      description: Retorna a lista de alunos cadastrados. Apenas administradores.
+      description: 'Retorna a lista de alunos cadastrados. Autenticado: L2+ lista
+        todos; L1 vê apenas o próprio.'
       summary: Listar alunos
       parameters:
       - in: query
@@ -356,7 +358,7 @@ paths:
   /cortex/academico/alunos/{usuario_id}/:
     get:
       operationId: academico_alunos_retrieve
-      description: Retorna os detalhes de um aluno. Apenas administradores.
+      description: Retorna os detalhes de um aluno. L2+ ou dono do registro.
       summary: Detalhar aluno
       parameters:
       - in: path
@@ -411,10 +413,11 @@ paths:
     get:
       operationId: academico_cursos_list
       description: "\n    Lista todos os cursos cadastrados.\n\n    **Permissões:**
-        Apenas administradores.\n\n    **Paginação:** Suportada via query param `paginacao`
-        (padrão 10, máximo 100).\n\n    **Filtros:** Os query params apenas reduzem
-        o conjunto de resultados — nunca expandem o acesso além do que a permissão
-        do usuário já permite.\n    "
+        Qualquer usuário autenticado (catálogo de referência). Escrita apenas L3 (EDITAR_TUDO).\n\n
+        \   **Paginação:** Suportada via query param `paginacao` (padrão 10, máximo
+        100).\n\n    **Filtros:** Os query params apenas reduzem o conjunto de resultados
+        — nunca expandem o acesso além do que a permissão do usuário já permite.\n
+        \   "
       summary: Listar cursos
       parameters:
       - in: query
@@ -479,8 +482,8 @@ paths:
           description: ''
     post:
       operationId: academico_cursos_create
-      description: "\n    Cria um novo curso.\n\n    **Permissões:** Apenas administradores.\n
-        \   "
+      description: "\n    Cria um novo curso.\n\n    **Permissões:** Qualquer usuário
+        autenticado (catálogo de referência). Escrita apenas L3 (EDITAR_TUDO).\n    "
       summary: Criar curso
       tags:
       - Cursos
@@ -527,7 +530,8 @@ paths:
     get:
       operationId: academico_cursos_retrieve
       description: "\n    Exibe os detalhes de um curso específico.\n\n    **Permissões:**
-        Apenas administradores.\n    "
+        Qualquer usuário autenticado (catálogo de referência). Escrita apenas L3 (EDITAR_TUDO).\n
+        \   "
       summary: Detalhar curso
       parameters:
       - in: path
@@ -567,7 +571,8 @@ paths:
     patch:
       operationId: academico_cursos_partial_update
       description: "\n    Atualiza parcialmente os dados de um curso existente.\n\n
-        \   **Permissões:** Apenas administradores.\n    "
+        \   **Permissões:** Qualquer usuário autenticado (catálogo de referência).
+        Escrita apenas L3 (EDITAR_TUDO).\n    "
       summary: Atualizar curso
       parameters:
       - in: path
@@ -624,7 +629,8 @@ paths:
   /cortex/academico/cursos/{id}/desativar/:
     post:
       operationId: academico_cursos_desativar_create
-      description: "\n    Desativa um curso ativo.\n\n    **Permissões:** Apenas administradores.\n
+      description: "\n    Desativa um curso ativo.\n\n    **Permissões:** Qualquer
+        usuário autenticado (catálogo de referência). Escrita apenas L3 (EDITAR_TUDO).\n
         \   "
       summary: Desativar curso
       parameters:
@@ -671,8 +677,9 @@ paths:
   /cortex/academico/cursos/{id}/reativar/:
     post:
       operationId: academico_cursos_reativar_create
-      description: "\n    Reativa um curso inativo.\n\n    **Permissões:** Apenas
-        administradores.\n    "
+      description: "\n    Reativa um curso inativo.\n\n    **Permissões:** Qualquer
+        usuário autenticado (catálogo de referência). Escrita apenas L3 (EDITAR_TUDO).\n
+        \   "
       summary: Reativar curso
       parameters:
       - in: path
@@ -841,22 +848,50 @@ paths:
               schema:
                 description: Token inválido ou expirado.
           description: ''
+  /cortex/identidade/permissoes/documentacao/:
+    get:
+      operationId: identidade_permissoes_documentacao_retrieve
+      description: "\n    Retorna a documentação narrativa e estruturada das permissões
+        de cada módulo registrado.\n\n    Hoje inclui apenas o módulo **cortex** (L1–L3).
+        Módulos futuros (ex.: Sigec) serão\n    adicionados automaticamente quando
+        `documentacao_<modulo>()` for implementado.\n\n    **Permissões:** Qualquer
+        usuário autenticado.\n\n    **Manutenção:** toda alteração de regra de permissão
+        deve atualizar o método\n    `documentacao_<modulo>()` correspondente em `Identidade.usuarios.documentacao`.\n
+        \   "
+      summary: Documentação de permissões por módulo
+      tags:
+      - Identidade
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                description: Documentação obtida com sucesso.
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                description: Não autenticado.
+          description: ''
   /cortex/identidade/usuarios/:
     get:
       operationId: identidade_usuarios_list
       description: "\n    Retorna a lista paginada de usuários do sistema.\n\n    **Permissões:**
-        Apenas administradores.\n\n    **Query params:**\n    - `ativo` (bool, opcional):
-        filtra por status — `true` (ativos) ou `false` (inativos).\n      Omitindo
-        o parâmetro, retorna todos.\n    - `nome` (str, opcional): filtra por parte
-        do nome (ignorando maiúsculas e minúsculas).\n    - `cpf` (str, opcional):
-        filtra por parte do CPF.\n    - `email` (str, opcional): filtra por parte
-        do e-mail (ignorando maiúsculas e minúsculas).\n    - `tipo_perfil` (str,
-        opcional): filtra por tipo de perfil: `alunos` (ou `aluno`), `terceirizados`
-        (ou `terceirizado`) ou `servidores` (ou `servidor`).\n    - `paginacao` (int,
-        opcional): tamanho da página, entre 1 e 100. Padrão: 10.\n\n    **Segurança:**
-        os query params apenas restringem o conjunto de resultados dentro do\n    escopo
-        já autorizado — nunca expandem o acesso além do permitido pela permissão.\n
-        \   "
+        Autenticado. L2+ (LER_TUDO) lista todos; L1 (EDITAR_EU) vê apenas o próprio
+        registro.\n\n    **Query params:**\n    - `ativo` (bool, opcional): filtra
+        por status — `true` (ativos) ou `false` (inativos).\n      Omitindo o parâmetro,
+        retorna todos.\n    - `nome` (str, opcional): filtra por parte do nome (ignorando
+        maiúsculas e minúsculas).\n    - `cpf` (str, opcional): filtra por parte do
+        CPF.\n    - `email` (str, opcional): filtra por parte do e-mail (ignorando
+        maiúsculas e minúsculas).\n    - `tipo_perfil` (str, opcional): filtra por
+        tipo de perfil: `alunos` (ou `aluno`), `terceirizados` (ou `terceirizado`)
+        ou `servidores` (ou `servidor`).\n    - `paginacao` (int, opcional): tamanho
+        da página, entre 1 e 100. Padrão: 10.\n\n    **Segurança:** os query params
+        apenas restringem o conjunto de resultados dentro do\n    escopo já autorizado
+        — nunca expandem o acesso além do permitido pela permissão.\n    "
       summary: Listar usuários
       parameters:
       - in: query
@@ -920,7 +955,7 @@ paths:
           content:
             application/json:
               schema:
-                description: Sem permissão de administrador.
+                description: Sem permissão.
           description: ''
     post:
       operationId: identidade_usuarios_create
@@ -974,7 +1009,7 @@ paths:
           content:
             application/json:
               schema:
-                description: Sem permissão de administrador.
+                description: Sem permissão.
           description: ''
   /cortex/identidade/usuarios/{id}/:
     get:
@@ -1121,7 +1156,7 @@ paths:
           content:
             application/json:
               schema:
-                description: Sem permissão de administrador.
+                description: Sem permissão.
           description: ''
         '404':
           content:
@@ -1168,7 +1203,7 @@ paths:
           content:
             application/json:
               schema:
-                description: Sem permissão de administrador.
+                description: Sem permissão.
           description: ''
         '404':
           content:
@@ -1692,7 +1727,7 @@ paths:
           content:
             application/json:
               schema:
-                description: Sem permissão de administrador.
+                description: Sem permissão.
           description: ''
   /cortex/identidade/usuarios/importacao/cancelar/:
     post:
@@ -1727,7 +1762,7 @@ paths:
           content:
             application/json:
               schema:
-                description: Sem permissão de administrador.
+                description: Sem permissão.
           description: ''
   /cortex/identidade/usuarios/importacao/historico/:
     get:
@@ -1780,7 +1815,7 @@ paths:
           content:
             application/json:
               schema:
-                description: Sem permissão de administrador.
+                description: Sem permissão.
           description: ''
   /cortex/identidade/usuarios/importacao/modelo/:
     get:
@@ -1810,7 +1845,7 @@ paths:
           content:
             application/json:
               schema:
-                description: Sem permissão de administrador.
+                description: Sem permissão.
           description: ''
         '404':
           content:
@@ -1864,7 +1899,7 @@ paths:
           content:
             application/json:
               schema:
-                description: Sem permissão de administrador.
+                description: Sem permissão.
           description: ''
   /cortex/identidade/usuarios/importacao/status/:
     get:
@@ -1894,7 +1929,7 @@ paths:
           content:
             application/json:
               schema:
-                description: Sem permissão de administrador.
+                description: Sem permissão.
           description: ''
         '404':
           content:
@@ -1906,8 +1941,9 @@ paths:
     get:
       operationId: organizacional_funcoes_list
       description: "\n    Retorna a lista paginada de funções organizacionais.\n\n
-        \   **Permissões:** Apenas administradores.\n\n    **Query params apenas reduzem
-        o conjunto â€” nunca expandem o acesso.**\n    "
+        \   **Permissões:** Qualquer usuário autenticado (catálogo de referência).
+        Escrita apenas L3 (EDITAR_TUDO).\n\n    **Query params apenas reduzem o conjunto
+        â€” nunca expandem o acesso.**\n    "
       summary: Listar funções
       parameters:
       - in: query
@@ -1932,10 +1968,10 @@ paths:
           type: integer
         description: Tamanho da página (1â€“100, padrão 10).
       - in: query
-        name: sigla
+        name: papel_funcao
         schema:
           type: string
-        description: Filtra por parte da sigla (ignora acentos e maiúsculas).
+        description: Filtra por parte do papel/função (ignora acentos e maiúsculas).
       tags:
       - Funções
       security:
@@ -1962,7 +1998,7 @@ paths:
     post:
       operationId: organizacional_funcoes_create
       description: |-
-        Cria uma nova função organizacional. A sigla deve ser única.
+        Cria uma nova função organizacional. O papel/função deve ser único.
 
         **Permissões:** Apenas administradores.
       summary: Criar função
@@ -1993,7 +2029,7 @@ paths:
           content:
             application/json:
               schema:
-                description: Dados inválidos ou sigla já¡ cadastrada.
+                description: Dados inválidos ou papel/função já cadastrado.
           description: ''
         '401':
           content:
@@ -2013,7 +2049,7 @@ paths:
       description: |-
         Retorna os dados de uma função específica.
 
-        **Permissões:** Apenas administradores.
+        **Permissões:** Qualquer usuário autenticado (catálogo de referência).
       summary: Detalhe da função
       parameters:
       - in: path
@@ -2089,7 +2125,7 @@ paths:
           content:
             application/json:
               schema:
-                description: Dados inválidos ou sigla já¡ cadastrada.
+                description: Dados inválidos ou papel/função já cadastrado.
           description: ''
         '401':
           content:
@@ -2211,8 +2247,9 @@ paths:
     get:
       operationId: organizacional_setores_list
       description: "\n    Retorna a lista paginada de setores da instituição.\n\n
-        \   **Permissões:** Apenas administradores.\n\n    **Query params apenas reduzem
-        o conjunto — nunca expandem o acesso.**\n    "
+        \   **Permissões:** Qualquer usuário autenticado (catálogo de referência).
+        Escrita apenas L3 (EDITAR_TUDO).\n\n    **Query params apenas reduzem o conjunto
+        — nunca expandem o acesso.**\n    "
       summary: Listar setores
       parameters:
       - in: query
@@ -2318,7 +2355,7 @@ paths:
       description: |-
         Retorna os dados de um setor específico.
 
-        **Permissões:** Apenas administradores.
+        **Permissões:** Qualquer usuário autenticado (catálogo de referência).
       summary: Detalhe do setor
       parameters:
       - in: path
@@ -2516,8 +2553,9 @@ paths:
     get:
       operationId: organizacional_setores_vinculos_list
       description: "\n    Retorna a lista paginada de vínculos de um setor específico.\n\n
-        \   **Permissões:** Apenas administradores.\n\n    **Query params apenas reduzem
-        o conjunto â€” nunca expandem o acesso.**\n    "
+        \   **Permissões:** Autenticado. L2+ lista todos os vínculos do setor; L1
+        vê apenas os próprios.\n\n    **Query params apenas reduzem o conjunto â€”
+        nunca expandem o acesso.**\n    "
       summary: Listar vínculos do setor
       parameters:
       - in: query
@@ -2542,6 +2580,11 @@ paths:
           type: integer
         description: Tamanho da página (1â€“100, padrão 10).
       - in: query
+        name: papel_funcao
+        schema:
+          type: string
+        description: Filtra por parte do papel/função (ignora acentos e maiúsculas).
+      - in: query
         name: responsavel
         schema:
           type: boolean
@@ -2551,11 +2594,6 @@ paths:
         schema:
           type: integer
         required: true
-      - in: query
-        name: sigla_funcao
-        schema:
-          type: string
-        description: Filtra por parte da sigla da função (ignora acentos e maiúsculas).
       tags:
       - Vínculos de Setor
       security:
@@ -2590,8 +2628,8 @@ paths:
       description: "\n    Vincula um usuário ao setor com uma função obrigatória.\n\n
         \   **Regras:**\n    - Setor e função devem estar ativos.\n    - A combinação
         (usuário, setor, função) deve ser única.\n    - Um usuário pode ter múltiplos
-        vínculos com setores ou funções diferentes.\n\n    **Permissões:** Apenas
-        administradores.\n    "
+        vínculos com setores ou funções diferentes.\n\n    **Permissões:** Autenticado.
+        L2+ lista todos os vínculos do setor; L1 vê apenas os próprios.\n    "
       summary: Criar vínculo no setor
       parameters:
       - in: path
@@ -2652,7 +2690,8 @@ paths:
       description: "\n    Marca o vínculo como responsável pelo setor.\n\n    **Regras:**\n
         \   - O setor deve estar ativo.\n    - O usuário do vínculo deve possuir perfil
         de servidor ativo.\n\n    Apenas servidores ativos podem ocupar a responsabilidade
-        principal de um setor.\n\n    **Permissões:** Apenas administradores.\n    "
+        principal de um setor.\n\n    **Permissões:** Autenticado. L2+ lista todos
+        os vínculos do setor; L1 vê apenas os próprios.\n    "
       summary: Definir vínculo como responsável
       parameters:
       - in: path
@@ -2877,7 +2916,8 @@ paths:
     get:
       operationId: pessoas_institucionais_cargos_list
       description: "\n    Lista todos os cargos cadastrados.\n    \n    **Permissões:**
-        Apenas administradores.\n    "
+        Qualquer usuário autenticado (catálogo de referência). Escrita apenas L3 (EDITAR_TUDO).\n
+        \   "
       summary: Listar cargos
       parameters:
       - in: query
@@ -2914,7 +2954,8 @@ paths:
           description: ''
     post:
       operationId: pessoas_institucionais_cargos_create
-      description: "\n    Cria um novo cargo.\n    \n    **Permissões:** Apenas administradores.\n
+      description: "\n    Cria um novo cargo.\n    \n    **Permissões:** Qualquer
+        usuário autenticado (catálogo de referência). Escrita apenas L3 (EDITAR_TUDO).\n
         \   "
       summary: Criar cargo
       tags:
@@ -2944,7 +2985,8 @@ paths:
     get:
       operationId: pessoas_institucionais_cargos_retrieve
       description: "\n    Exibe os detalhes de um cargo específico.\n    \n    **Permissões:**
-        Apenas administradores.\n    "
+        Qualquer usuário autenticado (catálogo de referência). Escrita apenas L3 (EDITAR_TUDO).\n
+        \   "
       summary: Detalhar cargo
       parameters:
       - in: path
@@ -2965,8 +3007,8 @@ paths:
           description: ''
     patch:
       operationId: pessoas_institucionais_cargos_partial_update
-      description: "\n    Atualiza os dados de um cargo existente.\n    \n    **Permissões:**
-        Apenas administradores.\n    "
+      description: "\n    Atualiza os dados de um cargo existente.\n\n    **Permissões:**
+        Apenas L3 (EDITAR_TUDO) / administradores.\n    "
       summary: Atualizar cargo
       parameters:
       - in: path
@@ -2999,8 +3041,8 @@ paths:
   /cortex/pessoas-institucionais/cargos/{id}/desativar/:
     post:
       operationId: pessoas_institucionais_cargos_desativar_create
-      description: "\n    Desativa um cargo.\n    \n    **Permissões:** Apenas administradores.\n
-        \   "
+      description: "\n    Desativa um cargo.\n    \n    **Permissões:** Qualquer usuário
+        autenticado (catálogo de referência). Escrita apenas L3 (EDITAR_TUDO).\n    "
       summary: Desativar cargo
       parameters:
       - in: path
@@ -3022,8 +3064,9 @@ paths:
   /cortex/pessoas-institucionais/cargos/{id}/reativar/:
     post:
       operationId: pessoas_institucionais_cargos_reativar_create
-      description: "\n    Reativa um cargo inativo.\n    \n    **Permissões:** Apenas
-        administradores.\n    "
+      description: "\n    Reativa um cargo inativo.\n    \n    **Permissões:** Qualquer
+        usuário autenticado (catálogo de referência). Escrita apenas L3 (EDITAR_TUDO).\n
+        \   "
       summary: Reativar cargo
       parameters:
       - in: path
@@ -3046,8 +3089,8 @@ paths:
     get:
       operationId: pessoas_institucionais_empresas_list
       description: "\n    Lista todas as empresas/instituições cadastradas.\n\n    **Permissões:**
-        Apenas administradores.\n\n    Query params apenas reduzem o conjunto, nunca
-        expandem o acesso.\n    "
+        Autenticado. L2+ lista todas; L1 não vê empresas.\n\n    Query params apenas
+        reduzem o conjunto, nunca expandem o acesso.\n    "
       summary: Listar empresas/instituições
       parameters:
       - in: query
@@ -3090,7 +3133,7 @@ paths:
     post:
       operationId: pessoas_institucionais_empresas_create
       description: "\n    Cria uma nova empresa/instituição.\n\n    **Permissões:**
-        Apenas administradores.\n    "
+        Autenticado. L2+ lista todas; L1 não vê empresas.\n    "
       summary: Criar empresa/instituição
       tags:
       - Empresas/Instituições
@@ -3119,7 +3162,7 @@ paths:
     get:
       operationId: pessoas_institucionais_empresas_retrieve
       description: "\n    Exibe os detalhes de uma empresa/instituição específica.\n\n
-        \   **Permissões:** Apenas administradores.\n    "
+        \   **Permissões:** Autenticado. L2+ lista todas; L1 não vê empresas.\n    "
       summary: Detalhar empresa/instituição
       parameters:
       - in: path
@@ -3141,7 +3184,7 @@ paths:
     patch:
       operationId: pessoas_institucionais_empresas_partial_update
       description: "\n    Atualiza os dados de uma empresa/instituição existente.\n\n
-        \   **Permissões:** Apenas administradores.\n    "
+        \   **Permissões:** Autenticado. L2+ lista todas; L1 não vê empresas.\n    "
       summary: Atualizar empresa/instituição
       parameters:
       - in: path
@@ -3175,7 +3218,7 @@ paths:
     post:
       operationId: pessoas_institucionais_empresas_desativar_create
       description: "\n    Desativa uma empresa/instituição.\n\n    **Permissões:**
-        Apenas administradores.\n    "
+        Autenticado. L2+ lista todas; L1 não vê empresas.\n    "
       summary: Desativar empresa/instituição
       parameters:
       - in: path
@@ -3198,7 +3241,7 @@ paths:
     post:
       operationId: pessoas_institucionais_empresas_reativar_create
       description: "\n    Reativa uma empresa/instituição inativa.\n\n    **Permissões:**
-        Apenas administradores.\n    "
+        Autenticado. L2+ lista todas; L1 não vê empresas.\n    "
       summary: Reativar empresa/instituição
       parameters:
       - in: path
@@ -3221,8 +3264,8 @@ paths:
     get:
       operationId: pessoas_institucionais_servidores_list
       description: "\n    Lista todos os servidores cadastrados.\n\n    **Permissões:**
-        Apenas administradores.\n\n    Query params apenas reduzem o conjunto, nunca
-        expandem o acesso.\n    "
+        Autenticado. L2+ lista todos; L1 vê apenas o próprio registro.\n\n    Query
+        params apenas reduzem o conjunto, nunca expandem o acesso.\n    "
       summary: Listar servidores
       parameters:
       - in: query
@@ -3283,9 +3326,9 @@ paths:
     post:
       operationId: pessoas_institucionais_servidores_create
       description: "\n    Cria um novo perfil de servidor para um usuário existente.\n\n
-        \   **Permissões:** Apenas administradores.\n\n    **Regras:**\n    - O usuário
-        informado deve existir e não possuir perfil de servidor.\n    - O cargo informado
-        deve existir e estar ativo.\n    "
+        \   **Permissões:** Autenticado. L2+ lista todos; L1 vê apenas o próprio registro.\n\n
+        \   **Regras:**\n    - O usuário informado deve existir e não possuir perfil
+        de servidor.\n    - O cargo informado deve existir e estar ativo.\n    "
       summary: Criar servidor
       tags:
       - Servidores
@@ -3314,7 +3357,7 @@ paths:
     get:
       operationId: pessoas_institucionais_servidores_retrieve
       description: "\n    Exibe os detalhes de um servidor específico.\n\n    **Permissões:**
-        Apenas administradores.\n    "
+        L2+ ou dono do registro.\n    "
       summary: Detalhar servidor
       parameters:
       - in: path
@@ -3336,7 +3379,7 @@ paths:
     patch:
       operationId: pessoas_institucionais_servidores_partial_update
       description: "\n    Atualiza os dados de um servidor existente.\n\n    **Permissões:**
-        Apenas administradores.\n    "
+        Autenticado. L2+ lista todos; L1 vê apenas o próprio registro.\n    "
       summary: Atualizar servidor
       parameters:
       - in: path
@@ -3370,7 +3413,7 @@ paths:
     post:
       operationId: pessoas_institucionais_servidores_desativar_create
       description: "\n    Desativa o perfil de um servidor.\n\n    **Permissões:**
-        Apenas administradores.\n    "
+        Autenticado. L2+ lista todos; L1 vê apenas o próprio registro.\n    "
       summary: Desativar servidor
       parameters:
       - in: path
@@ -3393,7 +3436,7 @@ paths:
     post:
       operationId: pessoas_institucionais_servidores_reativar_create
       description: "\n    Reativa o perfil de um servidor inativo.\n\n    **Permissões:**
-        Apenas administradores.\n    "
+        Autenticado. L2+ lista todos; L1 vê apenas o próprio registro.\n    "
       summary: Reativar servidor
       parameters:
       - in: path
@@ -3416,8 +3459,8 @@ paths:
     get:
       operationId: pessoas_institucionais_terceirizados_list
       description: "\n    Lista todos os terceirizados cadastrados.\n\n    **Permissões:**
-        Apenas administradores.\n\n    Query params apenas reduzem o conjunto, nunca
-        expandem o acesso.\n    "
+        Autenticado. L2+ lista todos; L1 vê apenas o próprio registro.\n\n    Query
+        params apenas reduzem o conjunto, nunca expandem o acesso.\n    "
       summary: Listar terceirizados
       parameters:
       - in: query
@@ -3481,9 +3524,10 @@ paths:
     post:
       operationId: pessoas_institucionais_terceirizados_create
       description: "\n    Cria um novo perfil de terceirizado para um usuário existente.\n\n
-        \   **Permissões:** Apenas administradores.\n\n    **Regras:**\n    - O usuário
-        informado deve existir e não possuir perfil de terceirizado.\n    - A empresa/instituição
-        informada deve existir e estar ativa.\n    "
+        \   **Permissões:** Autenticado. L2+ lista todos; L1 vê apenas o próprio registro.\n\n
+        \   **Regras:**\n    - O usuário informado deve existir e não possuir perfil
+        de terceirizado.\n    - A empresa/instituição informada deve existir e estar
+        ativa.\n    "
       summary: Criar terceirizado
       tags:
       - Terceirizados
@@ -3512,7 +3556,7 @@ paths:
     get:
       operationId: pessoas_institucionais_terceirizados_retrieve
       description: "\n    Exibe os detalhes de um terceirizado específico.\n\n    **Permissões:**
-        Apenas administradores.\n    "
+        L2+ ou dono do registro.\n    "
       summary: Detalhar terceirizado
       parameters:
       - in: path
@@ -3534,7 +3578,7 @@ paths:
     patch:
       operationId: pessoas_institucionais_terceirizados_partial_update
       description: "\n    Atualiza os dados de um terceirizado existente.\n\n    **Permissões:**
-        Apenas administradores.\n    "
+        Autenticado. L2+ lista todos; L1 vê apenas o próprio registro.\n    "
       summary: Atualizar terceirizado
       parameters:
       - in: path
@@ -3568,7 +3612,7 @@ paths:
     post:
       operationId: pessoas_institucionais_terceirizados_desativar_create
       description: "\n    Desativa o perfil de um terceirizado.\n\n    **Permissões:**
-        Apenas administradores.\n    "
+        Autenticado. L2+ lista todos; L1 vê apenas o próprio registro.\n    "
       summary: Desativar terceirizado
       parameters:
       - in: path
@@ -3591,7 +3635,7 @@ paths:
     post:
       operationId: pessoas_institucionais_terceirizados_reativar_create
       description: "\n    Reativa o perfil de um terceirizado inativo.\n\n    **Permissões:**
-        Apenas administradores.\n    "
+        Autenticado. L2+ lista todos; L1 vê apenas o próprio registro.\n    "
       summary: Reativar terceirizado
       parameters:
       - in: path
@@ -3864,9 +3908,9 @@ components:
     CriarFuncao:
       type: object
       properties:
-        sigla:
+        papel_funcao:
           type: string
-          maxLength: 20
+          maxLength: 255
         descricao:
           type: string
           maxLength: 255
@@ -3878,7 +3922,7 @@ components:
           default: false
       required:
       - descricao
-      - sigla
+      - papel_funcao
     CriarServidor:
       type: object
       properties:
@@ -4162,9 +4206,10 @@ components:
         id:
           type: integer
           readOnly: true
-        sigla:
+        papel_funcao:
           type: string
-          maxLength: 20
+          title: Papel/Função
+          maxLength: 255
         descricao:
           type: string
           title: Descrição
@@ -4184,7 +4229,7 @@ components:
       - created_at
       - descricao
       - id
-      - sigla
+      - papel_funcao
     ImportacaoErroLinha:
       type: object
       properties:
@@ -4670,9 +4715,9 @@ components:
     PatchedAtualizarFuncao:
       type: object
       properties:
-        sigla:
+        papel_funcao:
           type: string
-          maxLength: 20
+          maxLength: 255
         descricao:
           type: string
           maxLength: 255
@@ -4966,7 +5011,7 @@ components:
           type: integer
           nullable: true
           title: Função
-        funcao_sigla:
+        papel_funcao:
           type: string
           readOnly: true
         funcao_descricao:
@@ -4982,8 +5027,8 @@ components:
       required:
       - created_at
       - funcao_descricao
-      - funcao_sigla
       - id
+      - papel_funcao
       - setor
       - usuario
       - usuario_nome
@@ -5284,7 +5329,7 @@ components:
         funcao:
           type: integer
           nullable: true
-        funcao_sigla:
+        funcao_papel_funcao:
           type: string
           nullable: true
         funcao_descricao:
@@ -5299,7 +5344,7 @@ components:
       - created_at
       - funcao
       - funcao_descricao
-      - funcao_sigla
+      - funcao_papel_funcao
       - id
       - responsavel
       - setor

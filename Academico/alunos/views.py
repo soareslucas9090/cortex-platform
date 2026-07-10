@@ -8,7 +8,8 @@ from AppCore.basics.views.basic_views import (
     BasicRetrieveAPIView,
     BasicPatchAPIView,
 )
-from AppCore.basics.mixins.mixins import IsAdminMixin
+from AppCore.basics.mixins.mixins import IsOwnerOrAdminMixin, IsAdminMixin
+from Identidade.usuarios.access import escopar_queryset_cortex
 from .models import Aluno
 from .serializers import AlunoSerializer, CriarAlunoSerializer, AtualizarAlunoSerializer
 
@@ -16,7 +17,7 @@ from .serializers import AlunoSerializer, CriarAlunoSerializer, AtualizarAlunoSe
 @extend_schema(
     tags=['Alunos'],
     summary='Listar alunos',
-    description='Retorna a lista de alunos cadastrados. Apenas administradores.',
+    description='Retorna a lista de alunos cadastrados. Autenticado: L2+ lista todos; L1 vê apenas o próprio.',
     responses={200: AlunoSerializer(many=True)},
     parameters=[
         OpenApiParameter(
@@ -37,14 +38,12 @@ from .serializers import AlunoSerializer, CriarAlunoSerializer, AtualizarAlunoSe
         ),
     ]
 )
-class ListarAlunosView(IsAdminMixin, BasicGetAPIView):
+class ListarAlunosView(IsOwnerOrAdminMixin, BasicGetAPIView):
     serializer_class = AlunoSerializer
     
     def get_queryset(self):
         qs = Aluno.objects.all().select_related('usuario')
-
-        if not self.request.user.is_staff:
-            return qs.filter(usuario__id=self.request.user.id)
+        qs = escopar_queryset_cortex(self.request.user, qs, campo_dono='usuario')
         
         ativo = self.request.query_params.get('ativo')
         if ativo is not None and ativo.lower() in ('true', 'false'):
@@ -92,14 +91,17 @@ class CriarAlunoView(IsAdminMixin, BasicPostAPIView):
 @extend_schema(
     tags=['Alunos'],
     summary='Detalhar aluno',
-    description='Retorna os detalhes de um aluno. Apenas administradores.',
+    description='Retorna os detalhes de um aluno. L2+ ou dono do registro.',
     responses={200: AlunoSerializer},
 )
-class DetalharAlunoView(IsAdminMixin, BasicRetrieveAPIView):
+class DetalharAlunoView(IsOwnerOrAdminMixin, BasicRetrieveAPIView):
     serializer_class = AlunoSerializer
     queryset = Aluno.objects.all()
     lookup_field = 'pk'
     lookup_url_kwarg = 'usuario_id'
+
+    def obter_usuario_dono(self, obj):
+        return obj.usuario
 
 
 @extend_schema(

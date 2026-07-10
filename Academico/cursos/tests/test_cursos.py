@@ -166,9 +166,9 @@ class CursosAPITestCase(APITestCase):
         response = self.client.get(url)
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
-    def test_nao_admin_retorna_403(self):
+    def test_usuario_autenticado_pode_listar_catalogo(self):
         usuario_comum = Usuario.objects.create_user(cpf='00000000002', password='Senha@123', nome='Comum')
         self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {obter_token(usuario_comum)}')
         url = reverse('academico:curso-list')
         response = self.client.get(url)
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)

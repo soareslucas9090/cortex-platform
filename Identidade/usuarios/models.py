@@ -6,6 +6,7 @@ from AppCore.common.util.util import normalizar_cpf
 from AppCore.core.business.business_mixin import ModelBusinessMixin
 from AppCore.core.helpers.helpers_mixin import ModelHelperMixin
 from AppCore.core.users_permissions.user_permission_mixin import UserModelPermissionMixin
+from .choices import PERMISSAO_CORTEX_EDITAR_TUDO, PERMISSAO_CORTEX_LER_TUDO
 from .permissions import UsuarioPermissions
 
 
@@ -93,6 +94,15 @@ class Usuario(ModelHelperMixin, ModelBusinessMixin, UserModelPermissionMixin, Ab
             self.cpf = None
 
         super().save(*args, **kwargs)
+
+    def tem_acesso_elevado(self) -> bool:
+        return self.permissoes.get('cortex') == PERMISSAO_CORTEX_EDITAR_TUDO
+
+    def tem_leitura_ampla(self) -> bool:
+        return self.permissoes.get('cortex') in (
+            PERMISSAO_CORTEX_LER_TUDO,
+            PERMISSAO_CORTEX_EDITAR_TUDO,
+        )
 
     class Meta:
         verbose_name = 'Usuário'

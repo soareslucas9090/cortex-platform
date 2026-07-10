@@ -1,0 +1,39 @@
+# Geração de mensagens de commit (Source Control / sparkle)
+
+Quando o Cursor gerar automaticamente uma mensagem de commit Git neste repositório (botão de brilho no Controle de Código-Fonte):
+
+## Idioma
+
+- Sempre em português brasileiro (pt-BR).
+- Nunca gerar a mensagem em inglês.
+
+## Formato (obrigatório)
+
+- Uma linha no padrão Conventional Commits:
+  `tipo: descrição detalhada`
+- Tipos permitidos: `feat`, `fix`, `refactor`, `docs`, `style`, `test`, `chore`, `perf`, `ci`, `build`, `revert`
+- Sem escopo entre parênteses (ex.: não usar `feat(auth): ...`), salvo se o histórico recente do repo já usar esse padrão de forma dominante.
+- Sem ponto final no título.
+- Sem corpo/lista de arquivos, a menos que a mudança seja grande e um corpo curto de 1–2 linhas ajude a explicar a intenção.
+
+## Conteúdo (intenção, não diff bruto)
+
+- Inferir o objetivo e o contexto do conjunto de alterações staged (o “porquê” / o resultado para o sistema), mesmo com muitos arquivos.
+- Não listar arquivos, paths, nomes de funções ou trechos de código.
+- Não descrever linha a linha o que mudou; sintetizar a intenção unificada.
+- Se houver várias intenções misturadas no stage, priorizar a mudança principal e manter a mensagem direta (não inventar um “e também…” genérico).
+- Mensagens diretas e concisas: título claro, específico e útil no histórico.
+
+## Exemplos bons
+
+- `feat: implementação de permissões granulares nos módulos acadêmicos`
+- `fix: correção do filtro de vínculos ativos por setor`
+- `refactor: unificação das checagens de permissão nas views organizacionais`
+- `chore: organização das rotas do módulo Sigec`
+
+## Exemplos ruins
+
+- Mensagens em inglês
+- `update files` / `ajustes` / `melhorias` (vago demais)
+- Lista de paths ou “altera X, Y e Z”
+- Repetir o diff bruto em vez da intenção

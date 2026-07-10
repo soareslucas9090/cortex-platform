@@ -3,7 +3,7 @@ from drf_spectacular.types import OpenApiTypes
 from rest_framework import status
 from rest_framework.serializers import Serializer
 
-from AppCore.basics.mixins.mixins import IsAdminMixin
+from AppCore.basics.mixins.mixins import IsAdminMixin, IsOwnerOrAdminMixin
 from AppCore.basics.pagination.pagination import PaginacaoCustomizada
 from AppCore.basics.views.basic_views import (
     BasicGetAPIView,
@@ -11,6 +11,7 @@ from AppCore.basics.views.basic_views import (
     BasicRetrieveAPIView,
     BasicPatchAPIView,
 )
+from Identidade.usuarios.access import escopar_queryset_cortex
 
 from .choices import CategoriaServidor
 from .models import Servidor
@@ -32,7 +33,7 @@ class SerializerVazio(Serializer):
     description='''
     Lista todos os servidores cadastrados.
 
-    **Permissões:** Apenas administradores.
+    **Permissões:** Autenticado. L2+ lista todos; L1 vê apenas o próprio registro.
 
     Query params apenas reduzem o conjunto, nunca expandem o acesso.
     ''',
@@ -78,16 +79,14 @@ class SerializerVazio(Serializer):
         status.HTTP_200_OK: ServidorSerializer(many=True),
     },
 )
-class ListarServidoresView(IsAdminMixin, BasicGetAPIView):
+class ListarServidoresView(IsOwnerOrAdminMixin, BasicGetAPIView):
     pagination_class = PaginacaoCustomizada
     serializer_class = ServidorSerializer
     mensagem_sucesso = 'Servidores listados com sucesso.'
 
     def get_queryset(self):
         qs = Servidor.objects.select_related('usuario', 'cargo').all()
-
-        if not self.request.user.is_staff:
-            return qs.filter(usuario__id=self.request.user.id)
+        qs = escopar_queryset_cortex(self.request.user, qs, campo_dono='usuario')
 
         ativo = self.request.query_params.get('ativo')
         if ativo is not None and ativo.lower() in ('true', 'false'):
@@ -131,7 +130,7 @@ class ListarServidoresView(IsAdminMixin, BasicGetAPIView):
     description='''
     Cria um novo perfil de servidor para um usuário existente.
 
-    **Permissões:** Apenas administradores.
+    **Permissões:** Autenticado. L2+ lista todos; L1 vê apenas o próprio registro.
 
     **Regras:**
     - O usuário informado deve existir e não possuir perfil de servidor.
@@ -161,16 +160,19 @@ class CriarServidorView(IsAdminMixin, BasicPostAPIView):
     description='''
     Exibe os detalhes de um servidor específico.
 
-    **Permissões:** Apenas administradores.
+    **Permissões:** L2+ ou dono do registro.
     ''',
     responses={
         status.HTTP_200_OK: ServidorSerializer,
     },
 )
-class DetalharServidorView(IsAdminMixin, BasicRetrieveAPIView):
+class DetalharServidorView(IsOwnerOrAdminMixin, BasicRetrieveAPIView):
     queryset = Servidor.objects.select_related('usuario', 'cargo').all()
     serializer_class = ServidorSerializer
     mensagem_sucesso = 'Servidor detalhado com sucesso.'
+
+    def obter_usuario_dono(self, obj):
+        return obj.usuario
 
 
 @extend_schema(
@@ -179,7 +181,7 @@ class DetalharServidorView(IsAdminMixin, BasicRetrieveAPIView):
     description='''
     Atualiza os dados de um servidor existente.
 
-    **Permissões:** Apenas administradores.
+    **Permissões:** Autenticado. L2+ lista todos; L1 vê apenas o próprio registro.
     ''',
     request=AtualizarServidorSerializer,
     responses={
@@ -208,7 +210,7 @@ class AtualizarServidorView(IsAdminMixin, BasicPatchAPIView):
     description='''
     Desativa o perfil de um servidor.
 
-    **Permissões:** Apenas administradores.
+    **Permissões:** Autenticado. L2+ lista todos; L1 vê apenas o próprio registro.
     ''',
     request=SerializerVazio,
     responses={
@@ -237,7 +239,7 @@ class DesativarServidorView(IsAdminMixin, BasicPostAPIView):
     description='''
     Reativa o perfil de um servidor inativo.
 
-    **Permissões:** Apenas administradores.
+    **Permissões:** Autenticado. L2+ lista todos; L1 vê apenas o próprio registro.
     ''',
     request=SerializerVazio,
     responses={

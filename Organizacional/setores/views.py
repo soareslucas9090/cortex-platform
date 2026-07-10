@@ -5,7 +5,7 @@ from rest_framework import status
 from drf_spectacular.utils import extend_schema, OpenApiParameter
 from drf_spectacular.types import OpenApiTypes
 
-from AppCore.basics.mixins.mixins import IsAdminMixin
+from AppCore.basics.mixins.mixins import IsAdminMixin, IsAuthenticatedMixin
 from AppCore.basics.pagination.pagination import PaginacaoCustomizada
 from AppCore.basics.views.basic_views import (
     BasicGetAPIView,
@@ -32,7 +32,7 @@ logger = logging.getLogger(__name__)
     description='''
     Retorna a lista paginada de setores da instituição.
 
-    **Permissões:** Apenas administradores.
+    **Permissões:** Qualquer usuário autenticado (catálogo de referência). Escrita apenas L3 (EDITAR_TUDO).
 
     **Query params apenas reduzem o conjunto — nunca expandem o acesso.**
     ''',
@@ -60,7 +60,7 @@ logger = logging.getLogger(__name__)
         status.HTTP_403_FORBIDDEN: {'description': 'Sem permissão de administrador.'},
     },
 )
-class ListarSetoresView(IsAdminMixin, BasicGetAPIView):
+class ListarSetoresView(IsAuthenticatedMixin, BasicGetAPIView):
     """GET /cortex/organizacional/setores/"""
     pagination_class = PaginacaoCustomizada
     serializer_class = SetorSerializer
@@ -113,7 +113,7 @@ class CriarSetorView(IsAdminMixin, BasicPostAPIView):
 @extend_schema(
     tags=['Setores'],
     summary='Detalhe do setor',
-    description='Retorna os dados de um setor específico.\n\n**Permissões:** Apenas administradores.',
+    description='Retorna os dados de um setor específico.\n\n**Permissões:** Qualquer usuário autenticado (catálogo de referência).',
     responses={
         status.HTTP_200_OK: SetorSerializer,
         status.HTTP_401_UNAUTHORIZED: {'description': 'Não autenticado.'},
@@ -121,7 +121,7 @@ class CriarSetorView(IsAdminMixin, BasicPostAPIView):
         status.HTTP_404_NOT_FOUND: {'description': 'Setor não encontrado.'},
     },
 )
-class DetalheSetorView(IsAdminMixin, BasicRetrieveAPIView):
+class DetalheSetorView(IsAuthenticatedMixin, BasicRetrieveAPIView):
     """GET /cortex/organizacional/setores/<pk>/"""
     queryset = Setor.objects.all()
     serializer_class = SetorSerializer

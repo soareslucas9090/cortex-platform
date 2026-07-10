@@ -122,3 +122,38 @@ class AlunoCursoAPITestCase(APITestCase):
         response = self.client.get(url)
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+
+class DetalharAlunoCursoPermissaoTest(APITestCase):
+
+    def setUp(self):
+        from PessoasInstitucionais.cargos.models import Cargo
+        from PessoasInstitucionais.servidores.models import Servidor
+
+        self.usuario_dono = criar_usuario('22222222222', 'Aluno Dono')
+        self.aluno = criar_aluno(self.usuario_dono)
+        self.outro_usuario = criar_usuario('33333333333', 'Outro Aluno')
+        criar_aluno(self.outro_usuario)
+        self.curso = criar_curso('Engenharia', 'ENG001')
+        self.vinculo = AlunoCurso.objects.create(aluno=self.aluno, curso=self.curso)
+
+        cargo = Cargo.objects.create(nome='Cargo Servidor')
+        self.servidor_user = criar_usuario('44444444444', 'Servidor')
+        Servidor.objects.create(usuario=self.servidor_user, cargo=cargo, categoria=1, ativo=True)
+
+        self.url = f'/cortex/academico/aluno-cursos/{self.vinculo.pk}/'
+
+    def test_l1_dono_pode_detalhar_proprio_vinculo(self):
+        self.client.force_authenticate(user=self.usuario_dono)
+        response = self.client.get(self.url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    def test_l1_outro_usuario_nao_pode_detalhar(self):
+        self.client.force_authenticate(user=self.outro_usuario)
+        response = self.client.get(self.url)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_l2_servidor_pode_detalhar_vinculo_de_outro(self):
+        self.client.force_authenticate(user=self.servidor_user)
+        response = self.client.get(self.url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)

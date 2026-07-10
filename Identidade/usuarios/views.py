@@ -10,7 +10,7 @@ from rest_framework.response import Response
 from drf_spectacular.utils import extend_schema, OpenApiParameter
 from drf_spectacular.types import OpenApiTypes
 
-from AppCore.basics.mixins.mixins import IsAdminMixin, IsOwnerOrAdminMixin
+from AppCore.basics.mixins.mixins import IsAdminMixin, IsOwnerOrAdminMixin, IsAuthenticatedMixin
 from AppCore.basics.pagination.pagination import PaginacaoCustomizada
 from AppCore.basics.views.basic_views import (
     BasicGetAPIView,
@@ -31,8 +31,44 @@ from .serializers import (
     ImportacaoUsuariosResponseSerializer,
     StatusImportacaoLoteSerializer,
 )
+from .access import escopar_queryset_cortex
+from .documentacao import PermissaoDocumentacao
 
 logger = logging.getLogger(__name__)
+
+
+@extend_schema(
+    tags=['Identidade'],
+    summary='Documentação de permissões por módulo',
+    description='''
+    Retorna a documentação narrativa e estruturada das permissões de cada módulo registrado.
+
+    Hoje inclui apenas o módulo **cortex** (L1–L3). Módulos futuros (ex.: Sigec) serão
+    adicionados automaticamente quando `documentacao_<modulo>()` for implementado.
+
+    **Permissões:** Qualquer usuário autenticado.
+
+    **Manutenção:** toda alteração de regra de permissão deve atualizar o método
+    `documentacao_<modulo>()` correspondente em `Identidade.usuarios.documentacao`.
+    ''',
+    responses={
+        status.HTTP_200_OK: {'description': 'Documentação obtida com sucesso.'},
+        status.HTTP_401_UNAUTHORIZED: {'description': 'Não autenticado.'},
+    },
+)
+class DocumentarPermissoesView(IsAuthenticatedMixin, BasicGetAPIView):
+    """GET /cortex/identidade/permissoes/documentacao/"""
+    serializer_class = SerializerVazio
+    mensagem_sucesso = 'Documentação de permissões obtida com sucesso.'
+
+    def get(self, request, *args, **kwargs):
+        return Response({
+            'status': 'success',
+            'mensagem': self.mensagem_sucesso,
+            'dados': {
+                'modulos': PermissaoDocumentacao.compilar_documentacao(),
+            },
+        }, status=status.HTTP_200_OK)
 
 
 @extend_schema(
@@ -41,7 +77,7 @@ logger = logging.getLogger(__name__)
     description='''
     Retorna a lista paginada de usuários do sistema.
 
-    **Permissões:** Apenas administradores.
+    **Permissões:** Autenticado. L2+ (LER_TUDO) lista todos; L1 (EDITAR_EU) vê apenas o próprio registro.
 
     **Query params:**
     - `ativo` (bool, opcional): filtra por status — `true` (ativos) ou `false` (inativos).
@@ -85,10 +121,10 @@ logger = logging.getLogger(__name__)
     responses={
         status.HTTP_200_OK: UsuarioSerializer(many=True),
         status.HTTP_401_UNAUTHORIZED: {'description': 'Não autenticado.'},
-        status.HTTP_403_FORBIDDEN: {'description': 'Sem permissão de administrador.'},
+        status.HTTP_403_FORBIDDEN: {'description': 'Sem permissão.'},
     },
 )
-class ListarUsuariosView(IsAdminMixin, BasicGetAPIView):
+class ListarUsuariosView(IsOwnerOrAdminMixin, BasicGetAPIView):
     """GET /cortex/identidade/usuarios/"""
     pagination_class = PaginacaoCustomizada
     serializer_class = UsuarioSerializer
@@ -96,9 +132,7 @@ class ListarUsuariosView(IsAdminMixin, BasicGetAPIView):
 
     def get_queryset(self):
         qs = Usuario.objects.all()
-
-        if not self.request.user.is_staff:
-            return qs.filter(id=self.request.user.id)
+        qs = escopar_queryset_cortex(self.request.user, qs, campo_dono='id')
 
         ativo = self.request.query_params.get('ativo')
         if ativo is not None and ativo.lower() in ('true', 'false'):
@@ -151,7 +185,7 @@ class ListarUsuariosView(IsAdminMixin, BasicGetAPIView):
         status.HTTP_201_CREATED: UsuarioSerializer,
         status.HTTP_400_BAD_REQUEST: {'description': 'Dados inválidos ou CPF já cadastrado.'},
         status.HTTP_401_UNAUTHORIZED: {'description': 'Não autenticado.'},
-        status.HTTP_403_FORBIDDEN: {'description': 'Sem permissão de administrador.'},
+        status.HTTP_403_FORBIDDEN: {'description': 'Sem permissão.'},
     },
 )
 class CriarUsuarioView(IsAdminMixin, BasicPostAPIView):
@@ -255,7 +289,7 @@ class AtualizarUsuarioView(IsOwnerOrAdminMixin, BasicPatchAPIView):
         status.HTTP_200_OK: {'description': 'Usuário desativado com sucesso.'},
         status.HTTP_400_BAD_REQUEST: {'description': 'Usuário já está inativo.'},
         status.HTTP_401_UNAUTHORIZED: {'description': 'Não autenticado.'},
-        status.HTTP_403_FORBIDDEN: {'description': 'Sem permissão de administrador.'},
+        status.HTTP_403_FORBIDDEN: {'description': 'Sem permissão.'},
         status.HTTP_404_NOT_FOUND: {'description': 'Usuário não encontrado.'},
     },
 )
@@ -282,7 +316,7 @@ class DesativarUsuarioView(IsAdminMixin, BasicPostAPIView):
         status.HTTP_200_OK: {'description': 'Usuário reativado com sucesso.'},
         status.HTTP_400_BAD_REQUEST: {'description': 'Usuário já está ativo.'},
         status.HTTP_401_UNAUTHORIZED: {'description': 'Não autenticado.'},
-        status.HTTP_403_FORBIDDEN: {'description': 'Sem permissão de administrador.'},
+        status.HTTP_403_FORBIDDEN: {'description': 'Sem permissão.'},
         status.HTTP_404_NOT_FOUND: {'description': 'Usuário não encontrado.'},
     },
 )
@@ -307,7 +341,7 @@ class ReativarUsuarioView(IsAdminMixin, BasicPostAPIView):
     responses={
         status.HTTP_200_OK: {'description': 'Arquivo retornado com sucesso.'},
         status.HTTP_401_UNAUTHORIZED: {'description': 'Não autenticado.'},
-        status.HTTP_403_FORBIDDEN: {'description': 'Sem permissão de administrador.'},
+        status.HTTP_403_FORBIDDEN: {'description': 'Sem permissão.'},
         status.HTTP_404_NOT_FOUND: {'description': 'Arquivo modelo não encontrado.'},
     },
 )
@@ -386,7 +420,7 @@ class BaixarModeloImportacaoUsuariosView(IsAdminMixin, BasicGetAPIView):
         status.HTTP_200_OK: ImportacaoUsuariosPreviewResponseSerializer,
         status.HTTP_400_BAD_REQUEST: {'description': 'Arquivo inválido ou estrutura inconsistente.'},
         status.HTTP_401_UNAUTHORIZED: {'description': 'Não autenticado.'},
-        status.HTTP_403_FORBIDDEN: {'description': 'Sem permissão de administrador.'},
+        status.HTTP_403_FORBIDDEN: {'description': 'Sem permissão.'},
     },
 )
 class PreVisualizarImportacaoUsuariosView(IsAdminMixin, BasicPostAPIView):
@@ -447,7 +481,7 @@ from rest_framework import parsers
         status.HTTP_202_ACCEPTED: {'description': 'Importação enviada para fila de processamento.'},
         status.HTTP_400_BAD_REQUEST: {'description': 'Já existe uma importação em andamento ou arquivo inválido.'},
         status.HTTP_401_UNAUTHORIZED: {'description': 'Não autenticado.'},
-        status.HTTP_403_FORBIDDEN: {'description': 'Sem permissão de administrador.'},
+        status.HTTP_403_FORBIDDEN: {'description': 'Sem permissão.'},
     },
 )
 class ImportarUsuariosLoteView(IsAdminMixin, BasicPostAPIView):
@@ -493,7 +527,7 @@ class ImportarUsuariosLoteView(IsAdminMixin, BasicPostAPIView):
     responses={
         status.HTTP_200_OK: StatusImportacaoLoteSerializer,
         status.HTTP_401_UNAUTHORIZED: {'description': 'Não autenticado.'},
-        status.HTTP_403_FORBIDDEN: {'description': 'Sem permissão de administrador.'},
+        status.HTTP_403_FORBIDDEN: {'description': 'Sem permissão.'},
         status.HTTP_404_NOT_FOUND: {'description': 'Nenhuma importação encontrada.'},
     },
 )
@@ -528,7 +562,7 @@ class StatusImportacaoLoteView(IsAdminMixin, BasicGetAPIView):
         status.HTTP_200_OK: {'description': 'Importação cancelada com sucesso.'},
         status.HTTP_400_BAD_REQUEST: {'description': 'Não há importação em andamento.'},
         status.HTTP_401_UNAUTHORIZED: {'description': 'Não autenticado.'},
-        status.HTTP_403_FORBIDDEN: {'description': 'Sem permissão de administrador.'},
+        status.HTTP_403_FORBIDDEN: {'description': 'Sem permissão.'},
     },
 )
 class CancelarImportacaoView(IsAdminMixin, BasicPostAPIView):
@@ -588,7 +622,7 @@ class CancelarImportacaoView(IsAdminMixin, BasicPostAPIView):
     responses={
         status.HTTP_200_OK: StatusImportacaoLoteSerializer(many=True),
         status.HTTP_401_UNAUTHORIZED: {'description': 'Não autenticado.'},
-        status.HTTP_403_FORBIDDEN: {'description': 'Sem permissão de administrador.'},
+        status.HTTP_403_FORBIDDEN: {'description': 'Sem permissão.'},
     },
 )
 class HistoricoImportacaoLoteView(IsAdminMixin, BasicGetAPIView):

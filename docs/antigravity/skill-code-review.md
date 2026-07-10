@@ -182,9 +182,13 @@ Quando a view herda de `GenericAPIView` diretamente (sem usar `BasicPostAPIView`
 
 #### Permissões
 
-- [ ] Toda view usa um mixin de permissão: `AllowAnyMixin`, `IsOwnerOrAdminMixin` ou `IsAdminMixin`.
+- [ ] Toda view usa um mixin de permissão: `AllowAnyMixin`, `IsAuthenticatedMixin`, `IsOwnerOrAdminMixin` ou `IsAdminMixin`.
 - [ ] Endpoints públicos usam `AllowAnyMixin` explicitamente.
-- [ ] Views com `IsOwnerOrAdminMixin` implementam `obter_usuario_dono(self, obj)`.
+- [ ] Catálogos de leitura usam `IsAuthenticatedMixin`.
+- [ ] Views com `IsOwnerOrAdminMixin` implementam `obter_usuario_dono(self, obj)` quando há dono.
+- [ ] Listagens com escopo Cortex usam `escopar_queryset_cortex` antes de query params.
+- [ ] `verificar_acesso_usuario`: L2 (`tem_leitura_ampla`) só em métodos SAFE; escrita exige dono ou L3.
+- [ ] Alterações de regra atualizam `documentacao_<modulo>()` em `Identidade.usuarios.documentacao`.
 
 ---
 

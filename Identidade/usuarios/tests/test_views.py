@@ -55,10 +55,12 @@ class ListarUsuariosViewTest(APITestCase):
         self.assertEqual(resposta.data['status'], 'success')
         self.assertIn('dados', resposta.data)
 
-    def test_usuario_comum_nao_pode_listar(self):
+    def test_usuario_comum_ve_apenas_proprio(self):
         self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token_comum}')
         resposta = self.client.get(self.url)
-        self.assertEqual(resposta.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(resposta.status_code, status.HTTP_200_OK)
+        cpfs = [u['cpf'] for u in resposta.data['dados']]
+        self.assertEqual(cpfs, [self.usuario_comum.cpf])
 
     def test_nao_autenticado_retorna_401(self):
         resposta = self.client.get(self.url)
@@ -934,3 +936,102 @@ class UsuarioPermissoesTest(APITestCase):
         data = resposta.data['dados'] if 'dados' in resposta.data else resposta.data
         self.assertIn('permissoes', data)
         self.assertEqual(data['permissoes'], {'cortex': 'EDITAR_EU'})
+
+
+class CortexPermissoesEscopoViewTest(APITestCase):
+
+    def setUp(self):
+        from Academico.alunos.models import Aluno
+        from PessoasInstitucionais.cargos.models import Cargo
+        from PessoasInstitucionais.empresas_instituicoes.models import EmpresaInstituicao
+        from PessoasInstitucionais.servidores.models import Servidor
+
+        self.cargo = Cargo.objects.create(nome='Cargo Teste')
+        self.empresa = EmpresaInstituicao.objects.create(nome='Empresa Teste')
+
+        self.aluno_user = criar_usuario('88888888881', nome='Aluno Escopo')
+        Aluno.objects.create(usuario=self.aluno_user, ativo=True)
+
+        self.servidor_user = criar_usuario('88888888882', nome='Servidor Escopo')
+        Servidor.objects.create(
+            usuario=self.servidor_user, cargo=self.cargo, categoria=1, ativo=True,
+        )
+
+        self.staff_user = criar_usuario('88888888883', nome='Staff Escopo', is_staff=True)
+
+        self.token_aluno = obter_tokens(self.aluno_user)
+        self.token_servidor = obter_tokens(self.servidor_user)
+        self.token_staff = obter_tokens(self.staff_user)
+
+    def test_l1_lista_apenas_proprio_usuario(self):
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token_aluno}')
+        resposta = self.client.get(reverse('identidade:usuario-list'))
+        self.assertEqual(resposta.status_code, status.HTTP_200_OK)
+        cpfs = [u['cpf'] for u in resposta.data['dados']]
+        self.assertEqual(cpfs, [self.aluno_user.cpf])
+
+    def test_l2_lista_todos_usuarios(self):
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token_servidor}')
+        resposta = self.client.get(reverse('identidade:usuario-list'))
+        self.assertEqual(resposta.status_code, status.HTTP_200_OK)
+        self.assertGreater(len(resposta.data['dados']), 1)
+
+    def test_l1_nao_lista_empresas(self):
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token_aluno}')
+        resposta = self.client.get(reverse('pessoas-institucionais:empresa-list'))
+        self.assertEqual(resposta.status_code, status.HTTP_200_OK)
+        self.assertEqual(resposta.data['dados'], [])
+
+    def test_l2_lista_empresas(self):
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token_servidor}')
+        resposta = self.client.get(reverse('pessoas-institucionais:empresa-list'))
+        self.assertEqual(resposta.status_code, status.HTTP_200_OK)
+        self.assertGreaterEqual(len(resposta.data['dados']), 1)
+
+    def test_l1_pode_listar_catalogo_setores(self):
+        from Organizacional.setores.models import Setor
+
+        Setor.objects.create(sigla='TST', nome='Setor Teste')
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token_aluno}')
+        resposta = self.client.get(reverse('organizacional:setores'))
+        self.assertEqual(resposta.status_code, status.HTTP_200_OK)
+        self.assertGreaterEqual(len(resposta.data['dados']), 1)
+
+    def test_l2_nao_pode_criar_setor(self):
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token_servidor}')
+        resposta = self.client.post(
+            reverse('organizacional:setores'),
+            {'sigla': 'NOV', 'nome': 'Novo Setor'},
+        )
+        self.assertEqual(resposta.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_l3_pode_criar_setor(self):
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token_staff}')
+        resposta = self.client.post(
+            reverse('organizacional:setores'),
+            {'sigla': 'STF', 'nome': 'Setor Staff'},
+        )
+        self.assertEqual(resposta.status_code, status.HTTP_201_CREATED)
+
+
+class DocumentarPermissoesViewTest(APITestCase):
+
+    def setUp(self):
+        self.usuario = criar_usuario('99999999999', nome='Docs Teste')
+        self.token = obter_tokens(self.usuario)
+        self.url = reverse('identidade:permissoes-documentacao')
+
+    def test_autenticado_obtem_documentacao(self):
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token}')
+        resposta = self.client.get(self.url)
+        self.assertEqual(resposta.status_code, status.HTTP_200_OK)
+        modulos = resposta.data['dados']['modulos']
+        self.assertEqual(len(modulos), 1)
+        self.assertEqual(modulos[0]['chave'], 'cortex')
+        self.assertEqual(len(modulos[0]['niveis']), 3)
+        self.assertGreaterEqual(len(modulos[0]['exemplos']), 1)
+        self.assertIn('texto', modulos[0])
+
+    def test_nao_autenticado_retorna_401(self):
+        resposta = self.client.get(self.url)
+        self.assertEqual(resposta.status_code, status.HTTP_401_UNAUTHORIZED)

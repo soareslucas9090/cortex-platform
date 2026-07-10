@@ -1,0 +1,62 @@
+# ADR-002 — Permissões Cortex por Nível (L1–L3)
+
+- **Status:** Aceito
+- **Data:** 2026-07-10
+
+## Contexto
+
+O Cortex expõe permissões compiladas por módulo (`user.permissoes`) para o frontend e precisa aplicar regras coerentes nas views da API. O módulo `cortex` define três níveis hierárquicos derivados da identidade do usuário.
+
+## Decisão
+
+### Níveis Cortex
+
+| Nível | Constante | Papel |
+|-------|-----------|--------|
+| 1 | `EDITAR_EU` | Empregado — lê/edita apenas recursos próprios |
+| 2 | `LER_TUDO` | Gerente — leitura ampla; escrita apenas do próprio (onde aplicável) |
+| 3 | `EDITAR_TUDO` | Master — leitura e escrita totais |
+
+Derivação em `Identidade.usuarios.permissions.UsuarioPermissions.permissoes_cortex()`:
+
+- `EDITAR_TUDO`: `is_staff`, `is_admin` ou `is_superuser`
+- `LER_TUDO`: servidor ou terceirizado ativo
+- `EDITAR_EU`: demais casos (ex.: aluno)
+
+### Compilação e hooks
+
+- `UserModelPermission.compilar_permissoes()` descobre métodos `permissoes_<modulo>()` e monta o dict.
+- `Usuario` expõe `tem_acesso_elevado()` (L3) e `tem_leitura_ampla()` (L2+) para o AppCore sem acoplamento a Identidade.
+- Helpers em `Identidade.usuarios.access`: `nivel_cortex`, `tem_nivel_cortex_minimo`, `escopar_queryset_cortex`.
+
+### Mixins nas views
+
+| Mixin | Uso |
+|-------|-----|
+| `IsAuthenticatedMixin` | Catálogos de referência (leitura para qualquer autenticado) |
+| `IsOwnerOrAdminMixin` | Recursos com dono; escopo no `get_queryset` via `escopar_queryset_cortex` |
+| `IsAdminMixin` | Escrita administrativa (L3 via `tem_acesso_elevado`) |
+
+### Matriz de leitura (módulo cortex)
+
+- **Catálogos** (setores, funções, cargos, cursos): autenticado → lista completa
+- **Pessoas / vínculos pessoais**: L2+ → todos; L1 → só `request.user`
+- **Empresas**: L2+ → todas; L1 → lista vazia
+
+Query params **apenas estreitam** resultados após o escopo de permissão.
+
+### Extensibilidade (ex.: Sigec)
+
+Novos produtos adicionam `permissoes_sigec()` em `UsuarioPermissions` e apps Django dentro de um módulo de domínio na raiz (`Sigec/`), nunca em pasta genérica `APPs/`. Subdomínios = apps internos do módulo (`Sigec/contratos/`, etc.).
+
+### Documentação viva da API
+
+- Endpoint: `GET /cortex/identidade/permissoes/documentacao/` (autenticado).
+- Implementação: `PermissaoDocumentacao.compilar_documentacao()` em `Identidade.usuarios.documentacao`, espelhando `permissoes_*` com métodos `documentacao_<modulo>()`.
+- **Regra de manutenção:** toda alteração de regra de permissão deve atualizar o `documentacao_<modulo>()` correspondente no mesmo PR/commit.
+
+## Consequências
+
+- AppCore permanece genérico (duck-typing nos hooks do user).
+- Documentação e testes cobrem escopo L1/L2/L3 por tipo de recurso.
+- Swagger deve refletir permissões reais, não apenas “administradores”.
