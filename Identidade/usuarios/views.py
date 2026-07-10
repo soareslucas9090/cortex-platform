@@ -2,7 +2,7 @@ import logging, os
 from pathlib import Path
 
 from django.db import transaction
-from django.http import FileResponse, Http404
+from django.http import FileResponse, Http404, StreamingHttpResponse
 from rest_framework import status
 from rest_framework.parsers import MultiPartParser
 from rest_framework.response import Response
@@ -10,7 +10,7 @@ from rest_framework.response import Response
 from drf_spectacular.utils import extend_schema, OpenApiParameter
 from drf_spectacular.types import OpenApiTypes
 
-from AppCore.basics.mixins.mixins import IsAdminMixin, IsOwnerOrAdminMixin, IsAuthenticatedMixin
+from AppCore.basics.mixins.mixins import AllowAnyMixin, IsAdminMixin, IsOwnerOrAdminMixin, IsAuthenticatedMixin
 from AppCore.basics.pagination.pagination import PaginacaoCustomizada
 from AppCore.basics.views.basic_views import (
     BasicGetAPIView,
@@ -207,7 +207,7 @@ class CriarUsuarioView(IsAdminMixin, BasicPostAPIView):
         )
         return {
             'mensagem': self.mensagem_sucesso,
-            'dados': UsuarioSerializer(usuario).data,
+            'dados': UsuarioSerializer(usuario, context={'request': request}).data,
             'status_code': status.HTTP_201_CREATED,
         }
 
@@ -275,7 +275,7 @@ class AtualizarUsuarioView(IsOwnerOrAdminMixin, BasicPatchAPIView):
         self.object.business.atualizar_dados(serializer_data)
         return {
             'mensagem': self.mensagem_sucesso,
-            'dados': UsuarioSerializer(self.object).data,
+            'dados': UsuarioSerializer(self.object, context={'request': request}).data,
         }
 
 
@@ -308,21 +308,75 @@ class AtualizarFotoPrimariaView(IsAdminMixin, BasicPatchAPIView):
         self.object.business.atualizar_foto_primaria(serializer_data.get('foto'))
         return {
             'mensagem': self.mensagem_sucesso,
-            'dados': UsuarioSerializer(self.object).data,
+            'dados': UsuarioSerializer(self.object, context={'request': request}).data,
         }
+
+
+@extend_schema(
+    tags=['Identidade'],
+    summary='Obter foto secundária do usuário',
+    description='''
+    Retorna o arquivo de imagem da foto secundária via proxy da API.
+
+    **Permissões:** Público (não requer autenticação).
+
+    O bucket S3 permanece privado; este endpoint faz o stream da imagem para o navegador.
+    ''',
+    responses={
+        status.HTTP_200_OK: {
+            'description': 'Imagem retornada com sucesso.',
+            'content': {
+                'image/jpeg': {},
+                'image/png': {},
+                'image/webp': {},
+            },
+        },
+        status.HTTP_404_NOT_FOUND: {'description': 'Usuário ou foto não encontrados.'},
+    },
+)
+class ObterFotoSecundariaView(AllowAnyMixin, BasicGetAPIView):
+    """GET /cortex/identidade/usuarios/{pk}/foto-secundaria/"""
+    queryset = Usuario.objects.all()
+    serializer_class = SerializerVazio
+
+    def get(self, request, *args, **kwargs):
+        from botocore.exceptions import ClientError
+
+        from Identidade.usuarios.fotos.s3_helper import (
+            iterar_foto_secundaria_do_s3,
+            normalizar_s3_key,
+        )
+
+        usuario = self.get_object()
+        s3_key = normalizar_s3_key(usuario.foto_secundaria)
+        if not s3_key:
+            raise Http404('Foto secundária não encontrada.')
+
+        try:
+            stream, content_type = iterar_foto_secundaria_do_s3(s3_key)
+        except (ClientError, ValueError):
+            raise Http404('Foto secundária não encontrada.')
+        except Exception as exc:
+            logger.error('Erro ao obter foto secundária do S3 (%s): %s', s3_key, exc)
+            raise Http404('Erro ao recuperar a foto secundária.')
+
+        response = StreamingHttpResponse(stream, content_type=content_type)
+        response['Cache-Control'] = 'public, max-age=86400'
+        return response
 
 
 @extend_schema(
     tags=['Identidade'],
     summary='Enviar foto secundária do usuário',
     description='''
-    Faz upload da foto secundária para o S3 e persiste a URL pública no usuário.
+    Faz upload da foto secundária para o S3 e persiste a referência no usuário.
 
     **Permissões:** O próprio usuário ou administradores.
 
     **Limites do arquivo:** JPEG, PNG ou WebP, com tamanho máximo de 3 MB.
 
-    Para exibição no frontend, prefira `foto_secundaria` quando preenchida; caso contrário, use `foto`.
+    A resposta inclui `foto_secundaria` com a URL pública do proxy da API para exibição no frontend.
+    Prefira `foto_secundaria` quando preenchida; caso contrário, use `foto`.
     ''',
     request={
         'multipart/form-data': {
@@ -360,7 +414,7 @@ class AtualizarFotoSecundariaView(IsOwnerOrAdminMixin, BasicPostAPIView):
         usuario.business.atualizar_foto_secundaria(serializer_data['foto'])
         return {
             'mensagem': self.mensagem_sucesso,
-            'dados': UsuarioSerializer(usuario).data,
+            'dados': UsuarioSerializer(usuario, context={'request': request}).data,
         }
 
 

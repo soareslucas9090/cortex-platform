@@ -5,6 +5,7 @@ from AppCore.basics.views.basic_views import roteador_por_metodo
 from .views import (
     AtualizarUsuarioView,
     AtualizarFotoPrimariaView,
+    ObterFotoSecundariaView,
     AtualizarFotoSecundariaView,
     RemoverFotoSecundariaView,
     CriarUsuarioView,
@@ -32,7 +33,11 @@ urlpatterns = [
     path('usuarios/<int:pk>/foto-primaria/', AtualizarFotoPrimariaView.as_view(), name='usuario-foto-primaria'),
     path(
         'usuarios/<int:pk>/foto-secundaria/',
-        roteador_por_metodo(POST=AtualizarFotoSecundariaView, DELETE=RemoverFotoSecundariaView),
+        roteador_por_metodo(
+            GET=ObterFotoSecundariaView,
+            POST=AtualizarFotoSecundariaView,
+            DELETE=RemoverFotoSecundariaView,
+        ),
         name='usuario-foto-secundaria',
     ),
     path('usuarios/<int:pk>/desativar/', DesativarUsuarioView.as_view(), name='usuario-desativar'),

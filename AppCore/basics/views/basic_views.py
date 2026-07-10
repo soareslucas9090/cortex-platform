@@ -252,6 +252,15 @@ def roteador_por_metodo(**metodo_para_view):
     metodos_permitidos = list(metodo_para_view_upper.keys())
 
     class RoteadorMultiploView(GenericAPIView):
+        def get_permissions(self):
+            method = self.request.method.upper()
+            if method == 'HEAD' and 'GET' in metodo_para_view_upper:
+                method = 'GET'
+            view_class = metodo_para_view_upper.get(method)
+            if view_class is not None:
+                return view_class().get_permissions()
+            return super().get_permissions()
+
         def get_serializer_class(self):
             method = self.request.method.upper()
             if method == 'HEAD' and 'GET' in metodo_para_view_upper:

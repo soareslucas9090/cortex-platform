@@ -43,6 +43,16 @@ class UsuarioSerializer(serializers.ModelSerializer):
     servidor = serializers.SerializerMethodField()
     terceirizado = serializers.SerializerMethodField()
     vinculos = serializers.SerializerMethodField()
+    foto_secundaria = serializers.SerializerMethodField()
+
+    def get_foto_secundaria(self, obj) -> str | None:
+        from Identidade.usuarios.fotos.s3_helper import montar_url_proxy_foto_secundaria
+
+        return montar_url_proxy_foto_secundaria(
+            obj.pk,
+            obj.foto_secundaria,
+            self.context.get('request'),
+        )
 
     def get_tem_perfil_aluno(self, obj) -> bool:
         """

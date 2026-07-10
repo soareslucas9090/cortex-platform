@@ -1123,11 +1123,15 @@ class AtualizarFotoSecundariaViewTest(APITestCase):
         self.token_outro = obter_tokens(self.outro)
         self.url = reverse('identidade:usuario-foto-secundaria', kwargs={'pk': self.usuario.pk})
         self.url_primaria = 'https://sistema-externo.example/fotos/usuario.jpg'
-        self.url_secundaria = 'https://bucket.example/Cortex/usuarios/fotos/2/abc.jpg'
+        self.s3_key = f'Cortex/usuarios/fotos/{self.usuario.pk}/abc.jpg'
         self.arquivo_imagem = criar_arquivo_imagem_teste()
 
+    def _url_proxy_esperada(self):
+        path = reverse('identidade:usuario-foto-secundaria', kwargs={'pk': self.usuario.pk})
+        return f'http://testserver{path}?v=abc'
+
     def _mock_upload(self, usuario_id, arquivo):
-        return self.url_secundaria
+        return self.s3_key
 
     @patch('Identidade.usuarios.fotos.s3_helper.upload_foto_secundaria')
     def test_dono_envia_foto_secundaria(self, mock_upload):
@@ -1135,9 +1139,9 @@ class AtualizarFotoSecundariaViewTest(APITestCase):
         self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token_usuario}')
         resposta = self.client.post(self.url, {'foto': self.arquivo_imagem}, format='multipart')
         self.assertEqual(resposta.status_code, status.HTTP_200_OK)
-        self.assertEqual(resposta.data['dados']['foto_secundaria'], self.url_secundaria)
+        self.assertEqual(resposta.data['dados']['foto_secundaria'], self._url_proxy_esperada())
         self.usuario.refresh_from_db()
-        self.assertEqual(self.usuario.foto_secundaria, self.url_secundaria)
+        self.assertEqual(self.usuario.foto_secundaria, self.s3_key)
         mock_upload.assert_called_once()
 
     @patch('Identidade.usuarios.fotos.s3_helper.upload_foto_secundaria')
@@ -1146,44 +1150,60 @@ class AtualizarFotoSecundariaViewTest(APITestCase):
         self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token_admin}')
         resposta = self.client.post(self.url, {'foto': self.arquivo_imagem}, format='multipart')
         self.assertEqual(resposta.status_code, status.HTTP_200_OK)
-        self.assertEqual(resposta.data['dados']['foto_secundaria'], self.url_secundaria)
+        self.assertEqual(resposta.data['dados']['foto_secundaria'], self._url_proxy_esperada())
 
     def test_outro_usuario_nao_pode_enviar_foto_secundaria(self):
         self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token_outro}')
         resposta = self.client.post(self.url, {'foto': self.arquivo_imagem}, format='multipart')
         self.assertEqual(resposta.status_code, status.HTTP_403_FORBIDDEN)
 
-    def test_rejeita_foto_secundaria_acima_de_3mb(self):
-        from Identidade.usuarios.fotos.s3_helper import TAMANHO_MAXIMO_FOTO_SECUNDARIA_BYTES
-
+    @patch('Identidade.usuarios.rules.TAMANHO_MAXIMO_FOTO_SECUNDARIA_BYTES', 10)
+    @patch('Identidade.usuarios.fotos.s3_helper.upload_foto_secundaria')
+    def test_rejeita_foto_secundaria_acima_de_3mb(self, mock_upload):
         arquivo_grande = criar_arquivo_imagem_teste(nome='foto_grande.png')
-        arquivo_grande.size = TAMANHO_MAXIMO_FOTO_SECUNDARIA_BYTES + 1
         self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token_usuario}')
         resposta = self.client.post(self.url, {'foto': arquivo_grande}, format='multipart')
         self.assertEqual(resposta.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn('3 MB', str(resposta.data))
+        mock_upload.assert_not_called()
 
     @patch('Identidade.usuarios.fotos.s3_helper.remover_foto_secundaria_do_s3')
     def test_dono_remove_foto_secundaria(self, mock_remover):
-        self.usuario.foto_secundaria = self.url_secundaria
+        self.usuario.foto_secundaria = self.s3_key
         self.usuario.save()
         self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token_usuario}')
         resposta = self.client.delete(self.url)
         self.assertEqual(resposta.status_code, status.HTTP_204_NO_CONTENT)
         self.usuario.refresh_from_db()
         self.assertIsNone(self.usuario.foto_secundaria)
-        mock_remover.assert_called_once_with(self.url_secundaria)
+        mock_remover.assert_called_once_with(self.s3_key)
 
     def test_get_detalhe_retorna_ambas_fotos(self):
         self.usuario.foto = self.url_primaria
-        self.usuario.foto_secundaria = self.url_secundaria
+        self.usuario.foto_secundaria = self.s3_key
         self.usuario.save()
         self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token_usuario}')
         url_detalhe = reverse('identidade:usuario-detail', kwargs={'pk': self.usuario.pk})
         resposta = self.client.get(url_detalhe)
         self.assertEqual(resposta.status_code, status.HTTP_200_OK)
         self.assertEqual(resposta.data['dados']['foto'], self.url_primaria)
-        self.assertEqual(resposta.data['dados']['foto_secundaria'], self.url_secundaria)
+        self.assertEqual(resposta.data['dados']['foto_secundaria'], self._url_proxy_esperada())
+
+    @patch('Identidade.usuarios.fotos.s3_helper.iterar_foto_secundaria_do_s3')
+    def test_get_proxy_foto_secundaria_sem_autenticacao(self, mock_iterar):
+        self.usuario.foto_secundaria = self.s3_key
+        self.usuario.save()
+        mock_iterar.return_value = (iter([b'fake-image']), 'image/png')
+
+        resposta = self.client.get(self.url)
+        self.assertEqual(resposta.status_code, status.HTTP_200_OK)
+        self.assertEqual(resposta['Content-Type'], 'image/png')
+        self.assertEqual(b''.join(resposta.streaming_content), b'fake-image')
+        mock_iterar.assert_called_once_with(self.s3_key)
+
+    def test_get_proxy_foto_secundaria_retorna_404_sem_foto(self):
+        resposta = self.client.get(self.url)
+        self.assertEqual(resposta.status_code, status.HTTP_404_NOT_FOUND)
 
     def test_patch_usuario_nao_atualiza_campo_foto(self):
         self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token_usuario}')

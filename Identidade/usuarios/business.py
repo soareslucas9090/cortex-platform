@@ -100,7 +100,7 @@ class UsuarioBusiness(ModelInstanceBusiness):
             raise SystemErrorException('Não foi possível atualizar a foto primária.')
 
     def atualizar_foto_secundaria(self, arquivo):
-        """Envia a foto secundária para o S3 e persiste a URL pública."""
+        """Envia a foto secundária para o S3 e persiste a chave do objeto."""
         from Identidade.usuarios.fotos.s3_helper import (
             remover_foto_secundaria_do_s3,
             upload_foto_secundaria,
@@ -109,13 +109,13 @@ class UsuarioBusiness(ModelInstanceBusiness):
         regras = UsuarioRules(object_instance=self.object_instance)
         regras.validar_arquivo_foto(arquivo)
 
-        url_antiga = self.object_instance.foto_secundaria
+        chave_antiga = self.object_instance.foto_secundaria
         try:
-            nova_url = upload_foto_secundaria(self.object_instance.pk, arquivo)
-            self.object_instance.foto_secundaria = nova_url
+            nova_chave = upload_foto_secundaria(self.object_instance.pk, arquivo)
+            self.object_instance.foto_secundaria = nova_chave
             self.object_instance.save(update_fields=['foto_secundaria'])
-            if url_antiga and url_antiga != nova_url:
-                remover_foto_secundaria_do_s3(url_antiga)
+            if chave_antiga and chave_antiga != nova_chave:
+                remover_foto_secundaria_do_s3(chave_antiga)
         except ValidationException:
             raise
         except ValueError as e:
@@ -128,12 +128,12 @@ class UsuarioBusiness(ModelInstanceBusiness):
         """Remove a foto secundária do usuário e tenta apagar o objeto no S3."""
         from Identidade.usuarios.fotos.s3_helper import remover_foto_secundaria_do_s3
 
-        url_antiga = self.object_instance.foto_secundaria
+        chave_antiga = self.object_instance.foto_secundaria
         try:
             self.object_instance.foto_secundaria = None
             self.object_instance.save(update_fields=['foto_secundaria'])
-            if url_antiga:
-                remover_foto_secundaria_do_s3(url_antiga)
+            if chave_antiga:
+                remover_foto_secundaria_do_s3(chave_antiga)
         except Exception as e:
             logger.exception('Erro ao remover foto secundária do usuário: %s', e)
             raise SystemErrorException('Não foi possível remover a foto secundária.')
