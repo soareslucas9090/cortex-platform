@@ -113,7 +113,7 @@ class UsuarioSerializer(serializers.ModelSerializer):
         model = Usuario
         fields = [
             'id', 'cpf', 'nome', 'email', 'ativo', 'is_admin',
-            'foto', 'deficiencia', 'tem_perfil_aluno', 'created_at',
+            'foto', 'foto_secundaria', 'deficiencia', 'tem_perfil_aluno', 'created_at',
             'servidor', 'terceirizado', 'vinculos',
         ]
 
@@ -190,7 +190,6 @@ class CriarUsuarioSerializer(serializers.Serializer):
 class AtualizarUsuarioSerializer(serializers.Serializer):
     nome = serializers.CharField(max_length=255, required=False)
     email = serializers.EmailField(required=False, allow_null=True)
-    foto = serializers.ImageField(required=False, allow_null=True)
     deficiencia = serializers.CharField(
         required=False,
         allow_blank=True,
@@ -210,6 +209,21 @@ class AtualizarUsuarioSerializer(serializers.Serializer):
         from Identidade.usuarios.utils import normalizar_deficiencia
 
         return normalizar_deficiencia(value)
+
+
+class AtualizarFotoPrimariaSerializer(serializers.Serializer):
+    foto = serializers.URLField(
+        required=False,
+        allow_null=True,
+        allow_blank=True,
+        help_text='URL pública da foto primária vinda de sistemas externos.',
+    )
+
+
+class AtualizarFotoSecundariaSerializer(serializers.Serializer):
+    foto = serializers.ImageField(
+        help_text='Arquivo de imagem (JPEG, PNG ou WebP, até 5 MB).',
+    )
 
 
 class ArquivoImportacaoUsuariosSerializer(serializers.Serializer):

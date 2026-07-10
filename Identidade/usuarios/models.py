@@ -70,11 +70,19 @@ class Usuario(ModelHelperMixin, ModelBusinessMixin, UserModelPermissionMixin, Ab
         null=True,
         blank=True,
     )
-    foto = models.ImageField(
-        'Foto',
-        upload_to='usuarios/fotos/',
+    foto = models.URLField(
+        'Foto primária',
+        max_length=500,
         null=True,
         blank=True,
+        help_text='URL pública da foto vinda de sistemas externos.',
+    )
+    foto_secundaria = models.URLField(
+        'Foto secundária',
+        max_length=500,
+        null=True,
+        blank=True,
+        help_text='URL pública da foto enviada pelo próprio usuário no S3.',
     )
     deficiencia = models.CharField(
         'Deficiência / necessidade especial',
