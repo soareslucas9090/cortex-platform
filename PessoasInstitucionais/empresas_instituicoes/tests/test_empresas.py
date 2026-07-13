@@ -5,7 +5,6 @@ from rest_framework_simplejwt.tokens import RefreshToken
 
 from Identidade.usuarios.models import Usuario
 from PessoasInstitucionais.empresas_instituicoes.models import EmpresaInstituicao
-from PessoasInstitucionais.empresas_instituicoes.business import EmpresaInstituicaoBusiness
 from AppCore.core.exceptions.exceptions import BusinessRuleException
 
 
@@ -32,37 +31,32 @@ class TestEmpresaInstituicaoBusiness(APITestCase):
         )
 
     def test_criar_empresa(self):
-        business = EmpresaInstituicaoBusiness()
-        empresa = business.criar_empresa({'nome': 'Nova Empresa', 'cnpj': '22222222222222'})
+        empresa = EmpresaInstituicao().business.criar_empresa({'nome': 'Nova Empresa', 'cnpj': '22222222222222'})
         self.assertTrue(EmpresaInstituicao.objects.filter(nome='Nova Empresa').exists())
         self.assertEqual(empresa.nome, 'Nova Empresa')
         self.assertEqual(empresa.cnpj, '22222222222222')
 
     def test_criar_empresa_nome_duplicado(self):
-        business = EmpresaInstituicaoBusiness()
         with self.assertRaises(BusinessRuleException) as context:
-            business.criar_empresa({'nome': 'Empresa Teste'})
+            EmpresaInstituicao().business.criar_empresa({'nome': 'Empresa Teste'})
         self.assertIn('Já existe uma empresa/instituição cadastrada com esse nome.', str(context.exception))
 
     def test_criar_empresa_cnpj_duplicado(self):
-        business = EmpresaInstituicaoBusiness()
         with self.assertRaises(BusinessRuleException) as context:
-            business.criar_empresa({'nome': 'Outra Empresa', 'cnpj': '11111111111111'})
+            EmpresaInstituicao().business.criar_empresa({'nome': 'Outra Empresa', 'cnpj': '11111111111111'})
         self.assertIn('Já existe uma empresa/instituição cadastrada com esse CNPJ.', str(context.exception))
 
     def test_atualizar_dados(self):
-        business = EmpresaInstituicaoBusiness(object_instance=self.empresa)
-        business.atualizar_dados({'nome': 'Empresa Atualizada'})
+        self.empresa.business.atualizar_dados({'nome': 'Empresa Atualizada'})
         self.empresa.refresh_from_db()
         self.assertEqual(self.empresa.nome, 'Empresa Atualizada')
 
     def test_desativar_reativar(self):
-        business = EmpresaInstituicaoBusiness(object_instance=self.empresa)
-        business.desativar()
+        self.empresa.business.desativar()
         self.empresa.refresh_from_db()
         self.assertFalse(self.empresa.ativo)
 
-        business.reativar()
+        self.empresa.business.reativar()
         self.empresa.refresh_from_db()
         self.assertTrue(self.empresa.ativo)
 

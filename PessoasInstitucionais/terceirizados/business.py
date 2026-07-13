@@ -7,8 +7,6 @@ from AppCore.core.exceptions.exceptions import (
     ValidationException,
 )
 
-from .rules import TerceirizadoRules
-
 logger = logging.getLogger(__name__)
 
 
@@ -30,19 +28,14 @@ class TerceirizadoBusiness(ModelInstanceBusiness):
         from PessoasInstitucionais.empresas_instituicoes.models import EmpresaInstituicao
         from .models import Terceirizado
 
-        regras = TerceirizadoRules()
-
-        # Validar que o usuário existe
         Usuario = apps.get_model(settings.AUTH_USER_MODEL)
         try:
             usuario = Usuario.objects.get(pk=usuario_pk)
         except Usuario.DoesNotExist:
             raise NotFoundException('Usuário não encontrado.')
 
-        # Validar que o usuário ainda não tem perfil de terceirizado
-        regras.usuario_sem_perfil_terceirizado(usuario_pk)
+        self.object_instance.rules.usuario_sem_perfil_terceirizado(usuario_pk)
 
-        # Validar e buscar a empresa/instituição
         empresa_id = empresa_pk or kwargs.pop('empresa_instituicao_pk', None)
         if not empresa_id:
             raise ValidationException('O campo empresa/instituição é obrigatório.')
@@ -52,9 +45,8 @@ class TerceirizadoBusiness(ModelInstanceBusiness):
         except EmpresaInstituicao.DoesNotExist:
             raise NotFoundException('Empresa/instituição não encontrada.')
 
-        regras.empresa_ativa(empresa)
+        self.object_instance.rules.empresa_ativa(empresa)
 
-        # Validar e buscar o cargo se informado
         cargo = None
         if cargo_pk is not None:
             from PessoasInstitucionais.cargos.models import Cargo
@@ -62,7 +54,7 @@ class TerceirizadoBusiness(ModelInstanceBusiness):
                 cargo = Cargo.objects.get(pk=cargo_pk)
             except Cargo.DoesNotExist:
                 raise NotFoundException('Cargo não encontrado.')
-            regras.cargo_ativo(cargo)
+            self.object_instance.rules.cargo_ativo(cargo)
 
         try:
             return Terceirizado.objects.create(
@@ -79,8 +71,6 @@ class TerceirizadoBusiness(ModelInstanceBusiness):
 
     def atualizar_dados(self, dados: dict):
         """Atualiza campos do terceirizado. Revalida empresa e cargo se estiverem nos dados."""
-        regras = TerceirizadoRules(object_instance=self.object_instance)
-
         if 'empresa_pk' in dados or 'empresa_instituicao_pk' in dados:
             from PessoasInstitucionais.empresas_instituicoes.models import EmpresaInstituicao
             empresa_pk = dados.pop('empresa_pk', None) or dados.pop('empresa_instituicao_pk', None)
@@ -88,7 +78,7 @@ class TerceirizadoBusiness(ModelInstanceBusiness):
                 empresa = EmpresaInstituicao.objects.get(pk=empresa_pk)
             except EmpresaInstituicao.DoesNotExist:
                 raise NotFoundException('Empresa/instituição não encontrada.')
-            regras.empresa_ativa(empresa)
+            self.object_instance.rules.empresa_ativa(empresa)
             self.object_instance.empresa_instituicao = empresa
 
         if 'cargo_pk' in dados:
@@ -100,7 +90,7 @@ class TerceirizadoBusiness(ModelInstanceBusiness):
                     cargo = Cargo.objects.get(pk=cargo_pk)
                 except Cargo.DoesNotExist:
                     raise NotFoundException('Cargo não encontrado.')
-                regras.cargo_ativo(cargo)
+                self.object_instance.rules.cargo_ativo(cargo)
             self.object_instance.cargo = cargo
 
         try:
@@ -113,8 +103,7 @@ class TerceirizadoBusiness(ModelInstanceBusiness):
 
     def desativar(self):
         """Desativa o perfil de terceirizado."""
-        regras = TerceirizadoRules(object_instance=self.object_instance)
-        regras.pode_desativar()
+        self.object_instance.rules.pode_desativar()
         try:
             self.object_instance.ativo = False
             self.object_instance.save(update_fields=['ativo'])
@@ -124,8 +113,7 @@ class TerceirizadoBusiness(ModelInstanceBusiness):
 
     def reativar(self):
         """Reativa o perfil de terceirizado."""
-        regras = TerceirizadoRules(object_instance=self.object_instance)
-        regras.pode_reativar()
+        self.object_instance.rules.pode_reativar()
         try:
             self.object_instance.ativo = True
             self.object_instance.save(update_fields=['ativo'])

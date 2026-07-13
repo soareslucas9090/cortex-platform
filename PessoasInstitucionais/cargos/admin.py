@@ -2,7 +2,6 @@ from django.contrib import admin
 
 from AppCore.basics.admin import AtivoModelAdmin, run_business
 
-from .business import CargoBusiness
 from .models import Cargo
 
 
@@ -15,7 +14,7 @@ class CargoAdmin(AtivoModelAdmin):
     def save_model(self, request, obj, form, change):
         if not change:
             created = run_business(
-                lambda: CargoBusiness().criar_cargo(
+                lambda: Cargo().business.criar_cargo(
                     nome=obj.nome,
                     ativo=obj.ativo,
                 )

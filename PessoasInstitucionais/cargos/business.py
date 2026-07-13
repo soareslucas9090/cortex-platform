@@ -3,8 +3,6 @@ import logging
 from AppCore.core.business.business import ModelInstanceBusiness
 from AppCore.core.exceptions.exceptions import SystemErrorException
 
-from .rules import CargoRules
-
 logger = logging.getLogger(__name__)
 
 
@@ -13,8 +11,7 @@ class CargoBusiness(ModelInstanceBusiness):
     def criar_cargo(self, nome: str, **kwargs):
         """Cria um novo cargo validando unicidade do nome."""
         from .models import Cargo
-        regras = CargoRules()
-        regras.nome_unico(nome)
+        self.object_instance.rules.nome_unico(nome)
         try:
             return Cargo.objects.create(nome=nome, **kwargs)
         except Exception as e:
@@ -24,8 +21,10 @@ class CargoBusiness(ModelInstanceBusiness):
     def atualizar_dados(self, dados: dict):
         """Atualiza campos do cargo. Revalida nome se estiver nos dados."""
         if 'nome' in dados:
-            regras = CargoRules(object_instance=self.object_instance)
-            regras.nome_unico(dados['nome'], excluir_id=self.object_instance.pk)
+            self.object_instance.rules.nome_unico(
+                dados['nome'],
+                excluir_id=self.object_instance.pk,
+            )
         try:
             for attr, value in dados.items():
                 setattr(self.object_instance, attr, value)
@@ -36,8 +35,7 @@ class CargoBusiness(ModelInstanceBusiness):
 
     def desativar(self):
         """Desativa o cargo."""
-        regras = CargoRules(object_instance=self.object_instance)
-        regras.pode_desativar()
+        self.object_instance.rules.pode_desativar()
         try:
             self.object_instance.ativo = False
             self.object_instance.save(update_fields=['ativo'])
@@ -47,8 +45,7 @@ class CargoBusiness(ModelInstanceBusiness):
 
     def reativar(self):
         """Reativa o cargo."""
-        regras = CargoRules(object_instance=self.object_instance)
-        regras.pode_reativar()
+        self.object_instance.rules.pode_reativar()
         try:
             self.object_instance.ativo = True
             self.object_instance.save(update_fields=['ativo'])

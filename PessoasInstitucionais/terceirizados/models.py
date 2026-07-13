@@ -4,14 +4,17 @@ from django.db import models
 from AppCore.basics.models.models import BasicModel
 from AppCore.core.business.business_mixin import ModelBusinessMixin
 from AppCore.core.helpers.helpers_mixin import ModelHelperMixin
+from AppCore.core.rules.rules_mixin import ModelRulesMixin
 
 
-class Terceirizado(ModelHelperMixin, ModelBusinessMixin, BasicModel):
+class Terceirizado(ModelHelperMixin, ModelBusinessMixin, ModelRulesMixin, BasicModel):
     from .business import TerceirizadoBusiness
     from .helpers import TerceirizadoHelpers
+    from .rules import TerceirizadoRules
 
     business_class = TerceirizadoBusiness
     helper_class = TerceirizadoHelpers
+    rules_class = TerceirizadoRules
 
     usuario = models.OneToOneField(
         settings.AUTH_USER_MODEL,

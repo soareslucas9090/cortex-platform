@@ -3,17 +3,20 @@ from django.db import models
 from AppCore.basics.models.models import BasicModel
 from AppCore.core.business.business_mixin import ModelBusinessMixin
 from AppCore.core.helpers.helpers_mixin import ModelHelperMixin
+from AppCore.core.rules.rules_mixin import ModelRulesMixin
 from Identidade.usuarios.models import Usuario
 
 from .choices import FormaIngresso, SituacaoAluno
 
 
-class Aluno(ModelHelperMixin, ModelBusinessMixin, BasicModel):
+class Aluno(ModelHelperMixin, ModelBusinessMixin, ModelRulesMixin, BasicModel):
     from .business import AlunoBusiness
     from .helpers import AlunoHelpers
+    from .rules import AlunoRules
 
     business_class = AlunoBusiness
     helper_class = AlunoHelpers
+    rules_class = AlunoRules
 
     usuario = models.OneToOneField(
         Usuario,

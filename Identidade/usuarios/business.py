@@ -6,8 +6,6 @@ from AppCore.core.business.business import ModelInstanceBusiness
 from AppCore.core.exceptions.exceptions import ValidationException, SystemErrorException, BusinessRuleException
 from AppCore.common.util.util import normalizar_cpf, normalizar_cep
 
-from .rules import UsuarioRules
-from .helpers import UsuarioHelpers
 from Identidade.usuarios.importacao.importacao_parser import ImportacaoUsuariosParser
 from Identidade.usuarios.importacao.importacao_dtos import (
     ErroImportacaoDTO,
@@ -38,13 +36,11 @@ class UsuarioBusiness(ModelInstanceBusiness):
             from Identidade.matriculas.models import Matricula
             from Identidade.matriculas.choices import SituacaoMatricula
             
-            regras = UsuarioRules()
-            
             cpf_normalizado = None
             if cpf:
                 cpf_normalizado = normalizar_cpf(cpf)
-                regras.cpf_formato_valido(cpf_normalizado)
-                regras.cpf_unico(cpf_normalizado)
+                self.object_instance.rules.cpf_formato_valido(cpf_normalizado)
+                self.object_instance.rules.cpf_unico(cpf_normalizado)
             else:
                 if not matricula:
                     raise ValidationException('A matrícula é obrigatória caso o CPF não seja informado.')
@@ -90,8 +86,7 @@ class UsuarioBusiness(ModelInstanceBusiness):
 
     def atualizar_foto_primaria(self, url: str | None):
         """Atualiza a URL da foto primária do usuário."""
-        regras = UsuarioRules(object_instance=self.object_instance)
-        regras.validar_url_foto(url)
+        self.object_instance.rules.validar_url_foto(url)
         try:
             self.object_instance.foto = url or None
             self.object_instance.save(update_fields=['foto'])
@@ -106,8 +101,7 @@ class UsuarioBusiness(ModelInstanceBusiness):
             upload_foto_secundaria,
         )
 
-        regras = UsuarioRules(object_instance=self.object_instance)
-        regras.validar_arquivo_foto(arquivo)
+        self.object_instance.rules.validar_arquivo_foto(arquivo)
 
         chave_antiga = self.object_instance.foto_secundaria
         try:
@@ -141,9 +135,8 @@ class UsuarioBusiness(ModelInstanceBusiness):
     def atualizar_cpf(self, novo_cpf: str):
         """Atualiza o CPF do usuário com validação de formato e unicidade."""
         cpf_normalizado = normalizar_cpf(novo_cpf)
-        regras = UsuarioRules(object_instance=self.object_instance)
-        regras.cpf_formato_valido(cpf_normalizado)
-        regras.cpf_unico(cpf_normalizado, excluir_id=self.object_instance.pk)
+        self.object_instance.rules.cpf_formato_valido(cpf_normalizado)
+        self.object_instance.rules.cpf_unico(cpf_normalizado, excluir_id=self.object_instance.pk)
         try:
             self.object_instance.cpf = cpf_normalizado
             self.object_instance.save(update_fields=['cpf'])
@@ -153,8 +146,7 @@ class UsuarioBusiness(ModelInstanceBusiness):
 
     def desativar(self):
         """Desativa o usuário."""
-        regras = UsuarioRules(object_instance=self.object_instance)
-        regras.pode_desativar()
+        self.object_instance.rules.pode_desativar()
         try:
             self.object_instance.ativo = False
             self.object_instance.save(update_fields=['ativo'])
@@ -164,8 +156,7 @@ class UsuarioBusiness(ModelInstanceBusiness):
 
     def reativar(self):
         """Reativa o usuário."""
-        regras = UsuarioRules(object_instance=self.object_instance)
-        regras.pode_reativar()
+        self.object_instance.rules.pode_reativar()
         try:
             self.object_instance.ativo = True
             self.object_instance.save(update_fields=['ativo'])
@@ -216,9 +207,7 @@ class UsuarioBusiness(ModelInstanceBusiness):
         """Adiciona uma nova matrícula ao usuário após validar unicidade."""
         from Identidade.matriculas.models import Matricula
         from Identidade.matriculas.choices import SituacaoMatricula
-        from Identidade.matriculas.rules import MatriculaRules
-        regras = MatriculaRules(object_instance=self.object_instance)
-        regras.matricula_nao_duplicada(numero_matricula)
+        self.object_instance.rules.matricula_nao_duplicada(numero_matricula)
         try:
             return Matricula.objects.create(
                 usuario=self.object_instance,
@@ -304,7 +293,7 @@ class UsuarioBusiness(ModelInstanceBusiness):
                 cpf_digitos = ''.join(c for c in cpf_str if c.isdigit())
                 if len(cpf_digitos) >= 3:
                     l.cpf = cpf_digitos.zfill(11)
-                cpfs_planilha.append(UsuarioHelpers().normalizar_cpf(l.cpf))
+                cpfs_planilha.append(self.object_instance.helper.normalizar_cpf(l.cpf))
                 
         matriculas_planilha = [m for m in mapa_matriculas.values() if m]
         
@@ -353,8 +342,8 @@ class UsuarioBusiness(ModelInstanceBusiness):
         for linha in estrutura.contatos:
             _incrementar_progresso()
             try:
-                usuario = UsuarioHelpers().obter_usuario_por_id_planilha(linha.usuario_id_planilha, mapa_usuarios)
-                UsuarioRules().usuario_referenciado_existe(usuario, 'contato')
+                usuario = self.object_instance.helper.obter_usuario_por_id_planilha(linha.usuario_id_planilha, mapa_usuarios)
+                self.object_instance.rules.usuario_referenciado_existe(usuario, 'contato')
 
                 contato = contatos_existentes.get(usuario.id)
                 if contato:
@@ -395,8 +384,8 @@ class UsuarioBusiness(ModelInstanceBusiness):
         for linha in estrutura.enderecos:
             _incrementar_progresso()
             try:
-                usuario = UsuarioHelpers().obter_usuario_por_id_planilha(linha.usuario_id_planilha, mapa_usuarios)
-                UsuarioRules().usuario_referenciado_existe(usuario, 'endereço')
+                usuario = self.object_instance.helper.obter_usuario_por_id_planilha(linha.usuario_id_planilha, mapa_usuarios)
+                self.object_instance.rules.usuario_referenciado_existe(usuario, 'endereço')
 
                 endereco = enderecos_existentes.get(usuario.id)
                 cep_normalizado = normalizar_cep(linha.cep)
@@ -449,8 +438,8 @@ class UsuarioBusiness(ModelInstanceBusiness):
         for linha in estrutura.matriculas:
             _incrementar_progresso()
             try:
-                usuario = UsuarioHelpers().obter_usuario_por_id_planilha(linha.usuario_id_planilha, mapa_usuarios)
-                UsuarioRules().usuario_referenciado_existe(usuario, 'matrícula')
+                usuario = self.object_instance.helper.obter_usuario_por_id_planilha(linha.usuario_id_planilha, mapa_usuarios)
+                self.object_instance.rules.usuario_referenciado_existe(usuario, 'matrícula')
 
                 if (usuario.id, linha.matricula) not in matriculas_existentes:
                     nova_matricula = Matricula(usuario=usuario, matricula=linha.matricula)
@@ -470,8 +459,8 @@ class UsuarioBusiness(ModelInstanceBusiness):
             _incrementar_progresso()
             try:
                 with transaction.atomic():
-                    usuario = UsuarioHelpers().obter_usuario_por_id_planilha(linha.usuario_id_planilha, mapa_usuarios)
-                    UsuarioRules().usuario_referenciado_existe(usuario, 'aluno')
+                    usuario = self.object_instance.helper.obter_usuario_por_id_planilha(linha.usuario_id_planilha, mapa_usuarios)
+                    self.object_instance.rules.usuario_referenciado_existe(usuario, 'aluno')
                     aluno, criado = self._garantir_aluno(usuario, linha)
                     mapa_alunos[linha.aluno_id_planilha] = aluno
                     if criado:
@@ -496,11 +485,11 @@ class UsuarioBusiness(ModelInstanceBusiness):
             _incrementar_progresso()
             try:
                 with transaction.atomic():
-                    usuario = UsuarioHelpers().obter_usuario_por_id_planilha(linha.usuario_id_planilha, mapa_usuarios)
-                    UsuarioRules().usuario_referenciado_existe(usuario, 'servidor')
+                    usuario = self.object_instance.helper.obter_usuario_por_id_planilha(linha.usuario_id_planilha, mapa_usuarios)
+                    self.object_instance.rules.usuario_referenciado_existe(usuario, 'servidor')
 
                     cargo = mapa_cargos_db.get(linha.cargo_id_planilha)
-                    UsuarioRules().referencia_seed_existe(cargo, f'cargo_id={linha.cargo_id_planilha}')
+                    self.object_instance.rules.referencia_seed_existe(cargo, f'cargo_id={linha.cargo_id_planilha}')
 
                     criado = self._garantir_servidor(usuario, cargo, linha)
                     if criado:
@@ -525,11 +514,11 @@ class UsuarioBusiness(ModelInstanceBusiness):
             _incrementar_progresso()
             try:
                 with transaction.atomic():
-                    usuario = UsuarioHelpers().obter_usuario_por_id_planilha(linha.usuario_id_planilha, mapa_usuarios)
-                    UsuarioRules().usuario_referenciado_existe(usuario, 'terceirizado')
+                    usuario = self.object_instance.helper.obter_usuario_por_id_planilha(linha.usuario_id_planilha, mapa_usuarios)
+                    self.object_instance.rules.usuario_referenciado_existe(usuario, 'terceirizado')
 
                     empresa = mapa_empresas_db.get(linha.empresa_instituicao_id_planilha)
-                    UsuarioRules().referencia_seed_existe(
+                    self.object_instance.rules.referencia_seed_existe(
                         empresa,
                         f'empresa_instituicao_id={linha.empresa_instituicao_id_planilha}'
                     )
@@ -560,14 +549,14 @@ class UsuarioBusiness(ModelInstanceBusiness):
             _incrementar_progresso()
             try:
                 with transaction.atomic():
-                    usuario = UsuarioHelpers().obter_usuario_por_id_planilha(linha.usuario_id_planilha, mapa_usuarios)
-                    UsuarioRules().usuario_referenciado_existe(usuario, 'lotação')
+                    usuario = self.object_instance.helper.obter_usuario_por_id_planilha(linha.usuario_id_planilha, mapa_usuarios)
+                    self.object_instance.rules.usuario_referenciado_existe(usuario, 'lotação')
 
                     setor = mapa_setores_db.get(linha.setor_id_planilha)
-                    UsuarioRules().referencia_seed_existe(setor, f'setor_id={linha.setor_id_planilha}')
+                    self.object_instance.rules.referencia_seed_existe(setor, f'setor_id={linha.setor_id_planilha}')
 
                     funcao = mapa_funcoes_db.get(linha.funcao_id_planilha)
-                    UsuarioRules().referencia_seed_existe(funcao, f'funcao_id={linha.funcao_id_planilha}')
+                    self.object_instance.rules.referencia_seed_existe(funcao, f'funcao_id={linha.funcao_id_planilha}')
 
                     criado = self._garantir_lotacao(usuario, setor, funcao, linha)
                     if criado:
@@ -592,11 +581,11 @@ class UsuarioBusiness(ModelInstanceBusiness):
             _incrementar_progresso()
             try:
                 with transaction.atomic():
-                    aluno = UsuarioHelpers().obter_aluno_por_id_planilha(linha.aluno_id_planilha, mapa_alunos)
-                    UsuarioRules().aluno_referenciado_existe(aluno)
+                    aluno = self.object_instance.helper.obter_aluno_por_id_planilha(linha.aluno_id_planilha, mapa_alunos)
+                    self.object_instance.rules.aluno_referenciado_existe(aluno)
 
                     curso = mapa_cursos_db.get(linha.curso_id_planilha)
-                    UsuarioRules().referencia_seed_existe(curso, f'curso_id={linha.curso_id_planilha}')
+                    self.object_instance.rules.referencia_seed_existe(curso, f'curso_id={linha.curso_id_planilha}')
 
                     criado = self._garantir_vinculo_aluno_curso(aluno, curso, linha)
                     if criado:
@@ -633,7 +622,7 @@ class UsuarioBusiness(ModelInstanceBusiness):
         from .models import Usuario
         from Identidade.matriculas.models import Matricula
 
-        UsuarioRules().usuario_id_planilha_obrigatorio(linha.usuario_id_planilha)
+        self.object_instance.rules.usuario_id_planilha_obrigatorio(linha.usuario_id_planilha)
         
         cpf_normalizado = None
         matricula_planilha = mapa_matriculas.get(linha.usuario_id_planilha)
@@ -643,8 +632,8 @@ class UsuarioBusiness(ModelInstanceBusiness):
             if len(cpf_digitos) >= 3:
                 linha.cpf = cpf_digitos.zfill(11)
 
-            UsuarioRules().cpf_valido_importacao(linha.cpf)
-            cpf_normalizado = UsuarioHelpers().normalizar_cpf(linha.cpf)
+            self.object_instance.rules.cpf_valido_importacao(linha.cpf)
+            cpf_normalizado = self.object_instance.helper.normalizar_cpf(linha.cpf)
             usuario = usuarios_por_cpf.get(cpf_normalizado)
         elif matricula_planilha:
             cpf_normalizado = None

@@ -2,7 +2,6 @@ from django.contrib import admin
 
 from AppCore.basics.admin import AtivoModelAdmin, run_business
 
-from .business import TerceirizadoBusiness
 from .models import Terceirizado
 
 
@@ -38,7 +37,7 @@ class TerceirizadoAdmin(AtivoModelAdmin):
     def save_model(self, request, obj, form, change):
         if not change:
             created = run_business(
-                lambda: TerceirizadoBusiness().criar_terceirizado(
+                lambda: Terceirizado().business.criar_terceirizado(
                     usuario_pk=obj.usuario_id,
                     empresa_pk=obj.empresa_instituicao_id,
                     cargo_pk=obj.cargo_id,

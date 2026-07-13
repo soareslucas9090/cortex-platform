@@ -14,7 +14,6 @@ from AppCore.basics.views.basic_views import (
     BasicPostAPIView,
 )
 
-from .business import SetorVinculoBusiness
 from .models import SetorVinculo
 from .serializers import (
     AtualizarVinculoFuncaoSerializer,
@@ -122,7 +121,7 @@ class CriarVinculoView(IsAdminMixin, BasicPostAPIView):
     mensagem_sucesso = 'Vínculo criado com sucesso.'
 
     def do_action_post(self, serializer_data, request, *args, **kwargs):
-        vinculo = SetorVinculoBusiness().criar_vinculo_no_setor(
+        vinculo = SetorVinculo().business.criar_vinculo_no_setor(
             usuario=serializer_data['usuario'],
             setor_pk=self.kwargs['setor_pk'],
             funcao=serializer_data['funcao'],

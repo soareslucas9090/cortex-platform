@@ -2,7 +2,6 @@ from django.contrib import admin
 
 from AppCore.basics.admin import AtivoModelAdmin, run_business
 
-from .business import EmpresaInstituicaoBusiness
 from .models import EmpresaInstituicao
 
 
@@ -15,7 +14,7 @@ class EmpresaInstituicaoAdmin(AtivoModelAdmin):
     def save_model(self, request, obj, form, change):
         if not change:
             created = run_business(
-                lambda: EmpresaInstituicaoBusiness().criar_empresa(
+                lambda: EmpresaInstituicao().business.criar_empresa(
                     {
                         'nome': obj.nome,
                         'cnpj': obj.cnpj,

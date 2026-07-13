@@ -470,8 +470,6 @@ class ImportacaoUsuariosBusinessPreviewTests(TestCase):
 
     @patch('Identidade.usuarios.business.ImportacaoUsuariosParser.parse')
     def test_deve_retornar_preview_com_sucesso(self, mock_parse):
-        from Identidade.usuarios.business import UsuarioBusiness
-
         estrutura = ArquivoImportacaoUsuariosDTO(
             usuarios=[
                 LinhaUsuarioImportacaoDTO(
@@ -484,8 +482,7 @@ class ImportacaoUsuariosBusinessPreviewTests(TestCase):
         )
         mock_parse.return_value = estrutura
 
-        business = UsuarioBusiness()
-        resultado = business.pre_visualizar_importacao(arquivo=BytesIO(b'test'))
+        resultado = Usuario().business.pre_visualizar_importacao(arquivo=BytesIO(b'test'))
 
         self.assertTrue(resultado.sucesso)
         self.assertEqual(resultado.resumo.total_abas_processadas, 1)
@@ -494,13 +491,10 @@ class ImportacaoUsuariosBusinessPreviewTests(TestCase):
 
     @patch('Identidade.usuarios.business.ImportacaoUsuariosParser.parse')
     def test_preview_deve_retornar_erro_quando_nao_ha_usuarios(self, mock_parse):
-        from Identidade.usuarios.business import UsuarioBusiness
-
         estrutura = ArquivoImportacaoUsuariosDTO()
         mock_parse.return_value = estrutura
 
-        business = UsuarioBusiness()
-        resultado = business.pre_visualizar_importacao(arquivo=BytesIO(b'test'))
+        resultado = Usuario().business.pre_visualizar_importacao(arquivo=BytesIO(b'test'))
 
         self.assertFalse(resultado.sucesso)
         self.assertEqual(len(resultado.erros), 1)
@@ -514,8 +508,6 @@ class ImportacaoUsuariosBusinessImportacaoTests(TestCase):
 
     @patch('Identidade.usuarios.business.ImportacaoUsuariosParser.parse')
     def test_deve_importar_usuario_novo_com_sucesso(self, mock_parse):
-        from Identidade.usuarios.business import UsuarioBusiness
-
         estrutura = ArquivoImportacaoUsuariosDTO(
             usuarios=[
                 LinhaUsuarioImportacaoDTO(
@@ -536,8 +528,7 @@ class ImportacaoUsuariosBusinessImportacaoTests(TestCase):
         importacao_mock.linhas_processadas = 0
         importacao_mock.total_linhas = 0
         
-        business = UsuarioBusiness()
-        resultado = business.importar_usuarios_em_lote(importacao_lote=importacao_mock)
+        resultado = Usuario().business.importar_usuarios_em_lote(importacao_lote=importacao_mock)
 
         self.assertTrue(resultado.sucesso)
         self.assertEqual(resultado.resumo.usuarios_criados, 1)
@@ -545,8 +536,6 @@ class ImportacaoUsuariosBusinessImportacaoTests(TestCase):
 
     @patch('Identidade.usuarios.business.ImportacaoUsuariosParser.parse')
     def test_deve_atualizar_usuario_existente(self, mock_parse):
-        from Identidade.usuarios.business import UsuarioBusiness
-
         usuario = self.User.objects.create(
             cpf='12345678901',
             nome='Nome Antigo',
@@ -573,8 +562,7 @@ class ImportacaoUsuariosBusinessImportacaoTests(TestCase):
         importacao_mock.linhas_processadas = 0
         importacao_mock.total_linhas = 0
 
-        business = UsuarioBusiness()
-        resultado = business.importar_usuarios_em_lote(importacao_lote=importacao_mock)
+        resultado = Usuario().business.importar_usuarios_em_lote(importacao_lote=importacao_mock)
 
         usuario.refresh_from_db()
 
@@ -584,7 +572,6 @@ class ImportacaoUsuariosBusinessImportacaoTests(TestCase):
 
     @patch('Identidade.usuarios.business.ImportacaoUsuariosParser.parse')
     def test_deve_importar_usuario_sem_cpf_com_matricula_com_sucesso(self, mock_parse):
-        from Identidade.usuarios.business import UsuarioBusiness
         from Identidade.usuarios.importacao.importacao_dtos import LinhaMatriculaImportacaoDTO
 
         estrutura = ArquivoImportacaoUsuariosDTO(
@@ -615,8 +602,7 @@ class ImportacaoUsuariosBusinessImportacaoTests(TestCase):
         importacao_mock.linhas_processadas = 0
         importacao_mock.total_linhas = 0
         
-        business = UsuarioBusiness()
-        resultado = business.importar_usuarios_em_lote(importacao_lote=importacao_mock)
+        resultado = Usuario().business.importar_usuarios_em_lote(importacao_lote=importacao_mock)
 
         self.assertTrue(resultado.sucesso)
         self.assertEqual(resultado.resumo.usuarios_criados, 1)
@@ -631,8 +617,6 @@ class ImportacaoUsuariosBusinessImportacaoTests(TestCase):
 
     @patch('Identidade.usuarios.business.ImportacaoUsuariosParser.parse')
     def test_deve_retornar_erro_se_cpf_for_invalido(self, mock_parse):
-        from Identidade.usuarios.business import UsuarioBusiness
-
         estrutura = ArquivoImportacaoUsuariosDTO(
             usuarios=[
                 LinhaUsuarioImportacaoDTO(
@@ -653,8 +637,7 @@ class ImportacaoUsuariosBusinessImportacaoTests(TestCase):
         importacao_mock.linhas_processadas = 0
         importacao_mock.total_linhas = 0
 
-        business = UsuarioBusiness()
-        resultado = business.importar_usuarios_em_lote(importacao_lote=importacao_mock)
+        resultado = Usuario().business.importar_usuarios_em_lote(importacao_lote=importacao_mock)
 
         self.assertFalse(resultado.sucesso)
         self.assertEqual(resultado.resumo.usuarios_criados, 0)
@@ -663,8 +646,6 @@ class ImportacaoUsuariosBusinessImportacaoTests(TestCase):
 
     @patch('Identidade.usuarios.business.ImportacaoUsuariosParser.parse')
     def test_deve_importar_usuario_com_cpf_curto_preenchendo_zeros(self, mock_parse):
-        from Identidade.usuarios.business import UsuarioBusiness
-
         estrutura = ArquivoImportacaoUsuariosDTO(
             usuarios=[
                 LinhaUsuarioImportacaoDTO(
@@ -685,8 +666,7 @@ class ImportacaoUsuariosBusinessImportacaoTests(TestCase):
         importacao_mock.linhas_processadas = 0
         importacao_mock.total_linhas = 0
 
-        business = UsuarioBusiness()
-        resultado = business.importar_usuarios_em_lote(importacao_lote=importacao_mock)
+        resultado = Usuario().business.importar_usuarios_em_lote(importacao_lote=importacao_mock)
 
         self.assertTrue(resultado.sucesso)
         self.assertEqual(resultado.resumo.usuarios_criados, 1)
@@ -709,7 +689,7 @@ class ImportacaoUsuariosApiTests(TestCase):
         )
         self.client.force_authenticate(user=self.admin)
 
-    @patch('Identidade.usuarios.views.UsuarioBusiness.pre_visualizar_importacao')
+    @patch('Identidade.usuarios.business.UsuarioBusiness.pre_visualizar_importacao')
     def test_endpoint_preview_deve_retornar_200(self, mock_preview):
         mock_preview.return_value = ResultadoImportacaoDTO(
             sucesso=True,
@@ -739,7 +719,7 @@ class ImportacaoUsuariosApiTests(TestCase):
         self.assertEqual(response.data['status'], 'success')
         self.assertIn('dados', response.data)
 
-    @patch('Identidade.usuarios.views.UsuarioBusiness.importar_usuarios_em_lote')
+    @patch('Identidade.usuarios.business.UsuarioBusiness.importar_usuarios_em_lote')
     def test_endpoint_importacao_deve_retornar_200(self, mock_importar):
         mock_importar.return_value = ResultadoImportacaoDTO(
             sucesso=True,

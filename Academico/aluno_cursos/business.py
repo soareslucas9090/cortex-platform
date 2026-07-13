@@ -3,8 +3,6 @@ import logging
 from AppCore.core.business.business import ModelInstanceBusiness
 from AppCore.core.exceptions.exceptions import SystemErrorException, ValidationException
 
-from .rules import AlunoCursoRules
-
 logger = logging.getLogger(__name__)
 
 
@@ -26,8 +24,7 @@ class AlunoCursoBusiness(ModelInstanceBusiness):
         except Curso.DoesNotExist:
             raise ValidationException('Curso não encontrado.')
 
-        regras = AlunoCursoRules()
-        regras.vinculo_unico_ativo(aluno=aluno, curso=curso)
+        self.object_instance.rules.vinculo_unico_ativo(aluno=aluno, curso=curso)
 
         try:
             return AlunoCurso.objects.create(aluno=aluno, curso=curso, **kwargs)
@@ -47,8 +44,7 @@ class AlunoCursoBusiness(ModelInstanceBusiness):
 
     def encerrar(self, ano_conclusao: int):
         """Encerra o vínculo acadêmico, registrando o ano de conclusão."""
-        regras = AlunoCursoRules(object_instance=self.object_instance)
-        regras.pode_encerrar()
+        self.object_instance.rules.pode_encerrar()
         try:
             self.object_instance.ativo = False
             self.object_instance.ano_conclusao = ano_conclusao

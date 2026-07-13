@@ -20,7 +20,6 @@ from AppCore.basics.views.basic_views import (
     BasicDeleteAPIView,
 )
 
-from .business import UsuarioBusiness
 from .models import Usuario
 from .serializers import (
     AtualizarUsuarioSerializer,
@@ -197,7 +196,7 @@ class CriarUsuarioView(IsAdminMixin, BasicPostAPIView):
     mensagem_sucesso = 'Usuário criado com sucesso.'
 
     def do_action_post(self, serializer_data, request):
-        usuario = UsuarioBusiness().criar_usuario(
+        usuario = Usuario().business.criar_usuario(
             cpf=serializer_data.get('cpf'),
             matricula=serializer_data.get('matricula'),
             nome=serializer_data['nome'],
@@ -607,7 +606,7 @@ class PreVisualizarImportacaoUsuariosView(IsAdminMixin, BasicPostAPIView):
         if ImportacaoLote.objects.filter(status=StatusImportacao.EM_ANDAMENTO).exists():
             raise ValidationError('Já existe uma importação em andamento. Aguarde o término.')
 
-        resultado = UsuarioBusiness().pre_visualizar_importacao(
+        resultado = Usuario().business.pre_visualizar_importacao(
             arquivo=serializer_data['file']
         )
         return {

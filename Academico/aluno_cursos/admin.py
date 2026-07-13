@@ -2,7 +2,6 @@ from django.contrib import admin
 
 from AppCore.basics.admin import AtivoModelAdmin, run_business
 
-from .business import AlunoCursoBusiness
 from .models import AlunoCurso
 
 
@@ -29,7 +28,7 @@ class AlunoCursoAdmin(AtivoModelAdmin):
     def save_model(self, request, obj, form, change):
         if not change:
             created = run_business(
-                lambda: AlunoCursoBusiness().criar_vinculo(
+                lambda: AlunoCurso().business.criar_vinculo(
                     aluno_id=obj.aluno_id,
                     curso_id=obj.curso_id,
                     ano_conclusao=obj.ano_conclusao,

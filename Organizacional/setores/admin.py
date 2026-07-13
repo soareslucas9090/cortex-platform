@@ -2,7 +2,6 @@ from django.contrib import admin
 
 from AppCore.basics.admin import AtivoModelAdmin, run_business
 
-from .business import SetorBusiness
 from .models import Setor
 
 
@@ -15,7 +14,7 @@ class SetorAdmin(AtivoModelAdmin):
     def save_model(self, request, obj, form, change):
         if not change:
             created = run_business(
-                lambda: SetorBusiness().criar_setor(
+                lambda: Setor().business.criar_setor(
                     nome=obj.nome,
                     sigla=obj.sigla,
                     ativo=obj.ativo,

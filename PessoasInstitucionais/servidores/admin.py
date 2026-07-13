@@ -2,7 +2,6 @@ from django.contrib import admin
 
 from AppCore.basics.admin import AtivoModelAdmin, run_business
 
-from .business import ServidorBusiness
 from .models import Servidor
 
 
@@ -20,7 +19,7 @@ class ServidorAdmin(AtivoModelAdmin):
     def save_model(self, request, obj, form, change):
         if not change:
             created = run_business(
-                lambda: ServidorBusiness().criar_servidor(
+                lambda: Servidor().business.criar_servidor(
                     usuario_pk=obj.usuario_id,
                     cargo_pk=obj.cargo_id,
                     categoria=obj.categoria,
