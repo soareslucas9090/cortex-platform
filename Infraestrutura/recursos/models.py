@@ -43,4 +43,4 @@ class Recurso(ModelHelperMixin, ModelBusinessMixin, BasicModel):
     @property
     def estado_derivado(self):
         """Estado operacional derivado: avaria → emprestado → reservado → disponível."""
-        return self.helpers.obter_estado_derivado()
+        return self.helper.obter_estado_derivado()

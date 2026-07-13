@@ -1,5 +1,9 @@
-from django.urls import path
+from django.urls import path, include
 
 app_name = 'infraestrutura'
 
-urlpatterns = []
+urlpatterns = [
+    path('', include('Infraestrutura.blocos.urls')),
+    path('', include('Infraestrutura.salas.urls')),
+    path('', include('Infraestrutura.recursos.urls')),
+]

@@ -29,10 +29,11 @@ Padrões de código: [ADR-001](../decisions/ADR-001-modularizacao-por-dominio.md
 | E2 | Espaço físico | `blocos`, `salas` (`Bloco`, `Sala`, `SalaSetor`) | Concluída |
 | E3 | Recursos | `recursos` (`Recurso`, choices de tipo, estado derivado) | Concluída |
 | E4 | Permissões do módulo | `permissoes` + hook em `UsuarioPermissions` | Concluída |
-| E5 | Autorizações | `autorizacoes` | Pendente |
-| E6 | Empréstimos | `emprestimos` (CRUD operacional + ações) | Pendente |
-| E7 | Docs / ADR | Atualizar exemplo Sigec→Infraestrutura na ADR-002 e referências | Pendente |
-| E8 | Testes | Regras de retirada, XOR autorização, troca, escopo L1 | Pendente |
+| E5 | API de cadastro estrutural | serializers, views e urls de blocos, salas e recursos | Concluída |
+| E6 | Autorizações | `autorizacoes` | Pendente |
+| E7 | Empréstimos | `emprestimos` (CRUD operacional + ações) | Pendente |
+| E8 | Docs / ADR | Atualizar exemplo Sigec→Infraestrutura na ADR-002 e referências | Parcial (ADR-002 na I.4) |
+| E9 | Testes | Regras de retirada, XOR autorização, troca, escopo L1 | Pendente |
 
 ## Escopo — o que **não** entra (v1)
 
@@ -71,7 +72,8 @@ Cada etapa tem **pré-requisito**, **entregáveis**, **critério de saída** e *
 | I.2 | Concluída (13/07/2026) |
 | I.3 | Concluída (13/07/2026) |
 | I.4 | Concluída (13/07/2026) |
-| I.5–I.8 | Pendente |
+| I.5 | Concluída (13/07/2026) |
+| I.6–I.8 | Pendente |
 
 ### Etapa I.0 — Alinhamento documental
 
@@ -150,6 +152,7 @@ Estado derivado (prioridade): `avaria` → `emprestado` → `reservado` (sempre 
 | **Entregáveis** | Serializers, views AppCore, urls (`*-list`, `*-detail`, ações desativar/reativar); Swagger com `**Permissões:**`; gate capacidade `cadastrar` (e/ou L3 conforme matriz) |
 | **Critério de saída** | CRUD autenticado coerente; L1 sem `cadastrar` recebe 403 |
 | **Testes** | Criar/editar/desativar; validação chave sem sala |
+| **Status** | Concluída (13/07/2026) — APIs em `blocos`, `salas`, `recursos` e `salas-setores`; gate `cadastrar`; testes em `Infraestrutura/tests/test_cadastro_views.py` |
 
 ---
 

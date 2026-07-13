@@ -1,5 +1,7 @@
 from AppCore.core.rules.rules import ModelInstanceRules
 
+from django.apps import apps
+
 from .choices import TipoRecurso
 
 
@@ -25,7 +27,7 @@ class RecursoRules(ModelInstanceRules):
         """Sala informada deve existir e estar ativa."""
         if sala_id is None:
             return True
-        from salas.models import Sala
+        Sala = apps.get_model('salas', 'Sala')
         sala = Sala.objects.filter(pk=sala_id).first()
         if sala is None:
             self.return_exception('Sala informada não encontrada.')
