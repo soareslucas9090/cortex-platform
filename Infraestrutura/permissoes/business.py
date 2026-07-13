@@ -5,8 +5,6 @@ from django.apps import apps
 from AppCore.core.business.business import ModelInstanceBusiness
 from AppCore.core.exceptions.exceptions import SystemErrorException
 
-from .rules import PermissaoFuncaoInfraestruturaRules
-
 logger = logging.getLogger(__name__)
 
 
@@ -18,9 +16,8 @@ class PermissaoFuncaoInfraestruturaBusiness(ModelInstanceBusiness):
 
         Funcao = apps.get_model('funcoes', 'Funcao')
         funcao = Funcao.objects.get(pk=funcao_id)
-        regras = PermissaoFuncaoInfraestruturaRules()
-        regras.funcao_deve_estar_ativa(funcao)
-        regras.funcao_sem_permissao_existente(funcao_id)
+        self.object_instance.rules.funcao_deve_estar_ativa(funcao)
+        self.object_instance.rules.funcao_sem_permissao_existente(funcao_id)
         try:
             return PermissaoFuncaoInfraestrutura.objects.create(
                 funcao=funcao,

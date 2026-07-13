@@ -6,7 +6,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 
 from Identidade.usuarios.models import Usuario
 from Infraestrutura.blocos.models import Bloco
-from Infraestrutura.permissoes.business import PermissaoFuncaoInfraestruturaBusiness
+from Infraestrutura.permissoes.models import PermissaoFuncaoInfraestrutura
 from Infraestrutura.recursos.choices import TipoRecurso
 from Infraestrutura.salas.models import Sala
 from Organizacional.funcoes.models import Funcao
@@ -26,7 +26,7 @@ def criar_usuario(cpf, nome='Usuário Teste'):
 def conceder_capacidade_cadastrar(usuario):
     funcao = Funcao.objects.create(papel_funcao=f'CAD_{usuario.cpf}', descricao='Cadastrador')
     setor = Setor.objects.create(sigla=f'S{usuario.cpf[-3:]}', nome='Setor Teste')
-    PermissaoFuncaoInfraestruturaBusiness().criar_permissao(funcao_id=funcao.pk, cadastrar=True)
+    PermissaoFuncaoInfraestrutura().business.criar_permissao(funcao_id=funcao.pk, cadastrar=True)
     SetorVinculo.objects.create(usuario=usuario, setor=setor, funcao=funcao)
     return usuario
 

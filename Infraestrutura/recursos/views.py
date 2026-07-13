@@ -13,7 +13,6 @@ from AppCore.basics.views.basic_views import (
 )
 from Infraestrutura.permissoes.access import PodeCadastrarInfraestruturaMixin
 
-from .business import RecursoBusiness
 from .choices import TipoRecurso
 from .models import Recurso
 from .serializers import (
@@ -81,7 +80,7 @@ class CriarRecursoView(PodeCadastrarInfraestruturaMixin, BasicPostAPIView):
     mensagem_sucesso = 'Recurso criado com sucesso.'
 
     def do_action_post(self, serializer_data, request, *args, **kwargs):
-        recurso = RecursoBusiness().criar_recurso(**serializer_data)
+        recurso = Recurso().business.criar_recurso(**serializer_data)
         recurso = Recurso.objects.select_related('sala').get(pk=recurso.pk)
         return {
             'mensagem': self.mensagem_sucesso,

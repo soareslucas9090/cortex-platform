@@ -3,14 +3,17 @@ from django.db import models
 from AppCore.basics.models.models import BasicModel
 from AppCore.core.business.business_mixin import ModelBusinessMixin
 from AppCore.core.helpers.helpers_mixin import ModelHelperMixin
+from AppCore.core.rules.rules_mixin import ModelRulesMixin
 
 
-class PermissaoFuncaoInfraestrutura(ModelHelperMixin, ModelBusinessMixin, BasicModel):
+class PermissaoFuncaoInfraestrutura(ModelHelperMixin, ModelBusinessMixin, ModelRulesMixin, BasicModel):
     from .business import PermissaoFuncaoInfraestruturaBusiness
     from .helpers import PermissaoFuncaoInfraestruturaHelpers
+    from .rules import PermissaoFuncaoInfraestruturaRules
 
     business_class = PermissaoFuncaoInfraestruturaBusiness
     helper_class = PermissaoFuncaoInfraestruturaHelpers
+    rules_class = PermissaoFuncaoInfraestruturaRules
 
     funcao = models.OneToOneField(
         'funcoes.Funcao',

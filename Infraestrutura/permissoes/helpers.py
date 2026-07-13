@@ -15,10 +15,6 @@ class PermissaoFuncaoInfraestruturaHelpers(ModelInstanceHelpers):
             for capacidade in CAPACIDADES_INFRAESTRUTURA
         }
 
-
-class PermissaoInfraestruturaUsuarioHelpers(ModelInstanceHelpers):
-    """Compilação de capacidades do usuário a partir dos vínculos ativos."""
-
     def compilar_do_usuario(self, usuario) -> dict:
         """
         União (OR) das capacidades das funções dos vínculos ativos do usuário.

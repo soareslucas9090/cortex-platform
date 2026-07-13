@@ -1,7 +1,7 @@
 from AppCore.core.users_permissions.user_permission import UserModelPermission
 
 from Infraestrutura.permissoes.choices import capacidades_infraestrutura_vazias
-from Infraestrutura.permissoes.helpers import PermissaoInfraestruturaUsuarioHelpers
+from Infraestrutura.permissoes.models import PermissaoFuncaoInfraestrutura
 
 from .choices import (
     PERMISSAO_CORTEX_EDITAR_EU,
@@ -69,5 +69,5 @@ class UsuarioPermissions(UserModelPermission):
             return {'infraestrutura': capacidades_infraestrutura_vazias()}
 
         return {
-            'infraestrutura': PermissaoInfraestruturaUsuarioHelpers().compilar_do_usuario(user),
+            'infraestrutura': PermissaoFuncaoInfraestrutura().helper.compilar_do_usuario(user),
         }

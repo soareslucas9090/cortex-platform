@@ -14,7 +14,6 @@ from AppCore.basics.views.basic_views import (
 )
 from Infraestrutura.permissoes.access import PodeCadastrarInfraestruturaMixin
 
-from .business import SalaBusiness, SalaSetorBusiness
 from .models import Sala, SalaSetor
 from .serializers import (
     AtualizarSalaSerializer,
@@ -75,7 +74,7 @@ class CriarSalaView(PodeCadastrarInfraestruturaMixin, BasicPostAPIView):
     mensagem_sucesso = 'Sala criada com sucesso.'
 
     def do_action_post(self, serializer_data, request, *args, **kwargs):
-        sala = SalaBusiness().criar_sala(**serializer_data)
+        sala = Sala().business.criar_sala(**serializer_data)
         sala = Sala.objects.select_related('bloco').get(pk=sala.pk)
         return {
             'mensagem': self.mensagem_sucesso,
@@ -198,7 +197,7 @@ class CriarSalaSetorView(PodeCadastrarInfraestruturaMixin, BasicPostAPIView):
     mensagem_sucesso = 'Vínculo sala–setor criado com sucesso.'
 
     def do_action_post(self, serializer_data, request, *args, **kwargs):
-        vinculo = SalaSetorBusiness().criar_vinculo(**serializer_data)
+        vinculo = SalaSetor().business.criar_vinculo(**serializer_data)
         vinculo = SalaSetor.objects.select_related('sala__bloco', 'setor').get(pk=vinculo.pk)
         return {
             'mensagem': self.mensagem_sucesso,

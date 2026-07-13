@@ -3,14 +3,17 @@ from django.db import models
 from AppCore.basics.models.models import BasicModel
 from AppCore.core.business.business_mixin import ModelBusinessMixin
 from AppCore.core.helpers.helpers_mixin import ModelHelperMixin
+from AppCore.core.rules.rules_mixin import ModelRulesMixin
 
 
-class Sala(ModelHelperMixin, ModelBusinessMixin, BasicModel):
+class Sala(ModelHelperMixin, ModelBusinessMixin, ModelRulesMixin, BasicModel):
     from .business import SalaBusiness
     from .helpers import SalaHelpers
+    from .rules import SalaRules
 
     business_class = SalaBusiness
     helper_class = SalaHelpers
+    rules_class = SalaRules
 
     bloco = models.ForeignKey(
         'blocos.Bloco',
@@ -36,12 +39,14 @@ class Sala(ModelHelperMixin, ModelBusinessMixin, BasicModel):
         return f'{self.bloco} — {self.nome}'
 
 
-class SalaSetor(ModelHelperMixin, ModelBusinessMixin, BasicModel):
+class SalaSetor(ModelHelperMixin, ModelBusinessMixin, ModelRulesMixin, BasicModel):
     from .business import SalaSetorBusiness
     from .helpers import SalaSetorHelpers
+    from .rules import SalaSetorRules
 
     business_class = SalaSetorBusiness
     helper_class = SalaSetorHelpers
+    rules_class = SalaSetorRules
 
     sala = models.ForeignKey(
         'salas.Sala',

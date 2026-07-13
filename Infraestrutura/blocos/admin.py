@@ -2,7 +2,6 @@ from django.contrib import admin
 
 from AppCore.basics.admin import AtivoModelAdmin, run_business
 
-from .business import BlocoBusiness
 from .models import Bloco
 
 
@@ -15,7 +14,7 @@ class BlocoAdmin(AtivoModelAdmin):
     def save_model(self, request, obj, form, change):
         if not change:
             created = run_business(
-                lambda: BlocoBusiness().criar_bloco(
+                lambda: Bloco().business.criar_bloco(
                     nome=obj.nome,
                     ativo=obj.ativo,
                 )

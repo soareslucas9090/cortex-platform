@@ -3,8 +3,6 @@ import logging
 from AppCore.core.business.business import ModelInstanceBusiness
 from AppCore.core.exceptions.exceptions import SystemErrorException
 
-from .rules import SalaRules, SalaSetorRules
-
 logger = logging.getLogger(__name__)
 
 
@@ -31,8 +29,7 @@ class SalaBusiness(ModelInstanceBusiness):
 
     def desativar(self):
         """Desativa a sala."""
-        regras = SalaRules(object_instance=self.object_instance)
-        regras.pode_desativar()
+        self.object_instance.rules.pode_desativar()
         try:
             self.object_instance.ativo = False
             self.object_instance.save(update_fields=['ativo'])
@@ -42,8 +39,7 @@ class SalaBusiness(ModelInstanceBusiness):
 
     def reativar(self):
         """Reativa a sala."""
-        regras = SalaRules(object_instance=self.object_instance)
-        regras.pode_reativar()
+        self.object_instance.rules.pode_reativar()
         try:
             self.object_instance.ativo = True
             self.object_instance.save(update_fields=['ativo'])
@@ -57,8 +53,7 @@ class SalaSetorBusiness(ModelInstanceBusiness):
     def criar_vinculo(self, sala_id: int, setor_id: int):
         """Cria vínculo entre sala e setor."""
         from .models import SalaSetor
-        regras = SalaSetorRules()
-        regras.validar_vinculo_unico(sala_id, setor_id)
+        self.object_instance.rules.validar_vinculo_unico(sala_id, setor_id)
         try:
             return SalaSetor.objects.create(sala_id=sala_id, setor_id=setor_id)
         except Exception as e:

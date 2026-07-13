@@ -3,8 +3,6 @@ import logging
 from AppCore.core.business.business import ModelInstanceBusiness
 from AppCore.core.exceptions.exceptions import SystemErrorException
 
-from .rules import RecursoRules
-
 logger = logging.getLogger(__name__)
 
 
@@ -20,10 +18,9 @@ class RecursoBusiness(ModelInstanceBusiness):
     ):
         """Cria um novo recurso validando código e regras por tipo."""
         from .models import Recurso
-        regras = RecursoRules()
-        regras.codigo_unico(codigo)
-        regras.validar_sala_por_tipo(tipo, sala_id)
-        regras.validar_sala_ativa(sala_id)
+        self.object_instance.rules.codigo_unico(codigo)
+        self.object_instance.rules.validar_sala_por_tipo(tipo, sala_id)
+        self.object_instance.rules.validar_sala_ativa(sala_id)
         try:
             return Recurso.objects.create(
                 codigo=codigo,
@@ -42,11 +39,13 @@ class RecursoBusiness(ModelInstanceBusiness):
         sala = dados.get('sala', self.object_instance.sala_id)
         sala_id = sala.pk if hasattr(sala, 'pk') else sala
 
-        regras = RecursoRules(object_instance=self.object_instance)
         if 'codigo' in dados:
-            regras.codigo_unico(dados['codigo'], excluir_id=self.object_instance.pk)
-        regras.validar_sala_por_tipo(tipo, sala_id)
-        regras.validar_sala_ativa(sala_id)
+            self.object_instance.rules.codigo_unico(
+                dados['codigo'],
+                excluir_id=self.object_instance.pk,
+            )
+        self.object_instance.rules.validar_sala_por_tipo(tipo, sala_id)
+        self.object_instance.rules.validar_sala_ativa(sala_id)
 
         try:
             for attr, value in dados.items():
@@ -58,8 +57,7 @@ class RecursoBusiness(ModelInstanceBusiness):
 
     def desativar(self):
         """Desativa o recurso (sem exclusão física de negócio)."""
-        regras = RecursoRules(object_instance=self.object_instance)
-        regras.pode_desativar()
+        self.object_instance.rules.pode_desativar()
         try:
             self.object_instance.ativo = False
             self.object_instance.save(update_fields=['ativo'])
@@ -69,8 +67,7 @@ class RecursoBusiness(ModelInstanceBusiness):
 
     def reativar(self):
         """Reativa o recurso."""
-        regras = RecursoRules(object_instance=self.object_instance)
-        regras.pode_reativar()
+        self.object_instance.rules.pode_reativar()
         try:
             self.object_instance.ativo = True
             self.object_instance.save(update_fields=['ativo'])

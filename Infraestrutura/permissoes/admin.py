@@ -2,7 +2,6 @@ from django.contrib import admin
 
 from AppCore.basics.admin import run_business
 
-from .business import PermissaoFuncaoInfraestruturaBusiness
 from .models import PermissaoFuncaoInfraestrutura
 
 
@@ -23,7 +22,7 @@ class PermissaoFuncaoInfraestruturaAdmin(admin.ModelAdmin):
     def save_model(self, request, obj, form, change):
         if not change:
             created = run_business(
-                lambda: PermissaoFuncaoInfraestruturaBusiness().criar_permissao(
+                lambda: PermissaoFuncaoInfraestrutura().business.criar_permissao(
                     funcao_id=obj.funcao_id,
                     operar=obj.operar,
                     cadastrar=obj.cadastrar,

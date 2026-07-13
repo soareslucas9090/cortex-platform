@@ -2,7 +2,6 @@ from django.contrib import admin
 
 from AppCore.basics.admin import AtivoModelAdmin, run_business
 
-from .business import SalaBusiness, SalaSetorBusiness
 from .models import Sala, SalaSetor
 
 
@@ -16,7 +15,7 @@ class SalaAdmin(AtivoModelAdmin):
     def save_model(self, request, obj, form, change):
         if not change:
             created = run_business(
-                lambda: SalaBusiness().criar_sala(
+                lambda: Sala().business.criar_sala(
                     bloco_id=obj.bloco_id,
                     nome=obj.nome,
                     ativo=obj.ativo,
@@ -43,7 +42,7 @@ class SalaSetorAdmin(admin.ModelAdmin):
     def save_model(self, request, obj, form, change):
         if not change:
             created = run_business(
-                lambda: SalaSetorBusiness().criar_vinculo(
+                lambda: SalaSetor().business.criar_vinculo(
                     sala_id=obj.sala_id,
                     setor_id=obj.setor_id,
                 )

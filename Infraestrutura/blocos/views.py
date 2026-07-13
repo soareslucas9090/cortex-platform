@@ -13,7 +13,6 @@ from AppCore.basics.views.basic_views import (
 )
 from Infraestrutura.permissoes.access import PodeCadastrarInfraestruturaMixin
 
-from .business import BlocoBusiness
 from .models import Bloco
 from .serializers import (
     AtualizarBlocoSerializer,
@@ -77,7 +76,7 @@ class CriarBlocoView(PodeCadastrarInfraestruturaMixin, BasicPostAPIView):
     mensagem_sucesso = 'Bloco criado com sucesso.'
 
     def do_action_post(self, serializer_data, request, *args, **kwargs):
-        bloco = BlocoBusiness().criar_bloco(**serializer_data)
+        bloco = Bloco().business.criar_bloco(**serializer_data)
         return {
             'mensagem': self.mensagem_sucesso,
             'dados': BlocoSerializer(bloco).data,

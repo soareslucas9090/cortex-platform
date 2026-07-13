@@ -99,10 +99,8 @@ from AppCore.core.exceptions.exceptions import SystemErrorException
 
 class ProdutoBusiness(ModelInstanceBusiness):
     def criar_produto(self, **dados):
-        # Business orquestra a operação completa
-        regras = ProdutoRules()
-        if not regras.can_create():
-            raise BusinessRuleException('Não pode criar')
+        # Criação via Produto().business — rules acessadas pelo object_instance
+        self.object_instance.rules.validar_dados_criacao(**dados)
         return Produto.objects.create(**dados)
 
     def atualizar_dados(self, dados):
@@ -152,21 +150,33 @@ documento.state.posso_aprovar()  # Acessa método do estado atual
 
 ## Integração com Models
 
-**Use mixins para conectar camadas ao model:**
+**Use mixins para conectar camadas ao model. Nunca instancie Business, Rules ou Helpers manualmente** (exceto raras exceções documentadas no domínio):
 
 ```python
 from AppCore.core.helpers.helpers_mixin import ModelHelperMixin
 from AppCore.core.business.business_mixin import ModelBusinessMixin
+from AppCore.core.rules.rules_mixin import ModelRulesMixin
 from AppCore.basics.models.models import BasicModel
 
-class Produto(ModelHelperMixin, ModelBusinessMixin, BasicModel):
-    business_class = ProdutoBusiness  # Define a classe de business
-    helper_class = ProdutoHelpers     # Define a classe de helpers
+class Produto(ModelHelperMixin, ModelBusinessMixin, ModelRulesMixin, BasicModel):
+    from .business import ProdutoBusiness
+    from .helpers import ProdutoHelpers
+    from .rules import ProdutoRules
 
-    # Acesso via propriedades
-    # produto.business.criar_produto(...)
-    # produto.helper.deletar_codigos_expirados()
+    business_class = ProdutoBusiness
+    helper_class = ProdutoHelpers
+    rules_class = ProdutoRules
+
+    # Acesso via model:
+    # Produto().business.criar_produto(...)   — criação
+    # produto.business.atualizar_dados(...)   — instância persistida
+    # produto.rules.pode_desativar()          — validação
+    # produto.helper.listar_ativos()          — utilitário
 ```
+
+**Dentro de `business.py`:** use `self.object_instance.rules` e `self.object_instance.helper` — não importe nem instancie `ProdutoRules()` / `ProdutoHelpers()`.
+
+**Em views, admin e testes:** use `Model().business` ou `obj.business` — não `ProdutoBusiness()`.
 
 ## Modelos de Usuário Base
 

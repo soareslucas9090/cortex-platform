@@ -1,9 +1,8 @@
 from django.test import TestCase
 
 from Identidade.usuarios.tests.test_views import criar_usuario
-from Infraestrutura.permissoes.business import PermissaoFuncaoInfraestruturaBusiness
 from Infraestrutura.permissoes.choices import capacidades_infraestrutura_vazias
-from Infraestrutura.permissoes.helpers import PermissaoInfraestruturaUsuarioHelpers
+from Infraestrutura.permissoes.models import PermissaoFuncaoInfraestrutura
 from Organizacional.funcoes.models import Funcao
 from Organizacional.setores.models import Setor
 from Organizacional.vinculos.models import SetorVinculo
@@ -30,11 +29,11 @@ class PermissaoInfraestruturaCompilacaoTest(TestCase):
         self.funcao_autorizar = criar_funcao(papel_funcao='DIR', descricao='Diretor')
 
     def test_usuario_sem_vinculo_tem_capacidades_desligadas(self):
-        resultado = PermissaoInfraestruturaUsuarioHelpers().compilar_do_usuario(self.usuario)
+        resultado = PermissaoFuncaoInfraestrutura().helper.compilar_do_usuario(self.usuario)
         self.assertEqual(resultado, capacidades_infraestrutura_vazias())
 
     def test_compila_capacidade_operar_do_vinculo_ativo(self):
-        PermissaoFuncaoInfraestruturaBusiness().criar_permissao(
+        PermissaoFuncaoInfraestrutura().business.criar_permissao(
             funcao_id=self.funcao_operar.pk,
             operar=True,
         )
@@ -44,16 +43,16 @@ class PermissaoInfraestruturaCompilacaoTest(TestCase):
             funcao=self.funcao_operar,
         )
 
-        resultado = PermissaoInfraestruturaUsuarioHelpers().compilar_do_usuario(self.usuario)
+        resultado = PermissaoFuncaoInfraestrutura().helper.compilar_do_usuario(self.usuario)
         self.assertTrue(resultado['operar'])
         self.assertFalse(resultado['cadastrar'])
 
     def test_compila_uniao_or_entre_funcoes(self):
-        PermissaoFuncaoInfraestruturaBusiness().criar_permissao(
+        PermissaoFuncaoInfraestrutura().business.criar_permissao(
             funcao_id=self.funcao_operar.pk,
             operar=True,
         )
-        PermissaoFuncaoInfraestruturaBusiness().criar_permissao(
+        PermissaoFuncaoInfraestrutura().business.criar_permissao(
             funcao_id=self.funcao_autorizar.pk,
             autorizar=True,
             cadastrar=True,
@@ -69,13 +68,13 @@ class PermissaoInfraestruturaCompilacaoTest(TestCase):
             funcao=self.funcao_autorizar,
         )
 
-        resultado = PermissaoInfraestruturaUsuarioHelpers().compilar_do_usuario(self.usuario)
+        resultado = PermissaoFuncaoInfraestrutura().helper.compilar_do_usuario(self.usuario)
         self.assertTrue(resultado['operar'])
         self.assertTrue(resultado['autorizar'])
         self.assertTrue(resultado['cadastrar'])
 
     def test_vinculo_com_setor_inativo_nao_conta(self):
-        PermissaoFuncaoInfraestruturaBusiness().criar_permissao(
+        PermissaoFuncaoInfraestrutura().business.criar_permissao(
             funcao_id=self.funcao_operar.pk,
             operar=True,
         )
@@ -86,12 +85,12 @@ class PermissaoInfraestruturaCompilacaoTest(TestCase):
             funcao=self.funcao_operar,
         )
 
-        resultado = PermissaoInfraestruturaUsuarioHelpers().compilar_do_usuario(self.usuario)
+        resultado = PermissaoFuncaoInfraestrutura().helper.compilar_do_usuario(self.usuario)
         self.assertEqual(resultado, capacidades_infraestrutura_vazias())
 
     def test_vinculo_com_funcao_inativa_nao_conta(self):
         funcao_inativa = criar_funcao(papel_funcao='OLD', descricao='Inativa', ativo=True)
-        PermissaoFuncaoInfraestruturaBusiness().criar_permissao(
+        PermissaoFuncaoInfraestrutura().business.criar_permissao(
             funcao_id=funcao_inativa.pk,
             operar=True,
         )
@@ -103,11 +102,11 @@ class PermissaoInfraestruturaCompilacaoTest(TestCase):
             funcao=funcao_inativa,
         )
 
-        resultado = PermissaoInfraestruturaUsuarioHelpers().compilar_do_usuario(self.usuario)
+        resultado = PermissaoFuncaoInfraestrutura().helper.compilar_do_usuario(self.usuario)
         self.assertEqual(resultado, capacidades_infraestrutura_vazias())
 
     def test_usuario_permissions_inclui_chave_infraestrutura(self):
-        PermissaoFuncaoInfraestruturaBusiness().criar_permissao(
+        PermissaoFuncaoInfraestrutura().business.criar_permissao(
             funcao_id=self.funcao_operar.pk,
             operar=True,
             retirada_irrestrita=True,

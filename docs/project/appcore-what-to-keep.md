@@ -44,6 +44,8 @@ Ela ajuda a:
 
 Esses mixins oferecem um padrão de acesso limpo e coerente para os models do domínio.
 
+**Regra:** business, rules e helpers são compostos no model (`business_class`, `rules_class`, `helper_class`). Nunca instancie essas classes manualmente fora do model — use `obj.business`, `obj.rules` e `obj.helper`. Dentro de `business.py`, acesse as outras camadas por `self.object_instance.rules` e `self.object_instance.helper`.
+
 Exemplos:
 
 - `obj.business.metodo()`

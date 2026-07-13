@@ -3,8 +3,6 @@ import logging
 from AppCore.core.business.business import ModelInstanceBusiness
 from AppCore.core.exceptions.exceptions import SystemErrorException
 
-from .rules import BlocoRules
-
 logger = logging.getLogger(__name__)
 
 
@@ -31,8 +29,7 @@ class BlocoBusiness(ModelInstanceBusiness):
 
     def desativar(self):
         """Desativa o bloco."""
-        regras = BlocoRules(object_instance=self.object_instance)
-        regras.pode_desativar()
+        self.object_instance.rules.pode_desativar()
         try:
             self.object_instance.ativo = False
             self.object_instance.save(update_fields=['ativo'])
@@ -42,8 +39,7 @@ class BlocoBusiness(ModelInstanceBusiness):
 
     def reativar(self):
         """Reativa o bloco."""
-        regras = BlocoRules(object_instance=self.object_instance)
-        regras.pode_reativar()
+        self.object_instance.rules.pode_reativar()
         try:
             self.object_instance.ativo = True
             self.object_instance.save(update_fields=['ativo'])

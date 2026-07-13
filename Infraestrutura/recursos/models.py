@@ -3,16 +3,19 @@ from django.db import models
 from AppCore.basics.models.models import BasicModel
 from AppCore.core.business.business_mixin import ModelBusinessMixin
 from AppCore.core.helpers.helpers_mixin import ModelHelperMixin
+from AppCore.core.rules.rules_mixin import ModelRulesMixin
 
 from .choices import TipoRecurso
 
 
-class Recurso(ModelHelperMixin, ModelBusinessMixin, BasicModel):
+class Recurso(ModelHelperMixin, ModelBusinessMixin, ModelRulesMixin, BasicModel):
     from .business import RecursoBusiness
     from .helpers import RecursoHelpers
+    from .rules import RecursoRules
 
     business_class = RecursoBusiness
     helper_class = RecursoHelpers
+    rules_class = RecursoRules
 
     codigo = models.CharField('Código', max_length=50, unique=True)
     tipo = models.CharField(

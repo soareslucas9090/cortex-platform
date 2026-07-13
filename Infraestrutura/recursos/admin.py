@@ -2,7 +2,6 @@ from django.contrib import admin
 
 from AppCore.basics.admin import AtivoModelAdmin, run_business
 
-from .business import RecursoBusiness
 from .models import Recurso
 
 
@@ -16,7 +15,7 @@ class RecursoAdmin(AtivoModelAdmin):
     def save_model(self, request, obj, form, change):
         if not change:
             created = run_business(
-                lambda: RecursoBusiness().criar_recurso(
+                lambda: Recurso().business.criar_recurso(
                     codigo=obj.codigo,
                     tipo=obj.tipo,
                     sala_id=obj.sala_id,
