@@ -10,13 +10,14 @@ from .rules import FuncaoRules
 class FuncaoAdmin(AtivoModelAdmin):
     list_display = (
         'papel_funcao',
+        'categoria',
         'descricao',
         'e_gratificada',
         'exige_aluno',
         'ativo',
         'created_at',
     )
-    list_filter = ('ativo', 'e_gratificada', 'exige_aluno')
+    list_filter = ('ativo', 'categoria', 'e_gratificada', 'exige_aluno')
     search_fields = ('papel_funcao', 'descricao')
     ordering = ('papel_funcao',)
 

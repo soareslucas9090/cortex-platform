@@ -91,6 +91,11 @@ class Usuario(ModelHelperMixin, ModelBusinessMixin, UserModelPermissionMixin, Ab
         blank=True,
         null=True,
     )
+    colaborador_externo = models.BooleanField(
+        'Colaborador externo',
+        default=False,
+        help_text='Indica se o usuário é colaborador externo à instituição.',
+    )
 
     objects = UsuarioManager()
 

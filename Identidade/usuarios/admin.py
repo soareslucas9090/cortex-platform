@@ -67,6 +67,7 @@ class UsuarioAdmin(DjangoUserAdmin, CortexModelAdmin):
         'cpf',
         'email',
         'ativo',
+        'colaborador_externo',
         'is_admin',
         'is_staff',
         'is_superuser',
@@ -75,6 +76,7 @@ class UsuarioAdmin(DjangoUserAdmin, CortexModelAdmin):
     )
     list_filter = (
         'ativo',
+        'colaborador_externo',
         'is_admin',
         'is_staff',
         'is_superuser',
@@ -87,7 +89,7 @@ class UsuarioAdmin(DjangoUserAdmin, CortexModelAdmin):
 
     fieldsets = (
         (None, {'fields': ('cpf', 'password')}),
-        ('Dados pessoais', {'fields': ('nome', 'email', 'foto', 'foto_secundaria', 'deficiencia')}),
+        ('Dados pessoais', {'fields': ('nome', 'email', 'foto', 'foto_secundaria', 'deficiencia', 'colaborador_externo')}),
         (
             'Permissões',
             {
@@ -113,6 +115,7 @@ class UsuarioAdmin(DjangoUserAdmin, CortexModelAdmin):
                     'password1',
                     'password2',
                     'ativo',
+                    'colaborador_externo',
                     'is_admin',
                     'is_staff',
                     'is_superuser',
@@ -147,6 +150,7 @@ class UsuarioAdmin(DjangoUserAdmin, CortexModelAdmin):
                 'email': obj.email,
                 'deficiencia': obj.deficiencia,
                 'ativo': obj.ativo,
+                'colaborador_externo': obj.colaborador_externo,
                 'is_admin': obj.is_admin,
                 'is_staff': obj.is_staff,
                 'is_superuser': obj.is_superuser,

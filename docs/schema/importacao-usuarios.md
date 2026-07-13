@@ -73,12 +73,14 @@ Eles devem ser usados apenas como **identificadores temporários internos do arq
 - `deficiencia (String)`
 - `ativo (boolean)`
 - `ultimo_login (Date)`
+- `colaborador_externo (boolean)`
 
 ### Regras
 - `usuario_id` é obrigatório para correlação interna;
 - `cpf` é obrigatório;
 - `nome` é obrigatório;
 - `ativo` deve ser interpretável como booleano;
+- `colaborador_externo` deve ser interpretável como booleano; se ausente ou nulo, assume `false`;
 - `ultimo_login`, se informado, deve ser data válida.
 
 ---
@@ -220,6 +222,16 @@ A importação deve validar:
 - `Servidor` depende de `Usuario`
 - `Terceirizado` depende de `Usuario`
 - `Setor_Lotacao` depende de `Usuario`
+
+## Aba de referência `Funcao`
+
+A aba `Funcao` é apenas referência (não é persistida pela importação). Colunas esperadas:
+
+- `funcao_id (String, PK)` — identificador interno da planilha
+- `papel_funcao (String)` — chave natural no banco (`papel_funcao`)
+- `descricao (String)`
+- `ativo (boolean)`
+- `categoria (String)` — `diretor`, `coordenador` ou `chefe`
 
 ## Regras de persistência
 

@@ -4,6 +4,8 @@ from AppCore.basics.models.models import BasicModel
 from AppCore.core.business.business_mixin import ModelBusinessMixin
 from AppCore.core.helpers.helpers_mixin import ModelHelperMixin
 
+from .choices import CategoriaFuncao
+
 
 class Funcao(ModelHelperMixin, ModelBusinessMixin, BasicModel):
     from .business import FuncaoBusiness
@@ -13,6 +15,12 @@ class Funcao(ModelHelperMixin, ModelBusinessMixin, BasicModel):
     helper_class = FuncaoHelpers
 
     papel_funcao = models.CharField('Papel/Função', max_length=255, unique=True)
+    categoria = models.CharField(
+        'Categoria',
+        max_length=20,
+        choices=CategoriaFuncao.choices,
+        default=CategoriaFuncao.COORDENADOR,
+    )
     descricao = models.CharField('Descrição', max_length=255)
     e_gratificada = models.BooleanField('É gratificada', default=False)
     exige_aluno = models.BooleanField('Exige Aluno', default=False)

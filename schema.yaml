@@ -1234,12 +1234,47 @@ paths:
                 description: Usuário não encontrado.
           description: ''
   /cortex/identidade/usuarios/{id}/foto-secundaria/:
+    get:
+      operationId: identidade_usuarios_foto_secundaria_retrieve
+      description: "\n    Retorna o arquivo de imagem da foto secundária via proxy
+        da API.\n\n    **Permissões:** Público (não requer autenticação).\n\n    O
+        bucket S3 permanece privado; este endpoint faz o stream da imagem para o navegador.\n
+        \   "
+      summary: Obter foto secundária do usuário
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - Identidade
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                description: Imagem retornada com sucesso.
+                content:
+                  image/jpeg: {}
+                  image/png: {}
+                  image/webp: {}
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                description: Usuário ou foto não encontrados.
+          description: ''
     post:
       operationId: identidade_usuarios_foto_secundaria_create
-      description: "\n    Faz upload da foto secundária para o S3 e persiste a URL
-        pública no usuário.\n\n    **Permissões:** O próprio usuário ou administradores.\n\n
+      description: "\n    Faz upload da foto secundária para o S3 e persiste a referência
+        no usuário.\n\n    **Permissões:** O próprio usuário ou administradores.\n\n
         \   **Limites do arquivo:** JPEG, PNG ou WebP, com tamanho máximo de 3 MB.\n\n
-        \   Para exibição no frontend, prefira `foto_secundaria` quando preenchida;
+        \   A resposta inclui `foto_secundaria` com a URL pública do proxy da API
+        para exibição no frontend.\n    Prefira `foto_secundaria` quando preenchida;
         caso contrário, use `foto`.\n    "
       summary: Enviar foto secundária do usuário
       parameters:
@@ -2123,6 +2158,11 @@ paths:
         schema:
           type: boolean
         description: Filtra por ativa (true) ou inativa (false).
+      - in: query
+        name: categoria
+        schema:
+          type: string
+        description: 'Filtra por categoria: diretor, coordenador ou chefe.'
       - in: query
         name: descricao
         schema:
@@ -3961,7 +4001,17 @@ components:
       - id
       - nome
       - updated_at
-    CategoriaEnum:
+    CategoriaFuncaoEnum:
+      enum:
+      - diretor
+      - coordenador
+      - chefe
+      type: string
+      description: |-
+        * `diretor` - Diretor
+        * `coordenador` - Coordenador
+        * `chefe` - Chefe
+    CategoriaServidorEnum:
       enum:
       - 1
       - 2
@@ -4083,6 +4133,8 @@ components:
         papel_funcao:
           type: string
           maxLength: 255
+        categoria:
+          $ref: '#/components/schemas/CategoriaFuncaoEnum'
         descricao:
           type: string
           maxLength: 255
@@ -4093,6 +4145,7 @@ components:
           type: boolean
           default: false
       required:
+      - categoria
       - descricao
       - papel_funcao
     CriarServidor:
@@ -4103,7 +4156,7 @@ components:
         cargo_pk:
           type: integer
         categoria:
-          $ref: '#/components/schemas/CategoriaEnum'
+          $ref: '#/components/schemas/CategoriaServidorEnum'
         ativo:
           type: boolean
           default: true
@@ -4185,6 +4238,10 @@ components:
             outro valor não correspondente será normalizado como null. Strings equivalentes
             (ex: "Deficiência Múltipla") serão normalizadas automaticamente para sua
             chave de escolha.'
+        colaborador_externo:
+          type: boolean
+          default: false
+          description: Indica se o usuário é colaborador externo à instituição.
       required:
       - nome
     CriarVinculo:
@@ -4382,6 +4439,11 @@ components:
           type: string
           title: Papel/Função
           maxLength: 255
+        categoria:
+          $ref: '#/components/schemas/CategoriaFuncaoEnum'
+        categoria_display:
+          type: string
+          readOnly: true
         descricao:
           type: string
           title: Descrição
@@ -4398,6 +4460,7 @@ components:
           format: date-time
           readOnly: true
       required:
+      - categoria_display
       - created_at
       - descricao
       - id
@@ -4898,6 +4961,8 @@ components:
         papel_funcao:
           type: string
           maxLength: 255
+        categoria:
+          $ref: '#/components/schemas/CategoriaFuncaoEnum'
         descricao:
           type: string
           maxLength: 255
@@ -4911,7 +4976,7 @@ components:
         cargo_pk:
           type: integer
         categoria:
-          $ref: '#/components/schemas/CategoriaEnum'
+          $ref: '#/components/schemas/CategoriaServidorEnum'
         ativo:
           type: boolean
     PatchedAtualizarSetor:
@@ -4960,6 +5025,8 @@ components:
             outro valor não correspondente será normalizado como null. Strings equivalentes
             (ex: "Deficiência Múltipla") serão normalizadas automaticamente para sua
             chave de escolha.'
+        colaborador_externo:
+          type: boolean
     PatchedAtualizarVinculoFuncao:
       type: object
       properties:
@@ -5044,7 +5111,8 @@ components:
           format: uri
           nullable: true
           title: Foto secundária
-          description: URL pública da foto enviada pelo próprio usuário no S3.
+          description: Chave S3 da foto enviada pelo próprio usuário (servida via
+            proxy da API).
           maxLength: 500
         deficiencia:
           nullable: true
@@ -5053,6 +5121,9 @@ components:
           - $ref: '#/components/schemas/DeficienciaEnum'
           - $ref: '#/components/schemas/BlankEnum'
           - $ref: '#/components/schemas/NullEnum'
+        colaborador_externo:
+          type: boolean
+          description: Indica se o usuário é colaborador externo à instituição.
       required:
       - created_at
       - id
@@ -5130,7 +5201,7 @@ components:
           readOnly: true
         categoria:
           allOf:
-          - $ref: '#/components/schemas/CategoriaEnum'
+          - $ref: '#/components/schemas/CategoriaServidorEnum'
           minimum: -2147483648
           maximum: 2147483647
         categoria_display:
@@ -5408,11 +5479,8 @@ components:
           maxLength: 500
         foto_secundaria:
           type: string
-          format: uri
           nullable: true
-          title: Foto secundária
-          description: URL pública da foto enviada pelo próprio usuário no S3.
-          maxLength: 500
+          readOnly: true
         deficiencia:
           nullable: true
           title: Deficiência / necessidade especial
@@ -5420,6 +5488,9 @@ components:
           - $ref: '#/components/schemas/DeficienciaEnum'
           - $ref: '#/components/schemas/BlankEnum'
           - $ref: '#/components/schemas/NullEnum'
+        colaborador_externo:
+          type: boolean
+          description: Indica se o usuário é colaborador externo à instituição.
         tem_perfil_aluno:
           type: boolean
           description: |-
@@ -5447,6 +5518,7 @@ components:
           readOnly: true
       required:
       - created_at
+      - foto_secundaria
       - id
       - nome
       - servidor
@@ -5531,6 +5603,12 @@ components:
         funcao_descricao:
           type: string
           nullable: true
+        funcao_categoria:
+          type: string
+          nullable: true
+        funcao_categoria_display:
+          type: string
+          nullable: true
         responsavel:
           type: boolean
         created_at:
@@ -5539,6 +5617,8 @@ components:
       required:
       - created_at
       - funcao
+      - funcao_categoria
+      - funcao_categoria_display
       - funcao_descricao
       - funcao_papel_funcao
       - id

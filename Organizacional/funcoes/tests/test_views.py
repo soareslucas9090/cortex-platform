@@ -22,9 +22,21 @@ def criar_usuario_comum(cpf='00000000002', nome='Comum'):
     return Usuario.objects.create_user(cpf=cpf, password='Senha@123', nome=nome)
 
 
-def criar_funcao(papel_funcao='TI', descricao='Técnico de Informática', e_gratificada=False, exige_aluno=False, ativo=True):
+def criar_funcao(
+    papel_funcao='TI',
+    descricao='Técnico de Informática',
+    categoria='coordenador',
+    e_gratificada=False,
+    exige_aluno=False,
+    ativo=True,
+):
     return Funcao.objects.create(
-        papel_funcao=papel_funcao, descricao=descricao, e_gratificada=e_gratificada, exige_aluno=exige_aluno, ativo=ativo,
+        papel_funcao=papel_funcao,
+        categoria=categoria,
+        descricao=descricao,
+        e_gratificada=e_gratificada,
+        exige_aluno=exige_aluno,
+        ativo=ativo,
     )
 
 
@@ -97,6 +109,7 @@ class CriarFuncaoViewTest(APITestCase):
         self.url = reverse('organizacional:funcoes')
         self.payload_valido = {
             'papel_funcao': 'TI',
+            'categoria': 'coordenador',
             'descricao': 'Técnico de Informática',
         }
 
@@ -161,7 +174,7 @@ class CriarFuncaoViewTest(APITestCase):
 
     def test_descricao_obrigatoria_retorna_400(self):
         self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token_admin}')
-        resposta = self.client.post(self.url, {'papel_funcao': 'TI'})
+        resposta = self.client.post(self.url, {'papel_funcao': 'TI', 'categoria': 'coordenador'})
         self.assertEqual(resposta.status_code, status.HTTP_400_BAD_REQUEST)
 
 

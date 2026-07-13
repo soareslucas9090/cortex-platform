@@ -17,6 +17,9 @@ Garantir que as entidades institucionais de referência existam no banco antes d
 - Setor: `sigla`
 - Funcao: `papel_funcao`
 
+## Campos adicionais de referência
+- Funcao: `categoria` (`diretor`, `coordenador` ou `chefe`), usada para regras de negócio em outros módulos
+
 ## Regras
 - migrações devem ser idempotentes;
 - não duplicar registros;

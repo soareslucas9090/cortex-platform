@@ -10,7 +10,15 @@ logger = logging.getLogger(__name__)
 
 class FuncaoBusiness(ModelInstanceBusiness):
 
-    def criar_funcao(self, papel_funcao: str, descricao: str, e_gratificada: bool = False, exige_aluno: bool = False, **kwargs):
+    def criar_funcao(
+        self,
+        papel_funcao: str,
+        descricao: str,
+        categoria: str,
+        e_gratificada: bool = False,
+        exige_aluno: bool = False,
+        **kwargs,
+    ):
         """Cria uma nova função validando unicidade de papel/função."""
         from .models import Funcao
         regras = FuncaoRules()
@@ -18,6 +26,7 @@ class FuncaoBusiness(ModelInstanceBusiness):
         try:
             return Funcao.objects.create(
                 papel_funcao=papel_funcao,
+                categoria=categoria,
                 descricao=descricao,
                 e_gratificada=e_gratificada,
                 exige_aluno=exige_aluno,

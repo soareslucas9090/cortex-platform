@@ -367,8 +367,9 @@ class ImportacaoUsuariosParserTests(TestCase):
                     'deficiencia\n(String)',
                     'ativo\n(boolean)',
                     'ultimo_login\n(Date)',
+                    'colaborador_externo\n(Booleano)',
                 ],
-                [1, '12345678901', 'Usuário Teste', '', '', True, None],
+                [1, '12345678901', 'Usuário Teste', '', '', True, None, None],
             ]
         }
 
@@ -378,6 +379,37 @@ class ImportacaoUsuariosParserTests(TestCase):
         self.assertEqual(resultado.usuarios[0].usuario_id_planilha, 1)
         self.assertEqual(resultado.usuarios[0].cpf, '12345678901')
         self.assertEqual(resultado.usuarios[0].nome, 'Usuário Teste')
+        self.assertFalse(resultado.usuarios[0].colaborador_externo)
+
+    @patch('Identidade.usuarios.importacao.importacao_parser.get_data')
+    def test_deve_tratar_colaborador_externo_nulo_como_false(self, mock_get_data):
+        parser = ImportacaoUsuariosParser()
+
+        arquivo = SimpleUploadedFile(
+            'modelo-importacao-usuarios.ods',
+            b'fake-content',
+            content_type='application/vnd.oasis.opendocument.spreadsheet',
+        )
+
+        mock_get_data.return_value = {
+            'Usuario': [
+                [
+                    'usuario_id\n(int, PK)',
+                    'cpf\n(String)',
+                    'nome\n(String)',
+                    'foto\n(String)',
+                    'deficiencia\n(String)',
+                    'ativo\n(boolean)',
+                    'ultimo_login\n(Date)',
+                    'colaborador_externo\n(Booleano)',
+                ],
+                [3, '11122233344', 'Externo Teste', '', '', True, None, 'NULL'],
+            ]
+        }
+
+        resultado = parser.parse(arquivo)
+
+        self.assertFalse(resultado.usuarios[0].colaborador_externo)
 
     @patch('Identidade.usuarios.importacao.importacao_parser.get_data')
     def test_deve_ignorar_linhas_vazias(self, mock_get_data):
@@ -399,9 +431,10 @@ class ImportacaoUsuariosParserTests(TestCase):
                     'deficiencia\n(String)',
                     'ativo\n(boolean)',
                     'ultimo_login\n(Date)',
+                    'colaborador_externo\n(Booleano)',
                 ],
-                ['', '', '', '', '', '', ''],
-                [2, '98765432100', 'Outro Usuário', '', '', True, None],
+                ['', '', '', '', '', '', '', ''],
+                [2, '98765432100', 'Outro Usuário', '', '', True, None, False],
             ]
         }
 
