@@ -15,4 +15,5 @@ urlpatterns = [
     path('cortex/organizacional/', include('Organizacional.urls')),
     path('cortex/pessoas-institucionais/', include('PessoasInstitucionais.urls')),
     path('cortex/academico/', include('Academico.urls')),
+    path('cortex/infraestrutura/', include('Infraestrutura.urls')),
 ] + debug_toolbar_urls()

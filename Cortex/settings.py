@@ -133,6 +133,8 @@ PROJECT_APPS = [
     'Academico.cursos',
     'Academico.alunos',
     'Academico.aluno_cursos',
+    'Infraestrutura.blocos',
+    'Infraestrutura.salas',
 ]
 
 INSTALLED_APPS = DEFAULT_ROOT_APPS + AUTH_APPS + PROJECT_APPS

@@ -23,16 +23,16 @@ Padrões de código: [ADR-001](../decisions/ADR-001-modularizacao-por-dominio.md
 
 ## Escopo — o que entra (v1)
 
-| ID | Entrega | Apps / artefatos |
-|----|---------|------------------|
-| E1 | Esqueleto do domínio | `Infraestrutura/`, `urls.py`, `INSTALLED_APPS`, `Cortex/urls.py` |
-| E2 | Espaço físico | `blocos`, `salas` (`Bloco`, `Sala`, `SalaSetor`) |
-| E3 | Recursos | `recursos` (`Recurso`, choices de tipo, estado derivado) |
-| E4 | Permissões do módulo | `permissoes` + hook em `UsuarioPermissions` |
-| E5 | Autorizações | `autorizacoes` |
-| E6 | Empréstimos | `emprestimos` (CRUD operacional + ações) |
-| E7 | Docs / ADR | Atualizar exemplo Sigec→Infraestrutura na ADR-002 e referências |
-| E8 | Testes | Regras de retirada, XOR autorização, troca, escopo L1 |
+| ID | Entrega | Apps / artefatos | Status |
+|----|---------|------------------|--------|
+| E1 | Esqueleto do domínio | `Infraestrutura/`, `urls.py`, `INSTALLED_APPS`, `Cortex/urls.py` | Concluída |
+| E2 | Espaço físico | `blocos`, `salas` (`Bloco`, `Sala`, `SalaSetor`) | Concluída |
+| E3 | Recursos | `recursos` (`Recurso`, choices de tipo, estado derivado) | Pendente |
+| E4 | Permissões do módulo | `permissoes` + hook em `UsuarioPermissions` | Pendente |
+| E5 | Autorizações | `autorizacoes` | Pendente |
+| E6 | Empréstimos | `emprestimos` (CRUD operacional + ações) | Pendente |
+| E7 | Docs / ADR | Atualizar exemplo Sigec→Infraestrutura na ADR-002 e referências | Pendente |
+| E8 | Testes | Regras de retirada, XOR autorização, troca, escopo L1 | Pendente |
 
 ## Escopo — o que **não** entra (v1)
 
@@ -62,6 +62,15 @@ Padrões de código: [ADR-001](../decisions/ADR-001-modularizacao-por-dominio.md
 
 Cada etapa tem **pré-requisito**, **entregáveis**, **critério de saída** e **ID** para rastreio em PRs/commits (`infra-I.x`).
 
+### Progresso
+
+| Etapa | Status |
+|-------|--------|
+| I.0 | Concluída |
+| I.1 | Concluída (13/07/2026) |
+| I.2 | Concluída (13/07/2026) |
+| I.3–I.8 | Pendente |
+
 ### Etapa I.0 — Alinhamento documental
 
 | | |
@@ -81,6 +90,7 @@ Cada etapa tem **pré-requisito**, **entregáveis**, **critério de saída** e *
 | **Entregáveis** | Pasta `Infraestrutura/` com `__init__.py` e `urls.py` (`app_name = 'infraestrutura'`); include em `Cortex/urls.py` como `path('cortex/infraestrutura/', ...)`; placeholder vazio até os apps existirem |
 | **Critério de saída** | Rota do domínio existe e não quebra o boot do Django |
 | **Padrões** | Espelhar `Organizacional/urls.py`; `name=` em todo `path` futuro |
+| **Status** | Concluída (13/07/2026) — `Infraestrutura/__init__.py`, `Infraestrutura/urls.py` (`app_name = 'infraestrutura'`), include em `Cortex/urls.py`; `python manage.py check` OK |
 
 ---
 
@@ -92,6 +102,7 @@ Cada etapa tem **pré-requisito**, **entregáveis**, **critério de saída** e *
 | **Entregáveis** | Apps `Organizacional`-style: `Infraestrutura.blocos`, `Infraestrutura.salas`; models `Bloco`, `Sala`, `SalaSetor`; `ativo`; `unique_together` sala+setor; migrations; registro em `PROJECT_APPS` |
 | **Critério de saída** | Migrações aplicam; FKs com `PROTECT` onde histórico importa |
 | **Camadas mínimas** | Models + admin opcional; business/rules podem ser mínimos (CRUD + desativar) |
+| **Status** | Concluída (13/07/2026) — apps `Infraestrutura.blocos` e `Infraestrutura.salas`; models `Bloco`, `Sala`, `SalaSetor`; camadas rules/helpers/business/admin; migrations `0001_initial`; registro em `PROJECT_APPS` |
 
 **Campos mínimos sugeridos**
 
