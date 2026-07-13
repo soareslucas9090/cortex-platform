@@ -34,6 +34,8 @@ class UsuarioVinculoSerializer(serializers.Serializer):
     funcao = serializers.IntegerField(allow_null=True)
     funcao_papel_funcao = serializers.CharField(allow_null=True)
     funcao_descricao = serializers.CharField(allow_null=True)
+    funcao_categoria = serializers.CharField(allow_null=True)
+    funcao_categoria_display = serializers.CharField(allow_null=True)
     responsavel = serializers.BooleanField()
     created_at = serializers.CharField(allow_null=True)
 
@@ -111,6 +113,8 @@ class UsuarioSerializer(serializers.ModelSerializer):
                     'funcao': v.funcao_id if v.funcao else None,
                     'funcao_papel_funcao': v.funcao.papel_funcao if v.funcao else None,
                     'funcao_descricao': v.funcao.descricao if v.funcao else None,
+                    'funcao_categoria': v.funcao.categoria if v.funcao else None,
+                    'funcao_categoria_display': v.funcao.get_categoria_display() if v.funcao else None,
                     'responsavel': v.responsavel,
                     'created_at': v.created_at.isoformat() if v.created_at else None,
                 }
@@ -123,7 +127,8 @@ class UsuarioSerializer(serializers.ModelSerializer):
         model = Usuario
         fields = [
             'id', 'cpf', 'nome', 'email', 'ativo', 'is_admin',
-            'foto', 'foto_secundaria', 'deficiencia', 'tem_perfil_aluno', 'created_at',
+            'foto', 'foto_secundaria', 'deficiencia', 'colaborador_externo',
+            'tem_perfil_aluno', 'created_at',
             'servidor', 'terceirizado', 'vinculos',
         ]
 
@@ -170,6 +175,11 @@ class CriarUsuarioSerializer(serializers.Serializer):
             'serão normalizadas automaticamente para sua chave de escolha.'
         ),
     )
+    colaborador_externo = serializers.BooleanField(
+        required=False,
+        default=False,
+        help_text='Indica se o usuário é colaborador externo à instituição.',
+    )
 
     def validate(self, attrs):
         cpf = attrs.get('cpf')
@@ -214,6 +224,7 @@ class AtualizarUsuarioSerializer(serializers.Serializer):
             'serão normalizadas automaticamente para sua chave de escolha.'
         ),
     )
+    colaborador_externo = serializers.BooleanField(required=False)
 
     def validate_deficiencia(self, value):
         from Identidade.usuarios.utils import normalizar_deficiencia

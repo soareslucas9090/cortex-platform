@@ -169,6 +169,7 @@ class ImportacaoUsuariosParser:
                 deficiencia=self._to_str(linha.get('deficiencia')),
                 ativo=self._to_bool(linha.get('ativo'), default=True),
                 ultimo_login=linha.get('ultimo_login'),
+                colaborador_externo=self._to_bool(linha.get('colaborador_externo'), default=False),
             )
             for linha in linhas
         ]

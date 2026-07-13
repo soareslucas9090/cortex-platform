@@ -12,6 +12,7 @@ class LinhaUsuarioImportacaoDTO:
     deficiencia: str = ''
     ativo: bool = True
     ultimo_login: Any = None
+    colaborador_externo: bool = False
 
 
 @dataclass

@@ -12,5 +12,7 @@ SPECTACULAR_SETTINGS = {
     'ENUM_NAME_OVERRIDES': {
         'SituacaoAlunoEnum': 'Academico.alunos.choices.SituacaoAluno',
         'SituacaoMatriculaEnum': 'Identidade.matriculas.choices.SituacaoMatricula',
+        'CategoriaServidorEnum': 'PessoasInstitucionais.servidores.choices.CategoriaServidor',
+        'CategoriaFuncaoEnum': 'Organizacional.funcoes.choices.CategoriaFuncao',
     },
 }

@@ -656,6 +656,7 @@ class UsuarioBusiness(ModelInstanceBusiness):
             usuario.nome = linha.nome
             usuario.deficiencia = linha.deficiencia
             usuario.ativo = linha.ativo
+            usuario.colaborador_externo = linha.colaborador_externo
             if linha.foto:
                 usuario.foto = linha.foto
             if linha.ultimo_login:
@@ -672,6 +673,7 @@ class UsuarioBusiness(ModelInstanceBusiness):
             nome=linha.nome,
             deficiencia=linha.deficiencia,
             ativo=linha.ativo,
+            colaborador_externo=linha.colaborador_externo,
             foto=linha.foto or None,
             last_login=linha.ultimo_login,
         )

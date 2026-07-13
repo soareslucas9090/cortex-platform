@@ -15,6 +15,7 @@ from AppCore.basics.views.basic_views import (
 )
 
 from .business import FuncaoBusiness
+from .choices import CategoriaFuncao
 from .models import Funcao
 from .serializers import (
     AtualizarFuncaoSerializer,
@@ -50,6 +51,11 @@ logger = logging.getLogger(__name__)
             required=False, description='Filtra por parte da descrição (ignora acentos e maiúsculas).',
         ),
         OpenApiParameter(
+            'categoria', OpenApiTypes.STR, OpenApiParameter.QUERY,
+            required=False,
+            description='Filtra por categoria: diretor, coordenador ou chefe.',
+        ),
+        OpenApiParameter(
             'paginacao', OpenApiTypes.INT, OpenApiParameter.QUERY,
             required=False, description='Tamanho da página (1â€“100, padrão 10).',
         ),
@@ -80,6 +86,10 @@ class ListarFuncoesView(IsAuthenticatedMixin, BasicGetAPIView):
         descricao = self.request.query_params.get('descricao')
         if descricao:
             qs = qs.filter(descricao__unaccent__icontains=descricao)
+
+        categoria = self.request.query_params.get('categoria')
+        if categoria and categoria in CategoriaFuncao.values:
+            qs = qs.filter(categoria=categoria)
             
         return qs
 

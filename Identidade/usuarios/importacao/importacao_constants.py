@@ -45,6 +45,7 @@ COLUNAS_ABA_USUARIO = [
     'deficiencia',
     'ativo',
     'ultimo_login',
+    'colaborador_externo',
 ]
 
 COLUNAS_ABA_CONTATO = [
