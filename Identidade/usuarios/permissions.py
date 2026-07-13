@@ -1,5 +1,8 @@
 from AppCore.core.users_permissions.user_permission import UserModelPermission
 
+from Infraestrutura.permissoes.choices import capacidades_infraestrutura_vazias
+from Infraestrutura.permissoes.helpers import PermissaoInfraestruturaUsuarioHelpers
+
 from .choices import (
     PERMISSAO_CORTEX_EDITAR_EU,
     PERMISSAO_CORTEX_EDITAR_TUDO,
@@ -54,4 +57,17 @@ class UsuarioPermissions(UserModelPermission):
 
         return {
             'cortex': cortex_perm,
+        }
+
+    def permissoes_infraestrutura(self) -> dict:
+        """
+        Capacidades do módulo Infraestrutura compiladas por vínculo ativo com função.
+        União (OR) das flags configuradas em PermissaoFuncaoInfraestrutura.
+        """
+        user = self.object_instance
+        if not user:
+            return {'infraestrutura': capacidades_infraestrutura_vazias()}
+
+        return {
+            'infraestrutura': PermissaoInfraestruturaUsuarioHelpers().compilar_do_usuario(user),
         }

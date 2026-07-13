@@ -12,6 +12,7 @@ from rest_framework.test import APITestCase
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from Identidade.usuarios.models import Usuario
+from Infraestrutura.permissoes.choices import capacidades_infraestrutura_vazias
 from Identidade.usuarios.importacao.importacao_parser import ImportacaoUsuariosParser
 from Identidade.usuarios.importacao.importacao_dtos import (
     ArquivoImportacaoUsuariosDTO,
@@ -37,6 +38,13 @@ def criar_usuario(cpf, nome='Usuário Teste', password='Senha@123', is_admin=Fal
         **kwargs,
     )
     return usuario
+
+
+def permissoes_esperadas(cortex_nivel):
+    return {
+        'cortex': cortex_nivel,
+        'infraestrutura': capacidades_infraestrutura_vazias(),
+    }
 
 
 def criar_arquivo_imagem_teste(nome='foto.png'):
@@ -923,7 +931,7 @@ class UsuarioPermissoesTest(APITestCase):
         user = criar_usuario('11111111111', nome='Aluno Teste')
         Aluno.objects.create(usuario=user, ativo=True)
 
-        self.assertEqual(user.permissoes, {'cortex': 'EDITAR_EU'})
+        self.assertEqual(user.permissoes, permissoes_esperadas('EDITAR_EU'))
 
     def test_usuario_servidor_ativo_tem_permissao_ler_tudo(self):
         from PessoasInstitucionais.servidores.models import Servidor
@@ -931,7 +939,7 @@ class UsuarioPermissoesTest(APITestCase):
         user = criar_usuario('22222222222', nome='Servidor Teste')
         Servidor.objects.create(usuario=user, cargo=self.cargo, categoria=1, ativo=True)
 
-        self.assertEqual(user.permissoes, {'cortex': 'LER_TUDO'})
+        self.assertEqual(user.permissoes, permissoes_esperadas('LER_TUDO'))
 
     def test_usuario_servidor_inativo_e_aluno_tem_permissao_editar_eu(self):
         from Academico.alunos.models import Aluno
@@ -941,7 +949,7 @@ class UsuarioPermissoesTest(APITestCase):
         Aluno.objects.create(usuario=user, ativo=True)
         Servidor.objects.create(usuario=user, cargo=self.cargo, categoria=1, ativo=False)
 
-        self.assertEqual(user.permissoes, {'cortex': 'EDITAR_EU'})
+        self.assertEqual(user.permissoes, permissoes_esperadas('EDITAR_EU'))
 
     def test_usuario_terceirizado_ativo_tem_permissao_ler_tudo(self):
         from PessoasInstitucionais.terceirizados.models import Terceirizado
@@ -949,14 +957,14 @@ class UsuarioPermissoesTest(APITestCase):
         user = criar_usuario('44444444444', nome='Terceirizado Teste')
         Terceirizado.objects.create(usuario=user, empresa_instituicao=self.empresa, cargo=self.cargo, ativo=True)
 
-        self.assertEqual(user.permissoes, {'cortex': 'LER_TUDO'})
+        self.assertEqual(user.permissoes, permissoes_esperadas('LER_TUDO'))
 
     def test_usuario_staff_tem_permissao_editar_tudo(self):
         user = criar_usuario('55555555555', nome='Staff Teste')
         user.is_staff = True
         user.save()
 
-        self.assertEqual(user.permissoes, {'cortex': 'EDITAR_TUDO'})
+        self.assertEqual(user.permissoes, permissoes_esperadas('EDITAR_TUDO'))
 
     def test_login_retorna_permissoes_no_payload(self):
         user = criar_usuario('66666666666', nome='Login Perms Teste', password='Password123')
@@ -967,7 +975,7 @@ class UsuarioPermissoesTest(APITestCase):
         resposta = self.client.post(url_login, {'login': '66666666666', 'password': 'Password123'})
         self.assertEqual(resposta.status_code, status.HTTP_200_OK)
         self.assertIn('permissoes', resposta.data)
-        self.assertEqual(resposta.data['permissoes'], {'cortex': 'EDITAR_TUDO'})
+        self.assertEqual(resposta.data['permissoes'], permissoes_esperadas('EDITAR_TUDO'))
 
     def test_endpoint_me_retorna_permissoes(self):
         user = criar_usuario('77777777777', nome='Me Perms Teste', password='Password123')
@@ -980,7 +988,7 @@ class UsuarioPermissoesTest(APITestCase):
         
         data = resposta.data['dados'] if 'dados' in resposta.data else resposta.data
         self.assertIn('permissoes', data)
-        self.assertEqual(data['permissoes'], {'cortex': 'EDITAR_EU'})
+        self.assertEqual(data['permissoes'], permissoes_esperadas('EDITAR_EU'))
 
 
 class CortexPermissoesEscopoViewTest(APITestCase):
@@ -1071,11 +1079,19 @@ class DocumentarPermissoesViewTest(APITestCase):
         resposta = self.client.get(self.url)
         self.assertEqual(resposta.status_code, status.HTTP_200_OK)
         modulos = resposta.data['dados']['modulos']
-        self.assertEqual(len(modulos), 1)
-        self.assertEqual(modulos[0]['chave'], 'cortex')
-        self.assertEqual(len(modulos[0]['niveis']), 3)
-        self.assertGreaterEqual(len(modulos[0]['exemplos']), 1)
-        self.assertIn('texto', modulos[0])
+        self.assertEqual(len(modulos), 2)
+        chaves = {modulo['chave'] for modulo in modulos}
+        self.assertEqual(chaves, {'cortex', 'infraestrutura'})
+
+        cortex = next(modulo for modulo in modulos if modulo['chave'] == 'cortex')
+        self.assertEqual(len(cortex['niveis']), 3)
+        self.assertGreaterEqual(len(cortex['exemplos']), 1)
+        self.assertIn('texto', cortex)
+
+        infraestrutura = next(modulo for modulo in modulos if modulo['chave'] == 'infraestrutura')
+        self.assertEqual(len(infraestrutura['capacidades']), 4)
+        self.assertGreaterEqual(len(infraestrutura['exemplos']), 1)
+        self.assertIn('texto', infraestrutura)
 
     def test_nao_autenticado_retorna_401(self):
         resposta = self.client.get(self.url)

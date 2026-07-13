@@ -27,8 +27,8 @@ Padrões de código: [ADR-001](../decisions/ADR-001-modularizacao-por-dominio.md
 |----|---------|------------------|--------|
 | E1 | Esqueleto do domínio | `Infraestrutura/`, `urls.py`, `INSTALLED_APPS`, `Cortex/urls.py` | Concluída |
 | E2 | Espaço físico | `blocos`, `salas` (`Bloco`, `Sala`, `SalaSetor`) | Concluída |
-| E3 | Recursos | `recursos` (`Recurso`, choices de tipo, estado derivado) | Pendente |
-| E4 | Permissões do módulo | `permissoes` + hook em `UsuarioPermissions` | Pendente |
+| E3 | Recursos | `recursos` (`Recurso`, choices de tipo, estado derivado) | Concluída |
+| E4 | Permissões do módulo | `permissoes` + hook em `UsuarioPermissions` | Concluída |
 | E5 | Autorizações | `autorizacoes` | Pendente |
 | E6 | Empréstimos | `emprestimos` (CRUD operacional + ações) | Pendente |
 | E7 | Docs / ADR | Atualizar exemplo Sigec→Infraestrutura na ADR-002 e referências | Pendente |
@@ -69,7 +69,9 @@ Cada etapa tem **pré-requisito**, **entregáveis**, **critério de saída** e *
 | I.0 | Concluída |
 | I.1 | Concluída (13/07/2026) |
 | I.2 | Concluída (13/07/2026) |
-| I.3–I.8 | Pendente |
+| I.3 | Concluída (13/07/2026) |
+| I.4 | Concluída (13/07/2026) |
+| I.5–I.8 | Pendente |
 
 ### Etapa I.0 — Alinhamento documental
 
@@ -120,6 +122,7 @@ Cada etapa tem **pré-requisito**, **entregáveis**, **critério de saída** e *
 | **Entregáveis** | App `recursos`; `Recurso` com `codigo` único, `tipo` (choices), `sala` (obrigatória se chave), `descricao`, `em_avaria` (estado simples), `ativo`; helper/property de **estado derivado**; rules de validação por tipo |
 | **Critério de saída** | Não cria chave sem sala; desativar em vez de delete de negócio |
 | **Ordem de arquivos** | `choices.py` → `models.py` → `rules.py` → `helpers.py` → `business.py` |
+| **Status** | Concluída (13/07/2026) — app `Infraestrutura.recursos`; model `Recurso`; `TipoRecurso`/`EstadoRecurso`; property `estado_derivado`; rules `validar_sala_por_tipo` e `codigo_unico`; migration `0001_initial`; registro em `PROJECT_APPS` |
 
 Estado derivado (prioridade): `avaria` → `emprestado` → `reservado` (sempre falso na v1) → `disponivel`.
 
@@ -133,6 +136,7 @@ Estado derivado (prioridade): `avaria` → `emprestado` → `reservado` (sempre 
 | **Entregáveis** | App `permissoes`; model `PermissaoFuncaoInfraestrutura` OneToOne/`FK` única com `Funcao`; flags booleanas das quatro capacidades; método `permissoes_infraestrutura()` em `UsuarioPermissions`; `documentacao_infraestrutura()` no mesmo PR; atualizar ADR-002 (exemplo Sigec → Infraestrutura) |
 | **Critério de saída** | `GET` de permissões do usuário inclui chave `infraestrutura` com flags compiladas a partir dos vínculos ativos |
 | **Padrões** | ADR-002 extensibilidade; descoberta automática `permissoes_*()` |
+| **Status** | Concluída (13/07/2026) — app `Infraestrutura.permissoes`; model `PermissaoFuncaoInfraestrutura`; `permissoes_infraestrutura()` e `documentacao_infraestrutura()`; ADR-002 atualizada; testes de compilação |
 
 **Compilação sugerida:** união das flags das funções dos `SetorVinculo` ativos do usuário (OR das capacidades).
 
