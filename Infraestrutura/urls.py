@@ -7,4 +7,5 @@ urlpatterns = [
     path('', include('Infraestrutura.salas.urls')),
     path('', include('Infraestrutura.recursos.urls')),
     path('', include('Infraestrutura.autorizacoes.urls')),
+    path('', include('Infraestrutura.emprestimos.urls')),
 ]

@@ -138,6 +138,7 @@ PROJECT_APPS = [
     'Infraestrutura.recursos',
     'Infraestrutura.permissoes',
     'Infraestrutura.autorizacoes',
+    'Infraestrutura.emprestimos',
 ]
 
 INSTALLED_APPS = DEFAULT_ROOT_APPS + AUTH_APPS + PROJECT_APPS

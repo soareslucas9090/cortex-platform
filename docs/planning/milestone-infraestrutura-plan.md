@@ -31,9 +31,9 @@ Padrões de código: [ADR-001](../decisions/ADR-001-modularizacao-por-dominio.md
 | E4 | Permissões do módulo | `permissoes` + hook em `UsuarioPermissions` | Concluída |
 | E5 | API de cadastro estrutural | serializers, views e urls de blocos, salas e recursos | Concluída |
 | E6 | Autorizações | `autorizacoes` | Concluída |
-| E7 | Empréstimos | `emprestimos` (CRUD operacional + ações) | Pendente |
+| E7 | Empréstimos | `emprestimos` (CRUD operacional + ações) | Concluída |
 | E8 | Docs / ADR | Atualizar exemplo Sigec→Infraestrutura na ADR-002 e referências | Parcial (ADR-002 na I.4) |
-| E9 | Testes | Regras de retirada, XOR autorização, troca, escopo L1 | Parcial (XOR/vigência/revogação na I.6) |
+| E9 | Testes | Regras de retirada, XOR autorização, troca, escopo L1 | Parcial (I.6 + núcleo I.7) |
 
 ## Escopo — o que **não** entra (v1)
 
@@ -74,7 +74,8 @@ Cada etapa tem **pré-requisito**, **entregáveis**, **critério de saída** e *
 | I.4 | Concluída (13/07/2026) |
 | I.5 | Concluída (13/07/2026) |
 | I.6 | Concluída (14/07/2026) |
-| I.7–I.8 | Pendente |
+| I.7 | Concluída (14/07/2026) |
+| I.8 | Pendente |
 
 ### Etapa I.0 — Alinhamento documental
 
@@ -187,6 +188,8 @@ Estado derivado (prioridade): `avaria` → `emprestado` → `reservado` (sempre 
 - Com `operar` (L2 típico): consulta ampla + filtros.
 - L1 sem `operar`: apenas empréstimos **ativos** em que é solicitante.
 - Alerta >24h: campo/anotação calculada na serialização (`atrasado` / similar) para o frontend — sem job de e-mail.
+
+| **Status** | Concluída (14/07/2026) — app `Infraestrutura.emprestimos`; models `Emprestimo` e `ItemEmprestimo`; business `realizar_emprestimo`, `devolver_itens`, `trocar_titular`; elegibilidade via SalaSetor, servente de limpeza, autorização e `retirada_irrestrita`; constraint de recurso único em aberto; APIs listar/realizar/devolver/trocar-titular; gate `operar`; escopo L1 na listagem; campo `atrasado`; migration cargo `SERVENTE DE LIMPEZA`; testes em `test_emprestimos.py` e `test_emprestimos_views.py` |
 
 ---
 
