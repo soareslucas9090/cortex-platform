@@ -74,6 +74,19 @@ Esta milestone **não deve** incluir:
 
 ---
 
+## Progresso
+
+| Etapa | Status |
+|-------|--------|
+| 5.1 | Concluída (14/07/2026) |
+| 5.2 | Concluída |
+| 5.3 | Concluída |
+| 5.4 | Concluída |
+| 5.5 | Concluída (14/07/2026) |
+| 5.6 | Parcial |
+
+---
+
 ## Frentes internas da milestone
 
 ## Etapa 5.1 — Integração `Identidade` + `PessoasInstitucionais`
@@ -88,6 +101,9 @@ Consolidar a relação entre a identidade do usuário e os perfis institucionais
 
 ### Critério de saída
 A identidade e os perfis institucionais devem estar integrados de forma coerente, sem sobreposição indevida de responsabilidades.
+
+### Status
+Concluída (14/07/2026) — exposição de `servidor` e `terceirizado` em `UsuarioSerializer` via reverse relations; queryset `queryset_usuario_com_perfis()` para listagem/detalhe; testes em `Identidade/usuarios/tests/test_perfil_institucional.py`.
 
 ---
 
@@ -151,6 +167,9 @@ Consolidar a coerência estrutural e documental do projeto.
 
 ### Critério de saída
 A estrutura do projeto e a documentação principal devem refletir corretamente a implementação final.
+
+### Status
+Concluída (14/07/2026) — `settings.py` e `urls.py` revisados; apps e rotas agregadas validados; `django-project-tree.md`, `README.md`, checklist global, plano mestre e `copilot-instructions.md` alinhados com a estrutura real (incluindo domínio `Infraestrutura`).
 
 ---
 

@@ -27,13 +27,6 @@ if not DEBUG and SECRET_KEY == _DEFAULT_SECRET_KEY:
 # Configure SIMPLE_JWT_SIGNING_KEY no .env em produção para uma chave dedicada.
 SIMPLE_JWT['SIGNING_KEY'] = os.environ.get('SIMPLE_JWT_SIGNING_KEY', SECRET_KEY)  # noqa: F821
 
-# Backends de autenticação — EmailOrCpfBackend aceita login por e-mail ou CPF;
-# ModelBackend é mantido como fallback para o Django admin.
-AUTHENTICATION_BACKENDS = [
-    'AppCore.basics.auth.backends.EmailOrCpfBackend',
-    'django.contrib.auth.backends.ModelBackend',
-]
-
 ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', '*').split(',')
 
 csrf_origins = os.environ.get('CSRF_TRUSTED_ORIGINS', '')

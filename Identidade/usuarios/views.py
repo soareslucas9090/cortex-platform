@@ -35,6 +35,7 @@ from .serializers import (
 )
 from .access import escopar_queryset_cortex
 from .documentacao import PermissaoDocumentacao
+from .querysets import queryset_usuario_com_perfis
 
 logger = logging.getLogger(__name__)
 
@@ -133,7 +134,7 @@ class ListarUsuariosView(IsOwnerOrAdminMixin, BasicGetAPIView):
     mensagem_sucesso = 'Usuários listados com sucesso.'
 
     def get_queryset(self):
-        qs = Usuario.objects.all()
+        qs = queryset_usuario_com_perfis()
         qs = escopar_queryset_cortex(self.request.user, qs, campo_dono='id')
 
         ativo = self.request.query_params.get('ativo')
@@ -228,7 +229,7 @@ class CriarUsuarioView(IsAdminMixin, BasicPostAPIView):
 )
 class DetalheUsuarioView(IsOwnerOrAdminMixin, BasicRetrieveAPIView):
     """GET /cortex/identidade/usuarios/{pk}/"""
-    queryset = Usuario.objects.all()
+    queryset = queryset_usuario_com_perfis()
     serializer_class = UsuarioSerializer
     mensagem_sucesso = 'Usuário obtido com sucesso.'
 

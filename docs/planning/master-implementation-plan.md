@@ -340,7 +340,7 @@ O projeto passa a representar perfis acadêmicos e seus vínculos formais com cu
 
 ## Estado
 
-**Em andamento** — estruturação e validação de documentos concluída.
+**Em andamento** — etapas 5.1–5.5 concluídas; validação funcional mínima (5.6) pendente.
 
 ## Objetivo
 
@@ -359,6 +359,36 @@ Consolidar a integração entre os domínios já implementados, validar invarian
 ## Resultado esperado
 
 O projeto deve terminar coerente, navegável, documentado e estruturalmente consistente de ponta a ponta.
+
+---
+
+# Milestone Infraestrutura — Domínio Infraestrutura (v1)
+
+## Estado
+
+**Concluída** (v1 operacional)
+
+## Objetivo
+
+Implementar o domínio `Infraestrutura` para cadastro de espaço físico, recursos, autorizações e empréstimos, com permissões por função conforme ADR-002.
+
+## Estrutura do domínio
+
+Módulo:
+
+- `Infraestrutura/`
+
+Apps internos:
+
+- `blocos/`, `salas/`, `recursos/`, `permissoes/`, `autorizacoes/`, `emprestimos/`
+
+## Observação
+
+Esta milestone evolui em paralelo à consolidação final (Milestone 5). O domínio está registrado em `PROJECT_APPS`, roteado em `/cortex/infraestrutura/` e documentado em `docs/planning/milestone-infraestrutura-plan.md`.
+
+## Resultado esperado
+
+Fluxo de liberação de recursos (chaves) substituindo o Chameco legado, com matriz L1/L2/L3 e testes das regras centrais.
 
 ---
 
@@ -431,5 +461,6 @@ A estrutura atual recomendada é:
 - `Organizacional/` com apps como `setores`, `funcoes`, `vinculos`
 - `PessoasInstitucionais/` com apps específicos para perfis institucionais
 - `Academico/` com apps específicos para perfis acadêmicos
+- `Infraestrutura/` com apps para espaço físico, recursos, autorizações e empréstimos
 
 Esse plano substitui a visão anterior em que cada domínio era tratado como um único app principal, e passa a refletir a arquitetura atual do projeto.
