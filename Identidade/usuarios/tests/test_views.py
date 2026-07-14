@@ -1072,6 +1072,14 @@ class DocumentarPermissoesViewTest(APITestCase):
         self.assertEqual(len(infraestrutura['capacidades']), 4)
         self.assertGreaterEqual(len(infraestrutura['exemplos']), 1)
         self.assertIn('texto', infraestrutura)
+        self.assertIn('regras_automaticas', infraestrutura)
+        codigos_regras = {r['codigo'] for r in infraestrutura['regras_automaticas']}
+        self.assertEqual(
+            codigos_regras,
+            {'acesso_total_admin', 'servente_limpeza', 'sala_setor', 'autorizacao_vigente'},
+        )
+        self.assertIn('SERVENTE DE LIMPEZA', infraestrutura['texto'])
+        self.assertIn('retirada_irrestrita', infraestrutura['texto'])
 
     def test_nao_autenticado_retorna_401(self):
         resposta = self.client.get(self.url)
