@@ -30,10 +30,10 @@ Padrões de código: [ADR-001](../decisions/ADR-001-modularizacao-por-dominio.md
 | E3 | Recursos | `recursos` (`Recurso`, choices de tipo, estado derivado) | Concluída |
 | E4 | Permissões do módulo | `permissoes` + hook em `UsuarioPermissions` | Concluída |
 | E5 | API de cadastro estrutural | serializers, views e urls de blocos, salas e recursos | Concluída |
-| E6 | Autorizações | `autorizacoes` | Pendente |
+| E6 | Autorizações | `autorizacoes` | Concluída |
 | E7 | Empréstimos | `emprestimos` (CRUD operacional + ações) | Pendente |
 | E8 | Docs / ADR | Atualizar exemplo Sigec→Infraestrutura na ADR-002 e referências | Parcial (ADR-002 na I.4) |
-| E9 | Testes | Regras de retirada, XOR autorização, troca, escopo L1 | Pendente |
+| E9 | Testes | Regras de retirada, XOR autorização, troca, escopo L1 | Parcial (XOR/vigência/revogação na I.6) |
 
 ## Escopo — o que **não** entra (v1)
 
@@ -73,7 +73,8 @@ Cada etapa tem **pré-requisito**, **entregáveis**, **critério de saída** e *
 | I.3 | Concluída (13/07/2026) |
 | I.4 | Concluída (13/07/2026) |
 | I.5 | Concluída (13/07/2026) |
-| I.6–I.8 | Pendente |
+| I.6 | Concluída (14/07/2026) |
+| I.7–I.8 | Pendente |
 
 ### Etapa I.0 — Alinhamento documental
 
@@ -164,6 +165,7 @@ Estado derivado (prioridade): `avaria` → `emprestado` → `reservado` (sempre 
 | **Entregáveis** | App `autorizacoes`; model com beneficiário, concedente, sala XOR recurso, datas, revogação, observação; rules `validar_alvo_xor`, `pode_conceder`, vigência; endpoints conceder/listar/revogar |
 | **Critério de saída** | Impossível salvar sala e recurso juntos; só `autorizar` concede/revoga; autorização por sala vale para recurso novo da sala na checagem de retirada |
 | **Testes** | XOR; revogação; vigência temporária |
+| **Status** | Concluída (14/07/2026) — app `Infraestrutura.autorizacoes`; model `Autorizacao`; rules `validar_alvo_xor`, `validar_vigencia`, `pode_conceder`, `pode_revogar`; helper `usuario_tem_autorizacao_vigente_para_recurso`; APIs conceder/listar/detalhe/revogar com gate `autorizar`; `PodeAutorizarInfraestruturaPermission` em `permissoes/access.py`; migration `0001_initial`; testes em `Infraestrutura/tests/test_autorizacoes.py` e `test_autorizacoes_views.py` |
 
 ---
 
