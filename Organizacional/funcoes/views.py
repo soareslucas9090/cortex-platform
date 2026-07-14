@@ -14,7 +14,6 @@ from AppCore.basics.views.basic_views import (
     BasicRetrieveAPIView,
 )
 
-from .business import FuncaoBusiness
 from .choices import CategoriaFuncao
 from .models import Funcao
 from .serializers import (
@@ -112,7 +111,7 @@ class CriarFuncaoView(IsAdminMixin, BasicPostAPIView):
     mensagem_sucesso = 'Função criada com sucesso.'
 
     def do_action_post(self, serializer_data, request, *args, **kwargs):
-        funcao = FuncaoBusiness().criar_funcao(**serializer_data)
+        funcao = Funcao().business.criar_funcao(**serializer_data)
         return {
             'mensagem': self.mensagem_sucesso,
             'dados': FuncaoSerializer(funcao).data,

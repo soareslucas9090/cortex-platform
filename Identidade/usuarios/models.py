@@ -5,6 +5,7 @@ from AppCore.basics.models.user_model import AbstractBaseAppUser
 from AppCore.common.util.util import normalizar_cpf
 from AppCore.core.business.business_mixin import ModelBusinessMixin
 from AppCore.core.helpers.helpers_mixin import ModelHelperMixin
+from AppCore.core.rules.rules_mixin import ModelRulesMixin
 from AppCore.core.users_permissions.user_permission_mixin import UserModelPermissionMixin
 from .choices import PERMISSAO_CORTEX_EDITAR_TUDO, PERMISSAO_CORTEX_LER_TUDO
 from .permissions import UsuarioPermissions
@@ -49,12 +50,14 @@ class TipoDeficiencia(models.TextChoices):
     DEFICIENCIA_FISICA = 'deficiencia_fisica', 'Deficiência Física'
 
 
-class Usuario(ModelHelperMixin, ModelBusinessMixin, UserModelPermissionMixin, AbstractBaseAppUser):
+class Usuario(ModelHelperMixin, ModelBusinessMixin, ModelRulesMixin, UserModelPermissionMixin, AbstractBaseAppUser):
     from .business import UsuarioBusiness
     from .helpers import UsuarioHelpers
+    from .rules import UsuarioRules
 
     business_class = UsuarioBusiness
     helper_class = UsuarioHelpers
+    rules_class = UsuarioRules
     user_permissions_class = UsuarioPermissions
 
     email = models.EmailField(

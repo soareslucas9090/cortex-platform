@@ -6,8 +6,6 @@ from AppCore.core.exceptions.exceptions import (
     SystemErrorException,
 )
 
-from .rules import ServidorRules
-
 logger = logging.getLogger(__name__)
 
 
@@ -21,25 +19,20 @@ class ServidorBusiness(ModelInstanceBusiness):
         from PessoasInstitucionais.cargos.models import Cargo
         from .models import Servidor
 
-        regras = ServidorRules()
-
-        # Validar que o usuário existe
         Usuario = apps.get_model(settings.AUTH_USER_MODEL)
         try:
             usuario = Usuario.objects.get(pk=usuario_pk)
         except Usuario.DoesNotExist:
             raise NotFoundException('Usuário não encontrado.')
 
-        # Validar que o usuário ainda não tem perfil de servidor
-        regras.usuario_sem_perfil_servidor(usuario_pk)
+        self.object_instance.rules.usuario_sem_perfil_servidor(usuario_pk)
 
-        # Validar e buscar o cargo
         try:
             cargo = Cargo.objects.get(pk=cargo_pk)
         except Cargo.DoesNotExist:
             raise NotFoundException('Cargo não encontrado.')
 
-        regras.cargo_ativo(cargo)
+        self.object_instance.rules.cargo_ativo(cargo)
 
         try:
             return Servidor.objects.create(
@@ -54,8 +47,6 @@ class ServidorBusiness(ModelInstanceBusiness):
 
     def atualizar_dados(self, dados: dict):
         """Atualiza campos do servidor. Revalida cargo se estiver nos dados."""
-        regras = ServidorRules(object_instance=self.object_instance)
-
         if 'cargo_pk' in dados:
             from PessoasInstitucionais.cargos.models import Cargo
             cargo_pk = dados.pop('cargo_pk')
@@ -63,7 +54,7 @@ class ServidorBusiness(ModelInstanceBusiness):
                 cargo = Cargo.objects.get(pk=cargo_pk)
             except Cargo.DoesNotExist:
                 raise NotFoundException('Cargo não encontrado.')
-            regras.cargo_ativo(cargo)
+            self.object_instance.rules.cargo_ativo(cargo)
             self.object_instance.cargo = cargo
 
         try:
@@ -76,8 +67,7 @@ class ServidorBusiness(ModelInstanceBusiness):
 
     def desativar(self):
         """Desativa o perfil de servidor."""
-        regras = ServidorRules(object_instance=self.object_instance)
-        regras.pode_desativar()
+        self.object_instance.rules.pode_desativar()
         try:
             self.object_instance.ativo = False
             self.object_instance.save(update_fields=['ativo'])
@@ -87,8 +77,7 @@ class ServidorBusiness(ModelInstanceBusiness):
 
     def reativar(self):
         """Reativa o perfil de servidor."""
-        regras = ServidorRules(object_instance=self.object_instance)
-        regras.pode_reativar()
+        self.object_instance.rules.pode_reativar()
         try:
             self.object_instance.ativo = True
             self.object_instance.save(update_fields=['ativo'])

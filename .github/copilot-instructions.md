@@ -229,6 +229,7 @@ class MinhaModel(BasicModel):
   - Organizacional
   - PessoasInstitucionais
   - Acadêmico
+  - Infraestrutura
 
 ## Autenticação
 
@@ -553,7 +554,7 @@ cd NomeApp
 
 - **Django 5.2.7** + **DRF 3.16.1**
 - **Auth**: SimpleJWT (tokens 30min/7 dias) + django-allauth 65.9.0 (login social)
-- **Database**: PostgreSQL (dev usa SQLite)
+- **Database**: PostgreSQL
 - **Background Tasks**: Celery 5.4.0 + Redis 5.0.3 (usado para importações assíncronas)
 - **Docs API**: drf-spectacular (Swagger/ReDoc em `/cortex/api/schema/swagger/`)
 - **Auditoria**: django-simple-history (histórico automático em models)
@@ -711,7 +712,7 @@ Veja exemplo em `Auth.auth.serializers` com `LoginInputSerializer` e `LoginRespo
 
 ## URLs e Estrutura de Rotas
 
-- `Cortex/urls.py` inclui os módulos de domínio (`Identidade.urls`, `Organizacional.urls`)
+- `Cortex/urls.py` inclui os módulos de domínio (`Identidade.urls`, `Organizacional.urls`, `PessoasInstitucionais.urls`, `Academico.urls`, `Infraestrutura.urls`) sob o prefixo `/cortex/`
 - O `urls.py` de cada módulo de domínio agrega as rotas dos apps internos
 - Apps internos **não** são incluídos diretamente em `Cortex/urls.py`
 - Documentação: `/cortex/api/schema/`, `/cortex/api/schema/swagger/`, `/cortex/api/schema/redoc/`
@@ -769,6 +770,13 @@ Abaixo está o resumo dos modelos, seus relacionamentos e o status de implementa
 | **Terceirizado**       | ✅ Implementado | `PessoasInstitucionais/terceirizados/`         | OneToOne com Usuario, N:1 com EmpresaInstituicao          |
 | **Aluno**              | ✅ Implementado | `Academico/alunos/`                            | OneToOne com Usuario                                      |
 | **Curso**              | ✅ Implementado | `Academico/cursos/`                            | M:N com Aluno via AlunoCurso                              |
+| **AlunoCurso**         | ✅ Implementado | `Academico/aluno_cursos/`                      | N:1 com Aluno e Curso                                     |
+| **Bloco**              | ✅ Implementado | `Infraestrutura/blocos/`                       | Entidade independente                                     |
+| **Sala**               | ✅ Implementado | `Infraestrutura/salas/`                        | N:1 com Bloco; M:N com Setor via SalaSetor                |
+| **Recurso**            | ✅ Implementado | `Infraestrutura/recursos/`                     | N:1 com Sala (quando aplicável)                           |
+| **Autorizacao**        | ✅ Implementado | `Infraestrutura/autorizacoes/`                 | XOR sala ou recurso                                       |
+| **Emprestimo**         | ✅ Implementado | `Infraestrutura/emprestimos/`                  | Multi-item; retirada e devolução                          |
+| **PermissaoFuncaoInfraestrutura** | ✅ Implementado | `Infraestrutura/permissoes/`          | Capacidades por função; sem rotas HTTP                    |
 
 ### Apps Internos por Módulo de Domínio
 
@@ -800,7 +808,14 @@ A ordem de criação respeita as dependências entre domínios. Apps dentro do m
 13. `Academico/cursos/` — Model: `Curso` (sem dependências externas)
 14. `Academico/aluno_cursos/` — Model: `AlunoCurso` (depende de `alunos`, `cursos`)
 
-### Choices Definidos
+**Módulo `Infraestrutura/`** (Milestone Infraestrutura v1 — concluída):
+
+15. `Infraestrutura/blocos/` — Model: `Bloco`
+16. `Infraestrutura/salas/` — Models: `Sala`, `SalaSetor` (depende de `blocos`, `Organizacional.setores`)
+17. `Infraestrutura/recursos/` — Model: `Recurso` (depende de `salas`)
+18. `Infraestrutura/permissoes/` — Model: `PermissaoFuncaoInfraestrutura` (depende de `Organizacional.funcoes`; sem rotas HTTP)
+19. `Infraestrutura/autorizacoes/` — Model: `Autorizacao`
+20. `Infraestrutura/emprestimos/` — Models de empréstimo multi-item
 
 - **Status genérico**: `STATUS_ATIVO`, `STATUS_INATIVO`
 - **Situação do Aluno**: `MATRICULADO`, `TRANCADO`, `FORMADO`, `DESISTENTE`, `TRANSFERIDO`
@@ -904,6 +919,7 @@ Exemplos de módulos de domínio:
 - `Organizacional/`
 - `PessoasInstitucionais/`
 - `Academico/`
+- `Infraestrutura/`
 
 ### Regra preferencial de modelagem física
 

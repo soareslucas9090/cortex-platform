@@ -62,7 +62,7 @@ def do_action_post(self, serializer_data, request):
 
 ```python
 def do_action_post(self, serializer_data, request):
-    UsuarioBusiness().criar_usuario(**serializer_data)
+    Usuario().business.criar_usuario(**serializer_data)
 ```
 
 ---
@@ -99,7 +99,7 @@ Os hooks `do_action_post`, `do_action_put`, `do_action_patch` e `do_action_delet
 ```python
 # ✅ CORRETO
 def do_action_post(self, serializer_data, request):
-    usuario = UsuarioBusiness().criar_usuario(**serializer_data)
+    usuario = Usuario().business.criar_usuario(**serializer_data)
     return {
         'mensagem': 'Usuário criado com sucesso.',
         'status_code': status.HTTP_201_CREATED,
@@ -107,13 +107,13 @@ def do_action_post(self, serializer_data, request):
 
 # ❌ ERRADO — retornando Response diretamente
 def do_action_post(self, serializer_data, request):
-    UsuarioBusiness().criar_usuario(**serializer_data)
+    Usuario().business.criar_usuario(**serializer_data)
     return Response({'mensagem': 'ok'}, status=201)
 
 # ❌ ERRADO — gerenciando transação manualmente
 def do_action_post(self, serializer_data, request):
     with transaction.atomic():
-        UsuarioBusiness().criar_usuario(**serializer_data)
+        Usuario().business.criar_usuario(**serializer_data)
 ```
 
 ##### `do_action_put(self, serializer_data, request)` e `do_action_patch(self, serializer_data, request)`
@@ -221,7 +221,8 @@ Quando a view herda de `GenericAPIView` diretamente (sem usar `BasicPostAPIView`
 
 - [ ] Herda de `ModelInstanceBusiness`.
 - [ ] Usa `self.object_instance` para acessar o objeto (não `self.object`).
-- [ ] Orquestra chamadas a `Rules`, `Helpers` e `State` — não implementa lógica de domínio que pertença a essas camadas.
+- [ ] Acessa Rules e Helpers via `self.object_instance.rules` e `self.object_instance.helper` — **nunca** importa nem instancia `XxxRules()` / `XxxHelpers()`.
+- [ ] Orquestra chamadas a Rules, Helpers e State — não implementa lógica de domínio que pertença a essas camadas.
 - [ ] Blocos `try/except Exception` **nunca** retornam `str(e)` ao cliente — sempre lançam `SystemErrorException` com mensagem genérica e logam com `logger.exception(...)`.
 - [ ] Método padrão de atualização:
   ```python
@@ -273,6 +274,8 @@ def can_desativar(self):
 - [ ] Model de usuário herda de `AbstractBaseAppUser`.
 - [ ] Models com Business usam `ModelBusinessMixin` e definem `business_class`.
 - [ ] Models com Helpers usam `ModelHelperMixin` e definem `helper_class`.
+- [ ] Models com Rules usam `ModelRulesMixin` e definem `rules_class`.
+- [ ] Views, admin e testes acessam camadas via `Model().business` / `obj.business` — nunca `XxxBusiness()`.
 - [ ] `verbose_name` e `verbose_name_plural` estão em português.
 - [ ] `related_name` está em português e é descritivo.
 - [ ] Herança de usuário usa `OneToOneField` com `primary_key=True`.

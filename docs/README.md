@@ -26,6 +26,7 @@ Documentos de planejamento de implementação e marcos.
 - [Milestone 4: Acadêmico Plan](planning/milestone-4-academico-plan.md)
 - [Milestone 5: Integração e Consolidação Final Plan](planning/milestone-5-integracao-e-consolidacao-final-plan.md)
 - [Milestone: Importação de Usuários](planning/milestone-importacao-usuarios.md)
+- [Milestone: Infraestrutura (v1)](planning/milestone-infraestrutura-plan.md)
 
 ### 🔌 API
 Especificações e especificações de integração das APIs.
@@ -35,6 +36,8 @@ Especificações e especificações de integração das APIs.
 Modelagens de dados, mapeamentos e regras de carga.
 - [Dados Raízes da Importação](schema/dados-raizes-importacao.md)
 - [Importação de Usuários](schema/importacao-usuarios.md)
+- [Infraestrutura](schema/infraestrutura.md)
+- [Funcionamento do Chameco legado](schema/funcionamento-antigo-sigec.md)
 
 ### 🌱 Seeds e Inicialização
 Dados de sementes (seeds) e informações de carga inicial do banco.

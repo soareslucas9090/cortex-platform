@@ -7,8 +7,7 @@ logger = logging.getLogger(__name__)
 
 @shared_task
 def processar_importacao_usuarios_task(importacao_id):
-    from .models import ImportacaoLote, StatusImportacao
-    from .business import UsuarioBusiness
+    from .models import ImportacaoLote, StatusImportacao, Usuario
 
     try:
         importacao = ImportacaoLote.objects.get(id=importacao_id)
@@ -22,7 +21,7 @@ def processar_importacao_usuarios_task(importacao_id):
         download_importacao_from_s3_if_needed(importacao)
 
         # Passa a importacao para o business para atualizar o progresso
-        resultado = UsuarioBusiness().importar_usuarios_em_lote(importacao)
+        resultado = Usuario().business.importar_usuarios_em_lote(importacao)
         
         # Após concluir, atualiza o status baseado no resultado
         if resultado.sucesso:

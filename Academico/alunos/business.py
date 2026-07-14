@@ -11,7 +11,6 @@ class AlunoBusiness(ModelInstanceBusiness):
     def criar_aluno(self, **dados):
         from Identidade.usuarios.models import Usuario
         from .models import Aluno
-        from .rules import AlunoRules
         from .choices import SituacaoAluno, FormaIngresso
 
         usuario_id = dados.get('usuario')
@@ -26,8 +25,7 @@ class AlunoBusiness(ModelInstanceBusiness):
         if Aluno.objects.filter(usuario=usuario).exists():
             raise ValidationException('Este usuário já possui um perfil de aluno.')
 
-        regras = AlunoRules()
-        if not regras.can_create():
+        if not self.object_instance.rules.can_create():
             raise ValidationException('Não é possível criar este aluno devido às regras de negócio.')
 
         aluno_dados = {
@@ -54,4 +52,3 @@ class AlunoBusiness(ModelInstanceBusiness):
         except Exception as e:
             logger.exception('Erro ao atualizar aluno: %s', e)
             raise SystemErrorException('Não foi possível atualizar os dados do aluno.')
-

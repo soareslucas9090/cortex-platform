@@ -3,16 +3,19 @@ from django.db import models
 from AppCore.basics.models.models import BasicModel
 from AppCore.core.business.business_mixin import ModelBusinessMixin
 from AppCore.core.helpers.helpers_mixin import ModelHelperMixin
+from AppCore.core.rules.rules_mixin import ModelRulesMixin
 
 from .choices import CategoriaFuncao
 
 
-class Funcao(ModelHelperMixin, ModelBusinessMixin, BasicModel):
+class Funcao(ModelHelperMixin, ModelBusinessMixin, ModelRulesMixin, BasicModel):
     from .business import FuncaoBusiness
     from .helpers import FuncaoHelpers
+    from .rules import FuncaoRules
 
     business_class = FuncaoBusiness
     helper_class = FuncaoHelpers
+    rules_class = FuncaoRules
 
     papel_funcao = models.CharField('Papel/Função', max_length=255, unique=True)
     categoria = models.CharField(

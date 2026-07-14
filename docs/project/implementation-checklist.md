@@ -284,6 +284,16 @@ O objetivo é permitir uma execução incremental, previsível e consistente, ev
 - [x] Atualizar `docs/decisions/ADR-001-modularizacao-por-dominio.md` se houver mudança arquitetural relevante
 - [x] Atualizar `.github/copilot-instructions.md` quando houver mudança significativa na estrutura do projeto
 
+## Revisão estrutural e documental (etapa 5.5)
+
+- [x] Revisar `Cortex/settings.py` e apps em `PROJECT_APPS`
+- [x] Revisar `Cortex/urls.py` e rotas agregadas por domínio
+- [x] Revisar `urls.py` agregadores de cada módulo de domínio
+- [x] Atualizar `docs/project/django-project-tree.md`
+- [x] Atualizar `README.md` na raiz do repositório
+- [x] Atualizar `.github/copilot-instructions.md`
+- [x] Alinhar checklist global e plano mestre com a estrutura real
+
 ## Validação funcional mínima
 
 - [x] Criar usuário com CPF
@@ -324,6 +334,7 @@ A implementação do Cortex segue uma ordem orientada por domínio, com cada dom
 | 2         | `Organizacional/`        | `setores`, `funcoes`, `vinculos`                                 | Concluído    |
 | 3         | `PessoasInstitucionais/` | `cargos`, `servidores`, `empresas_instituicoes`, `terceirizados` | Concluído    |
 | 4         | `Academico/`             | `alunos`, `cursos`, `aluno_cursos`                               | Concluído    |
-| 5         | —                        | Integração, consolidação e validação final                       | Em andamento |
+| 5         | —                        | Integração, consolidação e validação final                       | Concluído    |
+| Infra     | `Infraestrutura/`        | `blocos`, `salas`, `recursos`, `permissoes`, `autorizacoes`, `emprestimos` | v1 concluída |
 
 Esse checklist transforma a visão arquitetural já definida em uma sequência prática de execução, reduzindo risco de retrabalho e ajudando a preservar a consistência do domínio desde o início.

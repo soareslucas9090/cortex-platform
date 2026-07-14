@@ -3,7 +3,6 @@ from django.core.exceptions import ValidationError
 
 from AppCore.basics.admin import CortexModelAdmin, run_business
 
-from .business import SetorVinculoBusiness
 from .models import SetorVinculo
 
 
@@ -48,7 +47,7 @@ class SetorVinculoAdmin(CortexModelAdmin):
     def save_model(self, request, obj, form, change):
         if not change:
             created = run_business(
-                lambda: SetorVinculoBusiness().criar_vinculo(
+                lambda: SetorVinculo().business.criar_vinculo(
                     usuario=obj.usuario,
                     setor=obj.setor,
                     funcao=obj.funcao,

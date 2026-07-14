@@ -52,7 +52,7 @@ O login é feito por **CPF** ou **Matrícula** (não e-mail). Usuários são cri
 | Framework        | Django 5.2.7 + Django REST Framework 3.16.1 |
 | Autenticação     | SimpleJWT 5.5.1 (tokens Bearer)             |
 | Login social     | django-allauth 65.9.0                       |
-| Banco de dados   | PostgreSQL (dev usa SQLite por padrão)      |
+| Banco de dados   | PostgreSQL                                  |
 | Documentação API | drf-spectacular 0.28.0 (Swagger / ReDoc)    |
 | Auditoria        | django-simple-history 3.10.1                |
 | CORS             | django-cors-headers 4.9.0                   |
@@ -91,8 +91,25 @@ cortex-plataform/
 │   ├── setores/                # App Django do model Setor
 │   ├── funcoes/                # App Django do model Funcao
 │   └── vinculos/               # App Django do model SetorVinculo
-├── PessoasInstitucionais/      # Domínio: servidores, terceirizados (planejado)
-├── Academico/                  # Domínio: alunos, cursos (planejado)
+├── PessoasInstitucionais/      # Domínio: servidores, terceirizados, cargos
+│   ├── urls.py
+│   ├── cargos/
+│   ├── servidores/
+│   ├── empresas_instituicoes/
+│   └── terceirizados/
+├── Academico/                  # Domínio: alunos, cursos, vínculos acadêmicos
+│   ├── urls.py
+│   ├── alunos/
+│   ├── cursos/
+│   └── aluno_cursos/
+├── Infraestrutura/             # Domínio: blocos, salas, recursos, empréstimos
+│   ├── urls.py
+│   ├── blocos/
+│   ├── salas/
+│   ├── recursos/
+│   ├── permissoes/             # capacidades por função (sem rotas HTTP)
+│   ├── autorizacoes/
+│   └── emprestimos/
 │
 ├── docs/                       # Documentação do projeto
 │   ├── decisions/              # ADRs (Architecture Decision Records)
@@ -112,7 +129,7 @@ cortex-plataform/
 ### Pré-requisitos
 
 - Python 3.12+
-- PostgreSQL (opcional em desenvolvimento — SQLite é usado por padrão)
+- PostgreSQL
 
 ### Instalação
 
@@ -155,7 +172,7 @@ Crie um arquivo `.env` na raiz do projeto com as seguintes variáveis:
 DJANGO_SECRET_KEY=sua-chave-secreta-aqui
 DJANGO_DEBUG=True
 
-# Banco de dados (deixe vazio para usar SQLite em dev)
+# Banco de dados
 DATABASE_ENGINE=django.db.backends.postgresql
 DATABASE_NAME=cortex_db
 DATABASE_USER=postgres
@@ -334,7 +351,7 @@ Cadastro base da pessoa no sistema.
 - `Endereco` — endereço residencial
 - `Matricula` — carteirinha/matrícula institucional
 
-### Organizacional
+### Organizacional _(implementado)_
 
 Estrutura organizacional da instituição.
 
@@ -342,22 +359,33 @@ Estrutura organizacional da instituição.
 - `Funcao` — função institucional/organizacional (em `Organizacional.funcoes`)
 - `SetorVinculo` — vínculo entre usuário e setor, com papel de responsável e/ou monitor (em `Organizacional.vinculos`)
 
-### PessoasInstitucionais _(planejado)_
+### PessoasInstitucionais _(implementado)_
 
 Perfis institucionais dos usuários.
 
 - `Servidor` — servidor público (jornada 20h, 40h, DE)
 - `Cargo` — posição formal do servidor
 - `Terceirizado` — funcionário de empresa terceirizada
-- `Empresa` — empresa ou instituição parceira
+- `EmpresaInstituicao` — empresa ou instituição parceira
 
-### Academico _(planejado)_
+### Academico _(implementado)_
 
 Perfil e vínculos acadêmicos.
 
 - `Aluno` — aluno matriculado
-- `Estagiario` — estagiário com vínculo em empresa
-- `Curso` — curso ao qual o aluno pertence
+- `Curso` — curso oferecido pela instituição
+- `AlunoCurso` — vínculo entre aluno e curso
+
+### Infraestrutura _(implementado — v1)_
+
+Cadastro de espaço físico, recursos, autorizações e empréstimos.
+
+- `Bloco` — bloco físico do campus
+- `Sala` / `SalaSetor` — salas e vínculo sala–setor
+- `Recurso` — chaves e demais recursos emprestáveis
+- `Autorizacao` — autorização por sala ou recurso
+- `Emprestimo` — retirada e devolução multi-item
+- `PermissaoFuncaoInfraestrutura` — capacidades por função (app interno sem rotas HTTP)
 
 ## Decisões Técnicas
 

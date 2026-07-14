@@ -14,5 +14,7 @@ SPECTACULAR_SETTINGS = {
         'SituacaoMatriculaEnum': 'Identidade.matriculas.choices.SituacaoMatricula',
         'CategoriaServidorEnum': 'PessoasInstitucionais.servidores.choices.CategoriaServidor',
         'CategoriaFuncaoEnum': 'Organizacional.funcoes.choices.CategoriaFuncao',
+        'TipoRecursoEnum': 'Infraestrutura.recursos.choices.TipoRecurso',
+        'EstadoRecursoEnum': 'Infraestrutura.recursos.choices.EstadoRecurso',
     },
 }

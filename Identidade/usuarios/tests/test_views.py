@@ -12,6 +12,7 @@ from rest_framework.test import APITestCase
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from Identidade.usuarios.models import Usuario
+from Infraestrutura.permissoes.choices import capacidades_infraestrutura_vazias
 from Identidade.usuarios.importacao.importacao_parser import ImportacaoUsuariosParser
 from Identidade.usuarios.importacao.importacao_dtos import (
     ArquivoImportacaoUsuariosDTO,
@@ -37,6 +38,13 @@ def criar_usuario(cpf, nome='Usuário Teste', password='Senha@123', is_admin=Fal
         **kwargs,
     )
     return usuario
+
+
+def permissoes_esperadas(cortex_nivel):
+    return {
+        'cortex': cortex_nivel,
+        'infraestrutura': capacidades_infraestrutura_vazias(),
+    }
 
 
 def criar_arquivo_imagem_teste(nome='foto.png'):
@@ -462,8 +470,6 @@ class ImportacaoUsuariosBusinessPreviewTests(TestCase):
 
     @patch('Identidade.usuarios.business.ImportacaoUsuariosParser.parse')
     def test_deve_retornar_preview_com_sucesso(self, mock_parse):
-        from Identidade.usuarios.business import UsuarioBusiness
-
         estrutura = ArquivoImportacaoUsuariosDTO(
             usuarios=[
                 LinhaUsuarioImportacaoDTO(
@@ -476,8 +482,7 @@ class ImportacaoUsuariosBusinessPreviewTests(TestCase):
         )
         mock_parse.return_value = estrutura
 
-        business = UsuarioBusiness()
-        resultado = business.pre_visualizar_importacao(arquivo=BytesIO(b'test'))
+        resultado = Usuario().business.pre_visualizar_importacao(arquivo=BytesIO(b'test'))
 
         self.assertTrue(resultado.sucesso)
         self.assertEqual(resultado.resumo.total_abas_processadas, 1)
@@ -486,13 +491,10 @@ class ImportacaoUsuariosBusinessPreviewTests(TestCase):
 
     @patch('Identidade.usuarios.business.ImportacaoUsuariosParser.parse')
     def test_preview_deve_retornar_erro_quando_nao_ha_usuarios(self, mock_parse):
-        from Identidade.usuarios.business import UsuarioBusiness
-
         estrutura = ArquivoImportacaoUsuariosDTO()
         mock_parse.return_value = estrutura
 
-        business = UsuarioBusiness()
-        resultado = business.pre_visualizar_importacao(arquivo=BytesIO(b'test'))
+        resultado = Usuario().business.pre_visualizar_importacao(arquivo=BytesIO(b'test'))
 
         self.assertFalse(resultado.sucesso)
         self.assertEqual(len(resultado.erros), 1)
@@ -506,8 +508,6 @@ class ImportacaoUsuariosBusinessImportacaoTests(TestCase):
 
     @patch('Identidade.usuarios.business.ImportacaoUsuariosParser.parse')
     def test_deve_importar_usuario_novo_com_sucesso(self, mock_parse):
-        from Identidade.usuarios.business import UsuarioBusiness
-
         estrutura = ArquivoImportacaoUsuariosDTO(
             usuarios=[
                 LinhaUsuarioImportacaoDTO(
@@ -528,8 +528,7 @@ class ImportacaoUsuariosBusinessImportacaoTests(TestCase):
         importacao_mock.linhas_processadas = 0
         importacao_mock.total_linhas = 0
         
-        business = UsuarioBusiness()
-        resultado = business.importar_usuarios_em_lote(importacao_lote=importacao_mock)
+        resultado = Usuario().business.importar_usuarios_em_lote(importacao_lote=importacao_mock)
 
         self.assertTrue(resultado.sucesso)
         self.assertEqual(resultado.resumo.usuarios_criados, 1)
@@ -537,8 +536,6 @@ class ImportacaoUsuariosBusinessImportacaoTests(TestCase):
 
     @patch('Identidade.usuarios.business.ImportacaoUsuariosParser.parse')
     def test_deve_atualizar_usuario_existente(self, mock_parse):
-        from Identidade.usuarios.business import UsuarioBusiness
-
         usuario = self.User.objects.create(
             cpf='12345678901',
             nome='Nome Antigo',
@@ -565,8 +562,7 @@ class ImportacaoUsuariosBusinessImportacaoTests(TestCase):
         importacao_mock.linhas_processadas = 0
         importacao_mock.total_linhas = 0
 
-        business = UsuarioBusiness()
-        resultado = business.importar_usuarios_em_lote(importacao_lote=importacao_mock)
+        resultado = Usuario().business.importar_usuarios_em_lote(importacao_lote=importacao_mock)
 
         usuario.refresh_from_db()
 
@@ -576,7 +572,6 @@ class ImportacaoUsuariosBusinessImportacaoTests(TestCase):
 
     @patch('Identidade.usuarios.business.ImportacaoUsuariosParser.parse')
     def test_deve_importar_usuario_sem_cpf_com_matricula_com_sucesso(self, mock_parse):
-        from Identidade.usuarios.business import UsuarioBusiness
         from Identidade.usuarios.importacao.importacao_dtos import LinhaMatriculaImportacaoDTO
 
         estrutura = ArquivoImportacaoUsuariosDTO(
@@ -607,8 +602,7 @@ class ImportacaoUsuariosBusinessImportacaoTests(TestCase):
         importacao_mock.linhas_processadas = 0
         importacao_mock.total_linhas = 0
         
-        business = UsuarioBusiness()
-        resultado = business.importar_usuarios_em_lote(importacao_lote=importacao_mock)
+        resultado = Usuario().business.importar_usuarios_em_lote(importacao_lote=importacao_mock)
 
         self.assertTrue(resultado.sucesso)
         self.assertEqual(resultado.resumo.usuarios_criados, 1)
@@ -623,8 +617,6 @@ class ImportacaoUsuariosBusinessImportacaoTests(TestCase):
 
     @patch('Identidade.usuarios.business.ImportacaoUsuariosParser.parse')
     def test_deve_retornar_erro_se_cpf_for_invalido(self, mock_parse):
-        from Identidade.usuarios.business import UsuarioBusiness
-
         estrutura = ArquivoImportacaoUsuariosDTO(
             usuarios=[
                 LinhaUsuarioImportacaoDTO(
@@ -645,8 +637,7 @@ class ImportacaoUsuariosBusinessImportacaoTests(TestCase):
         importacao_mock.linhas_processadas = 0
         importacao_mock.total_linhas = 0
 
-        business = UsuarioBusiness()
-        resultado = business.importar_usuarios_em_lote(importacao_lote=importacao_mock)
+        resultado = Usuario().business.importar_usuarios_em_lote(importacao_lote=importacao_mock)
 
         self.assertFalse(resultado.sucesso)
         self.assertEqual(resultado.resumo.usuarios_criados, 0)
@@ -655,8 +646,6 @@ class ImportacaoUsuariosBusinessImportacaoTests(TestCase):
 
     @patch('Identidade.usuarios.business.ImportacaoUsuariosParser.parse')
     def test_deve_importar_usuario_com_cpf_curto_preenchendo_zeros(self, mock_parse):
-        from Identidade.usuarios.business import UsuarioBusiness
-
         estrutura = ArquivoImportacaoUsuariosDTO(
             usuarios=[
                 LinhaUsuarioImportacaoDTO(
@@ -677,8 +666,7 @@ class ImportacaoUsuariosBusinessImportacaoTests(TestCase):
         importacao_mock.linhas_processadas = 0
         importacao_mock.total_linhas = 0
 
-        business = UsuarioBusiness()
-        resultado = business.importar_usuarios_em_lote(importacao_lote=importacao_mock)
+        resultado = Usuario().business.importar_usuarios_em_lote(importacao_lote=importacao_mock)
 
         self.assertTrue(resultado.sucesso)
         self.assertEqual(resultado.resumo.usuarios_criados, 1)
@@ -701,7 +689,7 @@ class ImportacaoUsuariosApiTests(TestCase):
         )
         self.client.force_authenticate(user=self.admin)
 
-    @patch('Identidade.usuarios.views.UsuarioBusiness.pre_visualizar_importacao')
+    @patch('Identidade.usuarios.business.UsuarioBusiness.pre_visualizar_importacao')
     def test_endpoint_preview_deve_retornar_200(self, mock_preview):
         mock_preview.return_value = ResultadoImportacaoDTO(
             sucesso=True,
@@ -731,7 +719,7 @@ class ImportacaoUsuariosApiTests(TestCase):
         self.assertEqual(response.data['status'], 'success')
         self.assertIn('dados', response.data)
 
-    @patch('Identidade.usuarios.views.UsuarioBusiness.importar_usuarios_em_lote')
+    @patch('Identidade.usuarios.business.UsuarioBusiness.importar_usuarios_em_lote')
     def test_endpoint_importacao_deve_retornar_200(self, mock_importar):
         mock_importar.return_value = ResultadoImportacaoDTO(
             sucesso=True,
@@ -923,7 +911,7 @@ class UsuarioPermissoesTest(APITestCase):
         user = criar_usuario('11111111111', nome='Aluno Teste')
         Aluno.objects.create(usuario=user, ativo=True)
 
-        self.assertEqual(user.permissoes, {'cortex': 'EDITAR_EU'})
+        self.assertEqual(user.permissoes, permissoes_esperadas('EDITAR_EU'))
 
     def test_usuario_servidor_ativo_tem_permissao_ler_tudo(self):
         from PessoasInstitucionais.servidores.models import Servidor
@@ -931,7 +919,7 @@ class UsuarioPermissoesTest(APITestCase):
         user = criar_usuario('22222222222', nome='Servidor Teste')
         Servidor.objects.create(usuario=user, cargo=self.cargo, categoria=1, ativo=True)
 
-        self.assertEqual(user.permissoes, {'cortex': 'LER_TUDO'})
+        self.assertEqual(user.permissoes, permissoes_esperadas('LER_TUDO'))
 
     def test_usuario_servidor_inativo_e_aluno_tem_permissao_editar_eu(self):
         from Academico.alunos.models import Aluno
@@ -941,7 +929,7 @@ class UsuarioPermissoesTest(APITestCase):
         Aluno.objects.create(usuario=user, ativo=True)
         Servidor.objects.create(usuario=user, cargo=self.cargo, categoria=1, ativo=False)
 
-        self.assertEqual(user.permissoes, {'cortex': 'EDITAR_EU'})
+        self.assertEqual(user.permissoes, permissoes_esperadas('EDITAR_EU'))
 
     def test_usuario_terceirizado_ativo_tem_permissao_ler_tudo(self):
         from PessoasInstitucionais.terceirizados.models import Terceirizado
@@ -949,14 +937,14 @@ class UsuarioPermissoesTest(APITestCase):
         user = criar_usuario('44444444444', nome='Terceirizado Teste')
         Terceirizado.objects.create(usuario=user, empresa_instituicao=self.empresa, cargo=self.cargo, ativo=True)
 
-        self.assertEqual(user.permissoes, {'cortex': 'LER_TUDO'})
+        self.assertEqual(user.permissoes, permissoes_esperadas('LER_TUDO'))
 
     def test_usuario_staff_tem_permissao_editar_tudo(self):
         user = criar_usuario('55555555555', nome='Staff Teste')
         user.is_staff = True
         user.save()
 
-        self.assertEqual(user.permissoes, {'cortex': 'EDITAR_TUDO'})
+        self.assertEqual(user.permissoes, permissoes_esperadas('EDITAR_TUDO'))
 
     def test_login_retorna_permissoes_no_payload(self):
         user = criar_usuario('66666666666', nome='Login Perms Teste', password='Password123')
@@ -967,7 +955,7 @@ class UsuarioPermissoesTest(APITestCase):
         resposta = self.client.post(url_login, {'login': '66666666666', 'password': 'Password123'})
         self.assertEqual(resposta.status_code, status.HTTP_200_OK)
         self.assertIn('permissoes', resposta.data)
-        self.assertEqual(resposta.data['permissoes'], {'cortex': 'EDITAR_TUDO'})
+        self.assertEqual(resposta.data['permissoes'], permissoes_esperadas('EDITAR_TUDO'))
 
     def test_endpoint_me_retorna_permissoes(self):
         user = criar_usuario('77777777777', nome='Me Perms Teste', password='Password123')
@@ -980,7 +968,7 @@ class UsuarioPermissoesTest(APITestCase):
         
         data = resposta.data['dados'] if 'dados' in resposta.data else resposta.data
         self.assertIn('permissoes', data)
-        self.assertEqual(data['permissoes'], {'cortex': 'EDITAR_EU'})
+        self.assertEqual(data['permissoes'], permissoes_esperadas('EDITAR_EU'))
 
 
 class CortexPermissoesEscopoViewTest(APITestCase):
@@ -1071,11 +1059,19 @@ class DocumentarPermissoesViewTest(APITestCase):
         resposta = self.client.get(self.url)
         self.assertEqual(resposta.status_code, status.HTTP_200_OK)
         modulos = resposta.data['dados']['modulos']
-        self.assertEqual(len(modulos), 1)
-        self.assertEqual(modulos[0]['chave'], 'cortex')
-        self.assertEqual(len(modulos[0]['niveis']), 3)
-        self.assertGreaterEqual(len(modulos[0]['exemplos']), 1)
-        self.assertIn('texto', modulos[0])
+        self.assertEqual(len(modulos), 2)
+        chaves = {modulo['chave'] for modulo in modulos}
+        self.assertEqual(chaves, {'cortex', 'infraestrutura'})
+
+        cortex = next(modulo for modulo in modulos if modulo['chave'] == 'cortex')
+        self.assertEqual(len(cortex['niveis']), 3)
+        self.assertGreaterEqual(len(cortex['exemplos']), 1)
+        self.assertIn('texto', cortex)
+
+        infraestrutura = next(modulo for modulo in modulos if modulo['chave'] == 'infraestrutura')
+        self.assertEqual(len(infraestrutura['capacidades']), 4)
+        self.assertGreaterEqual(len(infraestrutura['exemplos']), 1)
+        self.assertIn('texto', infraestrutura)
 
     def test_nao_autenticado_retorna_401(self):
         resposta = self.client.get(self.url)

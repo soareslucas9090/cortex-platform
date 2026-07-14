@@ -3,8 +3,6 @@ import logging
 from AppCore.core.business.business import ModelInstanceBusiness
 from AppCore.core.exceptions.exceptions import NotFoundException, SystemErrorException
 
-from .rules import SetorVinculoRules
-
 logger = logging.getLogger(__name__)
 
 
@@ -23,15 +21,14 @@ class SetorVinculoBusiness(ModelInstanceBusiness):
         (responsavel deve ser Servidor) é garantida por regra do domínio.
         """
         from .models import SetorVinculo
-        regras = SetorVinculoRules()
-        regras.setor_esta_ativo(setor)
-        regras.funcao_esta_ativa(funcao)
-        regras.vinculo_sem_duplicata(usuario, setor, funcao)
-        regras.usuario_e_aluno_se_exigido(usuario, funcao)
-        
+        self.object_instance.rules.setor_esta_ativo(setor)
+        self.object_instance.rules.funcao_esta_ativa(funcao)
+        self.object_instance.rules.vinculo_sem_duplicata(usuario, setor, funcao)
+        self.object_instance.rules.usuario_e_aluno_se_exigido(usuario, funcao)
+
         if responsavel:
-            regras.usuario_e_servidor(usuario)
-            
+            self.object_instance.rules.usuario_e_servidor(usuario)
+
         try:
             return SetorVinculo.objects.create(
                 usuario=usuario,
@@ -48,15 +45,17 @@ class SetorVinculoBusiness(ModelInstanceBusiness):
         Atualiza a função exercida no vínculo.
         Revalida atividade da nova função e unicidade da nova combinação.
         """
-        regras = SetorVinculoRules(object_instance=self.object_instance)
-        regras.funcao_esta_ativa(nova_funcao)
-        regras.vinculo_sem_duplicata(
+        self.object_instance.rules.funcao_esta_ativa(nova_funcao)
+        self.object_instance.rules.vinculo_sem_duplicata(
             self.object_instance.usuario,
             self.object_instance.setor,
             nova_funcao,
             excluir_id=self.object_instance.pk,
         )
-        regras.usuario_e_aluno_se_exigido(self.object_instance.usuario, nova_funcao)
+        self.object_instance.rules.usuario_e_aluno_se_exigido(
+            self.object_instance.usuario,
+            nova_funcao,
+        )
         try:
             self.object_instance.funcao = nova_funcao
             self.object_instance.save(update_fields=['funcao'])
@@ -71,9 +70,8 @@ class SetorVinculoBusiness(ModelInstanceBusiness):
         Nota: a validação de elegibilidade institucional (responsavel deve ser Servidor)
         é garantida por regra do domínio.
         """
-        regras = SetorVinculoRules(object_instance=self.object_instance)
-        regras.setor_esta_ativo(self.object_instance.setor)
-        regras.usuario_e_servidor(self.object_instance.usuario)
+        self.object_instance.rules.setor_esta_ativo(self.object_instance.setor)
+        self.object_instance.rules.usuario_e_servidor(self.object_instance.usuario)
         try:
             self.object_instance.responsavel = True
             self.object_instance.save(update_fields=['responsavel'])
@@ -86,8 +84,7 @@ class SetorVinculoBusiness(ModelInstanceBusiness):
         Remove a marcação de responsável do vínculo.
         Bloqueado se este for o único responsável do setor.
         """
-        regras = SetorVinculoRules(object_instance=self.object_instance)
-        regras.setor_mantem_responsavel(excluir_id=self.object_instance.pk)
+        self.object_instance.rules.setor_mantem_responsavel(excluir_id=self.object_instance.pk)
         try:
             self.object_instance.responsavel = False
             self.object_instance.save(update_fields=['responsavel'])
@@ -113,8 +110,7 @@ class SetorVinculoBusiness(ModelInstanceBusiness):
         Bloqueado se for responsável e for o único responsável do setor.
         """
         if self.object_instance.responsavel:
-            regras = SetorVinculoRules(object_instance=self.object_instance)
-            regras.setor_mantem_responsavel(excluir_id=self.object_instance.pk)
+            self.object_instance.rules.setor_mantem_responsavel(excluir_id=self.object_instance.pk)
         try:
             self.object_instance.delete()
         except Exception as e:

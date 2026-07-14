@@ -8,7 +8,7 @@ from Identidade.contatos.models import Contato
 from Identidade.enderecos.models import Endereco
 from Identidade.matriculas.models import Matricula
 
-from .business import UsuarioBusiness
+from .models import Usuario
 from .models import ImportacaoLote, Usuario
 
 
@@ -156,7 +156,7 @@ class UsuarioAdmin(DjangoUserAdmin, CortexModelAdmin):
                 'is_superuser': obj.is_superuser,
             }
             created = run_business(
-                lambda: UsuarioBusiness().criar_usuario(
+                lambda: Usuario().business.criar_usuario(
                     cpf=obj.cpf,
                     nome=obj.nome,
                     password=password,

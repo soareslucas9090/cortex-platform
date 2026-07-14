@@ -4,14 +4,17 @@ from django.db import models
 from AppCore.basics.models.models import BasicModel
 from AppCore.core.business.business_mixin import ModelBusinessMixin
 from AppCore.core.helpers.helpers_mixin import ModelHelperMixin
+from AppCore.core.rules.rules_mixin import ModelRulesMixin
 
 
-class SetorVinculo(ModelHelperMixin, ModelBusinessMixin, BasicModel):
+class SetorVinculo(ModelHelperMixin, ModelBusinessMixin, ModelRulesMixin, BasicModel):
     from .business import SetorVinculoBusiness
     from .helpers import SetorVinculoHelpers
+    from .rules import SetorVinculoRules
 
     business_class = SetorVinculoBusiness
     helper_class = SetorVinculoHelpers
+    rules_class = SetorVinculoRules
 
     usuario = models.ForeignKey(
         settings.AUTH_USER_MODEL,

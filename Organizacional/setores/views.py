@@ -14,7 +14,6 @@ from AppCore.basics.views.basic_views import (
     BasicRetrieveAPIView,
 )
 
-from .business import SetorBusiness
 from .models import Setor
 from .serializers import (
     AtualizarSetorSerializer,
@@ -102,7 +101,7 @@ class CriarSetorView(IsAdminMixin, BasicPostAPIView):
     mensagem_sucesso = 'Setor criado com sucesso.'
 
     def do_action_post(self, serializer_data, request, *args, **kwargs):
-        setor = SetorBusiness().criar_setor(**serializer_data)
+        setor = Setor().business.criar_setor(**serializer_data)
         return {
             'mensagem': self.mensagem_sucesso,
             'dados': SetorSerializer(setor).data,

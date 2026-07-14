@@ -8,47 +8,69 @@
 - **Sigec**: nome provisório usado no levantamento.
 - **Infraestrutura**: nome atual do novo módulo do Cortex/MeuIF.
 - Será um menu principal expansível na barra lateral, no mesmo nível de Organizacional, Pessoas Institucionais e Acadêmico.
-- Controlará recursos físicos, reservas, autorizações, empréstimos e devoluções.
+- Controlará recursos físicos, autorizações, empréstimos e devoluções.
+- **Reservas** fazem parte do domínio, mas ficam para **entrega posterior**; o foco da v1 é o operador (guarda) liberar o recurso para quem retira.
 
 ## Fontes
 
 - [Funcionamento do Chameco legado](funcionamento-antigo-sigec.md)
 - [Requisitos recebidos](Sigec%20-%20Requisitos.pdf)
 - [DER recebido](Sigec.webp)
+- [Plano de implementação](../planning/milestone-infraestrutura-plan.md)
 
-## Requisitos essenciais
+## Requisitos essenciais (v1)
 
 - Todo recurso possui código de negócio diferente da PK e cadastro individual.
 - Tipos iniciais: **chave**, **mídia** e **material didático**.
 - Um empréstimo pode conter vários recursos.
 - Cada item pode ser devolvido separadamente; o empréstimo termina quando todos forem devolvidos.
-- Deve ser possível consultar e filtrar empréstimos abertos ou concluídos por recurso, tipo, retirada, devolução, solicitante e responsável.
+- Deve ser possível consultar e filtrar empréstimos abertos ou concluídos por recurso, tipo, retirada, devolução, solicitante e responsável (consulta ampla só para operadores).
 - Recursos e usuários devem ser encontrados por nome/código e nome/matrícula.
-- Empréstimos abertos há mais de 24 horas devem ser sinalizados ao responsável.
-- A interface deve permanecer simples, concentrar operação e consulta em uma tela e permitir criar empréstimos em até quatro cliques.
+- Empréstimos abertos há mais de 24 horas devem ser **sinalizados na interface** (sem e-mail ou outro canal na v1).
+- A interface deve permanecer simples, concentrar operação e consulta e permitir criar empréstimos em até quatro cliques.
 
 ## Usuários e acesso
 
 - A interface `UsuarioCortex` do DER corresponde diretamente a `Identidade.usuarios.Usuario`; não haverá espelho local de usuários ou tokens.
-- Nome e foto vêm de `Usuario`; matrícula vem de `Identidade.matriculas.Matricula`.
+- Nome e foto vêm de `Usuario`; matrícula vem de `Identidade.matriculas.Matricula` (join; sem snapshot).
 - Todo solicitante, inclusive colaborador externo, deverá possuir `Usuario` no Cortex.
 - No empréstimo:
   - **solicitante** é quem recebe os recursos;
   - **responsável** é o operador que registra a retirada ou devolução.
-- Vigilantes e técnicos administrativos autorizados operam empréstimos, devoluções e consultas.
-- Diretores, coordenadores e chefes de departamento podem retirar qualquer recurso e conceder ou revogar autorizações.
-- Essas capacidades serão configuradas no módulo por vínculo com `Organizacional.funcoes.Funcao`, sem adicionar campos específicos à própria `Funcao`.
-- Uma sala pode estar vinculada a vários setores. Servidores e monitores vinculados a esses setores podem retirar suas chaves.
-- Terceirizados com cargo de servente de limpeza podem retirar qualquer chave do campus.
+
+### Níveis Cortex × módulo (L1 < L2 < L3)
+
+| Nível | Papel no módulo |
+|-------|-----------------|
+| **L1** | Solicitante comum: vê apenas empréstimos **ativos** no próprio nome; sem histórico; não opera |
+| **L2** | Operação do dia a dia (guardas, auxiliares): emprestar, devolver, trocar titular e consultar (`operar`) |
+| **L3** | Autorizar/desautorizar (`autorizar`); tipicamente também cadastra estrutura e opera |
+
+Capacidades finas são configuradas por vínculo com `Organizacional.funcoes.Funcao` via `PermissaoFuncaoInfraestrutura`, **sem** campos novos em `Funcao`. Compilação em `permissoes_infraestrutura()`, separada de L1–L3 do Cortex.
+
+### Capacidades v1 (`PermissaoFuncaoInfraestrutura`)
+
+| Capacidade | Libera |
+|------------|--------|
+| `operar` | Retirada, devolução, troca de titular e consulta ampla de empréstimos |
+| `cadastrar` | Blocos, salas, recursos e vínculos sala–setor |
+| `autorizar` | Conceder e revogar autorizações |
+| `retirada_irrestrita` | Solicitar qualquer recurso (ex.: diretores / coordenadores / chefes) |
+
+### Regras automáticas de retirada (além de autorização explícita)
+
+- Solicitante com vínculo ativo em setor ligado à sala (`SalaSetor`) pode retirar recursos tipo **chave** dessa sala.
+- Terceirizado com cargo **servente de limpeza** pode retirar **qualquer chave**.
+- Demais casos (outros tipos, externos, sem vínculo): exigem `Autorizacao` explícita ou capacidade `retirada_irrestrita`.
 
 ## Autorizações
 
-- Podem ser **temporárias** ou **permanentes**.
-- Podem abranger:
-  - um recurso específico; ou
-  - todos os recursos de uma sala, incluindo qualquer chave cadastrada nela.
-- Devem registrar beneficiário, concedente, período, revogação, revogador e observação.
-- Autorizações complementam o acesso automático por função, cargo ou vínculo setorial.
+- Podem ser **temporárias** (`data_inicio` / `data_fim`) ou **permanentes** (`data_fim` nula).
+- Alvo **XOR**: exatamente um de `sala` ou `recurso`.
+- Autorização por sala vale para **todos** os recursos da sala, inclusive os cadastrados depois (avaliação em runtime).
+- Registram beneficiário, concedente, período, revogação (`revogado_em` + `revogador`) e observação.
+- Só quem tem capacidade `autorizar` concede ou revoga.
+- Complementam o acesso automático por função, cargo ou vínculo setorial.
 
 ## Estrutura planejada
 
@@ -57,10 +79,10 @@ O domínio agregador será `Infraestrutura/`, seguindo a ADR de modularização 
 - `blocos`: `Bloco`;
 - `salas`: `Sala` e `SalaSetor`;
 - `recursos`: `Recurso`;
-- `reservas`: reservas futuras;
 - `emprestimos`: `Emprestimo` e `ItemEmprestimo`;
 - `autorizacoes`: autorizações por sala ou recurso;
-- `permissoes`: capacidades de Infraestrutura associadas às funções.
+- `permissoes`: capacidades de Infraestrutura associadas às funções;
+- `reservas`: **entrega futura** (bloqueios futuros; não implementar na v1).
 
 Não será criado outro módulo chamado `Sigec`.
 
@@ -79,24 +101,30 @@ erDiagram
     Usuario ||--o{ Autorizacao : recebe
     Sala ||--o{ Autorizacao : pode_abranger
     Recurso ||--o{ Autorizacao : pode_abranger
-    Usuario ||--o{ Reserva : solicita
-    Recurso ||--o{ Reserva : agenda
     Funcao ||--o| PermissaoFuncaoInfraestrutura : configura
 ```
 
 ## Decisões de modelagem
 
-- Relações históricas com usuários e recursos usarão proteção contra exclusão.
-- Reservas representam bloqueios futuros; não significam empréstimo aberto.
-- O estado exibido do recurso será derivado com prioridade: **avaria → emprestado → reservado → disponível**, evitando duplicidade de estado.
-- Retirada e devolução serão transacionais, impedindo dois empréstimos abertos para o mesmo recurso.
-- Entidades de negócio usarão `BasicModel` para datas e histórico.
-- Permissões específicas serão compiladas por `permissoes_infraestrutura()`, separadas dos níveis gerais L1–L3 do Cortex.
+- Entidades de negócio usam `BasicModel` (datas + histórico).
+- Relações históricas com usuários e recursos usam proteção contra exclusão (`PROTECT`).
+- Bloco, Sala e Recurso possuem `ativo`; recursos **só desativam** (sem exclusão física de negócio).
+- `Recurso.codigo` é único na instância (campus); distinto da PK.
+- Tipo `chave` exige `sala`; `midia` e `material_didatico` têm `sala` opcional.
+- Sem distinção principal/reserva; eventual detalhe na descrição.
+- Sem campo de patrimônio/tombo separado na v1 (usar descrição se necessário).
+- Estado exibido do recurso: **avaria → emprestado → reservado → disponível**. Avaria é **estado simples** na v1; “reservado” só passa a aplicar quando reservas existirem.
+- Retirada e devolução são transacionais; impede dois empréstimos abertos para o mesmo recurso.
+- Empréstimo: observação/descrição opcional no cabeçalho; encerrado = derivado (todos os `ItemEmprestimo.devolvido_em` preenchidos); sem `status` explícito.
+- Troca de titular: uma ação que, por baixo, devolve e abre novo empréstimo com as **mesmas regras**; sem vínculo entre o registro antigo e o novo.
+- `SalaSetor`: `sala` + `setor` com unicidade conjunta.
+- Autorização permanente: `data_fim` nula.
+- Implantação prevista **por campus** (instância dedicada); sem FK de campus no módulo.
+- Permissões do módulo via `permissoes_infraestrutura()`, fora dos níveis gerais L1–L3 do Cortex (que condicionam o público: L1 lê ativos próprios; L2 opera; L3 autoriza).
 
-## Ainda pendente
+## Entrega futura (fora da v1)
 
-- Canal do alerta de 24 horas: apenas interface, e-mail ou outra notificação.
-- Manutenção da troca de titular existente no Chameco legado.
-- Necessidade de distinguir chave principal e reserva.
-- Política de exclusão ou apenas desativação de recursos.
-- Possível suporte futuro a múltiplos campi.
+- App e regras de **reservas** (bloqueio futuro; conflitos com empréstimo/avaria).
+- Fluxo rico de manutenção de avaria (além do estado simples).
+- Multi-campi na mesma instância.
+- Canal de notificação do alerta >24h além da UI.

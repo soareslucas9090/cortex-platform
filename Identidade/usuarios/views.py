@@ -20,7 +20,6 @@ from AppCore.basics.views.basic_views import (
     BasicDeleteAPIView,
 )
 
-from .business import UsuarioBusiness
 from .models import Usuario
 from .serializers import (
     AtualizarUsuarioSerializer,
@@ -36,6 +35,7 @@ from .serializers import (
 )
 from .access import escopar_queryset_cortex
 from .documentacao import PermissaoDocumentacao
+from .querysets import queryset_usuario_com_perfis
 
 logger = logging.getLogger(__name__)
 
@@ -134,7 +134,7 @@ class ListarUsuariosView(IsOwnerOrAdminMixin, BasicGetAPIView):
     mensagem_sucesso = 'Usuários listados com sucesso.'
 
     def get_queryset(self):
-        qs = Usuario.objects.all()
+        qs = queryset_usuario_com_perfis()
         qs = escopar_queryset_cortex(self.request.user, qs, campo_dono='id')
 
         ativo = self.request.query_params.get('ativo')
@@ -197,7 +197,7 @@ class CriarUsuarioView(IsAdminMixin, BasicPostAPIView):
     mensagem_sucesso = 'Usuário criado com sucesso.'
 
     def do_action_post(self, serializer_data, request):
-        usuario = UsuarioBusiness().criar_usuario(
+        usuario = Usuario().business.criar_usuario(
             cpf=serializer_data.get('cpf'),
             matricula=serializer_data.get('matricula'),
             nome=serializer_data['nome'],
@@ -229,7 +229,7 @@ class CriarUsuarioView(IsAdminMixin, BasicPostAPIView):
 )
 class DetalheUsuarioView(IsOwnerOrAdminMixin, BasicRetrieveAPIView):
     """GET /cortex/identidade/usuarios/{pk}/"""
-    queryset = Usuario.objects.all()
+    queryset = queryset_usuario_com_perfis()
     serializer_class = UsuarioSerializer
     mensagem_sucesso = 'Usuário obtido com sucesso.'
 
@@ -607,7 +607,7 @@ class PreVisualizarImportacaoUsuariosView(IsAdminMixin, BasicPostAPIView):
         if ImportacaoLote.objects.filter(status=StatusImportacao.EM_ANDAMENTO).exists():
             raise ValidationError('Já existe uma importação em andamento. Aguarde o término.')
 
-        resultado = UsuarioBusiness().pre_visualizar_importacao(
+        resultado = Usuario().business.pre_visualizar_importacao(
             arquivo=serializer_data['file']
         )
         return {

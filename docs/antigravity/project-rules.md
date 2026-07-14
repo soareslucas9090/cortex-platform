@@ -99,10 +99,8 @@ from AppCore.core.exceptions.exceptions import SystemErrorException
 
 class ProdutoBusiness(ModelInstanceBusiness):
     def criar_produto(self, **dados):
-        # Business orquestra a operação completa
-        regras = ProdutoRules()
-        if not regras.can_create():
-            raise BusinessRuleException('Não pode criar')
+        # Criação via Produto().business — rules acessadas pelo object_instance
+        self.object_instance.rules.validar_dados_criacao(**dados)
         return Produto.objects.create(**dados)
 
     def atualizar_dados(self, dados):
@@ -152,21 +150,33 @@ documento.state.posso_aprovar()  # Acessa método do estado atual
 
 ## Integração com Models
 
-**Use mixins para conectar camadas ao model:**
+**Use mixins para conectar camadas ao model. Nunca instancie Business, Rules ou Helpers manualmente** (exceto raras exceções documentadas no domínio):
 
 ```python
 from AppCore.core.helpers.helpers_mixin import ModelHelperMixin
 from AppCore.core.business.business_mixin import ModelBusinessMixin
+from AppCore.core.rules.rules_mixin import ModelRulesMixin
 from AppCore.basics.models.models import BasicModel
 
-class Produto(ModelHelperMixin, ModelBusinessMixin, BasicModel):
-    business_class = ProdutoBusiness  # Define a classe de business
-    helper_class = ProdutoHelpers     # Define a classe de helpers
+class Produto(ModelHelperMixin, ModelBusinessMixin, ModelRulesMixin, BasicModel):
+    from .business import ProdutoBusiness
+    from .helpers import ProdutoHelpers
+    from .rules import ProdutoRules
 
-    # Acesso via propriedades
-    # produto.business.criar_produto(...)
-    # produto.helper.deletar_codigos_expirados()
+    business_class = ProdutoBusiness
+    helper_class = ProdutoHelpers
+    rules_class = ProdutoRules
+
+    # Acesso via model:
+    # Produto().business.criar_produto(...)   — criação
+    # produto.business.atualizar_dados(...)   — instância persistida
+    # produto.rules.pode_desativar()          — validação
+    # produto.helper.listar_ativos()          — utilitário
 ```
+
+**Dentro de `business.py`:** use `self.object_instance.rules` e `self.object_instance.helper` — não importe nem instancie `ProdutoRules()` / `ProdutoHelpers()`.
+
+**Em views, admin e testes:** use `Model().business` ou `obj.business` — não `ProdutoBusiness()`.
 
 ## Modelos de Usuário Base
 
@@ -562,7 +572,7 @@ cd NomeApp
 
 - **Django 5.2.7** + **DRF 3.16.1**
 - **Auth**: SimpleJWT (tokens 30min/7 dias) + django-allauth 65.9.0 (login social)
-- **Database**: PostgreSQL (dev usa SQLite)
+- **Database**: PostgreSQL
 - **Docs API**: drf-spectacular (Swagger/ReDoc em `/cortex/api/schema/swagger/`)
 - **Auditoria**: django-simple-history (histórico automático em models)
 - **Email**: SMTP (padrão Gmail, configurável via env)
@@ -806,31 +816,40 @@ As regras específicas, escolhas de campos (choices), e detalhes de modelagem f�
 
 A ordem de criação respeita as dependências entre domínios. Apps dentro do mesmo módulo seguem a ordem abaixo:
 
-**Módulo [Identidade](./rules/identidade.md)** (Milestone 1 — em progresso):
+**Módulo [Identidade](./rules/identidade.md)** (Milestone 1 — concluído):
 
 1. `Identidade/usuarios/` — Model: `Usuario` (base de autenticação; sem dependências externas)
 2. `Identidade/contatos/` — Model: `Contato` (depende de `usuarios`)
 3. `Identidade/enderecos/` — Model: `Endereco` (depende de `usuarios`)
 4. `Identidade/matriculas/` — Model: `Matricula` (depende de `usuarios`)
 
-**Módulo [Organizacional](./rules/organizacional.md)** (Milestone 2 — em progresso):
+**Módulo [Organizacional](./rules/organizacional.md)** (Milestone 2 — concluído):
 
 5. `Organizacional/setores/` — Model: `Setor` (sem dependências externas)
 6. `Organizacional/funcoes/` — Model: `Funcao` (sem dependências externas)
 7. `Organizacional/vinculos/` — Model: `SetorVinculo` (depende de `usuarios`, `setores`, `funcoes`)
 
-**Módulo [Pessoas Institucionais](./rules/pessoas-institucionais.md)** (Milestone 3 — planejado):
+**Módulo [Pessoas Institucionais](./rules/pessoas-institucionais.md)** (Milestone 3 — concluído):
 
 8. `PessoasInstitucionais/cargos/` — Model: `Cargo` (sem dependências externas)
 9. `PessoasInstitucionais/servidores/` — Model: `Servidor` (depende de `usuarios`, `cargos`)
 10. `PessoasInstitucionais/empresas_instituicoes/` — Model: `EmpresaInstituicao` (sem dependências externas)
 11. `PessoasInstitucionais/terceirizados/` — Model: `Terceirizado` (depende de `usuarios`, `empresas_instituicoes`)
 
-**Módulo [Acadêmico](./rules/academico.md)** (Milestone 4 — planejado):
+**Módulo [Acadêmico](./rules/academico.md)** (Milestone 4 — concluído):
 
 12. `Academico/alunos/` — Model: `Aluno` (depende de `usuarios`)
 13. `Academico/cursos/` — Model: `Curso` (sem dependências externas)
 14. `Academico/aluno_cursos/` — Model: `AlunoCurso` (depende de `alunos`, `cursos`)
+
+**Módulo Infraestrutura** (Milestone Infraestrutura v1 — concluído):
+
+15. `Infraestrutura/blocos/` — Model: `Bloco`
+16. `Infraestrutura/salas/` — Models: `Sala`, `SalaSetor`
+17. `Infraestrutura/recursos/` — Model: `Recurso`
+18. `Infraestrutura/permissoes/` — Model: `PermissaoFuncaoInfraestrutura` (sem rotas HTTP)
+19. `Infraestrutura/autorizacoes/` — Model: `Autorizacao`
+20. `Infraestrutura/emprestimos/` — Models de empréstimo multi-item
 
 ---
 
@@ -848,6 +867,7 @@ Exemplos de módulos de domínio:
 - `Organizacional/`
 - `PessoasInstitucionais/`
 - `Academico/`
+- `Infraestrutura/`
 
 ### Regra preferencial de modelagem física
 

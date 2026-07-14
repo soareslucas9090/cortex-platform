@@ -45,9 +45,9 @@ Derivação em `Identidade.usuarios.permissions.UsuarioPermissions.permissoes_co
 
 Query params **apenas estreitam** resultados após o escopo de permissão.
 
-### Extensibilidade (ex.: Sigec)
+### Extensibilidade (ex.: Infraestrutura)
 
-Novos produtos adicionam `permissoes_sigec()` em `UsuarioPermissions` e apps Django dentro de um módulo de domínio na raiz (`Sigec/`), nunca em pasta genérica `APPs/`. Subdomínios = apps internos do módulo (`Sigec/contratos/`, etc.).
+Novos produtos adicionam `permissoes_<modulo>()` em `UsuarioPermissions` e apps Django dentro de um módulo de domínio na raiz (`Infraestrutura/`), nunca em pasta genérica `APPs/`. Subdomínios = apps internos do módulo (`Infraestrutura/recursos/`, `Infraestrutura/emprestimos/`, etc.).
 
 ### Documentação viva da API
 

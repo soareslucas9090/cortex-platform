@@ -80,6 +80,19 @@ class UsuarioRules(ModelInstanceRules):
             self.return_exception('O usuário já está ativo.')
         return True
 
+    def matricula_nao_duplicada(self, numero_matricula: str, excluir_id=None) -> bool:
+        """Valida que o número de matrícula não está duplicado para o mesmo usuário."""
+        from Identidade.matriculas.models import Matricula
+        qs = Matricula.objects.filter(
+            usuario=self.object_instance,
+            matricula=numero_matricula,
+        )
+        if excluir_id is not None:
+            qs = qs.exclude(pk=excluir_id)
+        if qs.exists():
+            self.return_exception('O usuário já possui essa matrícula registrada.')
+        return True
+
     def validar_url_foto(self, url: str | None) -> bool:
         if url in (None, ''):
             return True

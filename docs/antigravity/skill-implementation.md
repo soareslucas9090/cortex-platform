@@ -88,20 +88,35 @@ from AppCore.basics.models.models import BaseManagerUser
 # Combina BaseUserManager + BaseManager
 ```
 
-### Mixins de Model (Business e Helpers)
+### Mixins de Model (Business, Helpers e Rules)
 
 ```python
 from AppCore.core.business.business_mixin import ModelBusinessMixin
 from AppCore.core.helpers.helpers_mixin import ModelHelperMixin
+from AppCore.core.rules.rules_mixin import ModelRulesMixin
 
-class Produto(ModelBusinessMixin, ModelHelperMixin, BasicModel):
+class Produto(ModelHelperMixin, ModelBusinessMixin, ModelRulesMixin, BasicModel):
+    from .business import ProdutoBusiness
+    from .helpers import ProdutoHelpers
+    from .rules import ProdutoRules
+
     business_class = ProdutoBusiness   # obrigatório ao usar ModelBusinessMixin
     helper_class   = ProdutoHelpers    # obrigatório ao usar ModelHelperMixin
+    rules_class    = ProdutoRules      # obrigatório ao usar ModelRulesMixin
 
-# Acesso:
-# produto.business.criar_produto(...)   → instancia ProdutoBusiness(object_instance=produto)
-# produto.helper.buscar_ativos()        → instancia ProdutoHelpers(object_instance=produto)
+# Acesso sempre via model (nunca instanciar Business/Rules/Helpers manualmente):
+# Produto().business.criar_produto(...)   → criação (instância vazia do model)
+# produto.business.atualizar_dados(...)   → instância persistida
+# produto.rules.pode_desativar()          → validação via model
+# produto.helper.buscar_ativos()          → utilitário via model
 ```
+
+**Regra de composição (obrigatória):**
+
+- `business_class`, `helper_class` e `rules_class` são definidos **no model** via mixins.
+- Views, admin e testes chamam `Model().business.metodo()` ou `obj.business.metodo()` — **nunca** `ProdutoBusiness()`.
+- Dentro de `business.py`, rules e helpers são acessados por `self.object_instance.rules` e `self.object_instance.helper` — **nunca** importar/instantiar `ProdutoRules()` ou `ProdutoHelpers()`.
+- Em criação, `Produto().business.criar_produto(...)` fornece `self.object_instance` vazio com `.rules` e `.helper` já compostos.
 
 ### Classes Base das Camadas
 
@@ -198,13 +213,17 @@ from django.db import models
 from AppCore.basics.models.models import BasicModel
 from AppCore.core.business.business_mixin import ModelBusinessMixin
 from AppCore.core.helpers.helpers_mixin import ModelHelperMixin
+from AppCore.core.rules.rules_mixin import ModelRulesMixin
 
-logger = logging.getLogger(__name__)
 
+class Produto(ModelHelperMixin, ModelBusinessMixin, ModelRulesMixin, BasicModel):
+    from .business import ProdutoBusiness
+    from .helpers import ProdutoHelpers
+    from .rules import ProdutoRules
 
-class Produto(ModelBusinessMixin, ModelHelperMixin, BasicModel):
-    business_class = None   # preencher após criar ProdutoBusiness
-    helper_class   = None   # preencher após criar ProdutoHelpers
+    business_class = ProdutoBusiness
+    helper_class   = ProdutoHelpers
+    rules_class    = ProdutoRules
 
     nome = models.CharField('Nome', max_length=255)
     ativo = models.BooleanField('Ativo', default=True)
@@ -269,15 +288,13 @@ import logging
 from AppCore.core.business.business import ModelInstanceBusiness
 from AppCore.core.exceptions.exceptions import SystemErrorException
 
-from .rules import ProdutoRules
-
 logger = logging.getLogger(__name__)
 
 
 class ProdutoBusiness(ModelInstanceBusiness):
 
     # ------------------------------------------------------------------
-    # Operações sem object_instance (criação)
+    # Operações de criação (via Produto().business)
     # ------------------------------------------------------------------
 
     def criar_produto(self, nome: str, **kwargs):
@@ -289,7 +306,7 @@ class ProdutoBusiness(ModelInstanceBusiness):
             raise SystemErrorException('Não foi possível criar o produto.')
 
     # ------------------------------------------------------------------
-    # Operações com object_instance
+    # Operações com object_instance persistido
     # ------------------------------------------------------------------
 
     def atualizar_dados(self, dados: dict):
@@ -302,8 +319,7 @@ class ProdutoBusiness(ModelInstanceBusiness):
             raise SystemErrorException('Não foi possível atualizar o produto.')
 
     def excluir(self):
-        regras = ProdutoRules(object_instance=self.object_instance)
-        regras.pode_excluir()
+        self.object_instance.rules.pode_excluir()
         try:
             self.object_instance.delete()
         except Exception as e:
@@ -311,8 +327,7 @@ class ProdutoBusiness(ModelInstanceBusiness):
             raise SystemErrorException('Não foi possível excluir o produto.')
 
     def desativar(self):
-        regras = ProdutoRules(object_instance=self.object_instance)
-        regras.pode_desativar()
+        self.object_instance.rules.pode_desativar()
         try:
             self.object_instance.ativo = False
             self.object_instance.save(update_fields=['ativo'])
@@ -413,7 +428,7 @@ from drf_spectacular.utils import extend_schema
 from AppCore.basics.mixins.mixins import IsAdminMixin
 from AppCore.basics.views.basic_views import BasicPostAPIView
 
-from .business import ProdutoBusiness
+from .models import Produto
 from .serializers import CriarProdutoSerializer, ProdutoSerializer
 
 
@@ -438,7 +453,7 @@ class CriarProdutoView(IsAdminMixin, BasicPostAPIView):
     mensagem_sucesso  = 'Produto criado com sucesso.'
 
     def do_action_post(self, serializer_data, request):
-        ProdutoBusiness().criar_produto(**serializer_data)
+        Produto().business.criar_produto(**serializer_data)
         # retorno opcional — sobrescreve mensagem_sucesso e status_code
         return {'status_code': status.HTTP_201_CREATED}
 ```
@@ -687,6 +702,7 @@ nome_app/
 | `BaseManagerUser`          | `AppCore.basics.models.models`         |
 | `ModelBusinessMixin`       | `AppCore.core.business.business_mixin` |
 | `ModelHelperMixin`         | `AppCore.core.helpers.helpers_mixin`   |
+| `ModelRulesMixin`          | `AppCore.core.rules.rules_mixin`       |
 | `ModelInstanceBusiness`    | `AppCore.core.business.business`       |
 | `ModelInstanceRules`       | `AppCore.core.rules.rules`             |
 | `ModelInstanceHelpers`     | `AppCore.core.helpers.helpers`         |

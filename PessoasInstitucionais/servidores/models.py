@@ -4,16 +4,19 @@ from django.db import models
 from AppCore.basics.models.models import BasicModel
 from AppCore.core.business.business_mixin import ModelBusinessMixin
 from AppCore.core.helpers.helpers_mixin import ModelHelperMixin
+from AppCore.core.rules.rules_mixin import ModelRulesMixin
 
 from .choices import CategoriaServidor
 
 
-class Servidor(ModelHelperMixin, ModelBusinessMixin, BasicModel):
+class Servidor(ModelHelperMixin, ModelBusinessMixin, ModelRulesMixin, BasicModel):
     from .business import ServidorBusiness
     from .helpers import ServidorHelpers
+    from .rules import ServidorRules
 
     business_class = ServidorBusiness
     helper_class = ServidorHelpers
+    rules_class = ServidorRules
 
     usuario = models.OneToOneField(
         settings.AUTH_USER_MODEL,

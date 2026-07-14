@@ -3,7 +3,6 @@ from django.contrib import admin
 from AppCore.basics.admin import AtivoModelAdmin, run_business
 
 from .models import Funcao
-from .rules import FuncaoRules
 
 
 @admin.register(Funcao)
@@ -23,23 +22,22 @@ class FuncaoAdmin(AtivoModelAdmin):
 
     def save_model(self, request, obj, form, change):
         if not change:
-            regras = FuncaoRules()
-            run_business(lambda: regras.papel_funcao_unico(obj.papel_funcao))
-            obj.save()
+            created = run_business(
+                lambda: Funcao().business.criar_funcao(
+                    papel_funcao=obj.papel_funcao,
+                    categoria=obj.categoria,
+                    descricao=obj.descricao,
+                    e_gratificada=obj.e_gratificada,
+                    exige_aluno=obj.exige_aluno,
+                    ativo=obj.ativo,
+                )
+            )
+            obj.pk = created.pk
             return
 
         dados = {
             field: form.cleaned_data[field]
             for field in form.changed_data
         }
-        if 'papel_funcao' in dados:
-            regras = FuncaoRules(object_instance=obj)
-            run_business(
-                lambda: regras.papel_funcao_unico(
-                    dados['papel_funcao'],
-                    excluir_id=obj.pk,
-                )
-            )
-        for attr, value in dados.items():
-            setattr(obj, attr, value)
-        obj.save()
+        if dados:
+            run_business(lambda: obj.business.atualizar_dados(dados))

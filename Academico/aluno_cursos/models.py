@@ -3,17 +3,20 @@ from django.db import models
 from AppCore.basics.models.models import BasicModel
 from AppCore.core.business.business_mixin import ModelBusinessMixin
 from AppCore.core.helpers.helpers_mixin import ModelHelperMixin
+from AppCore.core.rules.rules_mixin import ModelRulesMixin
 
 from Academico.alunos.models import Aluno
 from Academico.cursos.models import Curso
 
 
-class AlunoCurso(ModelHelperMixin, ModelBusinessMixin, BasicModel):
+class AlunoCurso(ModelHelperMixin, ModelBusinessMixin, ModelRulesMixin, BasicModel):
     from .business import AlunoCursoBusiness
     from .helpers import AlunoCursoHelpers
+    from .rules import AlunoCursoRules
 
     business_class = AlunoCursoBusiness
     helper_class = AlunoCursoHelpers
+    rules_class = AlunoCursoRules
 
     aluno = models.ForeignKey(
         Aluno,

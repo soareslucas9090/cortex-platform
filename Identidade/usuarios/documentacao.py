@@ -28,7 +28,7 @@ class PermissaoDocumentacao:
             'titulo': 'Cortex (plataforma)',
             'resumo': (
                 'Três níveis hierárquicos de acesso derivados da identidade do usuário. '
-                'Outros produtos (ex.: Sigec) podem definir níveis próprios em módulos separados.'
+                'Outros produtos (ex.: Infraestrutura) podem definir níveis ou capacidades próprias em módulos separados.'
             ),
             'texto': (
                 'O módulo **cortex** controla o acesso à plataforma principal (Identidade, '
@@ -50,8 +50,8 @@ class PermissaoDocumentacao:
                 '- Empresas: L2+ vê todas; L1 não vê nenhuma.\n\n'
                 '**Escrita:** apenas L3, exceto recursos do próprio usuário (ex.: atualizar '
                 'próprio perfil, contatos e endereço).\n\n'
-                'O payload `user.permissoes` no login/me retorna `{"cortex": "<nível>"}`. '
-                'Módulos futuros (ex.: Sigec) aparecerão como chaves adicionais nesse objeto.'
+                'O payload `user.permissoes` no login/me retorna `{"cortex": "<nível>"}` e, '
+                'quando aplicável, chaves adicionais por módulo (ex.: `infraestrutura` com flags booleanas).'
             ),
             'niveis': [
                 {
@@ -106,6 +106,109 @@ class PermissaoDocumentacao:
                     'nivel': PERMISSAO_CORTEX_EDITAR_TUDO,
                     'pode': [
                         'criar, alterar e desativar qualquer recurso da plataforma',
+                    ],
+                    'nao_pode': [],
+                },
+            ],
+        }
+
+    @classmethod
+    def documentacao_infraestrutura(cls) -> dict:
+        return {
+            'chave': 'infraestrutura',
+            'titulo': 'Infraestrutura',
+            'resumo': (
+                'Capacidades operacionais do módulo de liberação de recursos físicos '
+                '(chaves, mídias e materiais didáticos), independentes do nível Cortex L1–L3.'
+            ),
+            'texto': (
+                'O módulo **infraestrutura** expõe quatro capacidades booleanas compiladas a partir '
+                'das funções dos vínculos setoriais ativos do usuário (`SetorVinculo` com setor e '
+                'função ativos). Quando o usuário possui mais de um vínculo, aplica-se a **união (OR)** '
+                'das flags configuradas em `PermissaoFuncaoInfraestrutura`.\n\n'
+                '**Capacidades:**\n'
+                '- `operar`: retirada, devolução, troca de titular e consulta ampla de empréstimos.\n'
+                '- `cadastrar`: blocos, salas, recursos e vínculos sala–setor.\n'
+                '- `autorizar`: conceder e revogar autorizações de retirada.\n'
+                '- `retirada_irrestrita`: solicitar qualquer recurso sem autorização explícita '
+                '(tipicamente diretores, coordenadores e chefes, conforme configuração da função).\n\n'
+                '**Relação com níveis Cortex:**\n'
+                '- L1 (EDITAR_EU): em geral sem capacidades; consulta apenas empréstimos ativos próprios.\n'
+                '- L2 (LER_TUDO): tipicamente `operar` para guardas e auxiliares.\n'
+                '- L3 (EDITAR_TUDO): pode combinar `autorizar` e `cadastrar`, conforme a função.\n\n'
+                'O payload retorna `{"infraestrutura": {"operar": false, "cadastrar": false, '
+                '"autorizar": false, "retirada_irrestrita": false}}` quando não há capacidade alguma.'
+            ),
+            'capacidades': [
+                {
+                    'codigo': 'operar',
+                    'nome': 'Operar',
+                    'descricao': 'Fluxo operacional de empréstimos e consulta ampla.',
+                },
+                {
+                    'codigo': 'cadastrar',
+                    'nome': 'Cadastrar',
+                    'descricao': 'Manutenção estrutural de blocos, salas e recursos.',
+                },
+                {
+                    'codigo': 'autorizar',
+                    'nome': 'Autorizar',
+                    'descricao': 'Conceder e revogar autorizações por sala ou recurso.',
+                },
+                {
+                    'codigo': 'retirada_irrestrita',
+                    'nome': 'Retirada irrestrita',
+                    'descricao': 'Retirar recursos sem autorização explícita adicional.',
+                },
+            ],
+            'exemplos': [
+                {
+                    'perfil': 'Aluno sem vínculo setorial com permissão',
+                    'capacidades': {
+                        'operar': False,
+                        'cadastrar': False,
+                        'autorizar': False,
+                        'retirada_irrestrita': False,
+                    },
+                    'pode': [
+                        'consultar empréstimos ativos no próprio nome (via regras do módulo)',
+                    ],
+                    'nao_pode': [
+                        'operar retiradas de terceiros',
+                        'cadastrar recursos',
+                        'conceder autorizações',
+                    ],
+                },
+                {
+                    'perfil': 'Guarda com função configurada',
+                    'capacidades': {
+                        'operar': True,
+                        'cadastrar': False,
+                        'autorizar': False,
+                        'retirada_irrestrita': False,
+                    },
+                    'pode': [
+                        'emprestar, devolver e trocar titular',
+                        'consultar empréstimos com filtros amplos',
+                    ],
+                    'nao_pode': [
+                        'cadastrar blocos ou salas',
+                        'conceder autorizações',
+                    ],
+                },
+                {
+                    'perfil': 'Coordenador com função configurada',
+                    'capacidades': {
+                        'operar': True,
+                        'cadastrar': True,
+                        'autorizar': True,
+                        'retirada_irrestrita': True,
+                    },
+                    'pode': [
+                        'operar empréstimos',
+                        'cadastrar estrutura física',
+                        'autorizar retiradas',
+                        'retirar recursos sem autorização explícita',
                     ],
                     'nao_pode': [],
                 },

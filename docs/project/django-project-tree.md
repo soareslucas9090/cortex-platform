@@ -61,11 +61,14 @@ O projeto é organizado em três níveis principais:
 cortex-platform/
 ├── .github/
 ├── .vscode/
+├── Academico/
 ├── AppCore/
 ├── Auth/
 ├── Cortex/
 ├── Identidade/
+├── Infraestrutura/
 ├── Organizacional/
+├── PessoasInstitucionais/
 ├── docs/
 ├── manage.py
 ├── pyproject.toml
@@ -221,11 +224,14 @@ Exemplo atual:
 
 ```python name=cortex-urls-pattern.py
 urlpatterns = [
-    path('auth/', include('Auth.urls')),
-    path('identidade/', include('Identidade.urls')),
-    path('organizacional/', include('Organizacional.urls')),
-    path('pessoas-institucionais/', include('PessoasInstitucionais.urls')),
-    path('academico/', include('Academico.urls')),
+    path('cortex/api/schema/', SpectacularAPIView.as_view(), name='schema'),
+    path('cortex/admin/', admin.site.urls),
+    path('cortex/auth/', include('Auth.urls')),
+    path('cortex/identidade/', include('Identidade.urls')),
+    path('cortex/organizacional/', include('Organizacional.urls')),
+    path('cortex/pessoas-institucionais/', include('PessoasInstitucionais.urls')),
+    path('cortex/academico/', include('Academico.urls')),
+    path('cortex/infraestrutura/', include('Infraestrutura.urls')),
 ]
 ```
 
@@ -270,8 +276,16 @@ PROJECT_APPS = [
     'Academico.cursos',
     'Academico.alunos',
     'Academico.aluno_cursos',
+    'Infraestrutura.blocos',
+    'Infraestrutura.salas',
+    'Infraestrutura.recursos',
+    'Infraestrutura.permissoes',
+    'Infraestrutura.autorizacoes',
+    'Infraestrutura.emprestimos',
 ]
 ```
+
+Apps internos sem rotas HTTP próprias (suporte a regras e permissões) permanecem em `PROJECT_APPS`, mas não entram no `urls.py` agregador do domínio — exemplo: `Infraestrutura.permissoes`.
 
 ---
 
@@ -332,6 +346,35 @@ Academico/
 - `alunos/` → model principal `Aluno`
 - `cursos/` → model principal `Curso`
 - `aluno_cursos/` → model principal `AlunoCurso`
+
+---
+
+### `Infraestrutura/`
+
+Domínio responsável pelo cadastro de espaço físico, recursos, autorizações e empréstimos (substitui o fluxo legado do Chameco).
+
+#### Estrutura atual
+
+```text name=infraestrutura-module-tree.txt
+Infraestrutura/
+├── __init__.py
+├── urls.py
+├── blocos/
+├── salas/
+├── recursos/
+├── permissoes/
+├── autorizacoes/
+└── emprestimos/
+```
+
+#### Responsabilidades
+
+- `blocos/` → model principal `Bloco`
+- `salas/` → models `Sala` e `SalaSetor`
+- `recursos/` → model principal `Recurso`
+- `permissoes/` → model `PermissaoFuncaoInfraestrutura` (capacidades por função; sem rotas HTTP)
+- `autorizacoes/` → model principal `Autorizacao`
+- `emprestimos/` → models de empréstimo multi-item
 
 ---
 
