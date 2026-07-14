@@ -114,6 +114,100 @@ class PermissaoDocumentacao:
 
     @classmethod
     def documentacao_infraestrutura(cls) -> dict:
+        capacidades = [
+            {
+                'codigo': 'operar',
+                'nome': 'Operar',
+                'quem_usa': 'Responsável no balcão',
+                'pode': (
+                    'Realizar empréstimo, devolver itens, trocar titular; listar e filtrar '
+                    'empréstimos de qualquer pessoa.'
+                ),
+                'nao_sem_capacidade': (
+                    'Registrar operações de terceiros; ver histórico amplo de empréstimos.'
+                ),
+                'descricao': (
+                    'Registrar retirada, devolução e troca de titular; consulta ampla de '
+                    'empréstimos. Não confere elegibilidade ao solicitante.'
+                ),
+            },
+            {
+                'codigo': 'cadastrar',
+                'nome': 'Cadastrar',
+                'quem_usa': 'TI / gestão estrutural',
+                'pode': (
+                    'Criar, editar, desativar e reativar blocos, salas, recursos e vínculos '
+                    'sala–setor.'
+                ),
+                'nao_sem_capacidade': 'Alterar cadastro estrutural.',
+                'descricao': (
+                    'Manutenção estrutural: blocos, salas, recursos e vínculos sala–setor. '
+                    'Leitura dos catálogos permanece aberta a autenticados.'
+                ),
+            },
+            {
+                'codigo': 'autorizar',
+                'nome': 'Autorizar',
+                'quem_usa': 'Coordenação / chefia',
+                'pode': 'Listar, conceder, detalhar e revogar autorizações.',
+                'nao_sem_capacidade': 'Gerir autorizações de retirada.',
+                'descricao': (
+                    'Conceder, listar, detalhar e revogar autorizações por sala ou recurso.'
+                ),
+            },
+            {
+                'codigo': 'retirada_irrestrita',
+                'nome': 'Retirada irrestrita',
+                'quem_usa': 'Solicitante (ex.: diretor)',
+                'pode': (
+                    'Ser elegível a qualquer recurso na retirada, sem autorização nem vínculo '
+                    'setorial.'
+                ),
+                'nao_sem_capacidade': (
+                    'Receber recurso apenas por autorização, SalaSetor, cargo de limpeza '
+                    '(chaves) ou outra regra automática.'
+                ),
+                'descricao': (
+                    'Solicitante elegível a qualquer recurso sem autorização explícita. '
+                    'Admin/superuser recebem esta flag no bypass de acesso total. '
+                    'Não substitui a regra automática do cargo SERVENTE DE LIMPEZA.'
+                ),
+            },
+        ]
+        regras_automaticas = [
+            {
+                'codigo': 'acesso_total_admin',
+                'nome': 'Acesso total (admin/superuser)',
+                'descricao': (
+                    'is_admin ou is_superuser compilam todas as capacidades como true. '
+                    'is_staff sozinho não ativa esse bypass.'
+                ),
+            },
+            {
+                'codigo': 'servente_limpeza',
+                'nome': 'Servente de limpeza',
+                'descricao': (
+                    'Terceirizado ativo com cargo SERVENTE DE LIMPEZA pode retirar qualquer '
+                    'chave, sem autorização e sem retirada_irrestrita na função.'
+                ),
+            },
+            {
+                'codigo': 'sala_setor',
+                'nome': 'Vínculo setorial na sala',
+                'descricao': (
+                    'SetorVinculo ativo em setor ligado à sala (SalaSetor) libera chave '
+                    'daquela sala ao solicitante.'
+                ),
+            },
+            {
+                'codigo': 'autorizacao_vigente',
+                'nome': 'Autorização vigente',
+                'descricao': (
+                    'Autorização não revogada no período, no recurso ou na sala, libera o '
+                    'recurso correspondente ao beneficiário.'
+                ),
+            },
+        ]
         return {
             'chave': 'infraestrutura',
             'titulo': 'Infraestrutura',
@@ -124,137 +218,142 @@ class PermissaoDocumentacao:
                 'autorização e retirada irrestrita).'
             ),
             'texto': (
-                'O módulo **infraestrutura** controla quem **opera** o balcão (guarda/auxiliar), '
-                'quem **cadastra** a estrutura física, quem **autoriza** retiradas e quem pode '
-                '**solicitar** recursos. As quatro capacidades no payload são booleanas e '
-                'independentes dos níveis Cortex.\n\n'
-                '---\n\n'
-                '## Compilação das capacidades (`permissoes_infraestrutura`)\n\n'
-                '1. **Acesso total (bypass):** `is_admin` ou `is_superuser` recebem todas as '
-                'capacidades ligadas (`operar`, `cadastrar`, `autorizar`, `retirada_irrestrita`). '
-                '`is_staff` **não** entra nesse bypass (só afeta o nível Cortex L3).\n'
-                '2. **Demais usuários:** união (**OR**) das flags de `PermissaoFuncaoInfraestrutura` '
-                'das funções dos `SetorVinculo` ativos (setor e função ativos). Sem vínculo com '
-                'função configurada → todas as flags `false`.\n'
-                '3. Payload típico: '
-                '`{"infraestrutura": {"operar": false, "cadastrar": false, "autorizar": false, '
-                '"retirada_irrestrita": false}}`.\n\n'
-                '---\n\n'
-                '## Capacidades e o que liberam na API\n\n'
-                '| Capacidade | Quem usa | Pode | Não pode (sem a flag) |\n'
-                '|---|---|---|---|\n'
-                '| `operar` | Responsável no balcão | Realizar empréstimo, devolver itens, '
-                'trocar titular; listar/filtrar empréstimos de qualquer pessoa | Registrar '
-                'operações de terceiros; ver histórico amplo |\n'
-                '| `cadastrar` | TI / gestão estrutural | Criar/editar/desativar/reativar blocos, '
-                'salas, recursos e vínculos sala–setor | Alterar cadastro estrutural |\n'
-                '| `autorizar` | Coordenação / chefia | Listar, conceder, detalhar e revogar '
-                'autorizações | Gerir autorizações |\n'
-                '| `retirada_irrestrita` | Solicitante (ex.: diretor) | Ser elegível a **qualquer** '
-                'recurso na retirada, sem autorização nem vínculo setorial | — (só afeta elegibilidade '
-                'do solicitante, não opera o balcão sozinha) |\n\n'
-                '**Leitura de catálogos** (blocos, salas, recursos): qualquer usuário autenticado '
-                '(GET). Escrita exige `cadastrar`.\n\n'
-                '**Consulta de empréstimos sem `operar` (L1 do módulo):** só empréstimos **ativos** '
-                'em que o usuário é o **solicitante**; sem histórico concluído e sem filtros de '
-                'terceiros.\n\n'
-                '---\n\n'
-                '## Elegibilidade do solicitante (quem pode receber o recurso)\n\n'
-                'Independente de quem opera o balcão. Avaliada em ordem em '
-                '`EmprestimoHelpers.solicitante_pode_retirar_recurso`:\n\n'
-                '1. **`retirada_irrestrita`** no payload do solicitante → qualquer recurso '
-                '(chave, mídia ou material didático).\n'
-                '2. **Servente de limpeza** → terceirizado **ativo** com cargo ativo de nome '
-                'exato **SERVENTE DE LIMPEZA** → pode retirar **qualquer chave** '
-                '(não vale para mídia/material didático). Não depende de flag em '
-                '`PermissaoFuncaoInfraestrutura`; é regra automática por cargo.\n'
-                '3. **`SalaSetor`** → solicitante com vínculo setorial ativo em setor ligado à '
-                'sala da chave → pode retirar **chave** dessa sala.\n'
-                '4. **`Autorizacao` vigente** → autorização não revogada, dentro do período, '
-                'no recurso ou na sala do recurso (autorização por sala cobre recursos futuros '
-                'da mesma sala).\n\n'
-                'Se nenhuma regra passar → solicitante **não** pode receber aquele recurso.\n\n'
-                '**Importante:** `retirada_irrestrita` e limpeza/SalaSetor/autorização definem '
-                'quem **recebe**; `operar` define quem **registra** a operação. Um guarda com '
-                '`operar` ainda só libera o recurso se o solicitante for elegível.\n\n'
-                '---\n\n'
-                '## Relação com níveis Cortex (orientação típica)\n\n'
-                '- **L1 (EDITAR_EU):** em geral sem capacidades; só consulta empréstimos ativos '
-                'próprios; pode ser solicitante se tiver autorização, SalaSetor ou for limpeza.\n'
-                '- **L2 (LER_TUDO):** tipicamente `operar` (guardas/auxiliares).\n'
-                '- **L3 (EDITAR_TUDO):** tipicamente `autorizar`/`cadastrar` conforme a função; '
-                'admin/superuser têm acesso total às quatro capacidades.\n\n'
-                'Os níveis Cortex **não** substituem as flags de Infraestrutura: a checagem nas '
-                'views usa `usuario_pode_operar/cadastrar/autorizar_infraestrutura`.'
+                'O módulo infraestrutura controla quem opera o balcão (guarda/auxiliar), quem '
+                'cadastra a estrutura física, quem autoriza retiradas e quem pode solicitar '
+                'recursos. As quatro capacidades no payload são booleanas e independentes dos '
+                'níveis Cortex. Use o campo secoes para a documentação detalhada em blocos '
+                'renderizáveis; capacidades, regras_automaticas e exemplos trazem a matriz '
+                'estruturada.'
             ),
-            'capacidades': [
+            'secoes': [
                 {
-                    'codigo': 'operar',
-                    'nome': 'Operar',
-                    'descricao': (
-                        'Registrar retirada, devolução e troca de titular; consulta ampla de '
-                        'empréstimos. Não confere elegibilidade ao solicitante.'
-                    ),
+                    'titulo': 'Compilação das capacidades (permissoes_infraestrutura)',
+                    'itens': [
+                        {
+                            'destaque': 'Acesso total (bypass)',
+                            'texto': (
+                                'is_admin ou is_superuser recebem todas as capacidades ligadas '
+                                '(operar, cadastrar, autorizar, retirada_irrestrita). is_staff '
+                                'não entra nesse bypass (só afeta o nível Cortex L3).'
+                            ),
+                        },
+                        {
+                            'destaque': 'Demais usuários',
+                            'texto': (
+                                'União (OR) das flags de PermissaoFuncaoInfraestrutura das '
+                                'funções dos SetorVinculo ativos (setor e função ativos). Sem '
+                                'vínculo com função configurada, todas as flags ficam false.'
+                            ),
+                        },
+                        {
+                            'destaque': 'Payload típico',
+                            'texto': (
+                                '{"infraestrutura": {"operar": false, "cadastrar": false, '
+                                '"autorizar": false, "retirada_irrestrita": false}}'
+                            ),
+                        },
+                    ],
                 },
                 {
-                    'codigo': 'cadastrar',
-                    'nome': 'Cadastrar',
-                    'descricao': (
-                        'Manutenção estrutural: blocos, salas, recursos e vínculos sala–setor. '
-                        'Leitura dos catálogos permanece aberta a autenticados.'
-                    ),
+                    'titulo': 'Leitura e consulta na API',
+                    'paragrafos': [
+                        (
+                            'Leitura de catálogos (blocos, salas, recursos): qualquer usuário '
+                            'autenticado (GET). Escrita exige cadastrar.'
+                        ),
+                        (
+                            'Consulta de empréstimos sem operar (L1 do módulo): só empréstimos '
+                            'ativos em que o usuário é o solicitante; sem histórico concluído e '
+                            'sem filtros de terceiros.'
+                        ),
+                    ],
                 },
                 {
-                    'codigo': 'autorizar',
-                    'nome': 'Autorizar',
-                    'descricao': (
-                        'Conceder, listar, detalhar e revogar autorizações por sala ou recurso.'
+                    'titulo': 'Elegibilidade do solicitante (quem pode receber o recurso)',
+                    'introducao': (
+                        'Independente de quem opera o balcão. Avaliada em ordem em '
+                        'EmprestimoHelpers.solicitante_pode_retirar_recurso:'
                     ),
+                    'itens': [
+                        {
+                            'ordem': 1,
+                            'destaque': 'retirada_irrestrita',
+                            'texto': (
+                                'No payload do solicitante: qualquer recurso (chave, mídia ou '
+                                'material didático).'
+                            ),
+                        },
+                        {
+                            'ordem': 2,
+                            'destaque': 'Servente de limpeza',
+                            'texto': (
+                                'Terceirizado ativo com cargo ativo de nome exato SERVENTE DE '
+                                'LIMPEZA: pode retirar qualquer chave (não vale para mídia ou '
+                                'material didático). Regra automática por cargo, sem flag na '
+                                'função.'
+                            ),
+                        },
+                        {
+                            'ordem': 3,
+                            'destaque': 'SalaSetor',
+                            'texto': (
+                                'Solicitante com vínculo setorial ativo em setor ligado à sala da '
+                                'chave: pode retirar chave dessa sala.'
+                            ),
+                        },
+                        {
+                            'ordem': 4,
+                            'destaque': 'Autorizacao vigente',
+                            'texto': (
+                                'Autorização não revogada, dentro do período, no recurso ou na '
+                                'sala do recurso. Autorização por sala cobre recursos futuros da '
+                                'mesma sala.'
+                            ),
+                        },
+                    ],
+                    'observacoes': [
+                        'Se nenhuma regra passar, o solicitante não pode receber aquele recurso.',
+                        (
+                            'retirada_irrestrita e limpeza/SalaSetor/autorização definem quem '
+                            'recebe; operar define quem registra a operação. Um guarda com '
+                            'operar ainda só libera o recurso se o solicitante for elegível.'
+                        ),
+                    ],
                 },
                 {
-                    'codigo': 'retirada_irrestrita',
-                    'nome': 'Retirada irrestrita',
-                    'descricao': (
-                        'Solicitante elegível a qualquer recurso sem autorização explícita. '
-                        'Admin/superuser recebem esta flag no bypass de acesso total. '
-                        'Não substitui a regra automática do cargo SERVENTE DE LIMPEZA.'
-                    ),
+                    'titulo': 'Relação com níveis Cortex (orientação típica)',
+                    'itens': [
+                        {
+                            'destaque': 'L1 (EDITAR_EU)',
+                            'texto': (
+                                'Em geral sem capacidades; só consulta empréstimos ativos '
+                                'próprios; pode ser solicitante se tiver autorização, SalaSetor '
+                                'ou for limpeza.'
+                            ),
+                        },
+                        {
+                            'destaque': 'L2 (LER_TUDO)',
+                            'texto': 'Tipicamente operar (guardas/auxiliares).',
+                        },
+                        {
+                            'destaque': 'L3 (EDITAR_TUDO)',
+                            'texto': (
+                                'Tipicamente autorizar/cadastrar conforme a função; admin e '
+                                'superuser têm acesso total às quatro capacidades.'
+                            ),
+                        },
+                    ],
+                    'paragrafos': [
+                        (
+                            'Os níveis Cortex não substituem as flags de Infraestrutura: a '
+                            'checagem nas views usa usuario_pode_operar, usuario_pode_cadastrar '
+                            'e usuario_pode_autorizar_infraestrutura.'
+                        ),
+                    ],
                 },
             ],
-            'regras_automaticas': [
-                {
-                    'codigo': 'acesso_total_admin',
-                    'nome': 'Acesso total (admin/superuser)',
-                    'descricao': (
-                        'is_admin ou is_superuser compilam todas as capacidades como true. '
-                        'is_staff sozinho não ativa esse bypass.'
-                    ),
-                },
-                {
-                    'codigo': 'servente_limpeza',
-                    'nome': 'Servente de limpeza',
-                    'descricao': (
-                        'Terceirizado ativo com cargo SERVENTE DE LIMPEZA pode retirar qualquer '
-                        'chave, sem autorização e sem retirada_irrestrita na função.'
-                    ),
-                },
-                {
-                    'codigo': 'sala_setor',
-                    'nome': 'Vínculo setorial na sala',
-                    'descricao': (
-                        'SetorVinculo ativo em setor ligado à sala (SalaSetor) libera chave '
-                        'daquela sala ao solicitante.'
-                    ),
-                },
-                {
-                    'codigo': 'autorizacao_vigente',
-                    'nome': 'Autorização vigente',
-                    'descricao': (
-                        'Autorização não revogada no período, no recurso ou na sala, libera o '
-                        'recurso correspondente ao beneficiário.'
-                    ),
-                },
-            ],
+            'capacidades': capacidades,
+            'regras_automaticas': regras_automaticas,
             'exemplos': [
                 {
                     'perfil': 'Aluno sem vínculo setorial nem autorização',
