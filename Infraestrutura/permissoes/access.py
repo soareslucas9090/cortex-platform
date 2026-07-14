@@ -1,9 +1,18 @@
 from rest_framework.permissions import BasePermission
 
 
+def usuario_tem_acesso_total_infraestrutura(user) -> bool:
+    """Admin e superuser têm todas as capacidades do módulo Infraestrutura."""
+    if not user or not user.is_authenticated:
+        return False
+    return user.is_superuser or getattr(user, 'is_admin', False)
+
+
 def _capacidade_infraestrutura(user, capacidade: str) -> bool:
     if not user or not user.is_authenticated:
         return False
+    if usuario_tem_acesso_total_infraestrutura(user):
+        return True
     infraestrutura = getattr(user, 'permissoes', {}).get('infraestrutura', {})
     return bool(infraestrutura.get(capacidade))
 

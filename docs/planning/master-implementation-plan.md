@@ -340,7 +340,7 @@ O projeto passa a representar perfis acadêmicos e seus vínculos formais com cu
 
 ## Estado
 
-**Em andamento** — etapas 5.1–5.5 concluídas; validação funcional mínima (5.6) pendente.
+**Concluída** (14/07/2026) — etapas 5.1–5.6 concluídas; validação funcional mínima coberta pela suite de integração interdomínio.
 
 ## Objetivo
 

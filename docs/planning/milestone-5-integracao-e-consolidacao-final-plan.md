@@ -83,7 +83,7 @@ Esta milestone **não deve** incluir:
 | 5.3 | Concluída |
 | 5.4 | Concluída |
 | 5.5 | Concluída (14/07/2026) |
-| 5.6 | Parcial |
+| 5.6 | Concluída (14/07/2026) |
 
 ---
 
@@ -185,6 +185,9 @@ Executar uma validação funcional mínima dos principais fluxos e vínculos do 
 
 ### Critério de saída
 O projeto deve demonstrar coerência mínima de ponta a ponta para os cenários centrais já definidos.
+
+### Status
+Concluída (14/07/2026) — suite em `Organizacional/vinculos/tests/test_integracao_milestone_5.py`: fluxos prioritários (responsável, múltiplos vínculos, aluno+curso, monitor, terceirizado), checklist E2E via API, login por CPF e invariantes cruzadas de erro.
 
 ---
 

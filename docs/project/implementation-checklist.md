@@ -334,7 +334,7 @@ A implementação do Cortex segue uma ordem orientada por domínio, com cada dom
 | 2         | `Organizacional/`        | `setores`, `funcoes`, `vinculos`                                 | Concluído    |
 | 3         | `PessoasInstitucionais/` | `cargos`, `servidores`, `empresas_instituicoes`, `terceirizados` | Concluído    |
 | 4         | `Academico/`             | `alunos`, `cursos`, `aluno_cursos`                               | Concluído    |
-| 5         | —                        | Integração, consolidação e validação final                       | Em andamento |
+| 5         | —                        | Integração, consolidação e validação final                       | Concluído    |
 | Infra     | `Infraestrutura/`        | `blocos`, `salas`, `recursos`, `permissoes`, `autorizacoes`, `emprestimos` | v1 concluída |
 
 Esse checklist transforma a visão arquitetural já definida em uma sequência prática de execução, reduzindo risco de retrabalho e ajudando a preservar a consistência do domínio desde o início.

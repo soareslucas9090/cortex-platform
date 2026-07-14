@@ -1,6 +1,10 @@
 from AppCore.core.users_permissions.user_permission import UserModelPermission
 
-from Infraestrutura.permissoes.choices import capacidades_infraestrutura_vazias
+from Infraestrutura.permissoes.access import usuario_tem_acesso_total_infraestrutura
+from Infraestrutura.permissoes.choices import (
+    capacidades_infraestrutura_completas,
+    capacidades_infraestrutura_vazias,
+)
 from Infraestrutura.permissoes.models import PermissaoFuncaoInfraestrutura
 
 from .choices import (
@@ -63,10 +67,14 @@ class UsuarioPermissions(UserModelPermission):
         """
         Capacidades do módulo Infraestrutura compiladas por vínculo ativo com função.
         União (OR) das flags configuradas em PermissaoFuncaoInfraestrutura.
+        Admin e superuser recebem acesso total a todas as capacidades.
         """
         user = self.object_instance
         if not user:
             return {'infraestrutura': capacidades_infraestrutura_vazias()}
+
+        if usuario_tem_acesso_total_infraestrutura(user):
+            return {'infraestrutura': capacidades_infraestrutura_completas()}
 
         return {
             'infraestrutura': PermissaoFuncaoInfraestrutura().helper.compilar_do_usuario(user),

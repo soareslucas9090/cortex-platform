@@ -1,7 +1,16 @@
 from django.test import TestCase
 
 from Identidade.usuarios.tests.test_views import criar_usuario
-from Infraestrutura.permissoes.choices import capacidades_infraestrutura_vazias
+from Infraestrutura.permissoes.access import (
+    usuario_pode_autorizar_infraestrutura,
+    usuario_pode_cadastrar_infraestrutura,
+    usuario_pode_operar_infraestrutura,
+    usuario_tem_acesso_total_infraestrutura,
+)
+from Infraestrutura.permissoes.choices import (
+    capacidades_infraestrutura_completas,
+    capacidades_infraestrutura_vazias,
+)
 from Infraestrutura.permissoes.models import PermissaoFuncaoInfraestrutura
 from Organizacional.funcoes.models import Funcao
 from Organizacional.setores.models import Setor
@@ -121,3 +130,26 @@ class PermissaoInfraestruturaCompilacaoTest(TestCase):
         self.assertIn('infraestrutura', permissoes)
         self.assertTrue(permissoes['infraestrutura']['operar'])
         self.assertTrue(permissoes['infraestrutura']['retirada_irrestrita'])
+
+
+class PermissaoInfraestruturaAdminSuperuserTest(TestCase):
+
+    def test_admin_sem_vinculo_tem_capacidades_completas(self):
+        admin = criar_usuario('99999999991', nome='Admin Infra', is_admin=True)
+        self.assertEqual(admin.permissoes['infraestrutura'], capacidades_infraestrutura_completas())
+
+    def test_superuser_sem_vinculo_tem_capacidades_completas(self):
+        superuser = criar_usuario('99999999992', nome='Super Infra', is_superuser=True)
+        self.assertEqual(superuser.permissoes['infraestrutura'], capacidades_infraestrutura_completas())
+
+    def test_admin_tem_acesso_total_nas_checagens_de_api(self):
+        admin = criar_usuario('99999999993', nome='Admin API', is_admin=True)
+        self.assertTrue(usuario_tem_acesso_total_infraestrutura(admin))
+        self.assertTrue(usuario_pode_cadastrar_infraestrutura(admin))
+        self.assertTrue(usuario_pode_autorizar_infraestrutura(admin))
+        self.assertTrue(usuario_pode_operar_infraestrutura(admin))
+
+    def test_usuario_comum_sem_vinculo_nao_tem_acesso_total(self):
+        usuario = criar_usuario('99999999994', nome='Comum Infra')
+        self.assertFalse(usuario_tem_acesso_total_infraestrutura(usuario))
+        self.assertFalse(usuario_pode_cadastrar_infraestrutura(usuario))
