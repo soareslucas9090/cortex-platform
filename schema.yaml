@@ -2647,10 +2647,13 @@ paths:
     get:
       operationId: infraestrutura_emprestimos_solicitantes_elegiveis_list
       description: "\n    Retorna usuários que podem ser solicitantes de empréstimo
-        para o recurso informado,\n    conforme as regras de elegibilidade (retirada
-        irrestrita, autorização, SalaSetor,\n    servente de limpeza).\n\n    **Permissões:**
-        Capacidade `operar` em Infraestrutura.\n    "
-      summary: Listar solicitantes elegíveis para recurso
+        para **todos** os recursos\n    informados, conforme as regras de elegibilidade
+        (retirada irrestrita, autorização,\n    SalaSetor, servente de limpeza).\n\n
+        \   Informe um ou mais IDs em `recurso_id` e/ou `recurso_ids` (repetidos ou
+        separados\n    por vírgula). A resposta contém apenas usuários elegíveis a
+        cada recurso enviado.\n\n    **Permissões:** Capacidade `operar` em Infraestrutura.\n
+        \   "
+      summary: Listar solicitantes elegíveis para recurso(s)
       parameters:
       - in: query
         name: nome
@@ -2671,8 +2674,12 @@ paths:
         name: recurso_id
         schema:
           type: integer
-        description: ID do recurso para filtrar solicitantes elegíveis.
-        required: true
+        description: ID de um recurso (pode repetir o parâmetro para vários recursos).
+      - in: query
+        name: recurso_ids
+        schema:
+          type: integer
+        description: IDs de recursos (repetir o parâmetro ou separar por vírgula).
       tags:
       - Infraestrutura · Empréstimos
       security:

@@ -35,13 +35,28 @@ def queryset_emprestimo_detalhado():
     ).all()
 
 
+def _extrair_ids_recursos_da_query(query_params) -> list[int]:
+    """Aceita `recurso_id`, `recurso_ids` repetidos ou separados por vírgula."""
+    ids: list[int] = []
+    for chave in ('recurso_ids', 'recurso_id'):
+        for valor in query_params.getlist(chave):
+            for parte in str(valor).split(','):
+                parte = parte.strip()
+                if parte.isdigit():
+                    ids.append(int(parte))
+    return list(dict.fromkeys(ids))
+
+
 @extend_schema(
     tags=['Infraestrutura · Empréstimos'],
-    summary='Listar solicitantes elegíveis para recurso',
+    summary='Listar solicitantes elegíveis para recurso(s)',
     description='''
-    Retorna usuários que podem ser solicitantes de empréstimo para o recurso informado,
-    conforme as regras de elegibilidade (retirada irrestrita, autorização, SalaSetor,
-    servente de limpeza).
+    Retorna usuários que podem ser solicitantes de empréstimo para **todos** os recursos
+    informados, conforme as regras de elegibilidade (retirada irrestrita, autorização,
+    SalaSetor, servente de limpeza).
+
+    Informe um ou mais IDs em `recurso_id` e/ou `recurso_ids` (repetidos ou separados
+    por vírgula). A resposta contém apenas usuários elegíveis a cada recurso enviado.
 
     **Permissões:** Capacidade `operar` em Infraestrutura.
     ''',
@@ -50,8 +65,15 @@ def queryset_emprestimo_detalhado():
             'recurso_id',
             OpenApiTypes.INT,
             OpenApiParameter.QUERY,
-            required=True,
-            description='ID do recurso para filtrar solicitantes elegíveis.',
+            required=False,
+            description='ID de um recurso (pode repetir o parâmetro para vários recursos).',
+        ),
+        OpenApiParameter(
+            'recurso_ids',
+            OpenApiTypes.INT,
+            OpenApiParameter.QUERY,
+            required=False,
+            description='IDs de recursos (repetir o parâmetro ou separar por vírgula).',
         ),
         OpenApiParameter(
             'nome',
@@ -71,17 +93,19 @@ class ListarSolicitantesElegiveisView(PodeOperarInfraestruturaMixin, BasicGetAPI
     mensagem_sucesso = 'Solicitantes elegíveis listados com sucesso.'
 
     def get_queryset(self):
-        recurso_id = self.request.query_params.get('recurso_id')
-        if not recurso_id or not recurso_id.isdigit():
-            raise Http404('Recurso não encontrado.')
+        recurso_ids = _extrair_ids_recursos_da_query(self.request.query_params)
+        if not recurso_ids:
+            raise Http404('Informe ao menos um recurso.')
 
-        recurso = Recurso.objects.select_related('sala').filter(pk=int(recurso_id)).first()
-        if recurso is None:
-            raise Http404('Recurso não encontrado.')
+        recursos = list(
+            Recurso.objects.select_related('sala').filter(pk__in=recurso_ids),
+        )
+        if len(recursos) != len(recurso_ids):
+            raise Http404('Um ou mais recursos não foram encontrados.')
 
         nome = self.request.query_params.get('nome')
-        return Emprestimo().helper.listar_solicitantes_elegiveis_para_recurso(
-            recurso,
+        return Emprestimo().helper.listar_solicitantes_elegiveis_para_recursos(
+            recursos,
             nome=nome or None,
         )
 

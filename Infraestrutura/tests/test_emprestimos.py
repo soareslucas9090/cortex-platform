@@ -104,6 +104,34 @@ class EmprestimoElegibilidadeTest(TestCase):
         elegiveis_midia = Emprestimo().helper.listar_solicitantes_elegiveis_para_recurso(self.midia)
         self.assertNotIn(self.solicitante.pk, elegiveis_midia.values_list('pk', flat=True))
 
+    def test_listar_solicitantes_elegiveis_para_varios_recursos_intersecao(self):
+        setor = Setor.objects.create(sigla='SET2', nome='Setor Sala 2')
+        SalaSetor.objects.create(sala=self.sala, setor=setor)
+        SetorVinculo.objects.create(usuario=self.solicitante, setor=setor, funcao=None)
+
+        autorizador = conceder_capacidade_operar(criar_usuario('18181818182', nome='Autorizador Emp 2'))
+        funcao_aut = Funcao.objects.create(papel_funcao='AUT_EMP2', descricao='Aut 2')
+        setor_aut = Setor.objects.create(sigla='AU2', nome='Setor Aut 2')
+        PermissaoFuncaoInfraestrutura().business.criar_permissao(funcao_id=funcao_aut.pk, autorizar=True)
+        SetorVinculo.objects.create(usuario=autorizador, setor=setor_aut, funcao=funcao_aut)
+
+        Autorizacao().business.conceder_autorizacao(
+            beneficiario_id=self.solicitante.pk,
+            concedente=autorizador,
+            recurso_id=self.midia.pk,
+            data_inicio=datetime.date.today(),
+        )
+
+        apenas_chave = criar_usuario('17171717172', nome='Apenas Chave')
+        SetorVinculo.objects.create(usuario=apenas_chave, setor=setor, funcao=None)
+
+        elegiveis = Emprestimo().helper.listar_solicitantes_elegiveis_para_recursos(
+            [self.chave, self.midia],
+        )
+        ids = set(elegiveis.values_list('pk', flat=True))
+        self.assertIn(self.solicitante.pk, ids)
+        self.assertNotIn(apenas_chave.pk, ids)
+
     def test_servente_limpeza_retira_qualquer_chave(self):
         empresa = EmpresaInstituicao.objects.create(nome='Empresa Limpeza')
         cargo, _ = Cargo.objects.get_or_create(nome=CARGO_SERVENTE_LIMPEZA, defaults={'ativo': True})

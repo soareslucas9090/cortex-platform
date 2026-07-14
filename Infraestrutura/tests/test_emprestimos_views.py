@@ -76,6 +76,40 @@ class EmprestimosViewsTest(APITestCase):
         ids = [item['id'] for item in resposta.data['dados']]
         self.assertNotIn(sem_acesso.pk, ids)
 
+    def test_operador_lista_solicitantes_elegiveis_para_varios_recursos(self):
+        midia = Recurso.objects.create(
+            codigo='MID-API',
+            tipo=TipoRecurso.MIDIA,
+        )
+        autorizador = conceder_capacidade_operar(criar_usuario('26262626262', nome='Autorizador API'))
+        funcao_aut = Funcao.objects.create(papel_funcao='AUT_API', descricao='Aut API')
+        setor_aut = Setor.objects.create(sigla='AUT', nome='Setor Aut API')
+        PermissaoFuncaoInfraestrutura().business.criar_permissao(funcao_id=funcao_aut.pk, autorizar=True)
+        SetorVinculo.objects.create(usuario=autorizador, setor=setor_aut, funcao=funcao_aut)
+
+        from Infraestrutura.autorizacoes.models import Autorizacao
+
+        Autorizacao().business.conceder_autorizacao(
+            beneficiario_id=self.solicitante.pk,
+            concedente=autorizador,
+            recurso_id=midia.pk,
+            data_inicio=datetime.date.today(),
+        )
+
+        apenas_chave = criar_usuario('27272727272', nome='Apenas Chave API')
+        setor = Setor.objects.get(sigla='SAP')
+        SetorVinculo.objects.create(usuario=apenas_chave, setor=setor, funcao=None)
+
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token_operador}')
+        resposta = self.client.get(
+            self.url_solicitantes,
+            {'recurso_ids': f'{self.chave.pk},{midia.pk}'},
+        )
+        self.assertEqual(resposta.status_code, status.HTTP_200_OK)
+        ids = [item['id'] for item in resposta.data['dados']]
+        self.assertIn(self.solicitante.pk, ids)
+        self.assertNotIn(apenas_chave.pk, ids)
+
     def test_l1_nao_pode_realizar_emprestimo(self):
         self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token_l1}')
         resposta = self.client.post(self.url_lista, {

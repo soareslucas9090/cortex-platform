@@ -110,6 +110,30 @@ class EmprestimoHelpers(ModelInstanceHelpers):
             qs = qs.filter(nome__unaccent__icontains=nome)
         return qs.distinct().order_by('nome')
 
+    def listar_solicitantes_elegiveis_para_recursos(
+        self,
+        recursos,
+        *,
+        nome=None,
+        ativo=True,
+    ):
+        """
+        Retorna usuários elegíveis a retirar todos os recursos informados (interseção).
+        """
+        from Identidade.usuarios.models import Usuario
+
+        if not recursos:
+            return Usuario.objects.none()
+
+        qs = None
+        for recurso in recursos:
+            qs_recurso = self.listar_solicitantes_elegiveis_para_recurso(recurso, ativo=ativo)
+            qs = qs_recurso if qs is None else qs.filter(pk__in=qs_recurso.values('pk'))
+
+        if nome:
+            qs = qs.filter(nome__unaccent__icontains=nome)
+        return qs.distinct().order_by('nome')
+
     def listar_para_usuario(
         self,
         usuario,
