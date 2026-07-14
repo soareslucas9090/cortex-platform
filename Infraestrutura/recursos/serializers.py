@@ -1,9 +1,11 @@
+from drf_spectacular.utils import extend_schema_field, extend_schema_serializer
 from rest_framework import serializers
 
 from .choices import TipoRecurso
 from .models import Recurso
 
 
+@extend_schema_serializer(component_name='RecursoSalaResumo')
 class SalaResumoSerializer(serializers.Serializer):
     id = serializers.IntegerField()
     nome = serializers.CharField()
@@ -22,6 +24,7 @@ class RecursoSerializer(serializers.ModelSerializer):
             'em_avaria', 'ativo', 'estado_derivado', 'estado_derivado_display', 'created_at',
         ]
 
+    @extend_schema_field(serializers.CharField())
     def get_estado_derivado_display(self, obj):
         from .choices import EstadoRecurso
         return EstadoRecurso(obj.estado_derivado).label

@@ -2144,6 +2144,934 @@ paths:
               schema:
                 description: Nenhuma importação encontrada.
           description: ''
+  /cortex/infraestrutura/autorizacoes/:
+    get:
+      operationId: infraestrutura_autorizacoes_list
+      description: "\n    Retorna autorizações de retirada por sala ou recurso.\n\n
+        \   **Permissões:** Capacidade `autorizar` em Infraestrutura.\n    "
+      summary: Listar autorizações
+      parameters:
+      - in: query
+        name: beneficiario_id
+        schema:
+          type: integer
+      - name: page
+        required: false
+        in: query
+        description: Um número de página dentro do conjunto de resultados paginado.
+        schema:
+          type: integer
+      - in: query
+        name: paginacao
+        schema:
+          type: integer
+      - in: query
+        name: recurso_id
+        schema:
+          type: integer
+      - in: query
+        name: sala_id
+        schema:
+          type: integer
+      - in: query
+        name: vigente
+        schema:
+          type: boolean
+      tags:
+      - Infraestrutura · Autorizações
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedAutorizacaoList'
+          description: ''
+    post:
+      operationId: infraestrutura_autorizacoes_create
+      description: "\n    Concede autorização temporária ou permanente para sala ou
+        recurso (XOR).\n\n    **Permissões:** Capacidade `autorizar` em Infraestrutura.\n
+        \   "
+      summary: Conceder autorização
+      tags:
+      - Infraestrutura · Autorizações
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ConcederAutorizacao'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ConcederAutorizacao'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ConcederAutorizacao'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Autorizacao'
+          description: ''
+  /cortex/infraestrutura/autorizacoes/{id}/:
+    get:
+      operationId: infraestrutura_autorizacoes_retrieve
+      description: |-
+        Retorna os dados de uma autorização.
+
+        **Permissões:** Capacidade `autorizar` em Infraestrutura.
+      summary: Detalhe da autorização
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - Infraestrutura · Autorizações
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Autorizacao'
+          description: ''
+  /cortex/infraestrutura/autorizacoes/{id}/revogar/:
+    post:
+      operationId: infraestrutura_autorizacoes_revogar_create
+      description: |-
+        Revoga uma autorização vigente.
+
+        **Permissões:** Capacidade `autorizar` em Infraestrutura.
+      summary: Revogar autorização
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - Infraestrutura · Autorizações
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Autorizacao'
+          description: ''
+  /cortex/infraestrutura/blocos/:
+    get:
+      operationId: infraestrutura_blocos_list
+      description: "\n    Retorna a lista paginada de blocos.\n\n    **Permissões:**
+        Qualquer usuário autenticado. Escrita exige capacidade `cadastrar`.\n    "
+      summary: Listar blocos
+      parameters:
+      - in: query
+        name: ativo
+        schema:
+          type: boolean
+        description: Filtra por ativo (true) ou inativo (false).
+      - in: query
+        name: nome
+        schema:
+          type: string
+        description: Filtra por parte do nome (ignora acentos e maiúsculas).
+      - name: page
+        required: false
+        in: query
+        description: Um número de página dentro do conjunto de resultados paginado.
+        schema:
+          type: integer
+      - in: query
+        name: paginacao
+        schema:
+          type: integer
+        description: Tamanho da página (1–100, padrão 10).
+      tags:
+      - Infraestrutura · Blocos
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedBlocoList'
+          description: ''
+    post:
+      operationId: infraestrutura_blocos_create
+      description: |-
+        Cria um novo bloco.
+
+        **Permissões:** Capacidade `cadastrar` em Infraestrutura.
+      summary: Criar bloco
+      tags:
+      - Infraestrutura · Blocos
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CriarBloco'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/CriarBloco'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/CriarBloco'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Bloco'
+          description: ''
+  /cortex/infraestrutura/blocos/{id}/:
+    get:
+      operationId: infraestrutura_blocos_retrieve
+      description: |-
+        Retorna os dados de um bloco.
+
+        **Permissões:** Qualquer usuário autenticado.
+      summary: Detalhe do bloco
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - Infraestrutura · Blocos
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Bloco'
+          description: ''
+    patch:
+      operationId: infraestrutura_blocos_partial_update
+      description: |-
+        Atualiza parcialmente um bloco.
+
+        **Permissões:** Capacidade `cadastrar` em Infraestrutura.
+      summary: Atualizar bloco
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - Infraestrutura · Blocos
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedAtualizarBloco'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedAtualizarBloco'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedAtualizarBloco'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Bloco'
+          description: ''
+  /cortex/infraestrutura/blocos/{id}/desativar/:
+    post:
+      operationId: infraestrutura_blocos_desativar_create
+      description: |-
+        Desativa um bloco. Bloqueado se houver salas ativas.
+
+        **Permissões:** Capacidade `cadastrar` em Infraestrutura.
+      summary: Desativar bloco
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - Infraestrutura · Blocos
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                description: Bloco desativado com sucesso.
+          description: ''
+  /cortex/infraestrutura/blocos/{id}/reativar/:
+    post:
+      operationId: infraestrutura_blocos_reativar_create
+      description: |-
+        Reativa um bloco previamente desativado.
+
+        **Permissões:** Capacidade `cadastrar` em Infraestrutura.
+      summary: Reativar bloco
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - Infraestrutura · Blocos
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                description: Bloco reativado com sucesso.
+          description: ''
+  /cortex/infraestrutura/emprestimos/:
+    get:
+      operationId: infraestrutura_emprestimos_list
+      description: "\n    Com `operar`: consulta ampla com filtros.\n    Sem `operar`
+        (L1): apenas empréstimos ativos do próprio solicitante.\n\n    **Permissões:**
+        Usuário autenticado (escopo conforme capacidade `operar`).\n    "
+      summary: Listar empréstimos
+      parameters:
+      - in: query
+        name: ativo
+        schema:
+          type: boolean
+      - name: page
+        required: false
+        in: query
+        description: Um número de página dentro do conjunto de resultados paginado.
+        schema:
+          type: integer
+      - in: query
+        name: paginacao
+        schema:
+          type: integer
+      - in: query
+        name: recurso_id
+        schema:
+          type: integer
+      - in: query
+        name: responsavel_id
+        schema:
+          type: integer
+      - in: query
+        name: solicitante_id
+        schema:
+          type: integer
+      - in: query
+        name: tipo_recurso
+        schema:
+          type: string
+      tags:
+      - Infraestrutura · Empréstimos
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedEmprestimoList'
+          description: ''
+    post:
+      operationId: infraestrutura_emprestimos_create
+      description: "\n    Registra retirada multi-item para um solicitante.\n\n    **Permissões:**
+        Capacidade `operar` em Infraestrutura.\n    "
+      summary: Realizar empréstimo
+      tags:
+      - Infraestrutura · Empréstimos
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RealizarEmprestimo'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/RealizarEmprestimo'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/RealizarEmprestimo'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Emprestimo'
+          description: ''
+  /cortex/infraestrutura/emprestimos/{id}/:
+    get:
+      operationId: infraestrutura_emprestimos_retrieve
+      description: "\n    Com `operar`: qualquer empréstimo.\n    Sem `operar`: apenas
+        empréstimos ativos do próprio solicitante.\n\n    **Permissões:** Usuário
+        autenticado (escopo conforme capacidade `operar`).\n    "
+      summary: Detalhe do empréstimo
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - Infraestrutura · Empréstimos
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Emprestimo'
+          description: ''
+  /cortex/infraestrutura/emprestimos/{id}/devolver/:
+    post:
+      operationId: infraestrutura_emprestimos_devolver_create
+      description: "\n    Devolução parcial de itens. O empréstimo encerra quando
+        todos forem devolvidos.\n\n    **Permissões:** Capacidade `operar` em Infraestrutura.\n
+        \   "
+      summary: Devolver itens
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - Infraestrutura · Empréstimos
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DevolverItens'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/DevolverItens'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/DevolverItens'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Emprestimo'
+          description: ''
+  /cortex/infraestrutura/emprestimos/{id}/trocar-titular/:
+    post:
+      operationId: infraestrutura_emprestimos_trocar_titular_create
+      description: "\n    Devolve itens em aberto e registra novo empréstimo para
+        outro solicitante.\n\n    **Permissões:** Capacidade `operar` em Infraestrutura.\n
+        \   "
+      summary: Trocar titular
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - Infraestrutura · Empréstimos
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TrocarTitular'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/TrocarTitular'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/TrocarTitular'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Emprestimo'
+          description: ''
+  /cortex/infraestrutura/recursos/:
+    get:
+      operationId: infraestrutura_recursos_list
+      description: "\n    Retorna a lista paginada de recursos físicos.\n\n    **Permissões:**
+        Qualquer usuário autenticado. Escrita exige capacidade `cadastrar`.\n    "
+      summary: Listar recursos
+      parameters:
+      - in: query
+        name: ativo
+        schema:
+          type: boolean
+      - in: query
+        name: codigo
+        schema:
+          type: string
+      - name: page
+        required: false
+        in: query
+        description: Um número de página dentro do conjunto de resultados paginado.
+        schema:
+          type: integer
+      - in: query
+        name: paginacao
+        schema:
+          type: integer
+      - in: query
+        name: sala_id
+        schema:
+          type: integer
+      - in: query
+        name: tipo
+        schema:
+          type: string
+      tags:
+      - Infraestrutura · Recursos
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedRecursoList'
+          description: ''
+    post:
+      operationId: infraestrutura_recursos_create
+      description: "\n    Cria um novo recurso. Tipo chave exige sala vinculada.\n\n
+        \   **Permissões:** Capacidade `cadastrar` em Infraestrutura.\n    "
+      summary: Criar recurso
+      tags:
+      - Infraestrutura · Recursos
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CriarRecurso'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/CriarRecurso'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/CriarRecurso'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Recurso'
+          description: ''
+  /cortex/infraestrutura/recursos/{id}/:
+    get:
+      operationId: infraestrutura_recursos_retrieve
+      description: |-
+        Retorna os dados de um recurso.
+
+        **Permissões:** Qualquer usuário autenticado.
+      summary: Detalhe do recurso
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - Infraestrutura · Recursos
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Recurso'
+          description: ''
+    patch:
+      operationId: infraestrutura_recursos_partial_update
+      description: |-
+        Atualiza parcialmente um recurso.
+
+        **Permissões:** Capacidade `cadastrar` em Infraestrutura.
+      summary: Atualizar recurso
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - Infraestrutura · Recursos
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedAtualizarRecurso'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedAtualizarRecurso'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedAtualizarRecurso'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Recurso'
+          description: ''
+  /cortex/infraestrutura/recursos/{id}/desativar/:
+    post:
+      operationId: infraestrutura_recursos_desativar_create
+      description: |-
+        Desativa um recurso.
+
+        **Permissões:** Capacidade `cadastrar` em Infraestrutura.
+      summary: Desativar recurso
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - Infraestrutura · Recursos
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                description: Recurso desativado com sucesso.
+          description: ''
+  /cortex/infraestrutura/recursos/{id}/reativar/:
+    post:
+      operationId: infraestrutura_recursos_reativar_create
+      description: |-
+        Reativa um recurso.
+
+        **Permissões:** Capacidade `cadastrar` em Infraestrutura.
+      summary: Reativar recurso
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - Infraestrutura · Recursos
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                description: Recurso reativado com sucesso.
+          description: ''
+  /cortex/infraestrutura/salas/:
+    get:
+      operationId: infraestrutura_salas_list
+      description: "\n    Retorna a lista paginada de salas.\n\n    **Permissões:**
+        Qualquer usuário autenticado. Escrita exige capacidade `cadastrar`.\n    "
+      summary: Listar salas
+      parameters:
+      - in: query
+        name: ativo
+        schema:
+          type: boolean
+      - in: query
+        name: bloco_id
+        schema:
+          type: integer
+      - in: query
+        name: nome
+        schema:
+          type: string
+      - name: page
+        required: false
+        in: query
+        description: Um número de página dentro do conjunto de resultados paginado.
+        schema:
+          type: integer
+      - in: query
+        name: paginacao
+        schema:
+          type: integer
+      tags:
+      - Infraestrutura · Salas
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedSalaList'
+          description: ''
+    post:
+      operationId: infraestrutura_salas_create
+      description: |-
+        Cria uma nova sala vinculada a um bloco.
+
+        **Permissões:** Capacidade `cadastrar` em Infraestrutura.
+      summary: Criar sala
+      tags:
+      - Infraestrutura · Salas
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CriarSala'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/CriarSala'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/CriarSala'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Sala'
+          description: ''
+  /cortex/infraestrutura/salas-setores/:
+    get:
+      operationId: infraestrutura_salas_setores_list
+      description: "\n    Retorna vínculos entre salas e setores.\n\n    **Permissões:**
+        Qualquer usuário autenticado. Escrita exige capacidade `cadastrar`.\n    "
+      summary: Listar vínculos sala–setor
+      parameters:
+      - name: page
+        required: false
+        in: query
+        description: Um número de página dentro do conjunto de resultados paginado.
+        schema:
+          type: integer
+      - in: query
+        name: paginacao
+        schema:
+          type: integer
+      - in: query
+        name: sala_id
+        schema:
+          type: integer
+      - in: query
+        name: setor_id
+        schema:
+          type: integer
+      tags:
+      - Infraestrutura · Salas
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedSalaSetorList'
+          description: ''
+    post:
+      operationId: infraestrutura_salas_setores_create
+      description: |-
+        Vincula uma sala a um setor.
+
+        **Permissões:** Capacidade `cadastrar` em Infraestrutura.
+      summary: Criar vínculo sala–setor
+      tags:
+      - Infraestrutura · Salas
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CriarSalaSetor'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/CriarSalaSetor'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/CriarSalaSetor'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SalaSetor'
+          description: ''
+  /cortex/infraestrutura/salas-setores/{id}/:
+    delete:
+      operationId: infraestrutura_salas_setores_destroy
+      description: |-
+        Remove um vínculo sala–setor.
+
+        **Permissões:** Capacidade `cadastrar` em Infraestrutura.
+      summary: Remover vínculo sala–setor
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - Infraestrutura · Salas
+      security:
+      - jwtAuth: []
+      responses:
+        '204':
+          content:
+            application/json:
+              schema:
+                description: Vínculo removido com sucesso.
+          description: ''
+  /cortex/infraestrutura/salas/{id}/:
+    get:
+      operationId: infraestrutura_salas_retrieve
+      description: |-
+        Retorna os dados de uma sala.
+
+        **Permissões:** Qualquer usuário autenticado.
+      summary: Detalhe da sala
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - Infraestrutura · Salas
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Sala'
+          description: ''
+    patch:
+      operationId: infraestrutura_salas_partial_update
+      description: |-
+        Atualiza parcialmente uma sala.
+
+        **Permissões:** Capacidade `cadastrar` em Infraestrutura.
+      summary: Atualizar sala
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - Infraestrutura · Salas
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedAtualizarSala'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedAtualizarSala'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedAtualizarSala'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Sala'
+          description: ''
+  /cortex/infraestrutura/salas/{id}/desativar/:
+    post:
+      operationId: infraestrutura_salas_desativar_create
+      description: |-
+        Desativa uma sala.
+
+        **Permissões:** Capacidade `cadastrar` em Infraestrutura.
+      summary: Desativar sala
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - Infraestrutura · Salas
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                description: Sala desativada com sucesso.
+          description: ''
+  /cortex/infraestrutura/salas/{id}/reativar/:
+    post:
+      operationId: infraestrutura_salas_reativar_create
+      description: |-
+        Reativa uma sala.
+
+        **Permissões:** Capacidade `cadastrar` em Infraestrutura.
+      summary: Reativar sala
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - Infraestrutura · Salas
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                description: Sala reativada com sucesso.
+          description: ''
   /cortex/organizacional/funcoes/:
     get:
       operationId: organizacional_funcoes_list
@@ -3974,9 +4902,134 @@ components:
       - curso_nome
       - id
       - updated_at
+    Autorizacao:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        beneficiario:
+          allOf:
+          - $ref: '#/components/schemas/AutorizacaoUsuarioResumo'
+          readOnly: true
+        concedente:
+          allOf:
+          - $ref: '#/components/schemas/AutorizacaoUsuarioResumo'
+          readOnly: true
+        sala:
+          allOf:
+          - $ref: '#/components/schemas/AutorizacaoSalaResumo'
+          readOnly: true
+        recurso:
+          allOf:
+          - $ref: '#/components/schemas/AutorizacaoRecursoResumo'
+          readOnly: true
+        data_inicio:
+          type: string
+          format: date
+          title: Data de início
+        data_fim:
+          type: string
+          format: date
+          nullable: true
+          title: Data de fim
+          description: Nulo indica autorização permanente.
+        revogado_em:
+          type: string
+          format: date-time
+          nullable: true
+        revogador:
+          allOf:
+          - $ref: '#/components/schemas/AutorizacaoUsuarioResumo'
+          readOnly: true
+        observacao:
+          type: string
+          title: Observação
+        vigente:
+          type: boolean
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - beneficiario
+      - concedente
+      - created_at
+      - data_inicio
+      - id
+      - recurso
+      - revogador
+      - sala
+      - vigente
+    AutorizacaoRecursoResumo:
+      type: object
+      properties:
+        id:
+          type: integer
+        codigo:
+          type: string
+        tipo:
+          type: string
+      required:
+      - codigo
+      - id
+      - tipo
+    AutorizacaoSalaResumo:
+      type: object
+      properties:
+        id:
+          type: integer
+        nome:
+          type: string
+      required:
+      - id
+      - nome
+    AutorizacaoUsuarioResumo:
+      type: object
+      properties:
+        id:
+          type: integer
+        nome:
+          type: string
+        cpf:
+          type: string
+      required:
+      - cpf
+      - id
+      - nome
     BlankEnum:
       enum:
       - ''
+    Bloco:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        nome:
+          type: string
+          maxLength: 255
+        ativo:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - created_at
+      - id
+      - nome
+    BlocoResumo:
+      type: object
+      properties:
+        id:
+          type: integer
+        nome:
+          type: string
+      required:
+      - id
+      - nome
     Cargo:
       type: object
       properties:
@@ -4019,6 +5072,30 @@ components:
       description: |-
         * `1` - Professor
         * `2` - Tec.Administrativo
+    ConcederAutorizacao:
+      type: object
+      properties:
+        beneficiario_id:
+          type: integer
+        sala_id:
+          type: integer
+          nullable: true
+        recurso_id:
+          type: integer
+          nullable: true
+        data_inicio:
+          type: string
+          format: date
+        data_fim:
+          type: string
+          format: date
+          nullable: true
+        observacao:
+          type: string
+          default: ''
+      required:
+      - beneficiario_id
+      - data_inicio
     Contato:
       type: object
       properties:
@@ -4085,6 +5162,14 @@ components:
       required:
       - aluno
       - curso
+    CriarBloco:
+      type: object
+      properties:
+        nome:
+          type: string
+          maxLength: 255
+      required:
+      - nome
     CriarCargo:
       type: object
       properties:
@@ -4148,6 +5233,48 @@ components:
       - categoria
       - descricao
       - papel_funcao
+    CriarRecurso:
+      type: object
+      properties:
+        codigo:
+          type: string
+          maxLength: 50
+        tipo:
+          $ref: '#/components/schemas/TipoRecursoEnum'
+        sala_id:
+          type: integer
+          nullable: true
+        descricao:
+          type: string
+          default: ''
+          maxLength: 500
+        em_avaria:
+          type: boolean
+          default: false
+      required:
+      - codigo
+      - tipo
+    CriarSala:
+      type: object
+      properties:
+        bloco_id:
+          type: integer
+        nome:
+          type: string
+          maxLength: 255
+      required:
+      - bloco_id
+      - nome
+    CriarSalaSetor:
+      type: object
+      properties:
+        sala_id:
+          type: integer
+        setor_id:
+          type: integer
+      required:
+      - sala_id
+      - setor_id
     CriarServidor:
       type: object
       properties:
@@ -4314,6 +5441,15 @@ components:
         * `deficiencia_auditiva` - Deficiência Auditiva
         * `deficiencia_multipla` - Deficiência Múltipla
         * `deficiencia_fisica` - Deficiência Física
+    DevolverItens:
+      type: object
+      properties:
+        item_ids:
+          type: array
+          items:
+            type: integer
+      required:
+      - item_ids
     EmpresaInstituicao:
       type: object
       properties:
@@ -4343,6 +5479,80 @@ components:
       - id
       - nome
       - updated_at
+    Emprestimo:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        solicitante:
+          allOf:
+          - $ref: '#/components/schemas/EmprestimoUsuarioResumo'
+          readOnly: true
+        responsavel:
+          allOf:
+          - $ref: '#/components/schemas/EmprestimoUsuarioResumo'
+          readOnly: true
+        retirada_em:
+          type: string
+          format: date-time
+        observacao:
+          type: string
+          title: Observação
+        itens:
+          type: array
+          items:
+            $ref: '#/components/schemas/ItemEmprestimo'
+          readOnly: true
+        ativo:
+          type: boolean
+          readOnly: true
+        atrasado:
+          type: boolean
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - ativo
+      - atrasado
+      - created_at
+      - id
+      - itens
+      - responsavel
+      - retirada_em
+      - solicitante
+    EmprestimoRecursoResumo:
+      type: object
+      properties:
+        id:
+          type: integer
+        codigo:
+          type: string
+        tipo:
+          type: string
+        tipo_display:
+          type: string
+          readOnly: true
+      required:
+      - codigo
+      - id
+      - tipo
+      - tipo_display
+    EmprestimoUsuarioResumo:
+      type: object
+      properties:
+        id:
+          type: integer
+        nome:
+          type: string
+        cpf:
+          type: string
+      required:
+      - cpf
+      - id
+      - nome
     EncerrarAlunoCurso:
       type: object
       properties:
@@ -4507,6 +5717,27 @@ components:
       - mensagem
       - resumo
       - sucesso
+    ItemEmprestimo:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        recurso:
+          allOf:
+          - $ref: '#/components/schemas/EmprestimoRecursoResumo'
+          readOnly: true
+        devolvido_em:
+          type: string
+          format: date-time
+          nullable: true
+        ativo:
+          type: boolean
+          readOnly: true
+      required:
+      - ativo
+      - id
+      - recurso
     LoginInput:
       type: object
       description: Documenta o input do login no Swagger.
@@ -4618,6 +5849,52 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Aluno'
+    PaginatedAutorizacaoList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Autorizacao'
+    PaginatedBlocoList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Bloco'
     PaginatedCargoList:
       type: object
       required:
@@ -4710,6 +5987,29 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/EmpresaInstituicao'
+    PaginatedEmprestimoList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Emprestimo'
     PaginatedFuncaoList:
       type: object
       required:
@@ -4756,6 +6056,75 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Matricula'
+    PaginatedRecursoList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Recurso'
+    PaginatedSalaList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Sala'
+    PaginatedSalaSetorList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/SalaSetor'
     PaginatedServidorList:
       type: object
       required:
@@ -4914,6 +6283,12 @@ components:
           nullable: true
         ativo:
           type: boolean
+    PatchedAtualizarBloco:
+      type: object
+      properties:
+        nome:
+          type: string
+          maxLength: 255
     PatchedAtualizarCargo:
       type: object
       properties:
@@ -4970,6 +6345,30 @@ components:
           type: boolean
         exige_aluno:
           type: boolean
+    PatchedAtualizarRecurso:
+      type: object
+      properties:
+        codigo:
+          type: string
+          maxLength: 50
+        tipo:
+          $ref: '#/components/schemas/TipoRecursoEnum'
+        sala_id:
+          type: integer
+          nullable: true
+        descricao:
+          type: string
+          maxLength: 500
+        em_avaria:
+          type: boolean
+    PatchedAtualizarSala:
+      type: object
+      properties:
+        bloco_id:
+          type: integer
+        nome:
+          type: string
+          maxLength: 255
     PatchedAtualizarServidor:
       type: object
       properties:
@@ -5130,6 +6529,77 @@ components:
       - nome
       - permissoes
       - updated_at
+    RealizarEmprestimo:
+      type: object
+      properties:
+        solicitante_id:
+          type: integer
+        recurso_ids:
+          type: array
+          items:
+            type: integer
+        observacao:
+          type: string
+          default: ''
+      required:
+      - recurso_ids
+      - solicitante_id
+    Recurso:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        codigo:
+          type: string
+          title: Código
+          maxLength: 50
+        tipo:
+          $ref: '#/components/schemas/TipoRecursoEnum'
+        tipo_display:
+          type: string
+          readOnly: true
+        sala:
+          allOf:
+          - $ref: '#/components/schemas/RecursoSalaResumo'
+          readOnly: true
+        descricao:
+          type: string
+          title: Descrição
+          maxLength: 500
+        em_avaria:
+          type: boolean
+        ativo:
+          type: boolean
+        estado_derivado:
+          type: string
+          readOnly: true
+        estado_derivado_display:
+          type: string
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - codigo
+      - created_at
+      - estado_derivado
+      - estado_derivado_display
+      - id
+      - sala
+      - tipo
+      - tipo_display
+    RecursoSalaResumo:
+      type: object
+      properties:
+        id:
+          type: integer
+        nome:
+          type: string
+      required:
+      - id
+      - nome
     ResumoImportacao:
       type: object
       properties:
@@ -5182,6 +6652,53 @@ components:
       - usuarios_atualizados
       - usuarios_criados
       - vinculos_aluno_curso_criados
+    Sala:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        bloco:
+          allOf:
+          - $ref: '#/components/schemas/BlocoResumo'
+          readOnly: true
+        nome:
+          type: string
+          maxLength: 255
+        ativo:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - bloco
+      - created_at
+      - id
+      - nome
+    SalaSetor:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        sala:
+          allOf:
+          - $ref: '#/components/schemas/Sala'
+          readOnly: true
+        setor:
+          allOf:
+          - $ref: '#/components/schemas/SetorResumo'
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - created_at
+      - id
+      - sala
+      - setor
     Servidor:
       type: object
       properties:
@@ -5247,6 +6764,19 @@ components:
           readOnly: true
       required:
       - created_at
+      - id
+      - nome
+      - sigla
+    SetorResumo:
+      type: object
+      properties:
+        id:
+          type: integer
+        sigla:
+          type: string
+        nome:
+          type: string
+      required:
       - id
       - nome
       - sigla
@@ -5414,6 +6944,16 @@ components:
       - updated_at
       - usuario_cpf
       - usuario_nome
+    TipoRecursoEnum:
+      enum:
+      - chave
+      - midia
+      - material_didatico
+      type: string
+      description: |-
+        * `chave` - Chave
+        * `midia` - Mídia
+        * `material_didatico` - Material didático
     TokenRefresh:
       type: object
       properties:
@@ -5434,6 +6974,16 @@ components:
           writeOnly: true
       required:
       - token
+    TrocarTitular:
+      type: object
+      properties:
+        novo_solicitante_id:
+          type: integer
+        observacao:
+          type: string
+          default: ''
+      required:
+      - novo_solicitante_id
     TurnoEnum:
       enum:
       - 1

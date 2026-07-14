@@ -1,14 +1,17 @@
+from drf_spectacular.utils import extend_schema_serializer
 from rest_framework import serializers
 
 from .models import Emprestimo, ItemEmprestimo
 
 
+@extend_schema_serializer(component_name='EmprestimoUsuarioResumo')
 class UsuarioResumoSerializer(serializers.Serializer):
     id = serializers.IntegerField()
     nome = serializers.CharField()
     cpf = serializers.CharField()
 
 
+@extend_schema_serializer(component_name='EmprestimoRecursoResumo')
 class RecursoResumoSerializer(serializers.Serializer):
     id = serializers.IntegerField()
     codigo = serializers.CharField()

@@ -1,19 +1,23 @@
+from drf_spectacular.utils import extend_schema_serializer
 from rest_framework import serializers
 
 from .models import Autorizacao
 
 
+@extend_schema_serializer(component_name='AutorizacaoUsuarioResumo')
 class UsuarioResumoSerializer(serializers.Serializer):
     id = serializers.IntegerField()
     nome = serializers.CharField()
     cpf = serializers.CharField()
 
 
+@extend_schema_serializer(component_name='AutorizacaoSalaResumo')
 class SalaResumoSerializer(serializers.Serializer):
     id = serializers.IntegerField()
     nome = serializers.CharField()
 
 
+@extend_schema_serializer(component_name='AutorizacaoRecursoResumo')
 class RecursoResumoSerializer(serializers.Serializer):
     id = serializers.IntegerField()
     codigo = serializers.CharField()
