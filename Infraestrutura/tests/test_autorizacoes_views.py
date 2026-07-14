@@ -90,3 +90,78 @@ class AutorizacoesViewsTest(APITestCase):
             'data_inicio': self.hoje,
         })
         self.assertEqual(resposta.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_duplicata_mesmo_beneficiario_recurso_periodo_retorna_400(self):
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token_autorizador}')
+        from Infraestrutura.recursos.choices import TipoRecurso
+        from Infraestrutura.recursos.models import Recurso
+
+        recurso = Recurso.objects.create(
+            codigo='CHV-DUP',
+            tipo=TipoRecurso.CHAVE,
+            sala=self.sala,
+        )
+        payload = {
+            'beneficiario_id': self.beneficiario.pk,
+            'recurso_id': recurso.pk,
+            'data_inicio': self.hoje,
+        }
+        resposta = self.client.post(self.url_lista, payload)
+        self.assertEqual(resposta.status_code, status.HTTP_201_CREATED)
+
+        resposta = self.client.post(self.url_lista, payload)
+        self.assertEqual(resposta.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_reativar_autorizacao_revogada(self):
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token_autorizador}')
+        from Infraestrutura.recursos.choices import TipoRecurso
+        from Infraestrutura.recursos.models import Recurso
+
+        recurso = Recurso.objects.create(
+            codigo='CHV-REAT',
+            tipo=TipoRecurso.CHAVE,
+            sala=self.sala,
+        )
+        resposta = self.client.post(self.url_lista, {
+            'beneficiario_id': self.beneficiario.pk,
+            'recurso_id': recurso.pk,
+            'data_inicio': self.hoje,
+        })
+        autorizacao_id = resposta.data['dados']['id']
+
+        url_revogar = reverse('infraestrutura:autorizacao-revogar', kwargs={'pk': autorizacao_id})
+        self.client.post(url_revogar)
+
+        url_reativar = reverse('infraestrutura:autorizacao-reativar', kwargs={'pk': autorizacao_id})
+        resposta = self.client.post(url_reativar)
+        self.assertEqual(resposta.status_code, status.HTTP_200_OK)
+        self.assertTrue(resposta.data['dados']['vigente'])
+        self.assertIsNone(resposta.data['dados']['revogado_em'])
+
+    def test_reativar_com_sobreposicao_retorna_400(self):
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token_autorizador}')
+        from Infraestrutura.recursos.choices import TipoRecurso
+        from Infraestrutura.recursos.models import Recurso
+
+        recurso = Recurso.objects.create(
+            codigo='CHV-REAT2',
+            tipo=TipoRecurso.CHAVE,
+            sala=self.sala,
+        )
+        payload = {
+            'beneficiario_id': self.beneficiario.pk,
+            'recurso_id': recurso.pk,
+            'data_inicio': self.hoje,
+        }
+        resposta = self.client.post(self.url_lista, payload)
+        autorizacao_id = resposta.data['dados']['id']
+
+        url_revogar = reverse('infraestrutura:autorizacao-revogar', kwargs={'pk': autorizacao_id})
+        self.client.post(url_revogar)
+
+        resposta = self.client.post(self.url_lista, payload)
+        self.assertEqual(resposta.status_code, status.HTTP_201_CREATED)
+
+        url_reativar = reverse('infraestrutura:autorizacao-reativar', kwargs={'pk': autorizacao_id})
+        resposta = self.client.post(url_reativar)
+        self.assertEqual(resposta.status_code, status.HTTP_400_BAD_REQUEST)

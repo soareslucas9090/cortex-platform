@@ -48,6 +48,38 @@ class AutorizacaoRules(ModelInstanceRules):
             self.return_exception('O beneficiário informado está inativo.')
         return True
 
+    def validar_sem_sobreposicao(
+        self,
+        beneficiario_id: int,
+        data_inicio,
+        data_fim=None,
+        sala_id=None,
+        recurso_id=None,
+        excluir_id=None,
+    ) -> bool:
+        """Impede autorização com período sobreposto a outra não revogada."""
+        existentes = self.object_instance.helper.buscar_nao_revogadas_sobrepostas(
+            beneficiario_id=beneficiario_id,
+            data_inicio=data_inicio,
+            data_fim=data_fim,
+            sala_id=sala_id,
+            recurso_id=recurso_id,
+            excluir_id=excluir_id,
+        )
+        if existentes.exists():
+            self.return_exception(
+                'Já existe autorização não revogada para este beneficiário, alvo e período sobreposto.',
+            )
+        return True
+
+    def pode_reativar(self, concedente) -> bool:
+        """Somente autorizações revogadas podem ser reativadas."""
+        if not usuario_pode_autorizar_infraestrutura(concedente):
+            self.return_exception('Você não tem permissão para reativar autorizações.')
+        if self.object_instance.revogado_em is None:
+            self.return_exception('Esta autorização não está revogada.')
+        return True
+
     def validar_alvo_ativo(self, sala_id=None, recurso_id=None) -> bool:
         """Sala ou recurso informado deve existir e estar ativo."""
         if sala_id is not None:

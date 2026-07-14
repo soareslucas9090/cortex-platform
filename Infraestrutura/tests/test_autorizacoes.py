@@ -70,6 +70,120 @@ class AutorizacaoRulesTest(TestCase):
                 data_inicio=self.hoje,
             )
 
+    def test_rejeita_autorizacao_duplicada_mesmo_periodo(self):
+        Autorizacao().business.conceder_autorizacao(
+            beneficiario_id=self.beneficiario.pk,
+            concedente=self.autorizador,
+            recurso_id=self.recurso.pk,
+            data_inicio=self.hoje,
+            data_fim=None,
+        )
+        with self.assertRaises(Exception):
+            Autorizacao().business.conceder_autorizacao(
+                beneficiario_id=self.beneficiario.pk,
+                concedente=self.autorizador,
+                recurso_id=self.recurso.pk,
+                data_inicio=self.hoje,
+                data_fim=None,
+            )
+
+    def test_rejeita_periodo_sobreposto(self):
+        Autorizacao().business.conceder_autorizacao(
+            beneficiario_id=self.beneficiario.pk,
+            concedente=self.autorizador,
+            recurso_id=self.recurso.pk,
+            data_inicio=self.hoje,
+            data_fim=self.hoje + datetime.timedelta(days=30),
+        )
+        with self.assertRaises(Exception):
+            Autorizacao().business.conceder_autorizacao(
+                beneficiario_id=self.beneficiario.pk,
+                concedente=self.autorizador,
+                recurso_id=self.recurso.pk,
+                data_inicio=self.hoje + datetime.timedelta(days=15),
+                data_fim=self.hoje + datetime.timedelta(days=45),
+            )
+
+    def test_permite_novo_periodo_apos_revogacao(self):
+        autorizacao = Autorizacao().business.conceder_autorizacao(
+            beneficiario_id=self.beneficiario.pk,
+            concedente=self.autorizador,
+            recurso_id=self.recurso.pk,
+            data_inicio=self.hoje,
+            data_fim=None,
+        )
+        autorizacao.business.revogar(self.autorizador)
+        nova = Autorizacao().business.conceder_autorizacao(
+            beneficiario_id=self.beneficiario.pk,
+            concedente=self.autorizador,
+            recurso_id=self.recurso.pk,
+            data_inicio=self.hoje,
+            data_fim=None,
+        )
+        self.assertNotEqual(autorizacao.pk, nova.pk)
+
+    def test_reativar_autorizacao_revogada(self):
+        autorizacao = Autorizacao().business.conceder_autorizacao(
+            beneficiario_id=self.beneficiario.pk,
+            concedente=self.autorizador,
+            recurso_id=self.recurso.pk,
+            data_inicio=self.hoje,
+            data_fim=None,
+        )
+        autorizacao.business.revogar(self.autorizador)
+        autorizacao.business.reativar(self.autorizador)
+        autorizacao.refresh_from_db()
+        self.assertIsNone(autorizacao.revogado_em)
+        self.assertIsNone(autorizacao.revogador)
+        self.assertTrue(autorizacao.vigente)
+
+    def test_reativar_rejeita_se_ha_sobreposicao_com_outra_vigente(self):
+        autorizacao = Autorizacao().business.conceder_autorizacao(
+            beneficiario_id=self.beneficiario.pk,
+            concedente=self.autorizador,
+            recurso_id=self.recurso.pk,
+            data_inicio=self.hoje,
+            data_fim=None,
+        )
+        autorizacao.business.revogar(self.autorizador)
+        Autorizacao().business.conceder_autorizacao(
+            beneficiario_id=self.beneficiario.pk,
+            concedente=self.autorizador,
+            recurso_id=self.recurso.pk,
+            data_inicio=self.hoje,
+            data_fim=None,
+        )
+        with self.assertRaises(Exception):
+            autorizacao.business.reativar(self.autorizador)
+
+    def test_reativar_rejeita_autorizacao_ja_vigente(self):
+        autorizacao = Autorizacao().business.conceder_autorizacao(
+            beneficiario_id=self.beneficiario.pk,
+            concedente=self.autorizador,
+            recurso_id=self.recurso.pk,
+            data_inicio=self.hoje,
+            data_fim=None,
+        )
+        with self.assertRaises(Exception):
+            autorizacao.business.reativar(self.autorizador)
+
+    def test_permite_periodos_sequenciais_sem_sobreposicao(self):
+        Autorizacao().business.conceder_autorizacao(
+            beneficiario_id=self.beneficiario.pk,
+            concedente=self.autorizador,
+            recurso_id=self.recurso.pk,
+            data_inicio=self.hoje,
+            data_fim=self.hoje + datetime.timedelta(days=10),
+        )
+        nova = Autorizacao().business.conceder_autorizacao(
+            beneficiario_id=self.beneficiario.pk,
+            concedente=self.autorizador,
+            recurso_id=self.recurso.pk,
+            data_inicio=self.hoje + datetime.timedelta(days=11),
+            data_fim=self.hoje + datetime.timedelta(days=20),
+        )
+        self.assertIsNotNone(nova.pk)
+
 
 class AutorizacaoVigenciaTest(TestCase):
 

@@ -135,3 +135,30 @@ class RevogarAutorizacaoView(PodeAutorizarInfraestruturaMixin, BasicPostAPIView)
             'mensagem': self.mensagem_sucesso,
             'dados': AutorizacaoSerializer(autorizacao).data,
         }
+
+
+@extend_schema(
+    tags=['Infraestrutura · Autorizações'],
+    summary='Reativar autorização',
+    description='''
+    Reativa uma autorização previamente revogada.
+
+    **Permissões:** Capacidade `autorizar` em Infraestrutura.
+    ''',
+    request=None,
+    responses={status.HTTP_200_OK: AutorizacaoSerializer},
+)
+class ReativarAutorizacaoView(PodeAutorizarInfraestruturaMixin, BasicPostAPIView):
+    """POST /cortex/infraestrutura/autorizacoes/<pk>/reativar/"""
+    serializer_class = SerializerVazio
+    mensagem_sucesso = 'Autorização reativada com sucesso.'
+    queryset = Autorizacao.objects.all()
+
+    def do_action_post(self, serializer_data, request, *args, **kwargs):
+        autorizacao = self.get_object()
+        autorizacao.business.reativar(request.user)
+        autorizacao = queryset_autorizacao_detalhado().get(pk=autorizacao.pk)
+        return {
+            'mensagem': self.mensagem_sucesso,
+            'dados': AutorizacaoSerializer(autorizacao).data,
+        }

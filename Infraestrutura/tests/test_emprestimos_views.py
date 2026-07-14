@@ -55,6 +55,26 @@ class EmprestimosViewsTest(APITestCase):
             sala=self.sala,
         )
         self.url_lista = reverse('infraestrutura:emprestimos-list')
+        self.url_solicitantes = reverse('infraestrutura:emprestimos-solicitantes-elegiveis')
+
+    def test_l1_nao_pode_listar_solicitantes_elegiveis(self):
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token_l1}')
+        resposta = self.client.get(self.url_solicitantes, {'recurso_id': self.chave.pk})
+        self.assertEqual(resposta.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_operador_lista_solicitantes_elegiveis_por_recurso(self):
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token_operador}')
+        resposta = self.client.get(self.url_solicitantes, {'recurso_id': self.chave.pk})
+        self.assertEqual(resposta.status_code, status.HTTP_200_OK)
+        ids = [item['id'] for item in resposta.data['dados']]
+        self.assertIn(self.solicitante.pk, ids)
+
+    def test_solicitantes_elegiveis_exclui_usuario_sem_acesso(self):
+        sem_acesso = criar_usuario('25252525252', nome='Sem Acesso')
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token_operador}')
+        resposta = self.client.get(self.url_solicitantes, {'recurso_id': self.chave.pk})
+        ids = [item['id'] for item in resposta.data['dados']]
+        self.assertNotIn(sem_acesso.pk, ids)
 
     def test_l1_nao_pode_realizar_emprestimo(self):
         self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token_l1}')

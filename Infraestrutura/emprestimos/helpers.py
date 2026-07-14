@@ -1,8 +1,8 @@
-from datetime import timedelta
+from datetime import date, timedelta
 
 from django.apps import apps
 from django.conf import settings
-from django.db.models import Exists, OuterRef
+from django.db.models import Exists, OuterRef, Q
 from django.utils import timezone
 
 from AppCore.core.helpers.helpers import ModelInstanceHelpers
@@ -53,6 +53,62 @@ class EmprestimoHelpers(ModelInstanceHelpers):
             recurso=recurso,
             devolvido_em__isnull=True,
         ).exists()
+
+    def listar_solicitantes_elegiveis_para_recurso(
+        self,
+        recurso,
+        *,
+        nome=None,
+        ativo=True,
+    ):
+        """
+        Retorna usuários ativos elegíveis a retirar o recurso informado.
+        Espelha as regras de solicitante_pode_retirar_recurso em nível de queryset.
+        """
+        from Identidade.usuarios.models import Usuario
+
+        referencia = date.today()
+        elegiveis = Q(is_superuser=True) | Q(is_admin=True)
+        elegiveis |= Q(
+            setor_vinculos__setor__ativo=True,
+            setor_vinculos__funcao__isnull=False,
+            setor_vinculos__funcao__ativo=True,
+            setor_vinculos__funcao__permissao_infraestrutura__retirada_irrestrita=True,
+        )
+
+        if recurso.tipo == TipoRecurso.CHAVE:
+            elegiveis |= Q(
+                terceirizado__ativo=True,
+                terceirizado__cargo__ativo=True,
+                terceirizado__cargo__nome__iexact=CARGO_SERVENTE_LIMPEZA,
+            )
+            if recurso.sala_id:
+                elegiveis |= Q(
+                    setor_vinculos__setor__ativo=True,
+                    setor_vinculos__setor__salas_vinculadas__sala_id=recurso.sala_id,
+                )
+
+        filtro_vigencia = Q(
+            autorizacoes_infraestrutura__revogado_em__isnull=True,
+            autorizacoes_infraestrutura__data_inicio__lte=referencia,
+        ) & (
+            Q(autorizacoes_infraestrutura__data_fim__isnull=True)
+            | Q(autorizacoes_infraestrutura__data_fim__gte=referencia)
+        )
+        elegiveis |= Q(
+            autorizacoes_infraestrutura__recurso_id=recurso.pk,
+        ) & filtro_vigencia
+        if recurso.sala_id:
+            elegiveis |= Q(
+                autorizacoes_infraestrutura__sala_id=recurso.sala_id,
+            ) & filtro_vigencia
+
+        qs = Usuario.objects.filter(elegiveis)
+        if ativo is not None:
+            qs = qs.filter(ativo=ativo)
+        if nome:
+            qs = qs.filter(nome__unaccent__icontains=nome)
+        return qs.distinct().order_by('nome')
 
     def listar_para_usuario(
         self,

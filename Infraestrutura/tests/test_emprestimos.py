@@ -90,6 +90,20 @@ class EmprestimoElegibilidadeTest(TestCase):
         )
         self.assertEqual(emprestimo.itens.count(), 1)
 
+    def test_listar_solicitantes_elegiveis_reflete_regras(self):
+        setor = Setor.objects.create(sigla='SET', nome='Setor Sala')
+        SalaSetor.objects.create(sala=self.sala, setor=setor)
+        SetorVinculo.objects.create(usuario=self.solicitante, setor=setor, funcao=None)
+        sem_acesso = criar_usuario('17171717171', nome='Sem Acesso')
+
+        elegiveis_chave = Emprestimo().helper.listar_solicitantes_elegiveis_para_recurso(self.chave)
+        ids_chave = set(elegiveis_chave.values_list('pk', flat=True))
+        self.assertIn(self.solicitante.pk, ids_chave)
+        self.assertNotIn(sem_acesso.pk, ids_chave)
+
+        elegiveis_midia = Emprestimo().helper.listar_solicitantes_elegiveis_para_recurso(self.midia)
+        self.assertNotIn(self.solicitante.pk, elegiveis_midia.values_list('pk', flat=True))
+
     def test_servente_limpeza_retira_qualquer_chave(self):
         empresa = EmpresaInstituicao.objects.create(nome='Empresa Limpeza')
         cargo, _ = Cargo.objects.get_or_create(nome=CARGO_SERVENTE_LIMPEZA, defaults={'ativo': True})

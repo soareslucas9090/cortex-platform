@@ -1,3 +1,4 @@
+from django.http import Http404
 from rest_framework import status
 
 from drf_spectacular.types import OpenApiTypes
@@ -12,6 +13,7 @@ from AppCore.basics.views.basic_views import (
 )
 
 from Infraestrutura.permissoes.access import PodeOperarInfraestruturaMixin
+from Infraestrutura.recursos.models import Recurso
 
 from .models import Emprestimo
 from .serializers import (
@@ -20,6 +22,7 @@ from .serializers import (
     RealizarEmprestimoSerializer,
     SerializerVazio,
     TrocarTitularSerializer,
+    UsuarioResumoSerializer,
 )
 
 
@@ -30,6 +33,57 @@ def queryset_emprestimo_detalhado():
     ).prefetch_related(
         'itens__recurso__sala',
     ).all()
+
+
+@extend_schema(
+    tags=['Infraestrutura · Empréstimos'],
+    summary='Listar solicitantes elegíveis para recurso',
+    description='''
+    Retorna usuários que podem ser solicitantes de empréstimo para o recurso informado,
+    conforme as regras de elegibilidade (retirada irrestrita, autorização, SalaSetor,
+    servente de limpeza).
+
+    **Permissões:** Capacidade `operar` em Infraestrutura.
+    ''',
+    parameters=[
+        OpenApiParameter(
+            'recurso_id',
+            OpenApiTypes.INT,
+            OpenApiParameter.QUERY,
+            required=True,
+            description='ID do recurso para filtrar solicitantes elegíveis.',
+        ),
+        OpenApiParameter(
+            'nome',
+            OpenApiTypes.STR,
+            OpenApiParameter.QUERY,
+            required=False,
+            description='Filtra por parte do nome do solicitante.',
+        ),
+        OpenApiParameter('paginacao', OpenApiTypes.INT, OpenApiParameter.QUERY, required=False),
+    ],
+    responses={status.HTTP_200_OK: UsuarioResumoSerializer(many=True)},
+)
+class ListarSolicitantesElegiveisView(PodeOperarInfraestruturaMixin, BasicGetAPIView):
+    """GET /cortex/infraestrutura/emprestimos/solicitantes-elegiveis/"""
+    pagination_class = PaginacaoCustomizada
+    serializer_class = UsuarioResumoSerializer
+    mensagem_sucesso = 'Solicitantes elegíveis listados com sucesso.'
+
+    def get_queryset(self):
+        recurso_id = self.request.query_params.get('recurso_id')
+        if not recurso_id or not recurso_id.isdigit():
+            raise Http404('Recurso não encontrado.')
+
+        recurso = Recurso.objects.select_related('sala').filter(pk=int(recurso_id)).first()
+        if recurso is None:
+            raise Http404('Recurso não encontrado.')
+
+        nome = self.request.query_params.get('nome')
+        return Emprestimo().helper.listar_solicitantes_elegiveis_para_recurso(
+            recurso,
+            nome=nome or None,
+        )
 
 
 @extend_schema(

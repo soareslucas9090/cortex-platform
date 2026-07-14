@@ -861,11 +861,12 @@ paths:
     get:
       operationId: identidade_permissoes_documentacao_retrieve
       description: "\n    Retorna a documentação narrativa e estruturada das permissões
-        de cada módulo registrado.\n\n    Hoje inclui apenas o módulo **cortex** (L1–L3).
-        Módulos futuros (ex.: Sigec) serão\n    adicionados automaticamente quando
-        `documentacao_<modulo>()` for implementado.\n\n    **Permissões:** Qualquer
-        usuário autenticado.\n\n    **Manutenção:** toda alteração de regra de permissão
-        deve atualizar o método\n    `documentacao_<modulo>()` correspondente em `Identidade.usuarios.documentacao`.\n
+        de cada módulo registrado.\n\n    Inclui **cortex** (níveis L1–L3) e **infraestrutura**
+        (capacidades booleanas, secoes\n    estruturadas, acesso total de admin/superuser,
+        elegibilidade do solicitante). Novos módulos\n    entram automaticamente ao
+        implementar `documentacao_<modulo>()`.\n\n    **Permissões:** Qualquer usuário
+        autenticado.\n\n    **Manutenção:** toda alteração de regra de permissão deve
+        atualizar o método\n    `documentacao_<modulo>()` correspondente em `Identidade.usuarios.documentacao`.\n
         \   "
       summary: Documentação de permissões por módulo
       tags:
@@ -2242,6 +2243,29 @@ paths:
               schema:
                 $ref: '#/components/schemas/Autorizacao'
           description: ''
+  /cortex/infraestrutura/autorizacoes/{id}/reativar/:
+    post:
+      operationId: infraestrutura_autorizacoes_reativar_create
+      description: "\n    Reativa uma autorização previamente revogada.\n\n    **Permissões:**
+        Capacidade `autorizar` em Infraestrutura.\n    "
+      summary: Reativar autorização
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - Infraestrutura · Autorizações
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Autorizacao'
+          description: ''
   /cortex/infraestrutura/autorizacoes/{id}/revogar/:
     post:
       operationId: infraestrutura_autorizacoes_revogar_create
@@ -2618,6 +2642,47 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Emprestimo'
+          description: ''
+  /cortex/infraestrutura/emprestimos/solicitantes-elegiveis/:
+    get:
+      operationId: infraestrutura_emprestimos_solicitantes_elegiveis_list
+      description: "\n    Retorna usuários que podem ser solicitantes de empréstimo
+        para o recurso informado,\n    conforme as regras de elegibilidade (retirada
+        irrestrita, autorização, SalaSetor,\n    servente de limpeza).\n\n    **Permissões:**
+        Capacidade `operar` em Infraestrutura.\n    "
+      summary: Listar solicitantes elegíveis para recurso
+      parameters:
+      - in: query
+        name: nome
+        schema:
+          type: string
+        description: Filtra por parte do nome do solicitante.
+      - name: page
+        required: false
+        in: query
+        description: Um número de página dentro do conjunto de resultados paginado.
+        schema:
+          type: integer
+      - in: query
+        name: paginacao
+        schema:
+          type: integer
+      - in: query
+        name: recurso_id
+        schema:
+          type: integer
+        description: ID do recurso para filtrar solicitantes elegíveis.
+        required: true
+      tags:
+      - Infraestrutura · Empréstimos
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedEmprestimoUsuarioResumoList'
           description: ''
   /cortex/infraestrutura/recursos/:
     get:
@@ -6010,6 +6075,29 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Emprestimo'
+    PaginatedEmprestimoUsuarioResumoList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/EmprestimoUsuarioResumo'
     PaginatedFuncaoList:
       type: object
       required:

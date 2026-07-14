@@ -44,6 +44,35 @@ class AutorizacaoHelpers(ModelInstanceHelpers):
             beneficiario=usuario,
         ).filter(filtro_alvo).exists()
 
+    def buscar_nao_revogadas_sobrepostas(
+        self,
+        beneficiario_id: int,
+        data_inicio: date,
+        data_fim: date | None = None,
+        sala_id=None,
+        recurso_id=None,
+        excluir_id=None,
+    ):
+        """Retorna autorizações não revogadas cujo período intersecta o informado."""
+        from .models import Autorizacao
+
+        qs = Autorizacao.objects.filter(
+            revogado_em__isnull=True,
+            beneficiario_id=beneficiario_id,
+        )
+        if sala_id is not None:
+            qs = qs.filter(sala_id=sala_id)
+        if recurso_id is not None:
+            qs = qs.filter(recurso_id=recurso_id)
+        if excluir_id is not None:
+            qs = qs.exclude(pk=excluir_id)
+
+        filtro_periodo = Q(Q(data_fim__isnull=True) | Q(data_fim__gte=data_inicio))
+        if data_fim is not None:
+            filtro_periodo = Q(data_inicio__lte=data_fim) & filtro_periodo
+
+        return qs.filter(filtro_periodo)
+
     def listar_para_filtros(
         self,
         beneficiario_id=None,

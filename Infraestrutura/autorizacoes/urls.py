@@ -6,6 +6,7 @@ from .views import (
     ConcederAutorizacaoView,
     DetalheAutorizacaoView,
     ListarAutorizacoesView,
+    ReativarAutorizacaoView,
     RevogarAutorizacaoView,
 )
 
@@ -24,5 +25,10 @@ urlpatterns = [
         'autorizacoes/<int:pk>/revogar/',
         RevogarAutorizacaoView.as_view(),
         name='autorizacao-revogar',
+    ),
+    path(
+        'autorizacoes/<int:pk>/reativar/',
+        ReativarAutorizacaoView.as_view(),
+        name='autorizacao-reativar',
     ),
 ]
