@@ -3,6 +3,11 @@ from pathlib import Path
 from .importacao_constants import (
     ABAS_OPERACIONAIS,
     ABAS_OBRIGATORIAS_MINIMAS,
+    ABA_CARGO,
+    ABA_CURSO,
+    ABA_EMPRESA_INSTITUICAO,
+    ABA_FUNCAO,
+    ABA_SETOR,
     COLUNAS_ESPERADAS_POR_ABA,
     EXTENSOES_SUPORTADAS,
 )
@@ -17,7 +22,9 @@ from .importacao_dtos import (
     LinhaSetorLotacaoImportacaoDTO,
     LinhaTerceirizadoImportacaoDTO,
     LinhaUsuarioImportacaoDTO,
+    ReferenciasImportacaoDTO,
 )
+from .importacao_resolucao import normalizar_id_referencia, SIGLA_SETOR_ALIASES
 from .importacao_exceptions import (
     AbaObrigatoriaAusenteException,
     ArquivoImportacaoInvalidoException,
@@ -65,6 +72,21 @@ class ImportacaoUsuariosParser:
 
         if 'Terceirizado' in planilha:
             resultado.terceirizados = self._parse_terceirizados(planilha['Terceirizado'])
+
+        if ABA_SETOR in planilha:
+            self._parse_referencia_setores(planilha[ABA_SETOR], resultado.referencias)
+
+        if ABA_FUNCAO in planilha:
+            self._parse_referencia_funcoes(planilha[ABA_FUNCAO], resultado.referencias)
+
+        if ABA_CARGO in planilha:
+            self._parse_referencia_cargos(planilha[ABA_CARGO], resultado.referencias)
+
+        if ABA_CURSO in planilha:
+            self._parse_referencia_cursos(planilha[ABA_CURSO], resultado.referencias)
+
+        if ABA_EMPRESA_INSTITUICAO in planilha:
+            self._parse_referencia_empresas(planilha[ABA_EMPRESA_INSTITUICAO], resultado.referencias)
 
         if 'Setor_Lotacao' in planilha:
             resultado.setores_lotacao = self._parse_setores_lotacao(planilha['Setor_Lotacao'])
@@ -274,12 +296,47 @@ class ImportacaoUsuariosParser:
                 numero_linha=linha['numero_linha'],
                 usuario_id_planilha=self._to_int(linha.get('usuario_id')),
                 setor_id_planilha=self._to_int(linha.get('setor_id')),
-                funcao_id_planilha=self._to_str(linha.get('funcao_id')),
+                funcao_id_planilha=normalizar_id_referencia(linha.get('funcao_id')),
                 responsavel=self._to_bool(linha.get('responsavel'), default=False),
                 monitor=self._to_bool(linha.get('monitor'), default=False),
             )
             for linha in linhas
         ]
+
+    def _parse_referencia_setores(self, dados_aba, referencias: ReferenciasImportacaoDTO):
+        for linha in self._extrair_linhas(dados_aba, ABA_SETOR):
+            setor_id = self._to_int(linha.get('setor_id'))
+            sigla = self._to_str(linha.get('sigla'))
+            if setor_id is not None and sigla:
+                referencias.mapa_setor_id_para_sigla[setor_id] = SIGLA_SETOR_ALIASES.get(sigla, sigla)
+
+    def _parse_referencia_funcoes(self, dados_aba, referencias: ReferenciasImportacaoDTO):
+        for linha in self._extrair_linhas(dados_aba, ABA_FUNCAO):
+            funcao_id = normalizar_id_referencia(linha.get('funcao_id'))
+            papel = self._to_str(linha.get('papel_funcao'))
+            if funcao_id and papel:
+                referencias.mapa_funcao_id_para_papel[funcao_id] = papel
+
+    def _parse_referencia_cargos(self, dados_aba, referencias: ReferenciasImportacaoDTO):
+        for linha in self._extrair_linhas(dados_aba, ABA_CARGO):
+            cargo_id = self._to_int(linha.get('cargo_id'))
+            nome = self._to_str(linha.get('nome'))
+            if cargo_id is not None and nome:
+                referencias.mapa_cargo_id_para_nome[cargo_id] = nome
+
+    def _parse_referencia_cursos(self, dados_aba, referencias: ReferenciasImportacaoDTO):
+        for linha in self._extrair_linhas(dados_aba, ABA_CURSO):
+            curso_id = self._to_int(linha.get('curso_id'))
+            codigo = self._to_str(linha.get('codigo_curso'))
+            if curso_id is not None and codigo:
+                referencias.mapa_curso_id_para_codigo[curso_id] = codigo
+
+    def _parse_referencia_empresas(self, dados_aba, referencias: ReferenciasImportacaoDTO):
+        for linha in self._extrair_linhas(dados_aba, ABA_EMPRESA_INSTITUICAO):
+            empresa_id = self._to_int(linha.get('empresa_instituicao_id'))
+            nome = self._to_str(linha.get('nome'))
+            if empresa_id is not None and nome:
+                referencias.mapa_empresa_id_para_nome[empresa_id] = nome
 
     def _to_str(self, valor):
         if valor is None:

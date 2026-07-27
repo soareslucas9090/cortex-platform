@@ -7,6 +7,7 @@ from AppCore.core.exceptions.exceptions import ValidationException, SystemErrorE
 from AppCore.common.util.util import normalizar_cpf, normalizar_cep
 
 from Identidade.usuarios.importacao.importacao_parser import ImportacaoUsuariosParser
+from Identidade.usuarios.importacao.importacao_resolucao import ImportacaoReferenciasResolver
 from Identidade.usuarios.importacao.importacao_dtos import (
     ErroImportacaoDTO,
     ResumoImportacaoDTO,
@@ -262,6 +263,7 @@ class UsuarioBusiness(ModelInstanceBusiness):
         erros = []
         mapa_usuarios = {}
         mapa_alunos = {}
+        resolver_referencias = ImportacaoReferenciasResolver(estrutura.referencias)
 
         resumo.total_abas_processadas = self._contar_abas_processadas(estrutura)
         resumo.total_linhas_processadas = self._contar_linhas_processadas(estrutura)
@@ -477,10 +479,6 @@ class UsuarioBusiness(ModelInstanceBusiness):
                     )
                 )
 
-        from PessoasInstitucionais.cargos.models import Cargo
-        cargos_ids = {l.cargo_id_planilha for l in estrutura.servidores if l.cargo_id_planilha}
-        mapa_cargos_db = {c.id: c for c in Cargo.objects.filter(id__in=cargos_ids)} if cargos_ids else {}
-
         for linha in estrutura.servidores:
             _incrementar_progresso()
             try:
@@ -488,7 +486,7 @@ class UsuarioBusiness(ModelInstanceBusiness):
                     usuario = self.object_instance.helper.obter_usuario_por_id_planilha(linha.usuario_id_planilha, mapa_usuarios)
                     self.object_instance.rules.usuario_referenciado_existe(usuario, 'servidor')
 
-                    cargo = mapa_cargos_db.get(linha.cargo_id_planilha)
+                    cargo = resolver_referencias.resolver_cargo(linha.cargo_id_planilha)
                     self.object_instance.rules.referencia_seed_existe(cargo, f'cargo_id={linha.cargo_id_planilha}')
 
                     criado = self._garantir_servidor(usuario, cargo, linha)
@@ -506,10 +504,6 @@ class UsuarioBusiness(ModelInstanceBusiness):
                     )
                 )
 
-        from PessoasInstitucionais.empresas_instituicoes.models import EmpresaInstituicao
-        empresas_ids = {l.empresa_instituicao_id_planilha for l in estrutura.terceirizados if l.empresa_instituicao_id_planilha}
-        mapa_empresas_db = {e.id: e for e in EmpresaInstituicao.objects.filter(id__in=empresas_ids)} if empresas_ids else {}
-
         for linha in estrutura.terceirizados:
             _incrementar_progresso()
             try:
@@ -517,7 +511,7 @@ class UsuarioBusiness(ModelInstanceBusiness):
                     usuario = self.object_instance.helper.obter_usuario_por_id_planilha(linha.usuario_id_planilha, mapa_usuarios)
                     self.object_instance.rules.usuario_referenciado_existe(usuario, 'terceirizado')
 
-                    empresa = mapa_empresas_db.get(linha.empresa_instituicao_id_planilha)
+                    empresa = resolver_referencias.resolver_empresa(linha.empresa_instituicao_id_planilha)
                     self.object_instance.rules.referencia_seed_existe(
                         empresa,
                         f'empresa_instituicao_id={linha.empresa_instituicao_id_planilha}'
@@ -538,24 +532,25 @@ class UsuarioBusiness(ModelInstanceBusiness):
                     )
                 )
 
-        from Organizacional.setores.models import Setor
-        from Organizacional.funcoes.models import Funcao
-        setores_ids = {l.setor_id_planilha for l in estrutura.setores_lotacao if l.setor_id_planilha}
-        funcoes_papeis = {l.funcao_id_planilha for l in estrutura.setores_lotacao if l.funcao_id_planilha}
-        mapa_setores_db = {s.id: s for s in Setor.objects.filter(id__in=setores_ids)} if setores_ids else {}
-        mapa_funcoes_db = {f.papel_funcao: f for f in Funcao.objects.filter(papel_funcao__in=funcoes_papeis)} if funcoes_papeis else {}
-
         for linha in estrutura.setores_lotacao:
             _incrementar_progresso()
+            campo_erro = 'usuario_id'
+            valor_erro = linha.usuario_id_planilha
             try:
                 with transaction.atomic():
                     usuario = self.object_instance.helper.obter_usuario_por_id_planilha(linha.usuario_id_planilha, mapa_usuarios)
                     self.object_instance.rules.usuario_referenciado_existe(usuario, 'lotação')
 
-                    setor = mapa_setores_db.get(linha.setor_id_planilha)
+                    setor = resolver_referencias.resolver_setor(linha.setor_id_planilha)
+                    if not setor:
+                        campo_erro = 'setor_id'
+                        valor_erro = linha.setor_id_planilha
                     self.object_instance.rules.referencia_seed_existe(setor, f'setor_id={linha.setor_id_planilha}')
 
-                    funcao = mapa_funcoes_db.get(linha.funcao_id_planilha)
+                    funcao = resolver_referencias.resolver_funcao(linha.funcao_id_planilha)
+                    if not funcao:
+                        campo_erro = 'funcao_id'
+                        valor_erro = linha.funcao_id_planilha
                     self.object_instance.rules.referencia_seed_existe(funcao, f'funcao_id={linha.funcao_id_planilha}')
 
                     criado = self._garantir_lotacao(usuario, setor, funcao, linha)
@@ -566,16 +561,12 @@ class UsuarioBusiness(ModelInstanceBusiness):
                     self._criar_erro(
                         aba='Setor_Lotacao',
                         numero_linha=linha.numero_linha,
-                        campo='usuario_id',
-                        valor=linha.usuario_id_planilha,
+                        campo=campo_erro,
+                        valor=valor_erro,
                         codigo='erro_lotacao',
                         mensagem=str(exc),
                     )
                 )
-
-        from Academico.cursos.models import Curso
-        cursos_ids = {l.curso_id_planilha for l in estrutura.alunos_cursos if l.curso_id_planilha}
-        mapa_cursos_db = {c.id: c for c in Curso.objects.filter(id__in=cursos_ids)} if cursos_ids else {}
 
         for linha in estrutura.alunos_cursos:
             _incrementar_progresso()
@@ -584,7 +575,7 @@ class UsuarioBusiness(ModelInstanceBusiness):
                     aluno = self.object_instance.helper.obter_aluno_por_id_planilha(linha.aluno_id_planilha, mapa_alunos)
                     self.object_instance.rules.aluno_referenciado_existe(aluno)
 
-                    curso = mapa_cursos_db.get(linha.curso_id_planilha)
+                    curso = resolver_referencias.resolver_curso(linha.curso_id_planilha)
                     self.object_instance.rules.referencia_seed_existe(curso, f'curso_id={linha.curso_id_planilha}')
 
                     criado = self._garantir_vinculo_aluno_curso(aluno, curso, linha)
@@ -811,8 +802,6 @@ class UsuarioBusiness(ModelInstanceBusiness):
         if vinculo:
             if hasattr(vinculo, 'responsavel'):
                 vinculo.responsavel = linha.responsavel
-            if hasattr(vinculo, 'monitor'):
-                vinculo.monitor = linha.monitor
             vinculo.save()
             return False
 
@@ -824,8 +813,6 @@ class UsuarioBusiness(ModelInstanceBusiness):
 
         if hasattr(SetorVinculo, 'responsavel'):
             payload['responsavel'] = linha.responsavel
-        if hasattr(SetorVinculo, 'monitor'):
-            payload['monitor'] = linha.monitor
 
         SetorVinculo.objects.create(**payload)
         return True

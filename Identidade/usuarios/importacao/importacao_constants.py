@@ -107,6 +107,40 @@ COLUNAS_ABA_SETOR_LOTACAO = [
     'monitor',
 ]
 
+COLUNAS_ABA_SETOR_REFERENCIA = [
+    'setor_id',
+    'nome',
+    'sigla',
+    'ativo',
+]
+
+COLUNAS_ABA_FUNCAO_REFERENCIA = [
+    'funcao_id',
+    'papel_funcao',
+    'descricao',
+    'ativo',
+    'categoria',
+]
+
+COLUNAS_ABA_CARGO_REFERENCIA = [
+    'cargo_id',
+    'nome',
+    'ativo',
+]
+
+COLUNAS_ABA_CURSO_REFERENCIA = [
+    'curso_id',
+    'nome',
+    'codigo_curso',
+    'ativo',
+]
+
+COLUNAS_ABA_EMPRESA_INSTITUICAO_REFERENCIA = [
+    'empresa_instituicao_id',
+    'nome',
+    'ativo',
+]
+
 COLUNAS_ESPERADAS_POR_ABA = {
     ABA_USUARIO: COLUNAS_ABA_USUARIO,
     ABA_CONTATO: COLUNAS_ABA_CONTATO,
@@ -117,6 +151,11 @@ COLUNAS_ESPERADAS_POR_ABA = {
     ABA_SERVIDOR: COLUNAS_ABA_SERVIDOR,
     ABA_TERCEIRIZADO: COLUNAS_ABA_TERCEIRIZADO,
     ABA_SETOR_LOTACAO: COLUNAS_ABA_SETOR_LOTACAO,
+    ABA_SETOR: COLUNAS_ABA_SETOR_REFERENCIA,
+    ABA_FUNCAO: COLUNAS_ABA_FUNCAO_REFERENCIA,
+    ABA_CARGO: COLUNAS_ABA_CARGO_REFERENCIA,
+    ABA_CURSO: COLUNAS_ABA_CURSO_REFERENCIA,
+    ABA_EMPRESA_INSTITUICAO: COLUNAS_ABA_EMPRESA_INSTITUICAO_REFERENCIA,
 }
 
 DEPENDENCIAS_ENTRE_ABAS = {

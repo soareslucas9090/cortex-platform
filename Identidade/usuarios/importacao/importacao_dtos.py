@@ -81,6 +81,15 @@ class LinhaTerceirizadoImportacaoDTO:
 
 
 @dataclass
+class ReferenciasImportacaoDTO:
+    mapa_setor_id_para_sigla: dict[int, str] = field(default_factory=dict)
+    mapa_funcao_id_para_papel: dict[str, str] = field(default_factory=dict)
+    mapa_cargo_id_para_nome: dict[int, str] = field(default_factory=dict)
+    mapa_curso_id_para_codigo: dict[int, str] = field(default_factory=dict)
+    mapa_empresa_id_para_nome: dict[int, str] = field(default_factory=dict)
+
+
+@dataclass
 class LinhaSetorLotacaoImportacaoDTO:
     numero_linha: int
     usuario_id_planilha: int
@@ -131,6 +140,7 @@ class ResultadoImportacaoDTO:
 
 @dataclass
 class ArquivoImportacaoUsuariosDTO:
+    referencias: ReferenciasImportacaoDTO = field(default_factory=ReferenciasImportacaoDTO)
     usuarios: list[LinhaUsuarioImportacaoDTO] = field(default_factory=list)
     contatos: list[LinhaContatoImportacaoDTO] = field(default_factory=list)
     enderecos: list[LinhaEnderecoImportacaoDTO] = field(default_factory=list)
