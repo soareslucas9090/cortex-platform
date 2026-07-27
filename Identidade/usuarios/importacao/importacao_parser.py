@@ -8,6 +8,7 @@ from .importacao_constants import (
     ABA_EMPRESA_INSTITUICAO,
     ABA_FUNCAO,
     ABA_SETOR,
+    ALIAS_CABECALHOS_IMPORTACAO,
     COLUNAS_ESPERADAS_POR_ABA,
     EXTENSOES_SUPORTADAS,
 )
@@ -142,12 +143,14 @@ class ImportacaoUsuariosParser:
         for index, row in enumerate(dados_aba[1:], start=2):
             row_limpo = [self._limpar_valor(v) for v in row]
 
-            if self._linha_vazia(row_limpo):
-                continue
-
             item = {}
             for i, coluna in enumerate(header):
+                if not coluna:
+                    continue
                 item[coluna] = row_limpo[i] if i < len(row_limpo) else None
+
+            if self._linha_vazia([item.get(col) for col in colunas_esperadas]):
+                continue
 
             item['numero_linha'] = index
             linhas.append(item)
@@ -174,7 +177,8 @@ class ImportacaoUsuariosParser:
         if ' (' in texto:
             texto = texto.split(' (')[0].strip()
 
-        return texto
+        texto = texto.lower()
+        return ALIAS_CABECALHOS_IMPORTACAO.get(texto, texto)
 
     def _linha_vazia(self, row):
         return all(valor is None for valor in row)

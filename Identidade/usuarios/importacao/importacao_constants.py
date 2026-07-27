@@ -119,8 +119,12 @@ COLUNAS_ABA_FUNCAO_REFERENCIA = [
     'papel_funcao',
     'descricao',
     'ativo',
-    'categoria',
 ]
+
+# Aliases de cabeçalho da planilha → nome canônico interno
+ALIAS_CABECALHOS_IMPORTACAO = {
+    'funcao': 'papel_funcao',
+}
 
 COLUNAS_ABA_CARGO_REFERENCIA = [
     'cargo_id',

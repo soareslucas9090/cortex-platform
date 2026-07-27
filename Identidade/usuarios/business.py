@@ -547,11 +547,16 @@ class UsuarioBusiness(ModelInstanceBusiness):
                         valor_erro = linha.setor_id_planilha
                     self.object_instance.rules.referencia_seed_existe(setor, f'setor_id={linha.setor_id_planilha}')
 
-                    funcao = resolver_referencias.resolver_funcao(linha.funcao_id_planilha)
-                    if not funcao:
-                        campo_erro = 'funcao_id'
-                        valor_erro = linha.funcao_id_planilha
-                    self.object_instance.rules.referencia_seed_existe(funcao, f'funcao_id={linha.funcao_id_planilha}')
+                    funcao = None
+                    if linha.funcao_id_planilha:
+                        funcao = resolver_referencias.resolver_funcao(linha.funcao_id_planilha)
+                        if not funcao:
+                            campo_erro = 'funcao_id'
+                            valor_erro = linha.funcao_id_planilha
+                        self.object_instance.rules.referencia_seed_existe(
+                            funcao,
+                            f'funcao_id={linha.funcao_id_planilha}',
+                        )
 
                     criado = self._garantir_lotacao(usuario, setor, funcao, linha)
                     if criado:

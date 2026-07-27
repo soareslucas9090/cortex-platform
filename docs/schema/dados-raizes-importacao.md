@@ -15,7 +15,7 @@ Garantir que as entidades institucionais de referência existam no banco antes d
 - Cargo: `nome`
 - Empresa_Instituicao: `nome`
 - Setor: `sigla`
-- Funcao: `papel_funcao`
+- Funcao: `papel_funcao` (na planilha pode vir como coluna `funcao`)
 
 ## Campos adicionais de referência
 - Funcao: `categoria` (`diretor`, `coordenador` ou `chefe`), usada para regras de negócio em outros módulos

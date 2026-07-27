@@ -36,14 +36,15 @@ class ImportacaoReferenciasParserTests(TestCase):
                 [99, 'Setor Teste', 'NAPNE/FLO', 'true'],
             ],
             'Funcao': [
-                ['funcao_id\n(String, PK)', 'papel_funcao\n(String)', 'descricao\n(String)',
-                 'ativo\n(boolean)', 'categoria\n(String)'],
-                [1, 'Diretor Geral', 'Descrição', 'true', 'Diretor'],
+                ['funcao_id\n(String, PK)', 'funcao (String)', 'descricao\n(String)',
+                 'ativo\n(boolean)', 'Categoria'],
+                [1, 'Diretor(a) Geral', 'Descrição', 'true', 'Diretor'],
             ],
             'Setor_Lotacao': [
                 ['usuario_id\n(int, FK)', 'setor_id\n(int, FK)', 'funcao_id\n(String, FK)',
                  'responsavel\n(boolean)', 'monitor\n(boolean)'],
                 [1, 99, 1, 'false', 'false'],
+                [1, 99, 'NULL', False, False],
             ],
         }
 
@@ -52,9 +53,33 @@ class ImportacaoReferenciasParserTests(TestCase):
         resultado = ImportacaoUsuariosParser().parse(arquivo)
 
         self.assertEqual(resultado.referencias.mapa_setor_id_para_sigla[99], 'NAPNE')
-        self.assertEqual(resultado.referencias.mapa_funcao_id_para_papel['1'], 'Diretor Geral')
-        self.assertEqual(len(resultado.setores_lotacao), 1)
+        self.assertEqual(resultado.referencias.mapa_funcao_id_para_papel['1'], 'Diretor(a) Geral')
+        self.assertEqual(len(resultado.setores_lotacao), 2)
         self.assertEqual(resultado.setores_lotacao[0].funcao_id_planilha, '1')
+        self.assertEqual(resultado.setores_lotacao[1].funcao_id_planilha, '')
+
+    @patch('Identidade.usuarios.importacao.importacao_parser.get_data')
+    def test_deve_ignorar_linhas_sem_colunas_esperadas(self, mock_get_data):
+        mock_get_data.return_value = {
+            'Usuario': [
+                ['usuario_id\n(int, PK)', 'cpf\n(String)', 'nome\n(String)', 'foto\n(String)',
+                 'deficiencia\n(String)', 'ativo\n(boolean)', 'ultimo_login\n(Date)',
+                 'colaborador_externo\n(booleano)'],
+                [1, '12345678901', 'Usuário Teste', '', '', 'true', '', 'false'],
+            ],
+            'Matricula': [
+                ['usuario_id\n(int, FK)', 'matricula\n(String)', 'situacao\n(String)'],
+                ['', '', '', 8235],
+                [1, '2026001', 'ATIVA'],
+            ],
+        }
+
+        arquivo = BytesIO(b'test')
+        arquivo.name = 'modelo-importacao-usuarios.ods'
+        resultado = ImportacaoUsuariosParser().parse(arquivo)
+
+        self.assertEqual(len(resultado.matriculas), 1)
+        self.assertEqual(resultado.matriculas[0].matricula, '2026001')
 
 
 class ImportacaoReferenciasResolverTests(TestCase):
@@ -217,6 +242,43 @@ class ImportacaoSetorLotacaoBusinessTests(TestCase):
         self.assertEqual(len(resultado.erros), 1)
         self.assertEqual(resultado.erros[0].campo, 'funcao_id')
         self.assertEqual(SetorVinculo.objects.count(), 0)
+
+    @patch('Identidade.usuarios.business.ImportacaoUsuariosParser.parse')
+    def test_deve_importar_lotacao_sem_funcao(self, mock_parse):
+        setor = Setor.objects.create(nome='Setor Sem Função', sigla='SSEMF', ativo=True)
+        referencias = ReferenciasImportacaoDTO(
+            mapa_setor_id_para_sigla={10: 'SSEMF'},
+        )
+        estrutura = ArquivoImportacaoUsuariosDTO(
+            referencias=referencias,
+            usuarios=[
+                LinhaUsuarioImportacaoDTO(
+                    numero_linha=2,
+                    usuario_id_planilha=1,
+                    cpf='99988877766',
+                    nome='Usuário Sem Função',
+                    ativo=True,
+                )
+            ],
+            setores_lotacao=[
+                LinhaSetorLotacaoImportacaoDTO(
+                    numero_linha=2,
+                    usuario_id_planilha=1,
+                    setor_id_planilha=10,
+                    funcao_id_planilha='',
+                    responsavel=False,
+                )
+            ],
+        )
+        mock_parse.return_value = estrutura
+
+        resultado = Usuario().business.importar_usuarios_em_lote(importacao_lote=self._criar_importacao_mock())
+
+        self.assertTrue(resultado.sucesso)
+        self.assertEqual(resultado.resumo.lotacoes_criadas, 1)
+        vinculo = SetorVinculo.objects.get()
+        self.assertEqual(vinculo.setor_id, setor.id)
+        self.assertIsNone(vinculo.funcao_id)
 
     @patch('Identidade.usuarios.business.ImportacaoUsuariosParser.parse')
     def test_reimportacao_de_lotacao_eh_idempotente(self, mock_parse):

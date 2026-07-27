@@ -228,10 +228,15 @@ A importação deve validar:
 A aba `Funcao` é apenas referência (não é persistida pela importação). Colunas esperadas:
 
 - `funcao_id (String, PK)` — identificador interno da planilha
-- `papel_funcao (String)` — chave natural no banco (`papel_funcao`)
+- `funcao (String)` — chave natural no banco (`papel_funcao`); o cabeçalho `papel_funcao` também é aceito
 - `descricao (String)`
 - `ativo (boolean)`
-- `categoria (String)` — `diretor`, `coordenador` ou `chefe`
+- `categoria (String)` — opcional na planilha; no banco usa `diretor`, `coordenador` ou `chefe`
+
+### Aba `Setor_Lotacao` e função opcional
+
+- `funcao_id` pode ser nulo/`NULL`: o vínculo é criado só com usuário + setor
+- quando informado, deve existir na aba `Funcao` e no seed (`papel_funcao`)
 
 ## Regras de persistência
 
