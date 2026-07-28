@@ -39,6 +39,7 @@ Identidade/
   - `DELETE /usuarios/{pk}/coletivo/itens/{tipo}/{item_id}/` — remover item
   - Ao desativar a flag, o pool é limpo automaticamente.
   - Conta coletiva não pode ser solicitante nem responsável de empréstimo.
+  - No cadastro, o **CPF é opcional**; sem CPF, a **matrícula é obrigatória** (identificador de login: e-mail, CPF ou matrícula).
 
 #### Configuração de Autenticação do Model `Usuario`
 ```python

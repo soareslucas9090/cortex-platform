@@ -44,7 +44,9 @@ class UsuarioBusiness(ModelInstanceBusiness):
                 self.object_instance.rules.cpf_unico(cpf_normalizado)
             else:
                 if not matricula:
-                    raise ValidationException('A matrícula é obrigatória caso o CPF não seja informado.')
+                    raise ValidationException(
+                        'A matrícula é obrigatória caso o CPF não seja informado.'
+                    )
                 if Matricula.objects.filter(matricula=matricula).exists():
                     raise ValidationException('Já existe um usuário cadastrado com esta matrícula.')
 

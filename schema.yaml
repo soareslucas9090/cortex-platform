@@ -5718,8 +5718,8 @@ components:
         cpf:
           type: string
           nullable: true
-          description: 'CPF do usuário. Aceita com ou sem máscara (ex: 12345678901
-            ou 123.456.789-01).'
+          description: 'CPF do usuário (opcional). Aceita com ou sem máscara (ex:
+            12345678901 ou 123.456.789-01). Sem CPF, a matrícula é obrigatória.'
           maxLength: 14
         matricula:
           type: string

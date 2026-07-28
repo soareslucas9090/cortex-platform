@@ -157,7 +157,10 @@ class CriarUsuarioSerializer(serializers.Serializer):
         required=False,
         allow_null=True,
         allow_blank=True,
-        help_text='CPF do usuário. Aceita com ou sem máscara (ex: 12345678901 ou 123.456.789-01).',
+        help_text=(
+            'CPF do usuário (opcional). Aceita com ou sem máscara '
+            '(ex: 12345678901 ou 123.456.789-01). Sem CPF, a matrícula é obrigatória.'
+        ),
     )
     matricula = serializers.CharField(
         max_length=50,
@@ -208,7 +211,9 @@ class CriarUsuarioSerializer(serializers.Serializer):
         cpf = attrs.get('cpf')
         matricula = attrs.get('matricula')
         if not cpf and not matricula:
-            raise serializers.ValidationError('É necessário informar o CPF ou a Matrícula.')
+            raise serializers.ValidationError(
+                'É necessário informar o CPF ou a Matrícula (obrigatória para o login quando não houver CPF).'
+            )
         return attrs
 
     def validate_deficiencia(self, value):

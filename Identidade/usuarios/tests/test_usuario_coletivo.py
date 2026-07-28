@@ -55,6 +55,29 @@ class UsuarioColetivoViewsTest(APITestCase):
         self.assertTrue(usuario.usuario_coletivo)
         self.assertEqual(usuario.empresas_coletivo.count(), 0)
 
+    def test_criar_usuario_coletivo_sem_cpf_exige_matricula(self):
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token_admin}')
+        resposta = self.client.post(reverse('identidade:usuario-list'), {
+            'nome': 'Guarita Sem CPF',
+            'usuario_coletivo': True,
+            'matricula': 'GUA001',
+            'password': 'Senha@123',
+        })
+        self.assertEqual(resposta.status_code, status.HTTP_201_CREATED)
+        self.assertIsNone(resposta.data['dados']['cpf'])
+        self.assertTrue(resposta.data['dados']['usuario_coletivo'])
+        usuario = Usuario.objects.get(id=resposta.data['dados']['id'])
+        self.assertTrue(usuario.matriculas.filter(matricula='GUA001').exists())
+
+    def test_criar_usuario_coletivo_sem_cpf_sem_matricula_retorna_400(self):
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token_admin}')
+        resposta = self.client.post(reverse('identidade:usuario-list'), {
+            'nome': 'Guarita Sem Identificador',
+            'usuario_coletivo': True,
+            'password': 'Senha@123',
+        })
+        self.assertEqual(resposta.status_code, status.HTTP_400_BAD_REQUEST)
+
     def test_nao_admin_nao_acessa_coletivo(self):
         self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token_comum}')
         resposta = self.client.get(self.url_coletivo)
