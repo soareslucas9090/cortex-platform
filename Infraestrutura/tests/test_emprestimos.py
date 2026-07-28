@@ -229,6 +229,7 @@ class EmprestimoOperacoesTest(TestCase):
         self.assertFalse(emprestimo.ativo)
         self.assertNotEqual(novo.pk, emprestimo.pk)
         self.assertEqual(novo.solicitante, self.novo_solicitante)
+        self.assertEqual(novo.responsavel, self.operador)
         self.assertTrue(novo.ativo)
 
     def test_atrasado_apos_24_horas(self):

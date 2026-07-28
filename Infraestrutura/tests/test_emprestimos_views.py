@@ -247,3 +247,32 @@ class EmprestimoUsuarioColetivoViewsTest(APITestCase):
             'responsavel_id': self.solicitante.pk,
         })
         self.assertEqual(resposta.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_conta_coletiva_troca_titular_exige_e_grava_responsavel(self):
+        novo_solicitante = criar_usuario('32323232324', nome='Novo Titular')
+        SetorVinculo.objects.create(
+            usuario=novo_solicitante,
+            setor=Setor.objects.get(sigla='GUA'),
+            funcao=None,
+        )
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token_coletivo}')
+        criado = self.client.post(self.url_lista, {
+            'solicitante_id': self.solicitante.pk,
+            'recurso_ids': [self.chave.pk],
+            'responsavel_id': self.guardinha.pk,
+        })
+        emprestimo_id = criado.data['dados']['id']
+        url_trocar = reverse('infraestrutura:emprestimo-trocar-titular', kwargs={'pk': emprestimo_id})
+
+        sem_responsavel = self.client.post(url_trocar, {
+            'novo_solicitante_id': novo_solicitante.pk,
+        })
+        self.assertEqual(sem_responsavel.status_code, status.HTTP_400_BAD_REQUEST)
+
+        com_responsavel = self.client.post(url_trocar, {
+            'novo_solicitante_id': novo_solicitante.pk,
+            'responsavel_id': self.guardinha.pk,
+        })
+        self.assertEqual(com_responsavel.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(com_responsavel.data['dados']['solicitante']['id'], novo_solicitante.pk)
+        self.assertEqual(com_responsavel.data['dados']['responsavel']['id'], self.guardinha.pk)

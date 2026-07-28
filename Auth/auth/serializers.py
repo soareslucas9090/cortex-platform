@@ -66,12 +66,17 @@ class LoginSerializer(BaseHybridLoginSerializer):
 class ProjectMeSerializer(BaseMeSerializer):
     """
     Serializer do endpoint /me/ customizado para incluir permissões do usuário.
+    Inclui ``usuario_coletivo`` (campo do model) e indicadores de perfil.
     """
     permissoes = serializers.SerializerMethodField()
+    tem_perfil_aluno = serializers.SerializerMethodField()
 
     @extend_schema_field(serializers.JSONField())
     def get_permissoes(self, obj):
         return obj.permissoes
+
+    def get_tem_perfil_aluno(self, obj) -> bool:
+        return hasattr(obj, 'aluno') and obj.aluno is not None
 
 
 # Serializers para documentação Swagger
@@ -99,6 +104,10 @@ class LoginResponseSerializer(serializers.Serializer):
     nome = serializers.CharField(help_text='Nome do usuário autenticado.')
     tem_perfil_aluno = serializers.BooleanField(
         help_text='Indica se o usuário possui perfil de aluno.')
+    eh_admin_frontend = serializers.BooleanField(
+        help_text='Indica se o usuário tem acesso administrativo no frontend.')
+    usuario_coletivo = serializers.BooleanField(
+        help_text='Indica se a conta autenticada é usuário coletivo (ex.: guarita).')
     permissoes = serializers.JSONField(
         help_text='Dicionário de permissões por módulo (ex: {"cortex": "EDITAR_EU"}).'
     )

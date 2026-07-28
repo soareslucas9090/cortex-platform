@@ -2837,9 +2837,11 @@ paths:
     post:
       operationId: infraestrutura_emprestimos_trocar_titular_create
       description: "\n    Devolve itens em aberto e registra novo empréstimo para
-        outro solicitante.\n\n  - Conta coletiva: informe `responsavel_id` no novo
-        empréstimo, se aplicável.\n\n    **Permissões:** Capacidade `operar` em Infraestrutura.\n
-        \   "
+        outro solicitante\n    (encerra o atual e abre outro).\n\n    - Conta não
+        coletiva: o responsável do novo empréstimo é o próprio usuário autenticado.\n
+        \   - Conta coletiva: informe `responsavel_id` com um usuário do pool elegível\n
+        \     (mesma regra do realizar empréstimo).\n\n    **Permissões:** Capacidade
+        `operar` em Infraestrutura.\n    "
       summary: Trocar titular
       parameters:
       - in: path
@@ -6156,14 +6158,22 @@ components:
         tem_perfil_aluno:
           type: boolean
           description: Indica se o usuário possui perfil de aluno.
+        eh_admin_frontend:
+          type: boolean
+          description: Indica se o usuário tem acesso administrativo no frontend.
+        usuario_coletivo:
+          type: boolean
+          description: 'Indica se a conta autenticada é usuário coletivo (ex.: guarita).'
         permissoes:
           description: 'Dicionário de permissões por módulo (ex: {"cortex": "EDITAR_EU"}).'
       required:
       - access
+      - eh_admin_frontend
       - nome
       - permissoes
       - refresh
       - tem_perfil_aluno
+      - usuario_coletivo
     Matricula:
       type: object
       properties:
@@ -6861,13 +6871,17 @@ components:
           maxLength: 20
     ProjectMe:
       type: object
-      description: Serializer do endpoint /me/ customizado para incluir permissões
-        do usuário.
+      description: |-
+        Serializer do endpoint /me/ customizado para incluir permissões do usuário.
+        Inclui ``usuario_coletivo`` (campo do model) e indicadores de perfil.
       properties:
         id:
           type: integer
           readOnly: true
         permissoes:
+          readOnly: true
+        tem_perfil_aluno:
+          type: boolean
           readOnly: true
         last_login:
           type: string
@@ -6969,6 +6983,7 @@ components:
       - id
       - nome
       - permissoes
+      - tem_perfil_aluno
       - updated_at
     RealizarEmprestimo:
       type: object

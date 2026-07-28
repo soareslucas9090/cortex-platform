@@ -304,9 +304,12 @@ class DevolverItensEmprestimoView(PodeOperarInfraestruturaMixin, BasicPostAPIVie
     tags=['Infraestrutura · Empréstimos'],
     summary='Trocar titular',
     description='''
-    Devolve itens em aberto e registra novo empréstimo para outro solicitante.
+    Devolve itens em aberto e registra novo empréstimo para outro solicitante
+    (encerra o atual e abre outro).
 
-  - Conta coletiva: informe `responsavel_id` no novo empréstimo, se aplicável.
+    - Conta não coletiva: o responsável do novo empréstimo é o próprio usuário autenticado.
+    - Conta coletiva: informe `responsavel_id` com um usuário do pool elegível
+      (mesma regra do realizar empréstimo).
 
     **Permissões:** Capacidade `operar` em Infraestrutura.
     ''',
