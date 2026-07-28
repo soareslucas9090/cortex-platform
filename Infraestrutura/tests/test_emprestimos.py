@@ -6,7 +6,7 @@ from django.utils import timezone
 from Identidade.usuarios.models import Usuario
 from Infraestrutura.autorizacoes.models import Autorizacao
 from Infraestrutura.blocos.models import Bloco
-from Infraestrutura.emprestimos.choices import CARGO_SERVENTE_LIMPEZA, HORAS_ALERTA_ATRASO
+from Infraestrutura.emprestimos.choices import HORAS_ALERTA_ATRASO
 from Infraestrutura.emprestimos.models import Emprestimo, ItemEmprestimo
 from Infraestrutura.permissoes.models import PermissaoFuncaoInfraestrutura
 from Infraestrutura.recursos.choices import TipoRecurso
@@ -17,7 +17,10 @@ from Organizacional.setores.models import Setor
 from Organizacional.vinculos.models import SetorVinculo
 from PessoasInstitucionais.cargos.models import Cargo
 from PessoasInstitucionais.empresas_instituicoes.models import EmpresaInstituicao
+from PessoasInstitucionais.servidores.choices import CategoriaServidor
+from PessoasInstitucionais.servidores.models import Servidor
 from PessoasInstitucionais.terceirizados.models import Terceirizado
+from Academico.alunos.models import Aluno
 
 
 def criar_usuario(cpf, nome='Usuário Teste'):
@@ -132,12 +135,12 @@ class EmprestimoElegibilidadeTest(TestCase):
         self.assertIn(self.solicitante.pk, ids)
         self.assertNotIn(apenas_chave.pk, ids)
 
-    def test_servente_limpeza_retira_qualquer_chave(self):
-        empresa = EmpresaInstituicao.objects.create(nome='Empresa Limpeza')
-        cargo, _ = Cargo.objects.get_or_create(nome=CARGO_SERVENTE_LIMPEZA, defaults={'ativo': True})
-        limpeza = criar_usuario('19191919191', nome='Servente Limpeza')
+    def test_terceirizado_retira_qualquer_chave(self):
+        empresa = EmpresaInstituicao.objects.create(nome='Empresa Terceirizada')
+        cargo = Cargo.objects.create(nome='AUXILIAR DE SERVICOS GERAIS', ativo=True)
+        terceirizado_user = criar_usuario('19191919191', nome='Terceirizado Chave')
         Terceirizado().business.criar_terceirizado(
-            usuario_pk=limpeza.pk,
+            usuario_pk=terceirizado_user.pk,
             empresa_pk=empresa.pk,
             cargo_pk=cargo.pk,
             data_inicio=datetime.date.today(),
@@ -150,11 +153,85 @@ class EmprestimoElegibilidadeTest(TestCase):
         )
 
         emprestimo = Emprestimo().business.realizar_emprestimo(
-            solicitante_id=limpeza.pk,
+            solicitante_id=terceirizado_user.pk,
             conta_autenticada=self.operador,
             recurso_ids=[outra_chave.pk],
         )
-        self.assertEqual(emprestimo.solicitante, limpeza)
+        self.assertEqual(emprestimo.solicitante, terceirizado_user)
+
+    def test_terceirizado_nao_retira_midia_sem_autorizacao(self):
+        empresa = EmpresaInstituicao.objects.create(nome='Empresa Midia')
+        cargo = Cargo.objects.create(nome='PORTEIRO', ativo=True)
+        terceirizado_user = criar_usuario('19191919192', nome='Terceirizado Midia')
+        Terceirizado().business.criar_terceirizado(
+            usuario_pk=terceirizado_user.pk,
+            empresa_pk=empresa.pk,
+            cargo_pk=cargo.pk,
+            data_inicio=datetime.date.today(),
+        )
+        with self.assertRaises(Exception):
+            Emprestimo().business.realizar_emprestimo(
+                solicitante_id=terceirizado_user.pk,
+                conta_autenticada=self.operador,
+                recurso_ids=[self.midia.pk],
+            )
+
+    def test_servidor_retira_chave_e_midia_sem_autorizacao(self):
+        cargo, _ = Cargo.objects.get_or_create(
+            nome='ASSISTENTE EM ADMINISTRACAO',
+            defaults={'ativo': True},
+        )
+        servidor_user = criar_usuario('19191919193', nome='Servidor Livre')
+        Servidor().business.criar_servidor(
+            usuario_pk=servidor_user.pk,
+            cargo_pk=cargo.pk,
+            categoria=CategoriaServidor.TECNICO_ADMINISTRATIVO,
+        )
+
+        emprestimo_chave = Emprestimo().business.realizar_emprestimo(
+            solicitante_id=servidor_user.pk,
+            conta_autenticada=self.operador,
+            recurso_ids=[self.chave.pk],
+        )
+        self.assertEqual(emprestimo_chave.solicitante, servidor_user)
+
+        emprestimo_midia = Emprestimo().business.realizar_emprestimo(
+            solicitante_id=servidor_user.pk,
+            conta_autenticada=self.operador,
+            recurso_ids=[self.midia.pk],
+        )
+        self.assertEqual(emprestimo_midia.solicitante, servidor_user)
+
+    def test_aluno_so_retira_com_autorizacao(self):
+        aluno_user = criar_usuario('19191919194', nome='Aluno Autorizado')
+        Aluno().business.criar_aluno(usuario=aluno_user.pk)
+
+        with self.assertRaises(Exception):
+            Emprestimo().business.realizar_emprestimo(
+                solicitante_id=aluno_user.pk,
+                conta_autenticada=self.operador,
+                recurso_ids=[self.chave.pk],
+            )
+
+        autorizador = conceder_capacidade_operar(criar_usuario('18181818183', nome='Autorizador Aluno'))
+        funcao_aut = Funcao.objects.create(papel_funcao='AUT_ALUNO', descricao='Aut Aluno')
+        setor_aut = Setor.objects.create(sigla='AAL', nome='Setor Aut Aluno')
+        PermissaoFuncaoInfraestrutura().business.criar_permissao(funcao_id=funcao_aut.pk, autorizar=True)
+        SetorVinculo.objects.create(usuario=autorizador, setor=setor_aut, funcao=funcao_aut)
+
+        Autorizacao().business.conceder_autorizacao(
+            beneficiario_id=aluno_user.pk,
+            concedente=autorizador,
+            recurso_id=self.chave.pk,
+            data_inicio=datetime.date.today(),
+        )
+
+        emprestimo = Emprestimo().business.realizar_emprestimo(
+            solicitante_id=aluno_user.pk,
+            conta_autenticada=self.operador,
+            recurso_ids=[self.chave.pk],
+        )
+        self.assertEqual(emprestimo.solicitante, aluno_user)
 
 
 class EmprestimoOperacoesTest(TestCase):

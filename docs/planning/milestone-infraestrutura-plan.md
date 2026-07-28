@@ -52,7 +52,7 @@ Padrões de código: [ADR-001](../decisions/ADR-001-modularizacao-por-dominio.md
 2. Camadas por app: `models` → `rules` → `helpers` → `business` → `serializers` → `views` → `urls`.
 3. Views AppCore; sem ORM na view; regras em português (`pode_*`, `validar_*`).
 4. Capacidades: `operar`, `cadastrar`, `autorizar`, `retirada_irrestrita`.
-5. Regras auto: `SalaSetor`→chave; cargo limpeza→qualquer chave; demais→autorização ou irrestrita.
+5. Regras auto: servidor→qualquer recurso; terceirizado→qualquer chave; `SalaSetor`→chave da sala; demais→autorização ou irrestrita.
 6. Autorização XOR sala|recurso; sala cobre recursos futuros.
 7. Empréstimo sem status explícito; troca sem vínculo entre registros.
 8. L1 < L2 < L3 conforme ADR-002.
@@ -179,7 +179,7 @@ Estado derivado (prioridade): `avaria` → `emprestado` → `reservado` (sempre 
 | | — `realizar_emprestimo` |
 | | — `devolver_itens` (parcial) |
 | | — `trocar_titular` (devolver + novo, mesmas rules, sem FK entre empréstimos) |
-| | Helpers de elegibilidade do solicitante (SalaSetor, cargo limpeza, Autorizacao, `retirada_irrestrita`); impedir segundo aberto no mesmo recurso; listagens/filtros |
+| | Helpers de elegibilidade do solicitante (servidor, terceirizado, SalaSetor, Autorizacao, `retirada_irrestrita`); impedir segundo aberto no mesmo recurso; listagens/filtros |
 | **Critério de saída** | Fluxo guarda→usuário completo via API; parcial encerra só quando todos devolvidos |
 | **Padrões** | `transaction.atomic` só na view base; rules sem `.save()`; nomes em português |
 
@@ -189,7 +189,7 @@ Estado derivado (prioridade): `avaria` → `emprestado` → `reservado` (sempre 
 - L1 sem `operar`: apenas empréstimos **ativos** em que é solicitante.
 - Alerta >24h: campo/anotação calculada na serialização (`atrasado` / similar) para o frontend — sem job de e-mail.
 
-| **Status** | Concluída (14/07/2026) — app `Infraestrutura.emprestimos`; models `Emprestimo` e `ItemEmprestimo`; business `realizar_emprestimo`, `devolver_itens`, `trocar_titular`; elegibilidade via SalaSetor, servente de limpeza, autorização e `retirada_irrestrita`; constraint de recurso único em aberto; APIs listar/realizar/devolver/trocar-titular; gate `operar`; escopo L1 na listagem; campo `atrasado`; migration cargo `SERVENTE DE LIMPEZA`; testes em `test_emprestimos.py` e `test_emprestimos_views.py` |
+| **Status** | Concluída (14/07/2026) — app `Infraestrutura.emprestimos`; models `Emprestimo` e `ItemEmprestimo`; business `realizar_emprestimo`, `devolver_itens`, `trocar_titular`; elegibilidade via servidor, terceirizado (chaves), SalaSetor, autorização e `retirada_irrestrita`; constraint de recurso único em aberto; APIs listar/realizar/devolver/trocar-titular; gate `operar`; escopo L1 na listagem; campo `atrasado`; testes em `test_emprestimos.py` e `test_emprestimos_views.py` |
 
 ---
 
@@ -261,9 +261,9 @@ A milestone só fecha quando:
 | `Organizacional.setores.Setor` | `SalaSetor` |
 | `Organizacional.funcoes.Funcao` | Capacidades |
 | `Organizacional.vinculos.SetorVinculo` | Regra automática de chave + compilação de permissões |
-| `PessoasInstitucionais.cargos.Cargo` (+ vínculo de terceirizado) | Regra servente de limpeza |
-
-Se o cargo de limpeza ainda não existir no seed, incluir na I.7/I.8 (data migration ou seed) o cargo acordado, sem inventar regra alternativa.
+| `PessoasInstitucionais.servidores.Servidor` | Elegibilidade automática a qualquer recurso |
+| `PessoasInstitucionais.terceirizados.Terceirizado` | Elegibilidade automática a chaves |
+| `Academico.alunos.Aluno` | Elegibilidade só via `Autorizacao` (ou irrestrita) |
 
 ---
 

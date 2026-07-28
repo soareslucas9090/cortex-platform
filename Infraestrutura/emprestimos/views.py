@@ -54,8 +54,8 @@ def _extrair_ids_recursos_da_query(query_params) -> list[int]:
     summary='Listar solicitantes elegíveis para recurso(s)',
     description='''
     Retorna usuários que podem ser solicitantes de empréstimo para **todos** os recursos
-    informados, conforme as regras de elegibilidade (retirada irrestrita, autorização,
-    SalaSetor, servente de limpeza).
+    informados, conforme as regras de elegibilidade (retirada irrestrita, servidor,
+    terceirizado em chaves, SalaSetor, autorização).
 
     Informe um ou mais IDs em `recurso_id` e/ou `recurso_ids` (repetidos ou separados
     por vírgula). A resposta contém apenas usuários elegíveis a cada recurso enviado.

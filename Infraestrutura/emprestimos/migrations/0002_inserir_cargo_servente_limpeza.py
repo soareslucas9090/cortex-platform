@@ -1,6 +1,7 @@
 from django.db import migrations
 
-from Infraestrutura.emprestimos.choices import CARGO_SERVENTE_LIMPEZA
+
+CARGO_SERVENTE_LIMPEZA = 'SERVENTE DE LIMPEZA'
 
 
 def inserir_cargo_servente_limpeza(apps, schema_editor):

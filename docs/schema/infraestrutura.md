@@ -67,9 +67,10 @@ Capacidades finas vêm de duas fontes (união OR na compilação `permissoes_inf
 
 ### Regras automáticas de retirada (além de autorização explícita)
 
+- **Servidor** ativo pode retirar **qualquer** recurso (chave, mídia ou material didático).
+- **Terceirizado** ativo pode retirar **qualquer chave**; para mídia/material didático precisa de `Autorizacao`.
 - Solicitante com vínculo ativo em setor ligado à sala (`SalaSetor`) pode retirar recursos tipo **chave** dessa sala.
-- Terceirizado com cargo **servente de limpeza** pode retirar **qualquer chave**.
-- Demais casos (outros tipos, externos, sem vínculo): exigem `Autorizacao` explícita ou capacidade `retirada_irrestrita`.
+- Alunos e demais perfis: exigem `Autorizacao` explícita (qualquer tipo) ou capacidade `retirada_irrestrita`.
 
 ## Autorizações
 
@@ -78,7 +79,7 @@ Capacidades finas vêm de duas fontes (união OR na compilação `permissoes_inf
 - Autorização por sala vale para **todos** os recursos da sala, inclusive os cadastrados depois (avaliação em runtime).
 - Registram beneficiário, concedente, período, revogação (`revogado_em` + `revogador`) e observação.
 - Só quem tem capacidade `autorizar` concede ou revoga.
-- Complementam o acesso automático por função, cargo ou vínculo setorial.
+- Complementam o acesso automático por perfil (servidor/terceirizado), vínculo setorial ou função.
 
 ## Estrutura planejada
 

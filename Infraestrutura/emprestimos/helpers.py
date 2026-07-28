@@ -1,7 +1,6 @@
 from datetime import date, timedelta
 
 from django.apps import apps
-from django.conf import settings
 from django.db.models import Exists, OuterRef, Q
 from django.utils import timezone
 
@@ -10,7 +9,7 @@ from AppCore.core.helpers.helpers import ModelInstanceHelpers
 from Infraestrutura.permissoes.access import usuario_pode_operar_infraestrutura
 from Infraestrutura.recursos.choices import TipoRecurso
 
-from .choices import CARGO_SERVENTE_LIMPEZA, HORAS_ALERTA_ATRASO
+from .choices import HORAS_ALERTA_ATRASO
 
 
 class EmprestimoHelpers(ModelInstanceHelpers):
@@ -33,17 +32,17 @@ class EmprestimoHelpers(ModelInstanceHelpers):
     def solicitante_pode_retirar_recurso(self, solicitante, recurso) -> bool:
         """
         Elegibilidade do solicitante:
-        retirada_irrestrita → servente limpeza (chave) → SalaSetor (chave) → autorização.
+        retirada_irrestrita → servidor (qualquer) → terceirizado/SalaSetor (chave) → autorização.
         """
         if self._solicitante_tem_retirada_irrestrita(solicitante):
             return True
-        if recurso.tipo == TipoRecurso.CHAVE and self._usuario_e_servente_limpeza(solicitante):
+        if self._usuario_e_servidor_ativo(solicitante):
             return True
-        if recurso.tipo == TipoRecurso.CHAVE and self._usuario_tem_vinculo_setor_na_sala(
-            solicitante,
-            recurso.sala_id,
-        ):
-            return True
+        if recurso.tipo == TipoRecurso.CHAVE:
+            if self._usuario_e_terceirizado_ativo(solicitante):
+                return True
+            if self._usuario_tem_vinculo_setor_na_sala(solicitante, recurso.sala_id):
+                return True
         return self._usuario_tem_autorizacao_vigente(solicitante, recurso)
 
     def recurso_esta_emprestado(self, recurso) -> bool:
@@ -75,13 +74,11 @@ class EmprestimoHelpers(ModelInstanceHelpers):
             setor_vinculos__funcao__ativo=True,
             setor_vinculos__funcao__permissao_infraestrutura__retirada_irrestrita=True,
         )
+        elegiveis |= Q(permissao_infraestrutura__retirada_irrestrita=True)
+        elegiveis |= Q(servidor__ativo=True)
 
         if recurso.tipo == TipoRecurso.CHAVE:
-            elegiveis |= Q(
-                terceirizado__ativo=True,
-                terceirizado__cargo__ativo=True,
-                terceirizado__cargo__nome__iexact=CARGO_SERVENTE_LIMPEZA,
-            )
+            elegiveis |= Q(terceirizado__ativo=True)
             if recurso.sala_id:
                 elegiveis |= Q(
                     setor_vinculos__setor__ativo=True,
@@ -212,17 +209,19 @@ class EmprestimoHelpers(ModelInstanceHelpers):
         infraestrutura = getattr(solicitante, 'permissoes', {}).get('infraestrutura', {})
         return bool(infraestrutura.get('retirada_irrestrita'))
 
-    def _usuario_e_servente_limpeza(self, usuario) -> bool:
+    def _usuario_e_servidor_ativo(self, usuario) -> bool:
+        try:
+            Servidor = apps.get_model('servidores', 'Servidor')
+        except LookupError:
+            return False
+        return Servidor.objects.filter(usuario=usuario, ativo=True).exists()
+
+    def _usuario_e_terceirizado_ativo(self, usuario) -> bool:
         try:
             Terceirizado = apps.get_model('terceirizados', 'Terceirizado')
         except LookupError:
             return False
-        return Terceirizado.objects.filter(
-            usuario=usuario,
-            ativo=True,
-            cargo__ativo=True,
-            cargo__nome__iexact=CARGO_SERVENTE_LIMPEZA,
-        ).exists()
+        return Terceirizado.objects.filter(usuario=usuario, ativo=True).exists()
 
     def _usuario_tem_vinculo_setor_na_sala(self, usuario, sala_id) -> bool:
         if not sala_id:

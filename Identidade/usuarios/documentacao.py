@@ -164,13 +164,13 @@ class PermissaoDocumentacao:
                     'setorial.'
                 ),
                 'nao_sem_capacidade': (
-                    'Receber recurso apenas por autorização, SalaSetor, cargo de limpeza '
-                    '(chaves) ou outra regra automática.'
+                    'Receber recurso apenas por autorização, perfil (servidor/terceirizado), '
+                    'SalaSetor (chaves) ou outra regra automática.'
                 ),
                 'descricao': (
                     'Solicitante elegível a qualquer recurso sem autorização explícita. '
                     'Admin/superuser recebem esta flag no bypass de acesso total. '
-                    'Não substitui a regra automática do cargo SERVENTE DE LIMPEZA.'
+                    'Complementa (não substitui) as regras automáticas de servidor e terceirizado.'
                 ),
             },
         ]
@@ -184,11 +184,19 @@ class PermissaoDocumentacao:
                 ),
             },
             {
-                'codigo': 'servente_limpeza',
-                'nome': 'Servente de limpeza',
+                'codigo': 'servidor_ativo',
+                'nome': 'Servidor ativo',
                 'descricao': (
-                    'Terceirizado ativo com cargo SERVENTE DE LIMPEZA pode retirar qualquer '
-                    'chave, sem autorização e sem retirada_irrestrita na função.'
+                    'Servidor ativo pode retirar qualquer recurso (chave, mídia ou material '
+                    'didático), sem autorização e sem retirada_irrestrita na função.'
+                ),
+            },
+            {
+                'codigo': 'terceirizado_ativo',
+                'nome': 'Terceirizado ativo',
+                'descricao': (
+                    'Terceirizado ativo pode retirar qualquer chave, sem autorização. '
+                    'Para mídia ou material didático precisa de Autorizacao ou retirada_irrestrita.'
                 ),
             },
             {
@@ -214,8 +222,8 @@ class PermissaoDocumentacao:
             'resumo': (
                 'Capacidades booleanas do módulo de liberação de recursos físicos '
                 '(chaves, mídias e materiais didáticos), independentes do nível Cortex L1–L3. '
-                'Inclui regras automáticas de elegibilidade do solicitante (limpeza, SalaSetor, '
-                'autorização e retirada irrestrita).'
+                'Inclui regras automáticas de elegibilidade do solicitante (servidor, '
+                'terceirizado, SalaSetor, autorização e retirada irrestrita).'
             ),
             'texto': (
                 'O módulo infraestrutura controla quem opera o balcão (guarda/auxiliar), quem '
@@ -286,16 +294,23 @@ class PermissaoDocumentacao:
                         },
                         {
                             'ordem': 2,
-                            'destaque': 'Servente de limpeza',
+                            'destaque': 'Servidor ativo',
                             'texto': (
-                                'Terceirizado ativo com cargo ativo de nome exato SERVENTE DE '
-                                'LIMPEZA: pode retirar qualquer chave (não vale para mídia ou '
-                                'material didático). Regra automática por cargo, sem flag na '
-                                'função.'
+                                'Servidor ativo pode retirar qualquer recurso (chave, mídia ou '
+                                'material didático), sem autorização explícita.'
                             ),
                         },
                         {
                             'ordem': 3,
+                            'destaque': 'Terceirizado ativo',
+                            'texto': (
+                                'Terceirizado ativo pode retirar qualquer chave. Não vale para '
+                                'mídia ou material didático (precisa Autorizacao ou '
+                                'retirada_irrestrita).'
+                            ),
+                        },
+                        {
+                            'ordem': 4,
                             'destaque': 'SalaSetor',
                             'texto': (
                                 'Solicitante com vínculo setorial ativo em setor ligado à sala da '
@@ -303,7 +318,7 @@ class PermissaoDocumentacao:
                             ),
                         },
                         {
-                            'ordem': 4,
+                            'ordem': 5,
                             'destaque': 'Autorizacao vigente',
                             'texto': (
                                 'Autorização não revogada, dentro do período, no recurso ou na '
@@ -315,9 +330,10 @@ class PermissaoDocumentacao:
                     'observacoes': [
                         'Se nenhuma regra passar, o solicitante não pode receber aquele recurso.',
                         (
-                            'retirada_irrestrita e limpeza/SalaSetor/autorização definem quem '
-                            'recebe; operar define quem registra a operação. Um guarda com '
-                            'operar ainda só libera o recurso se o solicitante for elegível.'
+                            'retirada_irrestrita, servidor/terceirizado, SalaSetor e autorização '
+                            'definem quem recebe; operar define quem registra a operação. Um '
+                            'guarda com operar ainda só libera o recurso se o solicitante for '
+                            'elegível.'
                         ),
                     ],
                 },
@@ -328,8 +344,9 @@ class PermissaoDocumentacao:
                             'destaque': 'L1 (EDITAR_EU)',
                             'texto': (
                                 'Em geral sem capacidades; só consulta empréstimos ativos '
-                                'próprios; pode ser solicitante se tiver autorização, SalaSetor '
-                                'ou for limpeza.'
+                                'próprios; pode ser solicitante se tiver autorização, SalaSetor, '
+                                'perfil de servidor/terceirizado (conforme o tipo do recurso) ou '
+                                'retirada_irrestrita.'
                             ),
                         },
                         {
@@ -395,7 +412,7 @@ class PermissaoDocumentacao:
                     ],
                 },
                 {
-                    'perfil': 'Servente de limpeza (terceirizado, cargo SERVENTE DE LIMPEZA)',
+                    'perfil': 'Terceirizado ativo',
                     'capacidades': {
                         'operar': False,
                         'cadastrar': False,
@@ -403,18 +420,34 @@ class PermissaoDocumentacao:
                         'retirada_irrestrita': False,
                     },
                     'pode': [
-                        'receber qualquer chave como solicitante (regra automática por cargo)',
+                        'receber qualquer chave como solicitante (regra automática por perfil)',
                         'consultar empréstimos ativos no próprio nome',
                     ],
                     'nao_pode': [
-                        'receber mídia ou material didático só por ser limpeza '
+                        'receber mídia ou material didático só por ser terceirizado '
                         '(precisa autorização ou retirada_irrestrita)',
                         'operar o balcão',
                         'cadastrar ou autorizar',
                     ],
                 },
                 {
-                    'perfil': 'Servidor com vínculo no setor da sala (sem autorização explícita)',
+                    'perfil': 'Servidor ativo (sem autorização explícita)',
+                    'capacidades': {
+                        'operar': False,
+                        'cadastrar': False,
+                        'autorizar': False,
+                        'retirada_irrestrita': False,
+                    },
+                    'pode': [
+                        'receber qualquer recurso (chave, mídia ou material didático) como solicitante',
+                    ],
+                    'nao_pode': [
+                        'operar o balcão só por ser servidor',
+                        'cadastrar ou autorizar',
+                    ],
+                },
+                {
+                    'perfil': 'Usuário com vínculo no setor da sala (sem perfil servidor/terceirizado)',
                     'capacidades': {
                         'operar': False,
                         'cadastrar': False,
