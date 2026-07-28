@@ -1065,15 +1065,17 @@ paths:
     patch:
       operationId: identidade_usuarios_partial_update
       description: "\n    Atualiza parcialmente os dados básicos do usuário (nome,
-        e-mail, deficiência).\n\n    **Permissões:** O próprio usuário ou administradores.\n\n
-        \   CPF não é alterável neste endpoint.\n\n    **Normalização de Deficiência
-        (campo `deficiencia`):**\n    O campo é normalizado automaticamente no save
-        (removendo acentos, convertendo para caixa baixa e substituindo espaços por
-        `_`).\n    - Opções válidas resultantes: `deficiencia_intelectual`, `deficiencia_visual`,
-        `deficiencia_auditiva`, `deficiencia_multipla`, `deficiencia_fisica`.\n    -
-        Se a string enviada (ex: \"Deficiência Múltipla\") equivaler a uma das chaves
-        após a normalização, ela será associada.\n    - Se não houver correspondência,
-        o valor será gravado como `null`.\n    "
+        e-mail, deficiência,\n    colaborador_externo, usuario_coletivo).\n\n    A
+        flag `usuario_coletivo` pode ser alterada aqui; o pool de associações é mantido\n
+        \   em `GET/PUT /usuarios/{pk}/coletivo/`. Ao desativar a flag, o pool é limpo.\n\n
+        \   **Permissões:** O próprio usuário ou administradores.\n\n    CPF não é
+        alterável neste endpoint.\n\n    **Normalização de Deficiência (campo `deficiencia`):**\n
+        \   O campo é normalizado automaticamente no save (removendo acentos, convertendo
+        para caixa baixa e substituindo espaços por `_`).\n    - Opções válidas resultantes:
+        `deficiencia_intelectual`, `deficiencia_visual`, `deficiencia_auditiva`, `deficiencia_multipla`,
+        `deficiencia_fisica`.\n    - Se a string enviada (ex: \"Deficiência Múltipla\")
+        equivaler a uma das chaves após a normalização, ela será associada.\n    -
+        Se não houver correspondência, o valor será gravado como `null`.\n    "
       summary: Atualizar dados do usuário
       parameters:
       - in: path
@@ -1126,6 +1128,226 @@ paths:
             application/json:
               schema:
                 description: Usuário não encontrado.
+          description: ''
+  /cortex/identidade/usuarios/{id}/coletivo/:
+    get:
+      operationId: identidade_usuarios_coletivo_retrieve
+      description: "\n    Retorna o pool do usuário coletivo (empresas, cargos, funções
+        e setores).\n\n    A flag `usuario_coletivo` é definida na criação/edição
+        do usuário; as associações\n    do pool são mantidas apenas por estes endpoints
+        dedicados.\n\n    **Permissões:** Administradores (L3).\n    "
+      summary: Obter configuração do usuário coletivo
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - Identidade
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UsuarioColetivo'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                description: Não autenticado.
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                description: Sem permissão.
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                description: Usuário não encontrado.
+          description: ''
+    put:
+      operationId: identidade_usuarios_coletivo_update
+      description: "\n    Substitui integralmente as associações do pool (empresas,
+        cargos, funções, setores).\n\n    O usuário precisa estar com `usuario_coletivo=true`.
+        Listas omitidas são tratadas\n    como vazias nesta operação de substituição.\n\n
+        \   **Permissões:** Administradores (L3).\n    "
+      summary: Substituir pool do usuário coletivo
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - Identidade
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SubstituirUsuarioColetivo'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/SubstituirUsuarioColetivo'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/SubstituirUsuarioColetivo'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UsuarioColetivo'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                description: Dados inválidos ou usuário não coletivo.
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                description: Não autenticado.
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                description: Sem permissão.
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                description: Usuário não encontrado.
+          description: ''
+  /cortex/identidade/usuarios/{id}/coletivo/itens/:
+    post:
+      operationId: identidade_usuarios_coletivo_itens_create
+      description: "\n    Adiciona uma empresa, cargo, função ou setor ao pool.\n\n
+        \   Body: `{\"tipo\": \"empresa\"|\"cargo\"|\"funcao\"|\"setor\", \"id\":
+        <int>}`.\n\n    **Permissões:** Administradores (L3).\n    "
+      summary: Adicionar item ao pool do usuário coletivo
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - Identidade
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AdicionarItemColetivo'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/AdicionarItemColetivo'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/AdicionarItemColetivo'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UsuarioColetivo'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                description: Dados inválidos ou usuário não coletivo.
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                description: Não autenticado.
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                description: Sem permissão.
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                description: Usuário não encontrado.
+          description: ''
+  /cortex/identidade/usuarios/{id}/coletivo/itens/{tipo}/{item_id}/:
+    delete:
+      operationId: identidade_usuarios_coletivo_itens_destroy
+      description: "\n    Remove uma empresa, cargo, função ou setor do pool.\n\n
+        \   `tipo` deve ser `empresa`, `cargo`, `funcao` ou `setor`.\n\n    **Permissões:**
+        Administradores (L3).\n    "
+      summary: Remover item do pool do usuário coletivo
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      - in: path
+        name: item_id
+        schema:
+          type: integer
+        required: true
+      - in: path
+        name: tipo
+        schema:
+          type: string
+        required: true
+      tags:
+      - Identidade
+      security:
+      - jwtAuth: []
+      responses:
+        '204':
+          content:
+            application/json:
+              schema:
+                description: Item removido com sucesso.
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                description: Tipo inválido ou item não associado.
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                description: Não autenticado.
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                description: Sem permissão.
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                description: Usuário ou item não encontrado.
           description: ''
   /cortex/identidade/usuarios/{id}/desativar/:
     post:
@@ -2521,7 +2743,9 @@ paths:
           description: ''
     post:
       operationId: infraestrutura_emprestimos_create
-      description: "\n    Registra retirada multi-item para um solicitante.\n\n    **Permissões:**
+      description: "\n    Registra retirada multi-item para um solicitante.\n\n  -
+        Conta não coletiva: o responsável é o próprio usuário autenticado.\n  - Conta
+        coletiva: informe `responsavel_id` com um usuário do pool elegível.\n\n    **Permissões:**
         Capacidade `operar` em Infraestrutura.\n    "
       summary: Realizar empréstimo
       tags:
@@ -2611,7 +2835,8 @@ paths:
     post:
       operationId: infraestrutura_emprestimos_trocar_titular_create
       description: "\n    Devolve itens em aberto e registra novo empréstimo para
-        outro solicitante.\n\n    **Permissões:** Capacidade `operar` em Infraestrutura.\n
+        outro solicitante.\n\n  - Conta coletiva: informe `responsavel_id` no novo
+        empréstimo, se aplicável.\n\n    **Permissões:** Capacidade `operar` em Infraestrutura.\n
         \   "
       summary: Trocar titular
       parameters:
@@ -2642,6 +2867,67 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Emprestimo'
+          description: ''
+  /cortex/infraestrutura/emprestimos/responsaveis-elegiveis/:
+    get:
+      operationId: infraestrutura_emprestimos_responsaveis_elegiveis_list
+      description: "\n    Retorna usuários que podem ser **responsáveis** (quem entrega
+        o recurso) no empréstimo.\n\n    - Conta **não coletiva**: apenas o próprio
+        usuário autenticado.\n    - Conta **coletiva** (`usuario_coletivo`): pool
+        definido pelas associações\n      (empresas, cargos, funções, setores) da
+        conta.\n\n    Query params apenas **reduzem** o conjunto retornado; nunca
+        expandem o acesso\n    além do pool permitido para a conta autenticada.\n\n
+        \   **Permissões:** Capacidade `operar` em Infraestrutura.\n    "
+      summary: Listar responsáveis elegíveis
+      parameters:
+      - in: query
+        name: cargo_id
+        schema:
+          type: integer
+      - in: query
+        name: cpf
+        schema:
+          type: string
+      - in: query
+        name: empresa_id
+        schema:
+          type: integer
+      - in: query
+        name: funcao_id
+        schema:
+          type: integer
+      - in: query
+        name: nome
+        schema:
+          type: string
+      - name: page
+        required: false
+        in: query
+        description: Um número de página dentro do conjunto de resultados paginado.
+        schema:
+          type: integer
+      - in: query
+        name: paginacao
+        schema:
+          type: integer
+      - in: query
+        name: setor_id
+        schema:
+          type: integer
+      - in: query
+        name: tipo_perfil
+        schema:
+          type: string
+      tags:
+      - Infraestrutura · Empréstimos
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedEmprestimoUsuarioResumoList'
           description: ''
   /cortex/infraestrutura/emprestimos/solicitantes-elegiveis/:
     get:
@@ -4868,6 +5154,29 @@ paths:
           description: ''
 components:
   schemas:
+    AdicionarItemColetivo:
+      type: object
+      properties:
+        tipo:
+          $ref: '#/components/schemas/AdicionarItemColetivoTipoEnum'
+        id:
+          type: integer
+          minimum: 1
+      required:
+      - id
+      - tipo
+    AdicionarItemColetivoTipoEnum:
+      enum:
+      - empresa
+      - cargo
+      - funcao
+      - setor
+      type: string
+      description: |-
+        * `empresa` - Empresa
+        * `cargo` - Cargo
+        * `funcao` - Função
+        * `setor` - Setor
     AdicionarMatricula:
       type: object
       properties:
@@ -5441,6 +5750,10 @@ components:
           type: boolean
           default: false
           description: Indica se o usuário é colaborador externo à instituição.
+        usuario_coletivo:
+          type: boolean
+          default: false
+          description: 'Conta compartilhada (ex.: guarita) para operação coletiva.'
       required:
       - nome
     CriarVinculo:
@@ -6521,6 +6834,8 @@ components:
             chave de escolha.'
         colaborador_externo:
           type: boolean
+        usuario_coletivo:
+          type: boolean
     PatchedAtualizarVinculoFuncao:
       type: object
       properties:
@@ -6618,6 +6933,35 @@ components:
         colaborador_externo:
           type: boolean
           description: Indica se o usuário é colaborador externo à instituição.
+        usuario_coletivo:
+          type: boolean
+          title: Usuário coletivo
+          description: 'Conta compartilhada (ex.: guarita). No empréstimo, o responsável
+            deve ser escolhido entre os usuários do pool associado.'
+        empresas_coletivo:
+          type: array
+          items:
+            type: integer
+            title: Empresas do pool coletivo
+          title: Empresas do pool coletivo
+        cargos_coletivo:
+          type: array
+          items:
+            type: integer
+            title: Cargos do pool coletivo
+          title: Cargos do pool coletivo
+        funcoes_coletivo:
+          type: array
+          items:
+            type: integer
+            title: Funções do pool coletivo
+          title: Funções do pool coletivo
+        setores_coletivo:
+          type: array
+          items:
+            type: integer
+            title: Setores do pool coletivo
+          title: Setores do pool coletivo
       required:
       - created_at
       - id
@@ -6636,6 +6980,9 @@ components:
         observacao:
           type: string
           default: ''
+        responsavel_id:
+          type: integer
+          nullable: true
       required:
       - recurso_ids
       - solicitante_id
@@ -6984,6 +7331,25 @@ components:
       - porcentagem
       - resultado_json
       - updated_at
+    SubstituirUsuarioColetivo:
+      type: object
+      properties:
+        empresas_ids:
+          type: array
+          items:
+            type: integer
+        cargos_ids:
+          type: array
+          items:
+            type: integer
+        funcoes_ids:
+          type: array
+          items:
+            type: integer
+        setores_ids:
+          type: array
+          items:
+            type: integer
     Terceirizado:
       type: object
       properties:
@@ -7077,6 +7443,9 @@ components:
         observacao:
           type: string
           default: ''
+        responsavel_id:
+          type: integer
+          nullable: true
       required:
       - novo_solicitante_id
     TurnoEnum:
@@ -7136,6 +7505,31 @@ components:
         colaborador_externo:
           type: boolean
           description: Indica se o usuário é colaborador externo à instituição.
+        usuario_coletivo:
+          type: boolean
+          title: Usuário coletivo
+          description: 'Conta compartilhada (ex.: guarita). No empréstimo, o responsável
+            deve ser escolhido entre os usuários do pool associado.'
+        empresas_coletivo_ids:
+          type: array
+          items:
+            type: integer
+          readOnly: true
+        cargos_coletivo_ids:
+          type: array
+          items:
+            type: integer
+          readOnly: true
+        funcoes_coletivo_ids:
+          type: array
+          items:
+            type: integer
+          readOnly: true
+        setores_coletivo_ids:
+          type: array
+          items:
+            type: integer
+          readOnly: true
         tem_perfil_aluno:
           type: boolean
           description: |-
@@ -7162,14 +7556,58 @@ components:
             $ref: '#/components/schemas/UsuarioVinculo'
           readOnly: true
       required:
+      - cargos_coletivo_ids
       - created_at
+      - empresas_coletivo_ids
       - foto_secundaria
+      - funcoes_coletivo_ids
       - id
       - nome
       - servidor
+      - setores_coletivo_ids
       - tem_perfil_aluno
       - terceirizado
       - vinculos
+    UsuarioColetivo:
+      type: object
+      properties:
+        usuario_id:
+          type: integer
+        usuario_coletivo:
+          type: boolean
+        empresas:
+          type: array
+          items:
+            $ref: '#/components/schemas/UsuarioColetivoItem'
+        cargos:
+          type: array
+          items:
+            $ref: '#/components/schemas/UsuarioColetivoItem'
+        funcoes:
+          type: array
+          items:
+            $ref: '#/components/schemas/UsuarioColetivoItem'
+        setores:
+          type: array
+          items:
+            $ref: '#/components/schemas/UsuarioColetivoItem'
+      required:
+      - cargos
+      - empresas
+      - funcoes
+      - setores
+      - usuario_coletivo
+      - usuario_id
+    UsuarioColetivoItem:
+      type: object
+      properties:
+        id:
+          type: integer
+        nome:
+          type: string
+      required:
+      - id
+      - nome
     UsuarioServidor:
       type: object
       properties:
