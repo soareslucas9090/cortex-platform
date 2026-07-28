@@ -143,6 +143,9 @@ class Usuario(ModelHelperMixin, ModelBusinessMixin, ModelRulesMixin, UserModelPe
 
         super().save(*args, **kwargs)
 
+    def __str__(self):
+        return self.nome or self.cpf or self.email or f'Usuário #{self.pk}'
+
     def tem_acesso_elevado(self) -> bool:
         return self.permissoes.get('cortex') == PERMISSAO_CORTEX_EDITAR_TUDO
 
