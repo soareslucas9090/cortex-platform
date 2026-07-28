@@ -240,9 +240,10 @@ class PermissaoDocumentacao:
                         {
                             'destaque': 'Demais usuários',
                             'texto': (
-                                'União (OR) das flags de PermissaoFuncaoInfraestrutura das '
-                                'funções dos SetorVinculo ativos (setor e função ativos). Sem '
-                                'vínculo com função configurada, todas as flags ficam false.'
+                                'União (OR) de: (1) flags de PermissaoFuncaoInfraestrutura das '
+                                'funções dos SetorVinculo ativos (setor e função ativos); '
+                                '(2) flags de PermissaoUsuarioInfraestrutura do próprio usuário. '
+                                'Sem nenhuma das duas fontes, todas as flags ficam false.'
                             ),
                         },
                         {

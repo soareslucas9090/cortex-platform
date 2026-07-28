@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.db import models
 
 from AppCore.basics.models.models import BasicModel
@@ -33,3 +34,32 @@ class PermissaoFuncaoInfraestrutura(ModelHelperMixin, ModelBusinessMixin, ModelR
 
     def __str__(self):
         return f'Infraestrutura — {self.funcao}'
+
+
+class PermissaoUsuarioInfraestrutura(ModelHelperMixin, ModelBusinessMixin, ModelRulesMixin, BasicModel):
+    from .business import PermissaoUsuarioInfraestruturaBusiness
+    from .helpers import PermissaoUsuarioInfraestruturaHelpers
+    from .rules import PermissaoUsuarioInfraestruturaRules
+
+    business_class = PermissaoUsuarioInfraestruturaBusiness
+    helper_class = PermissaoUsuarioInfraestruturaHelpers
+    rules_class = PermissaoUsuarioInfraestruturaRules
+
+    usuario = models.OneToOneField(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        related_name='permissao_infraestrutura',
+        verbose_name='Usuário',
+    )
+    operar = models.BooleanField('Operar', default=False)
+    cadastrar = models.BooleanField('Cadastrar', default=False)
+    autorizar = models.BooleanField('Autorizar', default=False)
+    retirada_irrestrita = models.BooleanField('Retirada irrestrita', default=False)
+
+    class Meta:
+        verbose_name = 'Permissão de Infraestrutura por Usuário'
+        verbose_name_plural = 'Permissões de Infraestrutura por Usuário'
+        ordering = ['usuario__nome']
+
+    def __str__(self):
+        return f'Infraestrutura — {self.usuario}'

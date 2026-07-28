@@ -15,3 +15,19 @@ class PermissaoFuncaoInfraestruturaRules(ModelInstanceRules):
         if PermissaoFuncaoInfraestrutura.objects.filter(funcao_id=funcao_id).exists():
             self.return_exception('Já existe permissão de Infraestrutura para esta função.')
         return True
+
+
+class PermissaoUsuarioInfraestruturaRules(ModelInstanceRules):
+
+    def usuario_deve_estar_ativo(self, usuario) -> bool:
+        """Permissão só pode ser vinculada a usuário ativo."""
+        if not usuario.ativo:
+            self.return_exception('Não é possível configurar permissões para um usuário inativo.')
+        return True
+
+    def usuario_sem_permissao_existente(self, usuario_id: int) -> bool:
+        """Garante unicidade da configuração por usuário."""
+        from .models import PermissaoUsuarioInfraestrutura
+        if PermissaoUsuarioInfraestrutura.objects.filter(usuario_id=usuario_id).exists():
+            self.return_exception('Já existe permissão de Infraestrutura para este usuário.')
+        return True

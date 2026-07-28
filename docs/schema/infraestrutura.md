@@ -51,9 +51,12 @@
 | **L2** | Operação do dia a dia (guardas, auxiliares): emprestar, devolver, trocar titular e consultar (`operar`) |
 | **L3** | Autorizar/desautorizar (`autorizar`); tipicamente também cadastra estrutura e opera |
 
-Capacidades finas são configuradas por vínculo com `Organizacional.funcoes.Funcao` via `PermissaoFuncaoInfraestrutura`, **sem** campos novos em `Funcao`. Compilação em `permissoes_infraestrutura()`, separada de L1–L3 do Cortex.
+Capacidades finas vêm de duas fontes (união OR na compilação `permissoes_infraestrutura()`), separadas de L1–L3 do Cortex:
 
-### Capacidades v1 (`PermissaoFuncaoInfraestrutura`)
+1. **Por função** — vínculo com `Organizacional.funcoes.Funcao` via `PermissaoFuncaoInfraestrutura` (**sem** campos novos em `Funcao`).
+2. **Por usuário** — `PermissaoUsuarioInfraestrutura` (OneToOne com `Usuario`), para concessões pontuais (ex.: conta coletiva da guarita).
+
+### Capacidades v1
 
 | Capacidade | Libera |
 |------------|--------|
@@ -86,7 +89,7 @@ O domínio agregador será `Infraestrutura/`, seguindo a ADR de modularização 
 - `recursos`: `Recurso`;
 - `emprestimos`: `Emprestimo` e `ItemEmprestimo`;
 - `autorizacoes`: autorizações por sala ou recurso;
-- `permissoes`: capacidades de Infraestrutura associadas às funções;
+- `permissoes`: capacidades de Infraestrutura por função e por usuário;
 - `reservas`: **entrega futura** (bloqueios futuros; não implementar na v1).
 
 Não será criado outro módulo chamado `Sigec`.
@@ -107,6 +110,7 @@ erDiagram
     Sala ||--o{ Autorizacao : pode_abranger
     Recurso ||--o{ Autorizacao : pode_abranger
     Funcao ||--o| PermissaoFuncaoInfraestrutura : configura
+    Usuario ||--o| PermissaoUsuarioInfraestrutura : configura
 ```
 
 ## Decisões de modelagem

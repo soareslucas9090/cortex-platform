@@ -11,7 +11,10 @@ from Infraestrutura.permissoes.choices import (
     capacidades_infraestrutura_completas,
     capacidades_infraestrutura_vazias,
 )
-from Infraestrutura.permissoes.models import PermissaoFuncaoInfraestrutura
+from Infraestrutura.permissoes.models import (
+    PermissaoFuncaoInfraestrutura,
+    PermissaoUsuarioInfraestrutura,
+)
 from Organizacional.funcoes.models import Funcao
 from Organizacional.setores.models import Setor
 from Organizacional.vinculos.models import SetorVinculo
@@ -130,6 +133,39 @@ class PermissaoInfraestruturaCompilacaoTest(TestCase):
         self.assertIn('infraestrutura', permissoes)
         self.assertTrue(permissoes['infraestrutura']['operar'])
         self.assertTrue(permissoes['infraestrutura']['retirada_irrestrita'])
+
+    def test_compila_capacidade_operar_por_usuario_sem_vinculo(self):
+        PermissaoUsuarioInfraestrutura().business.criar_permissao(
+            usuario_id=self.usuario.pk,
+            operar=True,
+        )
+
+        resultado = PermissaoFuncaoInfraestrutura().helper.compilar_do_usuario(self.usuario)
+        self.assertTrue(resultado['operar'])
+        self.assertFalse(resultado['cadastrar'])
+        self.assertFalse(resultado['autorizar'])
+        self.assertTrue(self.usuario.permissoes['infraestrutura']['operar'])
+        self.assertTrue(usuario_pode_operar_infraestrutura(self.usuario))
+
+    def test_compila_uniao_or_entre_funcao_e_usuario(self):
+        PermissaoFuncaoInfraestrutura().business.criar_permissao(
+            funcao_id=self.funcao_operar.pk,
+            operar=True,
+        )
+        SetorVinculo.objects.create(
+            usuario=self.usuario,
+            setor=self.setor,
+            funcao=self.funcao_operar,
+        )
+        PermissaoUsuarioInfraestrutura().business.criar_permissao(
+            usuario_id=self.usuario.pk,
+            autorizar=True,
+        )
+
+        resultado = PermissaoFuncaoInfraestrutura().helper.compilar_do_usuario(self.usuario)
+        self.assertTrue(resultado['operar'])
+        self.assertTrue(resultado['autorizar'])
+        self.assertFalse(resultado['cadastrar'])
 
 
 class PermissaoInfraestruturaAdminSuperuserTest(TestCase):

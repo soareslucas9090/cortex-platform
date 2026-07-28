@@ -65,8 +65,8 @@ class UsuarioPermissions(UserModelPermission):
 
     def permissoes_infraestrutura(self) -> dict:
         """
-        Capacidades do módulo Infraestrutura compiladas por vínculo ativo com função.
-        União (OR) das flags configuradas em PermissaoFuncaoInfraestrutura.
+        Capacidades do módulo Infraestrutura: união (OR) das flags por função
+        (vínculos ativos) e por usuário (PermissaoUsuarioInfraestrutura).
         Admin e superuser recebem acesso total a todas as capacidades.
         """
         user = self.object_instance

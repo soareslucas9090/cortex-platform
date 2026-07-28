@@ -847,7 +847,7 @@ A ordem de criação respeita as dependências entre domínios. Apps dentro do m
 15. `Infraestrutura/blocos/` — Model: `Bloco`
 16. `Infraestrutura/salas/` — Models: `Sala`, `SalaSetor`
 17. `Infraestrutura/recursos/` — Model: `Recurso`
-18. `Infraestrutura/permissoes/` — Model: `PermissaoFuncaoInfraestrutura` (sem rotas HTTP)
+18. `Infraestrutura/permissoes/` — Models: `PermissaoFuncaoInfraestrutura`, `PermissaoUsuarioInfraestrutura` (sem rotas HTTP)
 19. `Infraestrutura/autorizacoes/` — Model: `Autorizacao`
 20. `Infraestrutura/emprestimos/` — Models de empréstimo multi-item
 
