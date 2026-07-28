@@ -61,7 +61,7 @@ Classificar a falha em uma das categorias:
 
 - Ler o traceback e o código da view/business/serializer
 - Identificar o ponto exato da falha (`AttributeError`, `AssertionError`, resposta inesperada, etc.)
-- Verificar se viola algum padrão do `project-rules.md` (ex: query ORM na view, hook retornando `Response` diretamente, exceção exposta ao cliente)
+- Verificar se viola algum padrão do `regras-do-projeto.md` (ex: query ORM na view, hook retornando `Response` diretamente, exceção exposta ao cliente)
 
 #### Teste desatualizado
 
@@ -86,7 +86,7 @@ Evidências que confirmam que o teste é o problema:
 
 - Corrigir a implementação (view, business, rules, helpers, serializer, model)
 - **Não modificar o teste**
-- Seguir os padrões da arquitetura (ver `project-rules.md`):
+- Seguir os padrões da arquitetura (ver `regras-do-projeto.md`):
   - Views herdam de `BasicXxxAPIView` e usam hooks `do_action_*`
   - Business orquestra queries e lógica
   - Exceções do AppCore (`BusinessRuleException`, `NotFoundException`, etc.)

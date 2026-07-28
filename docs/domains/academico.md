@@ -9,7 +9,7 @@ O domínio `Academico` gerencia a estrutura educacional do projeto, abrangendo a
 ### Modelos e Relacionamentos
 
 - **Aluno**: Discente da instituição. Possui relação de herança 1:1 com `Usuario`.
-- **Curso**: Cursos ofertados pela instituição. Os dados raízes/seeds para os cursos encontram-se em [docs/seeds/documentação DER - cortex.md](../../seeds/documentação DER - cortex.md).
+- **Curso**: Cursos ofertados pela instituição. Os dados raízes/seeds para os cursos encontram-se em [docs/seeds/documentação DER - cortex.md](../seeds/documentação DER - cortex.md).
 - **AlunoCurso**: Tabela de associação (M:N) ligando um `Aluno` a um `Curso`.
 
 ### Estrutura de Apps

@@ -9,7 +9,7 @@ user-invocable: true
 
 ## Objetivo
 
-Revisar arquivos Python do projeto verificando conformidade com os padrões arquiteturais definidos no `project-rules.md`. O revisor **aponta problemas, explica o padrão correto e sugere o código corrigido**.
+Revisar arquivos Python do projeto verificando conformidade com os padrões arquiteturais definidos em `regras-do-projeto.md`. O revisor **aponta problemas, explica o padrão correto e sugere o código corrigido**.
 
 ---
 
@@ -347,7 +347,7 @@ View → Business → Rules / Helpers / State
 
 ## Referências
 
-- Padrões completos: [`docs/antigravity/project-rules.md`](../project-rules.md)
-- Views base: [`AppCore/basics/views/basic_views.py`](../../../AppCore/basics/views/basic_views.py)
-- Exceções: [`AppCore/core/exceptions/exceptions.py`](../../../AppCore/core/exceptions/exceptions.py)
-- Exemplo de implementação: [`Identidade/identidade/views.py`](../../../Identidade/identidade/views.py), [`Identidade/identidade/business.py`](../../../Identidade/identidade/business.py)
+- Padrões completos: [`docs/project/regras-do-projeto.md`](./regras-do-projeto.md)
+- Views base: [`AppCore/basics/views/basic_views.py`](../../AppCore/basics/views/basic_views.py)
+- Exceções: [`AppCore/core/exceptions/exceptions.py`](../../AppCore/core/exceptions/exceptions.py)
+- Exemplo de implementação: [`Identidade/usuarios/views.py`](../../Identidade/usuarios/views.py), [`Identidade/usuarios/business.py`](../../Identidade/usuarios/business.py)

@@ -44,7 +44,11 @@ Dados de sementes (seeds) e informações de carga inicial do banco.
 - [Documentação DER - Cortex Seeds](seeds/documentação%20DER%20-%20cortex.md)
 
 ### 📁 Project
-Documentos gerais do projeto, checklists, revisões e estratégias de refatoração.
+Documentos gerais do projeto, checklists, revisões, regras de arquitetura e guias de desenvolvimento.
+- [Regras do Projeto](project/regras-do-projeto.md)
+- [Guia: Implementação](project/guia-implementacao.md)
+- [Guia: Revisão de Código](project/guia-revisao-de-codigo.md)
+- [Guia: Corrigir Testes](project/guia-corrigir-testes.md)
 - [AppCore Review Summary](project/appcore-review-summary.md)
 - [AppCore Risks and Refactoring Priorities](project/appcore-risks-and-refactoring-priorities.md)
 - [AppCore What To Keep](project/appcore-what-to-keep.md)
@@ -54,15 +58,9 @@ Documentos gerais do projeto, checklists, revisões e estratégias de refatoraç
 - [Test Users and Seed Scenarios](project/test-users-and-seed-scenarios.md)
 - [Debugando com Docker](debug-docker.md)
 
-### 🤖 Antigravity & AI Agents
-Instruções, regras arquiteturais e skills para uso com agentes de inteligência artificial (como o Antigravity).
-- [Regras do Projeto](antigravity/project-rules.md)
-- [Skill: Implementação](antigravity/skill-implementation.md)
-- [Skill: Revisão de Código](antigravity/skill-code-review.md)
-- [Skill: Corrigir Testes](antigravity/skill-test-fixing.md)
-
-#### Diretrizes por Domínio:
-- [Domínio: Identidade](antigravity/rules/identidade.md)
-- [Domínio: Organizacional](antigravity/rules/organizacional.md)
-- [Domínio: Pessoas Institucionais](antigravity/rules/pessoas-institucionais.md)
-- [Domínio: Acadêmico](antigravity/rules/academico.md)
+### 📦 Domains
+Diretrizes e regras específicas por domínio de negócio.
+- [Identidade](domains/identidade.md)
+- [Organizacional](domains/organizacional.md)
+- [Pessoas Institucionais](domains/pessoas-institucionais.md)
+- [Acadêmico](domains/academico.md)

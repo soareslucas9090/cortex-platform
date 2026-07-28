@@ -5,7 +5,7 @@
 Implementar o domínio `Infraestrutura` do Cortex/MeuIF, substituindo o Chameco legado no fluxo de **liberação de recursos** (foco em chaves) por operadores autorizados, com autorizações, empréstimos multi-item e permissões por função.
 
 Fonte canônica de regras: [docs/schema/infraestrutura.md](../schema/infraestrutura.md).  
-Padrões de código: [ADR-001](../decisions/ADR-001-modularizacao-por-dominio.md), [ADR-002](../decisions/ADR-002-permissoes-cortex-niveis.md), [skill de implementação](../antigravity/skill-implementation.md).
+Padrões de código: [ADR-001](../decisions/ADR-001-modularizacao-por-dominio.md), [ADR-002](../decisions/ADR-002-permissoes-cortex-niveis.md), [guia de implementação](../project/guia-implementacao.md).
 
 ---
 

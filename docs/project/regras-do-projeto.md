@@ -3,14 +3,14 @@
 > **Última atualização:** 23 de maio de 2026
 
 > [!IMPORTANT]
-> **Sincronização entre Antigravity e GitHub Copilot:**
-> Este arquivo de regras gerais do projeto (e suas diretrizes por domínio localizadas na pasta `./rules/`) deve ser mantido sempre sincronizado com as configurações de instruções do GitHub Copilot e do Antigravity, garantindo consistência no comportamento de ambos os assistentes de codificação.
+> **Sincronização com assistentes de codificação:**
+> Este arquivo de regras gerais do projeto (e as diretrizes por domínio em `docs/domains/`) deve ser mantido sincronizado com as configurações de instruções do GitHub Copilot e demais agentes, garantindo consistência no comportamento.
 
 ## Fontes de Verdade
 
 - `docs/` sempre tem prioridade como documentação de referência do projeto.
-- `docs/antigravity/project-rules.md` consolida as regras gerais de arquitetura e comportamento.
-- `docs/antigravity/rules/*.md` consolida as regras específicas por domínio.
+- `docs/project/regras-do-projeto.md` consolida as regras gerais de arquitetura e comportamento.
+- `docs/domains/*.md` consolida as regras específicas por domínio.
 - `docs/seeds/` contém a documentação das entidades e os dados de seeds/inicialização do sistema (como `docs/seeds/documentação DER - cortex.md`).
 - Se houver divergência entre este arquivo e a documentação em `docs/`, a documentação deve ser considerada a base a ser refletida na próxima atualização.
 
@@ -777,12 +777,12 @@ Abaixo está o resumo dos modelos, seus relacionamentos e o status de implementa
 
 ### Diretrizes por Domínio (Complementos)
 
-As regras específicas, escolhas de campos (choices), e detalhes de modelagem física de cada domínio foram movidos para arquivos dedicados na pasta `./rules/`. Consulte-os para guias detalhados de cada módulo:
+As regras específicas, escolhas de campos (choices), e detalhes de modelagem física de cada domínio foram movidos para arquivos dedicados em `docs/domains/`. Consulte-os para guias detalhados de cada módulo:
 
-- 👤 **Identidade**: [identidade.md](./rules/identidade.md) (Controles de Usuário, Autenticação, Contatos, Endereços, Matrículas)
-- 🏢 **Organizacional**: [organizacional.md](./rules/organizacional.md) (Setores, Funções, Vínculos, Tabela Associativa)
-- 💼 **Pessoas Institucionais**: [pessoas-institucionais.md](./rules/pessoas-institucionais.md) (Servidores, Cargos, Terceirizados, Jornada de Trabalho)
-- 🎓 **Acadêmico**: [academico.md](./rules/academico.md) (Alunos, Cursos, Matrículas Acadêmicas)
+- 👤 **Identidade**: [identidade.md](../domains/identidade.md) (Controles de Usuário, Autenticação, Contatos, Endereços, Matrículas)
+- 🏢 **Organizacional**: [organizacional.md](../domains/organizacional.md) (Setores, Funções, Vínculos, Tabela Associativa)
+- 💼 **Pessoas Institucionais**: [pessoas-institucionais.md](../domains/pessoas-institucionais.md) (Servidores, Cargos, Terceirizados, Jornada de Trabalho)
+- 🎓 **Acadêmico**: [academico.md](../domains/academico.md) (Alunos, Cursos, Matrículas Acadêmicas)
 
 ### Hierarquia de Herança Geral
 
@@ -816,27 +816,27 @@ As regras específicas, escolhas de campos (choices), e detalhes de modelagem f�
 
 A ordem de criação respeita as dependências entre domínios. Apps dentro do mesmo módulo seguem a ordem abaixo:
 
-**Módulo [Identidade](./rules/identidade.md)** (Milestone 1 — concluído):
+**Módulo [Identidade](../domains/identidade.md)** (Milestone 1 — concluído):
 
 1. `Identidade/usuarios/` — Model: `Usuario` (base de autenticação; sem dependências externas)
 2. `Identidade/contatos/` — Model: `Contato` (depende de `usuarios`)
 3. `Identidade/enderecos/` — Model: `Endereco` (depende de `usuarios`)
 4. `Identidade/matriculas/` — Model: `Matricula` (depende de `usuarios`)
 
-**Módulo [Organizacional](./rules/organizacional.md)** (Milestone 2 — concluído):
+**Módulo [Organizacional](../domains/organizacional.md)** (Milestone 2 — concluído):
 
 5. `Organizacional/setores/` — Model: `Setor` (sem dependências externas)
 6. `Organizacional/funcoes/` — Model: `Funcao` (sem dependências externas)
 7. `Organizacional/vinculos/` — Model: `SetorVinculo` (depende de `usuarios`, `setores`, `funcoes`)
 
-**Módulo [Pessoas Institucionais](./rules/pessoas-institucionais.md)** (Milestone 3 — concluído):
+**Módulo [Pessoas Institucionais](../domains/pessoas-institucionais.md)** (Milestone 3 — concluído):
 
 8. `PessoasInstitucionais/cargos/` — Model: `Cargo` (sem dependências externas)
 9. `PessoasInstitucionais/servidores/` — Model: `Servidor` (depende de `usuarios`, `cargos`)
 10. `PessoasInstitucionais/empresas_instituicoes/` — Model: `EmpresaInstituicao` (sem dependências externas)
 11. `PessoasInstitucionais/terceirizados/` — Model: `Terceirizado` (depende de `usuarios`, `empresas_instituicoes`)
 
-**Módulo [Acadêmico](./rules/academico.md)** (Milestone 4 — concluído):
+**Módulo [Acadêmico](../domains/academico.md)** (Milestone 4 — concluído):
 
 12. `Academico/alunos/` — Model: `Aluno` (depende de `usuarios`)
 13. `Academico/cursos/` — Model: `Curso` (sem dependências externas)

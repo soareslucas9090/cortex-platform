@@ -8,9 +8,9 @@ O domínio `PessoasInstitucionais` gerencia os diferentes tipos de colaboradores
 
 ### Modelos e Relacionamentos
 
-- **Cargo**: Cargos públicos ou posições estruturadas na instituição. Os dados raízes/seeds para os cargos encontram-se em [docs/seeds/documentação DER - cortex.md](../../seeds/documentação DER - cortex.md).
+- **Cargo**: Cargos públicos ou posições estruturadas na instituição. Os dados raízes/seeds para os cargos encontram-se em [docs/seeds/documentação DER - cortex.md](../seeds/documentação DER - cortex.md).
 - **Servidor**: Colaborador efetivo ou comissionado. Possui relação de herança 1:1 com `Usuario` e depende de um `Cargo`.
-- **EmpresaInstituicao**: Empresas parceiras ou prestadoras de serviço à instituição. Os dados raízes/seeds para as empresas/instituições encontram-se em [docs/seeds/documentação DER - cortex.md](../../seeds/documentação DER - cortex.md).
+- **EmpresaInstituicao**: Empresas parceiras ou prestadoras de serviço à instituição. Os dados raízes/seeds para as empresas/instituições encontram-se em [docs/seeds/documentação DER - cortex.md](../seeds/documentação DER - cortex.md).
 - **Terceirizado**: Colaborador contratado por intermédio de uma empresa parceira. Possui relação de herança 1:1 com `Usuario` e depende de `EmpresaInstituicao`.
 - **Estagiario**: Colaborador em regime de estágio (planejado na hierarquia de herança).
 

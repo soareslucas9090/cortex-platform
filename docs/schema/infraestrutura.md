@@ -36,7 +36,11 @@
 - Todo solicitante, inclusive colaborador externo, deverá possuir `Usuario` no Cortex.
 - No empréstimo:
   - **solicitante** é quem recebe os recursos;
-  - **responsável** é o operador que registra a retirada ou devolução.
+  - **responsável** é quem entrega o recurso na retirada (pessoa física).
+- Conta **`usuario_coletivo`** (ex.: login da guarita) autentica a sessão; o responsável é escolhido no pool associado (empresas, cargos, funções, setores) via `GET emprestimos/responsaveis-elegiveis/`.
+- Em conta não coletiva, o responsável é o próprio usuário autenticado.
+- Conta coletiva não pode ser solicitante nem responsável de empréstimo.
+- A flag `usuario_coletivo` é definida na criação/edição do usuário; o pool é mantido em endpoints separados de Identidade (`/usuarios/{pk}/coletivo/`).
 
 ### Níveis Cortex × módulo (L1 < L2 < L3)
 

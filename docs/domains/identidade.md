@@ -33,6 +33,12 @@ Identidade/
 - **Login por CPF**: O identificador único para login é o **CPF** (`cpf`), não o e-mail.
 - **Não há auto-cadastro**: Usuários não podem se cadastrar sozinhos no sistema. A criação é feita exclusivamente por administradores.
 - **Criação de Usuários**: Deve suportar criação individual ou em lote via payload JSON por um administrador ou via portal Admin. Não há fluxo de envio de e-mail para confirmação automática de cadastro.
+- **Usuário coletivo**: flag `usuario_coletivo` na criação/edição do usuário. Conta compartilhada (ex.: guarita) usada na operação de Infraestrutura. O pool de associações (empresas, cargos, funções, setores) **não** é enviado na criação; é configurado em endpoints dedicados:
+  - `GET/PUT /usuarios/{pk}/coletivo/` — consultar e substituir o pool
+  - `POST /usuarios/{pk}/coletivo/itens/` — adicionar item (`tipo` + `id`)
+  - `DELETE /usuarios/{pk}/coletivo/itens/{tipo}/{item_id}/` — remover item
+  - Ao desativar a flag, o pool é limpo automaticamente.
+  - Conta coletiva não pode ser solicitante nem responsável de empréstimo.
 
 #### Configuração de Autenticação do Model `Usuario`
 ```python
