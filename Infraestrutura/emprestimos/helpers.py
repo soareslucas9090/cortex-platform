@@ -170,7 +170,16 @@ class EmprestimoHelpers(ModelInstanceHelpers):
         if tipo_recurso is not None:
             qs = qs.filter(itens__recurso__tipo=tipo_recurso).distinct()
 
-        return qs
+        # Abertos primeiro; dentro de cada grupo, mais recentes primeiro.
+        itens_abertos = ItemEmprestimo.objects.filter(
+            emprestimo_id=OuterRef('pk'),
+            devolvido_em__isnull=True,
+        )
+        return qs.annotate(_aberto=Exists(itens_abertos)).order_by(
+            '-_aberto',
+            '-retirada_em',
+            'pk',
+        )
 
     def usuario_pode_consultar_emprestimo(self, usuario, emprestimo) -> bool:
         """Operador consulta qualquer; L1 apenas empréstimos ativos próprios."""

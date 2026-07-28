@@ -241,6 +241,65 @@ class EmprestimoOperacoesTest(TestCase):
         self.assertTrue(emprestimo.atrasado)
 
 
+class EmprestimoListagemOrdenacaoTest(TestCase):
+
+    def setUp(self):
+        self.operador = conceder_capacidade_operar(criar_usuario('35353535353', nome='Operador Ord'))
+        self.solicitante = criar_usuario('36363636363', nome='Solicitante Ord')
+        bloco = Bloco.objects.create(nome='Bloco Ord')
+        sala = Sala.objects.create(bloco=bloco, nome='Sala Ord')
+        setor = Setor.objects.create(sigla='ORD', nome='Setor Ord')
+        SalaSetor.objects.create(sala=sala, setor=setor)
+        SetorVinculo.objects.create(usuario=self.solicitante, setor=setor, funcao=None)
+        self.chave1 = Recurso.objects.create(
+            codigo='CHV-ORD1',
+            tipo=TipoRecurso.CHAVE,
+            sala=sala,
+        )
+        self.chave2 = Recurso.objects.create(
+            codigo='CHV-ORD2',
+            tipo=TipoRecurso.CHAVE,
+            sala=sala,
+        )
+        self.chave3 = Recurso.objects.create(
+            codigo='CHV-ORD3',
+            tipo=TipoRecurso.CHAVE,
+            sala=sala,
+        )
+
+    def test_lista_abertos_antes_de_fechados_por_data(self):
+        agora = timezone.now()
+        fechado_recente = Emprestimo().business.realizar_emprestimo(
+            solicitante_id=self.solicitante.pk,
+            conta_autenticada=self.operador,
+            recurso_ids=[self.chave1.pk],
+            retirada_em=agora - datetime.timedelta(hours=1),
+        )
+        fechado_recente.business.devolver_itens(
+            self.operador,
+            [fechado_recente.itens.first().pk],
+        )
+
+        aberto_antigo = Emprestimo().business.realizar_emprestimo(
+            solicitante_id=self.solicitante.pk,
+            conta_autenticada=self.operador,
+            recurso_ids=[self.chave2.pk],
+            retirada_em=agora - datetime.timedelta(hours=5),
+        )
+        aberto_recente = Emprestimo().business.realizar_emprestimo(
+            solicitante_id=self.solicitante.pk,
+            conta_autenticada=self.operador,
+            recurso_ids=[self.chave3.pk],
+            retirada_em=agora - datetime.timedelta(minutes=30),
+        )
+
+        ids = list(
+            Emprestimo().helper.listar_para_usuario(self.operador).values_list('pk', flat=True),
+        )
+        self.assertEqual(ids[:2], [aberto_recente.pk, aberto_antigo.pk])
+        self.assertEqual(ids[2], fechado_recente.pk)
+
+
 class EmprestimoUsuarioColetivoTest(TestCase):
 
     def setUp(self):

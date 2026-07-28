@@ -2696,8 +2696,10 @@ paths:
     get:
       operationId: infraestrutura_emprestimos_list
       description: "\n    Com `operar`: consulta ampla com filtros.\n    Sem `operar`
-        (L1): apenas empréstimos ativos do próprio solicitante.\n\n    **Permissões:**
-        Usuário autenticado (escopo conforme capacidade `operar`).\n    "
+        (L1): apenas empréstimos ativos do próprio solicitante.\n\n    Ordenação padrão:
+        empréstimos **abertos** primeiro (mais recentes primeiro),\n    depois os
+        **fechados** (mais recentes primeiro).\n\n    **Permissões:** Usuário autenticado
+        (escopo conforme capacidade `operar`).\n    "
       summary: Listar empréstimos
       parameters:
       - in: query

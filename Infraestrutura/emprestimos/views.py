@@ -172,6 +172,9 @@ class ListarResponsaveisElegiveisView(PodeOperarInfraestruturaMixin, BasicGetAPI
     Com `operar`: consulta ampla com filtros.
     Sem `operar` (L1): apenas empréstimos ativos do próprio solicitante.
 
+    Ordenação padrão: empréstimos **abertos** primeiro (mais recentes primeiro),
+    depois os **fechados** (mais recentes primeiro).
+
     **Permissões:** Usuário autenticado (escopo conforme capacidade `operar`).
     ''',
     parameters=[

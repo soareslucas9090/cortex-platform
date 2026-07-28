@@ -25,6 +25,7 @@
 - Um empréstimo pode conter vários recursos.
 - Cada item pode ser devolvido separadamente; o empréstimo termina quando todos forem devolvidos.
 - Deve ser possível consultar e filtrar empréstimos abertos ou concluídos por recurso, tipo, retirada, devolução, solicitante e responsável (consulta ampla só para operadores).
+- A listagem padrão ordena **abertos primeiro** (por data de retirada, mais recentes primeiro) e em seguida os **fechados** (mesma ordenação por data).
 - Recursos e usuários devem ser encontrados por nome/código e nome/matrícula.
 - Empréstimos abertos há mais de 24 horas devem ser **sinalizados na interface** (sem e-mail ou outro canal na v1).
 - A interface deve permanecer simples, concentrar operação e consulta e permitir criar empréstimos em até quatro cliques.
