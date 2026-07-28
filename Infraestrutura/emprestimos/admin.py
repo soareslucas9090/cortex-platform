@@ -16,4 +16,4 @@ class EmprestimoAdmin(admin.ModelAdmin):
     search_fields = ('solicitante__nome', 'solicitante__cpf', 'observacao')
     raw_id_fields = ('solicitante', 'responsavel')
     inlines = [ItemEmprestimoInline]
-    ordering = ('-retirada_em',)
+    ordering = ('solicitante__nome', '-retirada_em')

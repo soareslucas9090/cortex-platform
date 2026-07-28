@@ -65,7 +65,7 @@ class Autorizacao(ModelHelperMixin, ModelBusinessMixin, ModelRulesMixin, BasicMo
     class Meta:
         verbose_name = 'Autorização'
         verbose_name_plural = 'Autorizações'
-        ordering = ['-data_inicio', '-created_at']
+        ordering = ['beneficiario__nome', 'recurso__codigo', 'sala__bloco__nome', 'sala__nome']
 
     def __str__(self):
         alvo = self.recurso or self.sala

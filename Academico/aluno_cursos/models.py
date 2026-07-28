@@ -40,7 +40,7 @@ class AlunoCurso(ModelHelperMixin, ModelBusinessMixin, ModelRulesMixin, BasicMod
     class Meta:
         verbose_name = 'Vínculo Aluno-Curso'
         verbose_name_plural = 'Vínculos Aluno-Curso'
-        ordering = ['-created_at']
+        ordering = ['aluno__usuario__nome', 'curso__nome']
 
     def __str__(self):
         return f'{self.aluno} → {self.curso}'

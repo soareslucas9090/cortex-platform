@@ -10,7 +10,7 @@ class SalaAdmin(AtivoModelAdmin):
     list_display = ('nome', 'bloco', 'ativo', 'created_at')
     list_filter = ('bloco', 'ativo')
     search_fields = ('nome', 'bloco__nome')
-    ordering = ('bloco', 'nome')
+    ordering = ('bloco__nome', 'nome')
 
     def save_model(self, request, obj, form, change):
         if not change:
@@ -37,7 +37,7 @@ class SalaSetorAdmin(admin.ModelAdmin):
     list_display = ('sala', 'setor', 'created_at')
     list_filter = ('setor',)
     search_fields = ('sala__nome', 'setor__nome', 'setor__sigla')
-    ordering = ('sala', 'setor')
+    ordering = ('sala__bloco__nome', 'sala__nome', 'setor__nome')
 
     def save_model(self, request, obj, form, change):
         if not change:

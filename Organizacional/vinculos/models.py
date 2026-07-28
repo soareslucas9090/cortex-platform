@@ -41,7 +41,7 @@ class SetorVinculo(ModelHelperMixin, ModelBusinessMixin, ModelRulesMixin, BasicM
     class Meta:
         verbose_name = 'Vínculo de Setor'
         verbose_name_plural = 'Vínculos de Setor'
-        ordering = ['setor', 'usuario']
+        ordering = ['setor__nome', 'usuario__nome']
 
     def __str__(self):
         return f'{self.usuario} — {self.setor} ({self.funcao.sigla})'

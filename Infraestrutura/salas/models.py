@@ -27,7 +27,7 @@ class Sala(ModelHelperMixin, ModelBusinessMixin, ModelRulesMixin, BasicModel):
     class Meta:
         verbose_name = 'Sala'
         verbose_name_plural = 'Salas'
-        ordering = ['bloco', 'nome']
+        ordering = ['bloco__nome', 'nome']
         constraints = [
             models.UniqueConstraint(
                 fields=['bloco', 'nome'],
@@ -64,7 +64,7 @@ class SalaSetor(ModelHelperMixin, ModelBusinessMixin, ModelRulesMixin, BasicMode
     class Meta:
         verbose_name = 'Vínculo Sala–Setor'
         verbose_name_plural = 'Vínculos Sala–Setor'
-        ordering = ['sala', 'setor']
+        ordering = ['sala__bloco__nome', 'sala__nome', 'setor__nome']
         constraints = [
             models.UniqueConstraint(
                 fields=['sala', 'setor'],

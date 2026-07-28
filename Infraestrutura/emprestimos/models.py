@@ -34,7 +34,7 @@ class Emprestimo(ModelHelperMixin, ModelBusinessMixin, ModelRulesMixin, BasicMod
     class Meta:
         verbose_name = 'Empréstimo'
         verbose_name_plural = 'Empréstimos'
-        ordering = ['-retirada_em']
+        ordering = ['solicitante__nome', '-retirada_em']
 
     def __str__(self):
         return f'Empréstimo #{self.pk} — {self.solicitante}'
@@ -68,7 +68,7 @@ class ItemEmprestimo(BasicModel):
     class Meta:
         verbose_name = 'Item de empréstimo'
         verbose_name_plural = 'Itens de empréstimo'
-        ordering = ['id']
+        ordering = ['recurso__codigo']
         constraints = [
             models.UniqueConstraint(
                 fields=['recurso'],

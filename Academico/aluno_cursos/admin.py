@@ -16,7 +16,7 @@ class AlunoCursoAdmin(AtivoModelAdmin):
         'curso__codigo_curso',
     )
     autocomplete_fields = ('aluno', 'curso')
-    ordering = ('-created_at',)
+    ordering = ('aluno__usuario__nome', 'curso__nome')
 
     def get_queryset(self, request):
         return (

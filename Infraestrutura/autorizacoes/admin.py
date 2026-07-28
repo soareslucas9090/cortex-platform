@@ -22,4 +22,4 @@ class AutorizacaoAdmin(admin.ModelAdmin):
         'recurso__codigo',
     )
     raw_id_fields = ('beneficiario', 'concedente', 'revogador', 'sala', 'recurso')
-    ordering = ('-data_inicio',)
+    ordering = ('beneficiario__nome', 'recurso__codigo', 'sala__bloco__nome', 'sala__nome')
