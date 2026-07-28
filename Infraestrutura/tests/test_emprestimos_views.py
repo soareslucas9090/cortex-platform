@@ -162,3 +162,88 @@ class EmprestimosViewsTest(APITestCase):
         resposta = self.client.get(self.url_lista)
         ids = [item['id'] for item in resposta.data['dados']]
         self.assertNotIn(emprestimo_id, ids)
+
+
+class EmprestimoUsuarioColetivoViewsTest(APITestCase):
+
+    def setUp(self):
+        self.solicitante = criar_usuario('28282828282', nome='Professor Jão')
+        self.guardinha = criar_usuario('29292929292', nome='Seu Zé')
+        self.conta_coletiva = criar_usuario('30303030303', nome='Guarita')
+        self.conta_coletiva.usuario_coletivo = True
+        self.conta_coletiva.save()
+        conceder_capacidade_operar(self.conta_coletiva)
+
+        setor = Setor.objects.create(sigla='GUA', nome='Guarita')
+        self.conta_coletiva.setores_coletivo.add(setor)
+        SetorVinculo.objects.create(usuario=self.guardinha, setor=setor, funcao=None)
+
+        self.bloco = Bloco.objects.create(nome='Bloco Coletivo')
+        self.sala = Sala.objects.create(bloco=self.bloco, nome='Lab 1')
+        SalaSetor.objects.create(sala=self.sala, setor=setor)
+        SetorVinculo.objects.create(usuario=self.solicitante, setor=setor, funcao=None)
+        self.chave = Recurso.objects.create(
+            codigo='CHV-COL',
+            tipo=TipoRecurso.CHAVE,
+            sala=self.sala,
+        )
+
+        self.token_coletivo = obter_tokens(self.conta_coletiva)
+        self.token_guardinha = obter_tokens(self.guardinha)
+        self.url_lista = reverse('infraestrutura:emprestimos-list')
+        self.url_responsaveis = reverse('infraestrutura:emprestimos-responsaveis-elegiveis')
+
+    def test_conta_coletiva_lista_responsaveis_do_pool(self):
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token_coletivo}')
+        resposta = self.client.get(self.url_responsaveis)
+        self.assertEqual(resposta.status_code, status.HTTP_200_OK)
+        ids = [item['id'] for item in resposta.data['dados']]
+        self.assertIn(self.guardinha.pk, ids)
+        self.assertNotIn(self.conta_coletiva.pk, ids)
+
+    def test_conta_nao_coletiva_lista_apenas_si_mesma(self):
+        conceder_capacidade_operar(self.guardinha)
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token_guardinha}')
+        resposta = self.client.get(self.url_responsaveis)
+        self.assertEqual(resposta.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(resposta.data['dados']), 1)
+        self.assertEqual(resposta.data['dados'][0]['id'], self.guardinha.pk)
+
+    def test_conta_coletiva_exige_responsavel_id(self):
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token_coletivo}')
+        resposta = self.client.post(self.url_lista, {
+            'solicitante_id': self.solicitante.pk,
+            'recurso_ids': [self.chave.pk],
+        })
+        self.assertEqual(resposta.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_conta_coletiva_realiza_emprestimo_com_responsavel(self):
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token_coletivo}')
+        resposta = self.client.post(self.url_lista, {
+            'solicitante_id': self.solicitante.pk,
+            'recurso_ids': [self.chave.pk],
+            'responsavel_id': self.guardinha.pk,
+        })
+        self.assertEqual(resposta.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(resposta.data['dados']['responsavel']['id'], self.guardinha.pk)
+        self.assertEqual(resposta.data['dados']['responsavel']['nome'], 'Seu Zé')
+
+    def test_conta_coletiva_rejeita_responsavel_fora_do_pool(self):
+        fora = criar_usuario('31313131313', nome='Fora do Pool')
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token_coletivo}')
+        resposta = self.client.post(self.url_lista, {
+            'solicitante_id': self.solicitante.pk,
+            'recurso_ids': [self.chave.pk],
+            'responsavel_id': fora.pk,
+        })
+        self.assertEqual(resposta.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_usuario_normal_rejeita_responsavel_id_alheio(self):
+        conceder_capacidade_operar(self.guardinha)
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token_guardinha}')
+        resposta = self.client.post(self.url_lista, {
+            'solicitante_id': self.solicitante.pk,
+            'recurso_ids': [self.chave.pk],
+            'responsavel_id': self.solicitante.pk,
+        })
+        self.assertEqual(resposta.status_code, status.HTTP_400_BAD_REQUEST)

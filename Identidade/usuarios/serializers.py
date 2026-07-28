@@ -46,6 +46,10 @@ class UsuarioSerializer(serializers.ModelSerializer):
     terceirizado = serializers.SerializerMethodField()
     vinculos = serializers.SerializerMethodField()
     foto_secundaria = serializers.SerializerMethodField()
+    empresas_coletivo_ids = serializers.SerializerMethodField()
+    cargos_coletivo_ids = serializers.SerializerMethodField()
+    funcoes_coletivo_ids = serializers.SerializerMethodField()
+    setores_coletivo_ids = serializers.SerializerMethodField()
 
     def get_foto_secundaria(self, obj) -> str | None:
         from Identidade.usuarios.fotos.s3_helper import montar_url_proxy_foto_secundaria
@@ -123,11 +127,25 @@ class UsuarioSerializer(serializers.ModelSerializer):
         except Exception:
             return []
 
+    def get_empresas_coletivo_ids(self, obj) -> list[int]:
+        return list(obj.empresas_coletivo.values_list('pk', flat=True))
+
+    def get_cargos_coletivo_ids(self, obj) -> list[int]:
+        return list(obj.cargos_coletivo.values_list('pk', flat=True))
+
+    def get_funcoes_coletivo_ids(self, obj) -> list[int]:
+        return list(obj.funcoes_coletivo.values_list('pk', flat=True))
+
+    def get_setores_coletivo_ids(self, obj) -> list[int]:
+        return list(obj.setores_coletivo.values_list('pk', flat=True))
+
     class Meta:
         model = Usuario
         fields = [
             'id', 'cpf', 'nome', 'email', 'ativo', 'is_admin',
             'foto', 'foto_secundaria', 'deficiencia', 'colaborador_externo',
+            'usuario_coletivo', 'empresas_coletivo_ids', 'cargos_coletivo_ids',
+            'funcoes_coletivo_ids', 'setores_coletivo_ids',
             'tem_perfil_aluno', 'created_at',
             'servidor', 'terceirizado', 'vinculos',
         ]
@@ -180,6 +198,11 @@ class CriarUsuarioSerializer(serializers.Serializer):
         default=False,
         help_text='Indica se o usuário é colaborador externo à instituição.',
     )
+    usuario_coletivo = serializers.BooleanField(
+        required=False,
+        default=False,
+        help_text='Conta compartilhada (ex.: guarita) para operação coletiva.',
+    )
 
     def validate(self, attrs):
         cpf = attrs.get('cpf')
@@ -225,11 +248,64 @@ class AtualizarUsuarioSerializer(serializers.Serializer):
         ),
     )
     colaborador_externo = serializers.BooleanField(required=False)
+    usuario_coletivo = serializers.BooleanField(required=False)
 
     def validate_deficiencia(self, value):
         from Identidade.usuarios.utils import normalizar_deficiencia
 
         return normalizar_deficiencia(value)
+
+
+class UsuarioColetivoItemSerializer(serializers.Serializer):
+    id = serializers.IntegerField()
+    nome = serializers.CharField()
+
+
+class UsuarioColetivoSerializer(serializers.Serializer):
+    usuario_id = serializers.IntegerField()
+    usuario_coletivo = serializers.BooleanField()
+    empresas = UsuarioColetivoItemSerializer(many=True)
+    cargos = UsuarioColetivoItemSerializer(many=True)
+    funcoes = UsuarioColetivoItemSerializer(many=True)
+    setores = UsuarioColetivoItemSerializer(many=True)
+
+
+class SubstituirUsuarioColetivoSerializer(serializers.Serializer):
+    empresas_ids = serializers.ListField(
+        child=serializers.IntegerField(),
+        required=False,
+        allow_empty=True,
+        default=list,
+    )
+    cargos_ids = serializers.ListField(
+        child=serializers.IntegerField(),
+        required=False,
+        allow_empty=True,
+        default=list,
+    )
+    funcoes_ids = serializers.ListField(
+        child=serializers.IntegerField(),
+        required=False,
+        allow_empty=True,
+        default=list,
+    )
+    setores_ids = serializers.ListField(
+        child=serializers.IntegerField(),
+        required=False,
+        allow_empty=True,
+        default=list,
+    )
+
+
+class AdicionarItemColetivoSerializer(serializers.Serializer):
+    TIPO_CHOICES = (
+        ('empresa', 'Empresa'),
+        ('cargo', 'Cargo'),
+        ('funcao', 'Função'),
+        ('setor', 'Setor'),
+    )
+    tipo = serializers.ChoiceField(choices=TIPO_CHOICES)
+    id = serializers.IntegerField(min_value=1)
 
 
 class AtualizarFotoPrimariaSerializer(serializers.Serializer):

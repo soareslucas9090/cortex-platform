@@ -103,7 +103,7 @@ class EmprestimoHelpers(ModelInstanceHelpers):
                 autorizacoes_infraestrutura__sala_id=recurso.sala_id,
             ) & filtro_vigencia
 
-        qs = Usuario.objects.filter(elegiveis)
+        qs = Usuario.objects.filter(elegiveis, usuario_coletivo=False)
         if ativo is not None:
             qs = qs.filter(ativo=ativo)
         if nome:

@@ -16,17 +16,21 @@ from AppCore.basics.views.basic_views import (
     BasicGetAPIView,
     BasicPatchAPIView,
     BasicPostAPIView,
+    BasicPutAPIView,
     BasicRetrieveAPIView,
     BasicDeleteAPIView,
 )
 
 from .models import Usuario
 from .serializers import (
+    AdicionarItemColetivoSerializer,
     AtualizarUsuarioSerializer,
     AtualizarFotoPrimariaSerializer,
     AtualizarFotoSecundariaSerializer,
     CriarUsuarioSerializer,
     SerializerVazio,
+    SubstituirUsuarioColetivoSerializer,
+    UsuarioColetivoSerializer,
     UsuarioSerializer,
     ArquivoImportacaoUsuariosSerializer,
     ImportacaoUsuariosPreviewResponseSerializer,
@@ -205,6 +209,8 @@ class CriarUsuarioView(IsAdminMixin, BasicPostAPIView):
             password=serializer_data.get('password'),
             email=serializer_data.get('email'),
             deficiencia=serializer_data.get('deficiencia', ''),
+            colaborador_externo=serializer_data.get('colaborador_externo', False),
+            usuario_coletivo=serializer_data.get('usuario_coletivo', False),
         )
         return {
             'mensagem': self.mensagem_sucesso,
@@ -242,7 +248,11 @@ class DetalheUsuarioView(IsOwnerOrAdminMixin, BasicRetrieveAPIView):
     tags=['Identidade'],
     summary='Atualizar dados do usuário',
     description='''
-    Atualiza parcialmente os dados básicos do usuário (nome, e-mail, deficiência).
+    Atualiza parcialmente os dados básicos do usuário (nome, e-mail, deficiência,
+    colaborador_externo, usuario_coletivo).
+
+    A flag `usuario_coletivo` pode ser alterada aqui; o pool de associações é mantido
+    em `GET/PUT /usuarios/{pk}/coletivo/`. Ao desativar a flag, o pool é limpo.
 
     **Permissões:** O próprio usuário ou administradores.
 
@@ -278,6 +288,141 @@ class AtualizarUsuarioView(IsOwnerOrAdminMixin, BasicPatchAPIView):
             'mensagem': self.mensagem_sucesso,
             'dados': UsuarioSerializer(self.object, context={'request': request}).data,
         }
+
+
+@extend_schema(
+    tags=['Identidade'],
+    summary='Obter configuração do usuário coletivo',
+    description='''
+    Retorna o pool do usuário coletivo (empresas, cargos, funções e setores).
+
+    A flag `usuario_coletivo` é definida na criação/edição do usuário; as associações
+    do pool são mantidas apenas por estes endpoints dedicados.
+
+    **Permissões:** Administradores (L3).
+    ''',
+    responses={
+        status.HTTP_200_OK: UsuarioColetivoSerializer,
+        status.HTTP_401_UNAUTHORIZED: {'description': 'Não autenticado.'},
+        status.HTTP_403_FORBIDDEN: {'description': 'Sem permissão.'},
+        status.HTTP_404_NOT_FOUND: {'description': 'Usuário não encontrado.'},
+    },
+)
+class ObterUsuarioColetivoView(IsAdminMixin, BasicRetrieveAPIView):
+    """GET /cortex/identidade/usuarios/{pk}/coletivo/"""
+    queryset = Usuario.objects.all()
+    serializer_class = UsuarioColetivoSerializer
+    mensagem_sucesso = 'Configuração do usuário coletivo obtida com sucesso.'
+
+    def get_serializer(self, instance=None, *args, **kwargs):
+        if instance is not None and hasattr(instance, 'helper'):
+            instance = instance.helper.obter_configuracao_coletivo()
+        return super().get_serializer(instance, *args, **kwargs)
+
+
+@extend_schema(
+    tags=['Identidade'],
+    summary='Substituir pool do usuário coletivo',
+    description='''
+    Substitui integralmente as associações do pool (empresas, cargos, funções, setores).
+
+    O usuário precisa estar com `usuario_coletivo=true`. Listas omitidas são tratadas
+    como vazias nesta operação de substituição.
+
+    **Permissões:** Administradores (L3).
+    ''',
+    request=SubstituirUsuarioColetivoSerializer,
+    responses={
+        status.HTTP_200_OK: UsuarioColetivoSerializer,
+        status.HTTP_400_BAD_REQUEST: {'description': 'Dados inválidos ou usuário não coletivo.'},
+        status.HTTP_401_UNAUTHORIZED: {'description': 'Não autenticado.'},
+        status.HTTP_403_FORBIDDEN: {'description': 'Sem permissão.'},
+        status.HTTP_404_NOT_FOUND: {'description': 'Usuário não encontrado.'},
+    },
+)
+class SubstituirUsuarioColetivoView(IsAdminMixin, BasicPutAPIView):
+    """PUT /cortex/identidade/usuarios/{pk}/coletivo/"""
+    queryset = Usuario.objects.all()
+    serializer_class = SubstituirUsuarioColetivoSerializer
+    mensagem_sucesso = 'Pool do usuário coletivo atualizado com sucesso.'
+
+    def do_action_put(self, serializer_data, request, *args, **kwargs):
+        dados = self.object.business.substituir_associacoes_coletivo(**serializer_data)
+        return {
+            'mensagem': self.mensagem_sucesso,
+            'dados': UsuarioColetivoSerializer(dados).data,
+        }
+
+
+@extend_schema(
+    tags=['Identidade'],
+    summary='Adicionar item ao pool do usuário coletivo',
+    description='''
+    Adiciona uma empresa, cargo, função ou setor ao pool.
+
+    Body: `{"tipo": "empresa"|"cargo"|"funcao"|"setor", "id": <int>}`.
+
+    **Permissões:** Administradores (L3).
+    ''',
+    request=AdicionarItemColetivoSerializer,
+    responses={
+        status.HTTP_201_CREATED: UsuarioColetivoSerializer,
+        status.HTTP_400_BAD_REQUEST: {'description': 'Dados inválidos ou usuário não coletivo.'},
+        status.HTTP_401_UNAUTHORIZED: {'description': 'Não autenticado.'},
+        status.HTTP_403_FORBIDDEN: {'description': 'Sem permissão.'},
+        status.HTTP_404_NOT_FOUND: {'description': 'Usuário não encontrado.'},
+    },
+)
+class AdicionarItemColetivoView(IsAdminMixin, BasicPostAPIView):
+    """POST /cortex/identidade/usuarios/{pk}/coletivo/itens/"""
+    serializer_class = AdicionarItemColetivoSerializer
+    mensagem_sucesso = 'Item adicionado ao pool do usuário coletivo com sucesso.'
+
+    def do_action_post(self, serializer_data, request, *args, **kwargs):
+        from AppCore.core.exceptions.exceptions import NotFoundException
+
+        usuario = Usuario.objects.filter(pk=self.kwargs['pk']).first()
+        if usuario is None:
+            raise NotFoundException('Usuário não encontrado.')
+        dados = usuario.business.adicionar_associacao_coletiva(
+            tipo=serializer_data['tipo'],
+            item_id=serializer_data['id'],
+        )
+        return {
+            'mensagem': self.mensagem_sucesso,
+            'dados': UsuarioColetivoSerializer(dados).data,
+            'status_code': status.HTTP_201_CREATED,
+        }
+
+
+@extend_schema(
+    tags=['Identidade'],
+    summary='Remover item do pool do usuário coletivo',
+    description='''
+    Remove uma empresa, cargo, função ou setor do pool.
+
+    `tipo` deve ser `empresa`, `cargo`, `funcao` ou `setor`.
+
+    **Permissões:** Administradores (L3).
+    ''',
+    responses={
+        status.HTTP_204_NO_CONTENT: {'description': 'Item removido com sucesso.'},
+        status.HTTP_400_BAD_REQUEST: {'description': 'Tipo inválido ou item não associado.'},
+        status.HTTP_401_UNAUTHORIZED: {'description': 'Não autenticado.'},
+        status.HTTP_403_FORBIDDEN: {'description': 'Sem permissão.'},
+        status.HTTP_404_NOT_FOUND: {'description': 'Usuário ou item não encontrado.'},
+    },
+)
+class RemoverItemColetivoView(IsAdminMixin, BasicDeleteAPIView):
+    """DELETE /cortex/identidade/usuarios/{pk}/coletivo/itens/{tipo}/{item_id}/"""
+    queryset = Usuario.objects.all()
+    mensagem_sucesso = 'Item removido do pool do usuário coletivo com sucesso.'
+
+    def do_action_delete(self, request, *args, **kwargs):
+        self.object.business.remover_associacao_coletiva(
+            tipo=self.kwargs['tipo'],
+            item_id=int(self.kwargs['item_id']),
+        )
 
 
 @extend_schema(

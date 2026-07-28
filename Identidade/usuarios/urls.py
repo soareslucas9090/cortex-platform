@@ -3,6 +3,7 @@ from django.urls import path
 from AppCore.basics.views.basic_views import roteador_por_metodo
 
 from .views import (
+    AdicionarItemColetivoView,
     AtualizarUsuarioView,
     AtualizarFotoPrimariaView,
     ObterFotoSecundariaView,
@@ -13,7 +14,10 @@ from .views import (
     DesativarUsuarioView,
     DocumentarPermissoesView,
     ListarUsuariosView,
+    ObterUsuarioColetivoView,
     ReativarUsuarioView,
+    RemoverItemColetivoView,
+    SubstituirUsuarioColetivoView,
     BaixarModeloImportacaoUsuariosView,
     PreVisualizarImportacaoUsuariosView,
     ImportarUsuariosLoteView,
@@ -30,6 +34,21 @@ urlpatterns = [
     ),
     path('usuarios/', roteador_por_metodo(GET=ListarUsuariosView, POST=CriarUsuarioView), name='usuario-list'),
     path('usuarios/<int:pk>/', roteador_por_metodo(GET=DetalheUsuarioView, PATCH=AtualizarUsuarioView), name='usuario-detail'),
+    path(
+        'usuarios/<int:pk>/coletivo/',
+        roteador_por_metodo(GET=ObterUsuarioColetivoView, PUT=SubstituirUsuarioColetivoView),
+        name='usuario-coletivo',
+    ),
+    path(
+        'usuarios/<int:pk>/coletivo/itens/',
+        AdicionarItemColetivoView.as_view(),
+        name='usuario-coletivo-itens',
+    ),
+    path(
+        'usuarios/<int:pk>/coletivo/itens/<str:tipo>/<int:item_id>/',
+        RemoverItemColetivoView.as_view(),
+        name='usuario-coletivo-item-remover',
+    ),
     path('usuarios/<int:pk>/foto-primaria/', AtualizarFotoPrimariaView.as_view(), name='usuario-foto-primaria'),
     path(
         'usuarios/<int:pk>/foto-secundaria/',

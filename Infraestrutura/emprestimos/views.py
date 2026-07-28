@@ -15,6 +15,8 @@ from AppCore.basics.views.basic_views import (
 from Infraestrutura.permissoes.access import PodeOperarInfraestruturaMixin
 from Infraestrutura.recursos.models import Recurso
 
+from Identidade.usuarios.models import Usuario
+
 from .models import Emprestimo
 from .serializers import (
     DevolverItensSerializer,
@@ -112,6 +114,59 @@ class ListarSolicitantesElegiveisView(PodeOperarInfraestruturaMixin, BasicGetAPI
 
 @extend_schema(
     tags=['Infraestrutura · Empréstimos'],
+    summary='Listar responsáveis elegíveis',
+    description='''
+    Retorna usuários que podem ser **responsáveis** (quem entrega o recurso) no empréstimo.
+
+    - Conta **não coletiva**: apenas o próprio usuário autenticado.
+    - Conta **coletiva** (`usuario_coletivo`): pool definido pelas associações
+      (empresas, cargos, funções, setores) da conta.
+
+    Query params apenas **reduzem** o conjunto retornado; nunca expandem o acesso
+    além do pool permitido para a conta autenticada.
+
+    **Permissões:** Capacidade `operar` em Infraestrutura.
+    ''',
+    parameters=[
+        OpenApiParameter('nome', OpenApiTypes.STR, OpenApiParameter.QUERY, required=False),
+        OpenApiParameter('cpf', OpenApiTypes.STR, OpenApiParameter.QUERY, required=False),
+        OpenApiParameter('empresa_id', OpenApiTypes.INT, OpenApiParameter.QUERY, required=False),
+        OpenApiParameter('cargo_id', OpenApiTypes.INT, OpenApiParameter.QUERY, required=False),
+        OpenApiParameter('setor_id', OpenApiTypes.INT, OpenApiParameter.QUERY, required=False),
+        OpenApiParameter('funcao_id', OpenApiTypes.INT, OpenApiParameter.QUERY, required=False),
+        OpenApiParameter('tipo_perfil', OpenApiTypes.STR, OpenApiParameter.QUERY, required=False),
+        OpenApiParameter('paginacao', OpenApiTypes.INT, OpenApiParameter.QUERY, required=False),
+    ],
+    responses={status.HTTP_200_OK: UsuarioResumoSerializer(many=True)},
+)
+class ListarResponsaveisElegiveisView(PodeOperarInfraestruturaMixin, BasicGetAPIView):
+    """GET /cortex/infraestrutura/emprestimos/responsaveis-elegiveis/"""
+    pagination_class = PaginacaoCustomizada
+    serializer_class = UsuarioResumoSerializer
+    mensagem_sucesso = 'Responsáveis elegíveis listados com sucesso.'
+
+    def get_queryset(self):
+        params = self.request.query_params
+        filtros = {'nome': params.get('nome') or None}
+
+        for chave in ('cpf', 'tipo_perfil'):
+            valor = params.get(chave)
+            if valor:
+                filtros[chave] = valor
+
+        for chave in ('empresa_id', 'cargo_id', 'setor_id', 'funcao_id'):
+            valor = params.get(chave)
+            if valor and valor.isdigit():
+                filtros[chave] = int(valor)
+
+        return Usuario().helper.listar_responsaveis_do_coletivo(
+            self.request.user,
+            **filtros,
+        )
+
+
+@extend_schema(
+    tags=['Infraestrutura · Empréstimos'],
     summary='Listar empréstimos',
     description='''
     Com `operar`: consulta ampla com filtros.
@@ -168,6 +223,9 @@ class ListarEmprestimosView(IsAuthenticatedMixin, BasicGetAPIView):
     description='''
     Registra retirada multi-item para um solicitante.
 
+  - Conta não coletiva: o responsável é o próprio usuário autenticado.
+  - Conta coletiva: informe `responsavel_id` com um usuário do pool elegível.
+
     **Permissões:** Capacidade `operar` em Infraestrutura.
     ''',
     request=RealizarEmprestimoSerializer,
@@ -180,7 +238,7 @@ class RealizarEmprestimoView(PodeOperarInfraestruturaMixin, BasicPostAPIView):
 
     def do_action_post(self, serializer_data, request, *args, **kwargs):
         emprestimo = Emprestimo().business.realizar_emprestimo(
-            responsavel=request.user,
+            conta_autenticada=request.user,
             **serializer_data,
         )
         emprestimo = queryset_emprestimo_detalhado().get(pk=emprestimo.pk)
@@ -245,6 +303,8 @@ class DevolverItensEmprestimoView(PodeOperarInfraestruturaMixin, BasicPostAPIVie
     description='''
     Devolve itens em aberto e registra novo empréstimo para outro solicitante.
 
+  - Conta coletiva: informe `responsavel_id` no novo empréstimo, se aplicável.
+
     **Permissões:** Capacidade `operar` em Infraestrutura.
     ''',
     request=TrocarTitularSerializer,
@@ -259,7 +319,7 @@ class TrocarTitularEmprestimoView(PodeOperarInfraestruturaMixin, BasicPostAPIVie
     def do_action_post(self, serializer_data, request, *args, **kwargs):
         emprestimo_anterior = self.get_object()
         novo_emprestimo = emprestimo_anterior.business.trocar_titular(
-            request.user,
+            conta_autenticada=request.user,
             **serializer_data,
         )
         novo_emprestimo = queryset_emprestimo_detalhado().get(pk=novo_emprestimo.pk)

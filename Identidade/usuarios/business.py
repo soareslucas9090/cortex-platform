@@ -78,12 +78,82 @@ class UsuarioBusiness(ModelInstanceBusiness):
     def atualizar_dados(self, dados: dict):
         """Atualiza campos básicos do usuário."""
         try:
+            flag_coletivo = dados.pop('usuario_coletivo', None)
             for attr, value in dados.items():
                 setattr(self.object_instance, attr, value)
             self.object_instance.save()
+            if flag_coletivo is not None:
+                self.definir_flag_coletivo(flag_coletivo)
         except Exception as e:
             logger.exception('Erro ao atualizar dados do usuário: %s', e)
             raise SystemErrorException('Não foi possível atualizar os dados do usuário.')
+
+    def definir_flag_coletivo(self, usuario_coletivo: bool):
+        """Ativa/desativa a conta coletiva. Ao desativar, limpa o pool."""
+        try:
+            self.object_instance.usuario_coletivo = usuario_coletivo
+            self.object_instance.save(update_fields=['usuario_coletivo'])
+            if not usuario_coletivo:
+                self.object_instance.empresas_coletivo.clear()
+                self.object_instance.cargos_coletivo.clear()
+                self.object_instance.funcoes_coletivo.clear()
+                self.object_instance.setores_coletivo.clear()
+        except Exception as e:
+            logger.exception('Erro ao definir flag de usuário coletivo: %s', e)
+            raise SystemErrorException('Não foi possível atualizar a flag de usuário coletivo.')
+
+    def substituir_associacoes_coletivo(
+        self,
+        empresas_ids=None,
+        cargos_ids=None,
+        funcoes_ids=None,
+        setores_ids=None,
+    ):
+        """Substitui o pool completo do usuário coletivo."""
+        self.object_instance.rules.deve_ser_usuario_coletivo()
+        empresas_ids = empresas_ids or []
+        cargos_ids = cargos_ids or []
+        funcoes_ids = funcoes_ids or []
+        setores_ids = setores_ids or []
+        self.object_instance.rules.validar_ids_associacoes_coletivo(
+            empresas_ids=empresas_ids,
+            cargos_ids=cargos_ids,
+            funcoes_ids=funcoes_ids,
+            setores_ids=setores_ids,
+        )
+        try:
+            self.object_instance.empresas_coletivo.set(empresas_ids)
+            self.object_instance.cargos_coletivo.set(cargos_ids)
+            self.object_instance.funcoes_coletivo.set(funcoes_ids)
+            self.object_instance.setores_coletivo.set(setores_ids)
+            return self.object_instance.helper.obter_configuracao_coletivo()
+        except Exception as e:
+            logger.exception('Erro ao substituir associações do usuário coletivo: %s', e)
+            raise SystemErrorException('Não foi possível atualizar as associações do usuário coletivo.')
+
+    def adicionar_associacao_coletiva(self, tipo: str, item_id: int):
+        """Adiciona um item ao pool do usuário coletivo."""
+        self.object_instance.rules.deve_ser_usuario_coletivo()
+        self.object_instance.rules.validar_item_associacao_coletiva(tipo, item_id)
+        try:
+            relacao = self.object_instance.helper.obter_relacao_coletiva(tipo)
+            relacao.add(item_id)
+            return self.object_instance.helper.obter_configuracao_coletivo()
+        except Exception as e:
+            logger.exception('Erro ao adicionar associação coletiva: %s', e)
+            raise SystemErrorException('Não foi possível adicionar a associação do usuário coletivo.')
+
+    def remover_associacao_coletiva(self, tipo: str, item_id: int):
+        """Remove um item do pool do usuário coletivo."""
+        self.object_instance.rules.deve_ser_usuario_coletivo()
+        self.object_instance.rules.associacao_coletiva_existe(tipo, item_id)
+        try:
+            relacao = self.object_instance.helper.obter_relacao_coletiva(tipo)
+            relacao.remove(item_id)
+            return self.object_instance.helper.obter_configuracao_coletivo()
+        except Exception as e:
+            logger.exception('Erro ao remover associação coletiva: %s', e)
+            raise SystemErrorException('Não foi possível remover a associação do usuário coletivo.')
 
     def atualizar_foto_primaria(self, url: str | None):
         """Atualiza a URL da foto primária do usuário."""

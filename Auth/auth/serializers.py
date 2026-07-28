@@ -58,6 +58,7 @@ class LoginSerializer(BaseHybridLoginSerializer):
             'nome': user.nome,
             'tem_perfil_aluno': hasattr(user, 'aluno') and user.aluno is not None,
             'eh_admin_frontend': user.is_staff,
+            'usuario_coletivo': user.usuario_coletivo,
             'permissoes': user.permissoes,
         }
 

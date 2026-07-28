@@ -19,10 +19,12 @@ class EmprestimoBusiness(ModelInstanceBusiness):
     def realizar_emprestimo(
         self,
         solicitante_id: int,
-        responsavel,
+        conta_autenticada,
         recurso_ids: list,
         observacao: str = '',
         retirada_em=None,
+        responsavel_id=None,
+        responsavel=None,
         **kwargs,
     ):
         """Registra empréstimo multi-item com validação de elegibilidade e disponibilidade."""
@@ -31,7 +33,12 @@ class EmprestimoBusiness(ModelInstanceBusiness):
         Recurso = apps.get_model('recursos', 'Recurso')
         Usuario = apps.get_model(settings.AUTH_USER_MODEL)
 
-        self.object_instance.rules.pode_operar(responsavel)
+        self.object_instance.rules.pode_operar(conta_autenticada)
+        if responsavel is None:
+            responsavel = self.object_instance.rules.resolver_responsavel(
+                conta_autenticada,
+                responsavel_id=responsavel_id,
+            )
         recursos = list(
             Recurso.objects.filter(pk__in=recurso_ids).select_related('sala'),
         )
@@ -65,9 +72,9 @@ class EmprestimoBusiness(ModelInstanceBusiness):
             logger.exception('Erro ao realizar empréstimo: %s', e)
             raise SystemErrorException('Não foi possível realizar o empréstimo.')
 
-    def devolver_itens(self, responsavel, item_ids: list):
+    def devolver_itens(self, conta_autenticada, item_ids: list):
         """Devolve parcialmente itens do empréstimo."""
-        self.object_instance.rules.pode_operar(responsavel)
+        self.object_instance.rules.pode_operar(conta_autenticada)
         self.object_instance.rules.pode_devolver_itens()
         itens = list(
             self.object_instance.itens.filter(pk__in=item_ids).select_related('recurso'),
@@ -84,10 +91,20 @@ class EmprestimoBusiness(ModelInstanceBusiness):
             logger.exception('Erro ao devolver itens do empréstimo: %s', e)
             raise SystemErrorException('Não foi possível devolver os itens do empréstimo.')
 
-    def trocar_titular(self, responsavel, novo_solicitante_id: int, observacao: str = ''):
+    def trocar_titular(
+        self,
+        conta_autenticada,
+        novo_solicitante_id: int,
+        observacao: str = '',
+        responsavel_id=None,
+    ):
         """Devolve itens em aberto e abre novo empréstimo para outro solicitante."""
-        self.object_instance.rules.pode_operar(responsavel)
+        self.object_instance.rules.pode_operar(conta_autenticada)
         self.object_instance.rules.pode_trocar_titular()
+        responsavel = self.object_instance.rules.resolver_responsavel(
+            conta_autenticada,
+            responsavel_id=responsavel_id,
+        )
 
         itens_abertos = list(
             self.object_instance.itens.filter(
@@ -106,6 +123,7 @@ class EmprestimoBusiness(ModelInstanceBusiness):
 
             return Emprestimo().business.realizar_emprestimo(
                 solicitante_id=novo_solicitante_id,
+                conta_autenticada=conta_autenticada,
                 responsavel=responsavel,
                 recurso_ids=recurso_ids,
                 observacao=observacao,

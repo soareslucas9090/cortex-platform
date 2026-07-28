@@ -57,6 +57,7 @@ class RealizarEmprestimoSerializer(serializers.Serializer):
         allow_empty=False,
     )
     observacao = serializers.CharField(required=False, allow_blank=True, default='')
+    responsavel_id = serializers.IntegerField(required=False, allow_null=True)
 
 
 class DevolverItensSerializer(serializers.Serializer):
@@ -69,6 +70,7 @@ class DevolverItensSerializer(serializers.Serializer):
 class TrocarTitularSerializer(serializers.Serializer):
     novo_solicitante_id = serializers.IntegerField()
     observacao = serializers.CharField(required=False, allow_blank=True, default='')
+    responsavel_id = serializers.IntegerField(required=False, allow_null=True)
 
 
 class SerializerVazio(serializers.Serializer):

@@ -68,6 +68,7 @@ class UsuarioAdmin(DjangoUserAdmin, CortexModelAdmin):
         'email',
         'ativo',
         'colaborador_externo',
+        'usuario_coletivo',
         'is_admin',
         'is_staff',
         'is_superuser',
@@ -77,6 +78,7 @@ class UsuarioAdmin(DjangoUserAdmin, CortexModelAdmin):
     list_filter = (
         'ativo',
         'colaborador_externo',
+        'usuario_coletivo',
         'is_admin',
         'is_staff',
         'is_superuser',
@@ -84,12 +86,28 @@ class UsuarioAdmin(DjangoUserAdmin, CortexModelAdmin):
     )
     search_fields = ('nome', 'cpf', 'email')
     readonly_fields = ('last_login', 'created_at', 'updated_at')
-    filter_horizontal = ()
+    filter_horizontal = (
+        'empresas_coletivo',
+        'cargos_coletivo',
+        'funcoes_coletivo',
+        'setores_coletivo',
+    )
     actions = ('desativar_selecionados', 'reativar_selecionados')
 
     fieldsets = (
         (None, {'fields': ('cpf', 'password')}),
-        ('Dados pessoais', {'fields': ('nome', 'email', 'foto', 'foto_secundaria', 'deficiencia', 'colaborador_externo')}),
+        ('Dados pessoais', {'fields': ('nome', 'email', 'foto', 'foto_secundaria', 'deficiencia', 'colaborador_externo', 'usuario_coletivo')}),
+        (
+            'Pool do usuário coletivo',
+            {
+                'fields': (
+                    'empresas_coletivo',
+                    'cargos_coletivo',
+                    'funcoes_coletivo',
+                    'setores_coletivo',
+                ),
+            },
+        ),
         (
             'Permissões',
             {
@@ -116,6 +134,7 @@ class UsuarioAdmin(DjangoUserAdmin, CortexModelAdmin):
                     'password2',
                     'ativo',
                     'colaborador_externo',
+                    'usuario_coletivo',
                     'is_admin',
                     'is_staff',
                     'is_superuser',
@@ -151,6 +170,7 @@ class UsuarioAdmin(DjangoUserAdmin, CortexModelAdmin):
                 'deficiencia': obj.deficiencia,
                 'ativo': obj.ativo,
                 'colaborador_externo': obj.colaborador_externo,
+                'usuario_coletivo': obj.usuario_coletivo,
                 'is_admin': obj.is_admin,
                 'is_staff': obj.is_staff,
                 'is_superuser': obj.is_superuser,

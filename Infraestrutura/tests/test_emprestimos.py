@@ -56,7 +56,7 @@ class EmprestimoElegibilidadeTest(TestCase):
 
         emprestimo = Emprestimo().business.realizar_emprestimo(
             solicitante_id=self.solicitante.pk,
-            responsavel=self.operador,
+            conta_autenticada=self.operador,
             recurso_ids=[self.chave.pk],
         )
         self.assertEqual(emprestimo.solicitante, self.solicitante)
@@ -65,7 +65,7 @@ class EmprestimoElegibilidadeTest(TestCase):
         with self.assertRaises(Exception):
             Emprestimo().business.realizar_emprestimo(
                 solicitante_id=self.solicitante.pk,
-                responsavel=self.operador,
+                conta_autenticada=self.operador,
                 recurso_ids=[self.midia.pk],
             )
 
@@ -85,7 +85,7 @@ class EmprestimoElegibilidadeTest(TestCase):
 
         emprestimo = Emprestimo().business.realizar_emprestimo(
             solicitante_id=self.solicitante.pk,
-            responsavel=self.operador,
+            conta_autenticada=self.operador,
             recurso_ids=[self.midia.pk],
         )
         self.assertEqual(emprestimo.itens.count(), 1)
@@ -151,7 +151,7 @@ class EmprestimoElegibilidadeTest(TestCase):
 
         emprestimo = Emprestimo().business.realizar_emprestimo(
             solicitante_id=limpeza.pk,
-            responsavel=self.operador,
+            conta_autenticada=self.operador,
             recurso_ids=[outra_chave.pk],
         )
         self.assertEqual(emprestimo.solicitante, limpeza)
@@ -183,20 +183,20 @@ class EmprestimoOperacoesTest(TestCase):
     def test_nao_permite_segundo_emprestimo_aberto_no_recurso(self):
         Emprestimo().business.realizar_emprestimo(
             solicitante_id=self.solicitante.pk,
-            responsavel=self.operador,
+            conta_autenticada=self.operador,
             recurso_ids=[self.chave1.pk],
         )
         with self.assertRaises(Exception):
             Emprestimo().business.realizar_emprestimo(
                 solicitante_id=self.solicitante.pk,
-                responsavel=self.operador,
+                conta_autenticada=self.operador,
                 recurso_ids=[self.chave1.pk],
             )
 
     def test_devolucao_parcial_mantem_emprestimo_ativo(self):
         emprestimo = Emprestimo().business.realizar_emprestimo(
             solicitante_id=self.solicitante.pk,
-            responsavel=self.operador,
+            conta_autenticada=self.operador,
             recurso_ids=[self.chave1.pk, self.chave2.pk],
         )
         item_id = emprestimo.itens.filter(recurso=self.chave1).values_list('pk', flat=True).first()
@@ -207,7 +207,7 @@ class EmprestimoOperacoesTest(TestCase):
     def test_devolucao_total_encerra_emprestimo(self):
         emprestimo = Emprestimo().business.realizar_emprestimo(
             solicitante_id=self.solicitante.pk,
-            responsavel=self.operador,
+            conta_autenticada=self.operador,
             recurso_ids=[self.chave1.pk],
         )
         item_id = emprestimo.itens.first().pk
@@ -218,11 +218,11 @@ class EmprestimoOperacoesTest(TestCase):
     def test_trocar_titular_abre_novo_emprestimo(self):
         emprestimo = Emprestimo().business.realizar_emprestimo(
             solicitante_id=self.solicitante.pk,
-            responsavel=self.operador,
+            conta_autenticada=self.operador,
             recurso_ids=[self.chave1.pk],
         )
         novo = emprestimo.business.trocar_titular(
-            self.operador,
+            conta_autenticada=self.operador,
             novo_solicitante_id=self.novo_solicitante.pk,
         )
         emprestimo.refresh_from_db()
@@ -234,8 +234,51 @@ class EmprestimoOperacoesTest(TestCase):
     def test_atrasado_apos_24_horas(self):
         emprestimo = Emprestimo().business.realizar_emprestimo(
             solicitante_id=self.solicitante.pk,
-            responsavel=self.operador,
+            conta_autenticada=self.operador,
             recurso_ids=[self.chave1.pk],
             retirada_em=timezone.now() - datetime.timedelta(hours=HORAS_ALERTA_ATRASO + 1),
         )
         self.assertTrue(emprestimo.atrasado)
+
+
+class EmprestimoUsuarioColetivoTest(TestCase):
+
+    def setUp(self):
+        self.guardinha = criar_usuario('32323232323', nome='Seu Zé Unit')
+        self.conta_coletiva = criar_usuario('33333333333', nome='Guarita Unit')
+        self.conta_coletiva.usuario_coletivo = True
+        self.conta_coletiva.save()
+        conceder_capacidade_operar(self.conta_coletiva)
+
+        self.solicitante = criar_usuario('34343434343', nome='Solicitante Unit')
+        setor = Setor.objects.create(sigla='GUT', nome='Guarita Unit')
+        self.conta_coletiva.setores_coletivo.add(setor)
+        SetorVinculo.objects.create(usuario=self.guardinha, setor=setor, funcao=None)
+
+        bloco = Bloco.objects.create(nome='Bloco Unit')
+        sala = Sala.objects.create(bloco=bloco, nome='Sala Unit')
+        SalaSetor.objects.create(sala=sala, setor=setor)
+        SetorVinculo.objects.create(usuario=self.solicitante, setor=setor, funcao=None)
+        self.chave = Recurso.objects.create(
+            codigo='CHV-UNIT',
+            tipo=TipoRecurso.CHAVE,
+            sala=sala,
+        )
+
+    def test_conta_coletiva_grava_responsavel_escolhido(self):
+        emprestimo = Emprestimo().business.realizar_emprestimo(
+            solicitante_id=self.solicitante.pk,
+            conta_autenticada=self.conta_coletiva,
+            responsavel_id=self.guardinha.pk,
+            recurso_ids=[self.chave.pk],
+        )
+        self.assertEqual(emprestimo.responsavel, self.guardinha)
+
+    def test_solicitantes_elegiveis_excluem_conta_coletiva(self):
+        self.conta_coletiva.setor_vinculos.all().delete()
+        setor = self.conta_coletiva.setores_coletivo.first()
+        SetorVinculo.objects.create(usuario=self.conta_coletiva, setor=setor, funcao=None)
+
+        elegiveis = Emprestimo().helper.listar_solicitantes_elegiveis_para_recurso(self.chave)
+        ids = set(elegiveis.values_list('pk', flat=True))
+        self.assertNotIn(self.conta_coletiva.pk, ids)

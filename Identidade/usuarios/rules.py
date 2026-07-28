@@ -114,3 +114,90 @@ class UsuarioRules(ModelInstanceRules):
         if tamanho is not None and tamanho > TAMANHO_MAXIMO_FOTO_SECUNDARIA_BYTES:
             raise ValidationException('A imagem deve ter no máximo 3 MB.')
         return True
+
+    def validar_configuracao_coletivo(
+        self,
+        usuario_coletivo: bool,
+        *,
+        empresas_ids=None,
+        cargos_ids=None,
+        funcoes_ids=None,
+        setores_ids=None,
+    ) -> bool:
+        """Associações de pool só são permitidas em contas coletivas."""
+        tem_associacao = any([
+            empresas_ids,
+            cargos_ids,
+            funcoes_ids,
+            setores_ids,
+        ])
+        if tem_associacao and not usuario_coletivo:
+            self.return_exception(
+                'Associações de usuário coletivo só são permitidas com usuario_coletivo ativo.',
+            )
+        return True
+
+    def deve_ser_usuario_coletivo(self) -> bool:
+        """Exige conta marcada como coletiva para manter o pool."""
+        if not self.object_instance.usuario_coletivo:
+            self.return_exception(
+                'Só é possível configurar o pool em usuários com usuario_coletivo ativo.',
+            )
+        return True
+
+    def validar_tipo_associacao_coletiva(self, tipo: str) -> bool:
+        tipos_validos = {'empresa', 'cargo', 'funcao', 'setor'}
+        if tipo not in tipos_validos:
+            self.return_exception('Tipo de associação coletiva inválido.')
+        return True
+
+    def validar_item_associacao_coletiva(self, tipo: str, item_id: int) -> bool:
+        self.validar_tipo_associacao_coletiva(tipo)
+        from PessoasInstitucionais.empresas_instituicoes.models import EmpresaInstituicao
+        from PessoasInstitucionais.cargos.models import Cargo
+        from Organizacional.funcoes.models import Funcao
+        from Organizacional.setores.models import Setor
+
+        mapa = {
+            'empresa': (EmpresaInstituicao, 'Empresa'),
+            'cargo': (Cargo, 'Cargo'),
+            'funcao': (Funcao, 'Função'),
+            'setor': (Setor, 'Setor'),
+        }
+        model, rotulo = mapa[tipo]
+        if not model.objects.filter(pk=item_id).exists():
+            self.return_exception(f'{rotulo} informado(a) não encontrado(a).')
+        return True
+
+    def validar_ids_associacoes_coletivo(
+        self,
+        *,
+        empresas_ids,
+        cargos_ids,
+        funcoes_ids,
+        setores_ids,
+    ) -> bool:
+        for item_id in empresas_ids:
+            self.validar_item_associacao_coletiva('empresa', item_id)
+        for item_id in cargos_ids:
+            self.validar_item_associacao_coletiva('cargo', item_id)
+        for item_id in funcoes_ids:
+            self.validar_item_associacao_coletiva('funcao', item_id)
+        for item_id in setores_ids:
+            self.validar_item_associacao_coletiva('setor', item_id)
+        return True
+
+    def associacao_coletiva_existe(self, tipo: str, item_id: int) -> bool:
+        self.validar_tipo_associacao_coletiva(tipo)
+        relacao = self.object_instance.helper.obter_relacao_coletiva(tipo)
+        if not relacao.filter(pk=item_id).exists():
+            self.return_exception('O item informado não está associado ao pool deste usuário.')
+        return True
+
+    def conta_coletiva_nao_participa_emprestimo(self) -> bool:
+        """Conta coletiva não pode ser solicitante nem responsável."""
+        if self.object_instance.usuario_coletivo:
+            self.return_exception(
+                'Conta coletiva não pode ser solicitante nem responsável de empréstimo.',
+            )
+        return True

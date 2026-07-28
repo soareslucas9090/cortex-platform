@@ -8,11 +8,32 @@ from Infraestrutura.permissoes.access import usuario_pode_operar_infraestrutura
 
 class EmprestimoRules(ModelInstanceRules):
 
-    def pode_operar(self, responsavel) -> bool:
-        """Operações de empréstimo exigem capacidade operar."""
-        if not usuario_pode_operar_infraestrutura(responsavel):
+    def pode_operar(self, conta_autenticada) -> bool:
+        """Operações de empréstimo exigem capacidade operar na conta autenticada."""
+        if not usuario_pode_operar_infraestrutura(conta_autenticada):
             self.return_exception('Você não tem permissão para operar empréstimos.')
         return True
+
+    def resolver_responsavel(self, conta_autenticada, responsavel_id=None):
+        """Define o responsável (quem entrega o recurso) conforme o tipo de conta."""
+        from Identidade.usuarios.models import Usuario
+
+        if not conta_autenticada.usuario_coletivo:
+            if responsavel_id is not None and responsavel_id != conta_autenticada.pk:
+                self.return_exception(
+                    'Não é permitido informar outro responsável para esta conta.',
+                )
+            conta_autenticada.rules.conta_coletiva_nao_participa_emprestimo()
+            return conta_autenticada
+
+        if not responsavel_id:
+            self.return_exception('Informe o responsável pelo empréstimo.')
+
+        pool = Usuario().helper.listar_responsaveis_do_coletivo(conta_autenticada)
+        responsavel = pool.filter(pk=responsavel_id).first()
+        if responsavel is None:
+            self.return_exception('Responsável informado não é elegível para esta conta.')
+        return responsavel
 
     def validar_solicitante_ativo(self, solicitante_id: int) -> bool:
         Usuario = apps.get_model(settings.AUTH_USER_MODEL)
@@ -21,6 +42,8 @@ class EmprestimoRules(ModelInstanceRules):
             self.return_exception('Solicitante informado não encontrado.')
         if not solicitante.ativo:
             self.return_exception('O solicitante informado está inativo.')
+        if solicitante.usuario_coletivo:
+            self.return_exception('Conta coletiva não pode ser solicitante de empréstimo.')
         return True
 
     def validar_recursos_informados(self, recurso_ids: list, recursos) -> bool:

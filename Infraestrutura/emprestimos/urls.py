@@ -6,6 +6,7 @@ from .views import (
     DetalheEmprestimoView,
     DevolverItensEmprestimoView,
     ListarEmprestimosView,
+    ListarResponsaveisElegiveisView,
     ListarSolicitantesElegiveisView,
     RealizarEmprestimoView,
     TrocarTitularEmprestimoView,
@@ -16,6 +17,11 @@ urlpatterns = [
         'emprestimos/solicitantes-elegiveis/',
         ListarSolicitantesElegiveisView.as_view(),
         name='emprestimos-solicitantes-elegiveis',
+    ),
+    path(
+        'emprestimos/responsaveis-elegiveis/',
+        ListarResponsaveisElegiveisView.as_view(),
+        name='emprestimos-responsaveis-elegiveis',
     ),
     path(
         'emprestimos/',

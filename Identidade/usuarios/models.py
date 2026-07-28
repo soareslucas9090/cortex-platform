@@ -99,6 +99,38 @@ class Usuario(ModelHelperMixin, ModelBusinessMixin, ModelRulesMixin, UserModelPe
         default=False,
         help_text='Indica se o usuário é colaborador externo à instituição.',
     )
+    usuario_coletivo = models.BooleanField(
+        'Usuário coletivo',
+        default=False,
+        help_text=(
+            'Conta compartilhada (ex.: guarita). No empréstimo, o responsável '
+            'deve ser escolhido entre os usuários do pool associado.'
+        ),
+    )
+    empresas_coletivo = models.ManyToManyField(
+        'empresas_instituicoes.EmpresaInstituicao',
+        blank=True,
+        related_name='usuarios_coletivos_por_empresa',
+        verbose_name='Empresas do pool coletivo',
+    )
+    cargos_coletivo = models.ManyToManyField(
+        'cargos.Cargo',
+        blank=True,
+        related_name='usuarios_coletivos_por_cargo',
+        verbose_name='Cargos do pool coletivo',
+    )
+    funcoes_coletivo = models.ManyToManyField(
+        'funcoes.Funcao',
+        blank=True,
+        related_name='usuarios_coletivos_por_funcao',
+        verbose_name='Funções do pool coletivo',
+    )
+    setores_coletivo = models.ManyToManyField(
+        'setores.Setor',
+        blank=True,
+        related_name='usuarios_coletivos_por_setor',
+        verbose_name='Setores do pool coletivo',
+    )
 
     objects = UsuarioManager()
 
