@@ -1,8 +1,6 @@
 import logging
 
 from AppCore.core.business.business import ModelInstanceBusiness
-from AppCore.core.exceptions.exceptions import SystemErrorException
-
 logger = logging.getLogger(__name__)
 
 
@@ -19,5 +17,4 @@ class ContatoBusiness(ModelInstanceBusiness):
                 setattr(self.object_instance, attr, value)
             self.object_instance.save()
         except Exception as e:
-            logger.exception('Erro ao atualizar contato: %s', e)
-            raise SystemErrorException('Não foi possível atualizar o contato.')
+            self.relancar_ou_erro_sistema(e, 'Não foi possível atualizar o contato.', logger)

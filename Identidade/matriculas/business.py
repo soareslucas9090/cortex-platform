@@ -1,8 +1,6 @@
 import logging
 
 from AppCore.core.business.business import ModelInstanceBusiness
-from AppCore.core.exceptions.exceptions import SystemErrorException
-
 from .choices import SituacaoMatricula
 
 logger = logging.getLogger(__name__)
@@ -20,5 +18,4 @@ class MatriculaBusiness(ModelInstanceBusiness):
             self.object_instance.situacao = SituacaoMatricula.INATIVA
             self.object_instance.save(update_fields=['situacao'])
         except Exception as e:
-            logger.exception('Erro ao desativar matrícula: %s', e)
-            raise SystemErrorException('Não foi possível desativar a matrícula.')
+            self.relancar_ou_erro_sistema(e, 'Não foi possível desativar a matrícula.', logger)
