@@ -223,7 +223,9 @@ Quando a view herda de `GenericAPIView` diretamente (sem usar `BasicPostAPIView`
 - [ ] Usa `self.object_instance` para acessar o objeto (não `self.object`).
 - [ ] Acessa Rules e Helpers via `self.object_instance.rules` e `self.object_instance.helper` — **nunca** importa nem instancia `XxxRules()` / `XxxHelpers()`.
 - [ ] Orquestra chamadas a Rules, Helpers e State — não implementa lógica de domínio que pertença a essas camadas.
-- [ ] Blocos `try/except Exception` **nunca** retornam `str(e)` ao cliente — sempre lançam `SystemErrorException` com mensagem genérica e logam com `logger.exception(...)`.
+- [ ] **Todo método** envolve o corpo inteiro em `try/except` — nenhuma rules/query/persistência fora do `try`.
+- [ ] Catch-all `except Exception as e` chama `self.relancar_ou_erro_sistema(e, '...', logger)` — não duplique manualmente blocos de relançamento.
+- [ ] `relancar_ou_erro_sistema` **nunca** retorna `str(e)` ao cliente — sempre `SystemErrorException` genérica com log via `logger.exception(...)`.
 - [ ] Método padrão de atualização:
   ```python
   def atualizar_dados(self, dados: dict):
@@ -232,8 +234,7 @@ Quando a view herda de `GenericAPIView` diretamente (sem usar `BasicPostAPIView`
               setattr(self.object_instance, attr, value)
           self.object_instance.save()
       except Exception as e:
-          logger.exception('Erro ao atualizar dados: %s', e)
-          raise SystemErrorException('Não foi possível atualizar os dados.')
+          self.relancar_ou_erro_sistema(e, 'Não foi possível atualizar os dados.', logger)
   ```
 
 ---
@@ -329,7 +330,8 @@ def update_dados(self, dados): ...
 
 - [ ] **Sempre** use exceções do AppCore (`BusinessRuleException`, `ValidationException`, `AuthorizationException`, `NotFoundException`, `SystemErrorException`).
 - [ ] **Nunca** use `raise Exception(...)` ou `raise ValueError(...)` para erros de domínio.
-- [ ] `except Exception` genérico sempre loga com `logger.exception(...)` e relança `SystemErrorException`.
+- [ ] Em business: catch-all `except Exception as e` chama `self.relancar_ou_erro_sistema(e, '...', logger)` — não duplique manualmente blocos de relançamento.
+- [ ] `relancar_ou_erro_sistema` sempre loga e relança `SystemErrorException` genérica — nunca engole exceções aceitas.
 
 ---
 

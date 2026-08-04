@@ -39,7 +39,9 @@ Aplicar a cada arquivo gerado ou modificado **antes de considerar a implementaç
 
 ### Business
 
-- [ ] Métodos com `try/except Exception` nunca expõem `str(e)` ao cliente — sempre `SystemErrorException` + `logger.exception(...)`
+- [ ] **Todo método** envolve o corpo inteiro em `try/except` — zero lógica (rules, queries, persistência) fora do `try`
+- [ ] Catch-all `except Exception as e` chama `self.relancar_ou_erro_sistema(e, '...', logger)` — não duplique manualmente blocos de relançamento
+- [ ] `relancar_ou_erro_sistema` nunca expõe `str(e)` ao cliente
 - [ ] Nenhuma query ORM está na view — pertence ao Business (ou Helpers, chamados pelo Business)
 
 ### Rules
@@ -125,6 +127,7 @@ class Produto(ModelHelperMixin, ModelBusinessMixin, ModelRulesMixin, BasicModel)
 from AppCore.core.business.business import ModelInstanceBusiness
 # Atributo: self.object_instance  (o model passado no construtor)
 # exceptions_handled: AuthorizationException, BusinessRuleException, ValidationException, NotFoundException
+# Contrato: corpo inteiro do método em try; catch-all com relancar_ou_erro_sistema(e, '...', logger)
 
 # Rules
 from AppCore.core.rules.rules import ModelInstanceRules
@@ -283,10 +286,11 @@ class ProdutoRules(ModelInstanceRules):
 
 ### Business
 
+> **Obrigatório:** corpo inteiro do método dentro do `try`. Catch-all com `self.relancar_ou_erro_sistema(e, '...', logger)`. Nunca deixar rules/validações fora do `try`.
+
 ```python
 import logging
 from AppCore.core.business.business import ModelInstanceBusiness
-from AppCore.core.exceptions.exceptions import SystemErrorException
 
 logger = logging.getLogger(__name__)
 
@@ -302,8 +306,7 @@ class ProdutoBusiness(ModelInstanceBusiness):
         try:
             return Produto.objects.create(nome=nome, **kwargs)
         except Exception as e:
-            logger.exception('Erro ao criar produto: %s', e)
-            raise SystemErrorException('Não foi possível criar o produto.')
+            self.relancar_ou_erro_sistema(e, 'Não foi possível criar o produto.', logger)
 
     # ------------------------------------------------------------------
     # Operações com object_instance persistido
@@ -315,25 +318,22 @@ class ProdutoBusiness(ModelInstanceBusiness):
                 setattr(self.object_instance, attr, value)
             self.object_instance.save()
         except Exception as e:
-            logger.exception('Erro ao atualizar produto: %s', e)
-            raise SystemErrorException('Não foi possível atualizar o produto.')
+            self.relancar_ou_erro_sistema(e, 'Não foi possível atualizar o produto.', logger)
 
     def excluir(self):
-        self.object_instance.rules.pode_excluir()
         try:
+            self.object_instance.rules.pode_excluir()
             self.object_instance.delete()
         except Exception as e:
-            logger.exception('Erro ao excluir produto: %s', e)
-            raise SystemErrorException('Não foi possível excluir o produto.')
+            self.relancar_ou_erro_sistema(e, 'Não foi possível excluir o produto.', logger)
 
     def desativar(self):
-        self.object_instance.rules.pode_desativar()
         try:
+            self.object_instance.rules.pode_desativar()
             self.object_instance.ativo = False
             self.object_instance.save(update_fields=['ativo'])
         except Exception as e:
-            logger.exception('Erro ao desativar produto: %s', e)
-            raise SystemErrorException('Não foi possível desativar o produto.')
+            self.relancar_ou_erro_sistema(e, 'Não foi possível desativar o produto.', logger)
 ```
 
 ---
@@ -670,7 +670,8 @@ urlpatterns = [
 
 ### Segurança
 
-- `except Exception` **nunca** retorna `str(e)` ao cliente — sempre `SystemErrorException` + `logger.exception(...)`.
+- Em `business.py`, **todo método** cobre o corpo inteiro com `try/except`; o catch-all chama `self.relancar_ou_erro_sistema(e, '...', logger)`.
+- `relancar_ou_erro_sistema` **nunca** retorna `str(e)` ao cliente — sempre `SystemErrorException` genérica + `logger.exception(...)`.
 - Query params inválidos são ignorados silenciosamente (nunca retornam 400).
 - Permissões validadas antes de qualquer filtro adicional.
 

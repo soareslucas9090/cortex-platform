@@ -45,7 +45,7 @@ Dados de sementes (seeds) e informações de carga inicial do banco.
 
 ### 📁 Project
 Documentos gerais do projeto, checklists, revisões, regras de arquitetura e guias de desenvolvimento.
-- [Regras do Projeto](project/regras-do-projeto.md)
+- [Regras do Projeto](project/regras-do-projeto.md) — inclui contrato obrigatório de `try/except` em `business.py` (catch-all com `relancar_ou_erro_sistema`)
 - [Guia: Implementação](project/guia-implementacao.md)
 - [Guia: Revisão de Código](project/guia-revisao-de-codigo.md)
 - [Guia: Corrigir Testes](project/guia-corrigir-testes.md)

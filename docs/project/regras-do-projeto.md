@@ -90,18 +90,34 @@ class ProdutoRules(ModelInstanceRules):
 - **Herda de**: `ModelInstanceBusiness` (AppCore.core.business)
 - **Pode chamar**: Rules (validações), Helpers (queries), State (transições)
 - **Chamado por**: Views (única camada que views podem chamar diretamente)
-- **Captura exceções**: Define `exceptions_handled = (AuthorizationException, BusinessRuleException, ValidationException, NotFoundException)`
+- **Captura exceções**: Herda `exceptions_handled = (AuthorizationException, BusinessRuleException, ValidationException, NotFoundException)` — a subclasse pode **ampliar** a tupla para aceitar tipos adicionais; em geral não é preciso
 - **Acesso**: Via `model.business.nome_do_metodo()` após configurar o mixin
 
+> [!IMPORTANT]
+> **Contrato obrigatório de try/except (nunca violar ao criar/editar business):**
+>
+> 1. **Todo método** de `business.py` envolve o **corpo inteiro** (após a docstring) em um único `try/except`. Não pode sobrar rules, queries, loops ou persistência fora do `try`.
+> 2. Use `self.relancar_ou_erro_sistema(e, '...', logger)` no catch-all `except Exception as e` — o helper já relança `exceptions_handled` e `SystemErrorException`.
+> 3. Conversões especiais (ex.: `ValueError` → `ValidationException`) podem aparecer **antes** do catch-all.
+> 4. ❌ Proibido duplicar manualmente `except self.exceptions_handled` / `except SystemErrorException` / `logger.exception` + `SystemErrorException`.
+> 5. ❌ Proibido: `try` só em torno do `.create()`/`.save()` com validações/rules antes do `try`.
+> 6. ❌ Proibido: `except Exception` que engole `BusinessRuleException` / `ValidationException` / etc. sem relançar (use o helper).
+
 ```python
+import logging
 from AppCore.core.business.business import ModelInstanceBusiness
-from AppCore.core.exceptions.exceptions import SystemErrorException
+
+logger = logging.getLogger(__name__)
+
 
 class ProdutoBusiness(ModelInstanceBusiness):
     def criar_produto(self, **dados):
-        # Criação via Produto().business — rules acessadas pelo object_instance
-        self.object_instance.rules.validar_dados_criacao(**dados)
-        return Produto.objects.create(**dados)
+        from .models import Produto
+        try:
+            self.object_instance.rules.validar_dados_criacao(**dados)
+            return Produto.objects.create(**dados)
+        except Exception as e:
+            self.relancar_ou_erro_sistema(e, 'Não foi possível criar o produto.', logger)
 
     def atualizar_dados(self, dados):
         '''Método padrão para atualização de dados'''
@@ -110,7 +126,7 @@ class ProdutoBusiness(ModelInstanceBusiness):
                 setattr(self.object_instance, attr, value)
             self.object_instance.save()
         except Exception as e:
-            raise SystemErrorException('Não foi possível atualizar os dados.')
+            self.relancar_ou_erro_sistema(e, 'Não foi possível atualizar os dados.', logger)
 ```
 
 ### 3. **Helpers** (`helpers.py`) - Queries e Utilitários

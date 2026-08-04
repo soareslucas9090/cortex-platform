@@ -1,0 +1,28 @@
+---
+description: Contrato obrigatório de try/except em business.py — aplicar ao criar ou editar qualquer método de business
+globs: "**/business.py"
+alwaysApply: false
+---
+
+# Business: try/except obrigatório
+
+Ao criar ou editar qualquer método em `business.py`:
+
+1. O **corpo inteiro** do método (após a docstring) fica dentro de **um único** `try`.
+2. **Proibido** deixar rules, queries, loops ou persistência fora do `try`.
+3. Catch-all canônico — use `relancar_ou_erro_sistema` (já faz os isinstance checks):
+
+```python
+try:
+    # toda a lógica aqui
+    ...
+except Exception as e:
+    self.relancar_ou_erro_sistema(e, 'Não foi possível ...', logger)
+```
+
+   Conversões especiais (ex.: `ValueError` → `ValidationException`) podem aparecer **antes** do catch-all.
+
+4. `self.exceptions_handled` (base: `AuthorizationException`, `BusinessRuleException`, `ValidationException`, `NotFoundException`) = exceções aceitas que **atravessam** o business (HTTP correto na view). Amplie a tupla na subclasse só para adicionar tipos aceitos — **não** duplique blocos `except` para relançá-las.
+5. Nunca engolir exceções aceitas com `except Exception` → `SystemErrorException` sem passar pelo helper.
+6. Nunca expor `str(e)` ao cliente.
+7. Referência: `docs/project/regras-do-projeto.md` (seção Business), `docs/project/guia-implementacao.md`, `AppCore/core/business/business.py`.
