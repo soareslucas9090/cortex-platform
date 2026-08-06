@@ -37,3 +37,24 @@ Quando o Cursor gerar automaticamente uma mensagem de commit Git neste repositó
 - `update files` / `ajustes` / `melhorias` (vago demais)
 - Lista de paths ou “altera X, Y e Z”
 - Repetir o diff bruto em vez da intenção
+
+---
+
+# Orquestração de subagentes (operações brutas / alto consumo de tokens)
+
+Em toda tarefa, no momento de executar operações brutas que consomem muitos tokens, **delegar sempre a um subagente Composer 2.5** (`composer-2.5`, effort high ou maior disponível). O agente principal deve planejar, orquestrar e sintetizar; o subagente executa o trabalho bruto.
+
+## Quando é obrigatório usar o subagente Composer 2.5
+
+- Ler múltiplos arquivos
+- Editar múltiplos arquivos
+- Escrever/criar arquivos de fato (Write / patches extensos)
+- Buscas amplas no codebase (exploração, Grep/Glob em volume)
+- Refatorações ou implementações que tocam vários arquivos
+- Qualquer lote de operações de leitura/escrita que inflaria o contexto do agente principal
+
+## Como aplicar
+
+- Modelo: sempre `composer-2.5` (não usar variantes `*-fast` nem outros modelos “por costume”).
+- Preferir subagente para o trabalho bruto; o agente principal só faz leituras pontuais e decisões de alto nível.
+- Na dúvida se a operação é “bruta” / cara em tokens → usar o subagente Composer 2.5.
