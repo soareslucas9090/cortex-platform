@@ -55,7 +55,7 @@ Ordem sugerida (dependências na coluna “Depende”). Pode pular a ordem se a 
 | FOTO-S3-3 | Erro de config S3 não vira 400 de validação | Importante | — | Concluída (2026-08-16) |
 | FOTO-S3-4 | Validar/processar foto **antes** do `create` do recurso | Importante | FOTO-S3-2 (recomendado) | Concluída (2026-08-16) |
 | FOTO-S3-5 | Tirar ORM do hook `CriarRecursoView` | Importante | — | Concluída (2026-08-16) |
-| FOTO-S3-6 | Atualizar `documentacao_infraestrutura()` | Importante | — | Pendente |
+| FOTO-S3-6 | Atualizar `documentacao_infraestrutura()` | Importante | — | Concluída (2026-08-16) |
 | FOTO-S3-7 | `@extend_schema` no `get` + `BasicRetrieveAPIView` no proxy | Importante | — | Pendente |
 | FOTO-S3-8 | `URLField` → `CharField` para chave S3 | Sugestão | — | Pendente |
 | FOTO-S3-9 | Testes que travam os itens 2–4 e lacunas de API | Sugestão | FOTO-S3-1 a FOTO-S3-4 (cenários novos); o resto pode entrar junto de cada etapa | Pendente |
@@ -324,7 +324,7 @@ Implemente SOMENTE FOTO-S3-5 de docs/planning/followup-revisao-fotos-s3.md
 
 | | |
 |--|--|
-| **Status** | Pendente |
+| **Status** | Concluída (2026-08-16) |
 | **Severidade** | Importante |
 | **Pré-requisito** | Nenhum |
 | **Quem / onde** | |
@@ -347,8 +347,8 @@ Implemente SOMENTE FOTO-S3-5 de docs/planning/followup-revisao-fotos-s3.md
 
 ### Critério de saída
 
-- [ ] Texto compilado menciona GET público da foto e escrita da foto na capacidade `cadastrar`.
-- [ ] Nenhuma mudança de mixin/regra de acesso neste item (só documentação).
+- [x] Texto compilado menciona GET público da foto e escrita da foto na capacidade `cadastrar`.
+- [x] Nenhuma mudança de mixin/regra de acesso neste item (só documentação).
 
 ### Testes mínimos desta etapa
 

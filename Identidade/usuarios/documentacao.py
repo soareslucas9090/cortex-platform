@@ -137,12 +137,15 @@ class PermissaoDocumentacao:
                 'quem_usa': 'TI / gestão estrutural',
                 'pode': (
                     'Criar, editar, desativar e reativar blocos, salas, recursos e vínculos '
-                    'sala–setor.'
+                    'sala–setor; enviar e remover foto do recurso (POST/DELETE '
+                    '/recursos/{pk}/foto/ ou campo foto no multipart do POST de criação).'
                 ),
                 'nao_sem_capacidade': 'Alterar cadastro estrutural.',
                 'descricao': (
-                    'Manutenção estrutural: blocos, salas, recursos e vínculos sala–setor. '
-                    'Leitura dos catálogos permanece aberta a autenticados.'
+                    'Manutenção estrutural: blocos, salas, recursos e vínculos sala–setor, '
+                    'incluindo upload e remoção da foto do recurso. Leitura JSON dos catálogos '
+                    'permanece aberta a autenticados; o GET da foto do recurso é público '
+                    '(proxy da API, bucket S3 privado).'
                 ),
             },
             {
@@ -267,8 +270,15 @@ class PermissaoDocumentacao:
                     'titulo': 'Leitura e consulta na API',
                     'paragrafos': [
                         (
-                            'Leitura de catálogos (blocos, salas, recursos): qualquer usuário '
-                            'autenticado (GET). Escrita exige cadastrar.'
+                            'Leitura de catálogos (blocos, salas, recursos) em JSON: qualquer '
+                            'usuário autenticado (GET listagem e detalhe). Escrita exige '
+                            'cadastrar.'
+                        ),
+                        (
+                            'GET /recursos/{pk}/foto/ é público (AllowAny): serve o arquivo via '
+                            'proxy da API; o bucket S3 permanece privado. Upload e remoção da '
+                            'foto exigem cadastrar (POST/DELETE no mesmo path ou campo foto no '
+                            'POST de criação do recurso).'
                         ),
                         (
                             'Consulta de empréstimos sem operar (L1 do módulo): só empréstimos '
