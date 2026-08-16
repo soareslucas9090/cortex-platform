@@ -3,8 +3,8 @@ from urllib.parse import urlparse
 
 from AppCore.core.rules.rules import ModelInstanceRules
 from AppCore.core.exceptions.exceptions import ValidationException
-from Identidade.usuarios.fotos.s3_helper import (
-    TAMANHO_MAXIMO_FOTO_SECUNDARIA_BYTES,
+from AppCore.common.storage.imagens import (
+    TAMANHO_MAXIMO_IMAGEM_BYTES as TAMANHO_MAXIMO_FOTO_SECUNDARIA_BYTES,
     TIPOS_IMAGEM_PERMITIDOS,
 )
 

@@ -545,8 +545,14 @@ AppNome/
     - `create`
     - `update`
 - **Nomenclatura em Português (Pastas e Utils)**:
-  - Estruturas de pastas: `AppCore/common/textos/` (emails, mensagens)
-  - Funções utilitárias: `enviar_email_simples()` (não `send_simple_email()`)
+  - Estruturas de pastas: `AppCore/common/textos/` (emails, mensagens), `AppCore/common/storage/` (S3 e imagens)
+  - Funções utilitárias: `enviar_email_simples()` (não `send_simple_email()`), `enviar_arquivo_s3()` (não `upload_file_to_s3()`)
+
+### Armazenamento de arquivos (S3)
+
+Upload, download, remoção e URL de proxy de arquivos no bucket do projeto ficam em `AppCore.common.storage.s3`. Apps de domínio **não** devem copiar helpers S3: usam `enviar_arquivo_s3`, `iterar_objeto_s3`, `remover_objeto_s3`, `montar_url_proxy_arquivo` e `normalizar_chave_s3`, guardando só o prefixo e o nome da rota no app (`foto.py`). Processamento genérico de imagem (abrir, recorte central por proporção, reencode JPEG) fica em `AppCore.common.storage.imagens`.
+
+O cliente S3 (`obter_cliente_s3`) é o ponto único de configuração (`AWS_S3_ENDPOINT_URL`, `AWS_STORAGE_BUCKET_NAME`, chaves). Fluxos específicos (ex.: planilha de importação) podem continuar no app, mas reutilizam esse cliente.
 
 
 ### Localização

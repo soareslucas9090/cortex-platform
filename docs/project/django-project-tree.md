@@ -92,7 +92,8 @@ Responsável por:
 - autenticação base;
 - exceptions;
 - paginação;
-- helpers e componentes compartilhados.
+- helpers e componentes compartilhados;
+- armazenamento S3 e processamento de imagem em `AppCore/common/storage/`.
 
 ---
 

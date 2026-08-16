@@ -52,12 +52,15 @@ class UsuarioSerializer(serializers.ModelSerializer):
     setores_coletivo_ids = serializers.SerializerMethodField()
 
     def get_foto_secundaria(self, obj) -> str | None:
-        from Identidade.usuarios.fotos.s3_helper import montar_url_proxy_foto_secundaria
+        from AppCore.common.storage.s3 import montar_url_proxy_arquivo
+        from Identidade.usuarios.foto import NOME_URL_PROXY, caminho_fallback_proxy
 
-        return montar_url_proxy_foto_secundaria(
+        return montar_url_proxy_arquivo(
             obj.pk,
             obj.foto_secundaria,
+            NOME_URL_PROXY,
             self.context.get('request'),
+            caminho_fallback=caminho_fallback_proxy(obj.pk),
         )
 
     def get_tem_perfil_aluno(self, obj) -> bool:

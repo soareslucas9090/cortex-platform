@@ -121,6 +121,7 @@ erDiagram
 - Bloco, Sala e Recurso possuem `ativo`; recursos **só desativam** (sem exclusão física de negócio).
 - `Recurso.codigo` é único na instância (campus); distinto da PK.
 - Tipo `chave` exige `sala`; `midia` e `material_didatico` têm `sala` opcional.
+- Foto do recurso é **opcional** (recursos existentes podem ficar sem foto). Uma única fonte: upload do usuário. O arquivo vai ao bucket S3 do projeto (`Cortex/infraestrutura/recursos/fotos/{id}/...`) via `AppCore.common.storage.s3`; a API devolve a URL do proxy `GET /recursos/{pk}/foto/` (público, bucket privado). Envio no POST de cadastro (multipart) ou em `POST/DELETE /recursos/{pk}/foto/`. Orientação retrato obrigatória; recorte central 3:4 (largura:altura) sem deformar; mínimo **480×640** após o recorte; JPEG/PNG/WebP até 3 MB.
 - Sem distinção principal/reserva; eventual detalhe na descrição.
 - Sem campo de patrimônio/tombo separado na v1 (usar descrição se necessário).
 - Estado exibido do recurso: **avaria → emprestado → reservado → disponível**. Avaria é **estado simples** na v1; “reservado” só passa a aplicar quando reservas existirem.

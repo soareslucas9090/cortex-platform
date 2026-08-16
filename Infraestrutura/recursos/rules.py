@@ -1,8 +1,14 @@
-from AppCore.core.rules.rules import ModelInstanceRules
-
 from django.apps import apps
 
+from AppCore.core.exceptions.exceptions import ValidationException
+from AppCore.core.rules.rules import ModelInstanceRules
+from AppCore.common.storage.imagens import (
+    TAMANHO_MAXIMO_IMAGEM_BYTES as TAMANHO_MAXIMO_FOTO_BYTES,
+    TIPOS_IMAGEM_PERMITIDOS,
+)
+
 from .choices import TipoRecurso
+from .foto import ALTURA_MINIMA, LARGURA_MINIMA
 
 
 class RecursoRules(ModelInstanceRules):
@@ -45,4 +51,33 @@ class RecursoRules(ModelInstanceRules):
         """Recurso só pode ser reativado se estiver inativo."""
         if self.object_instance.ativo:
             self.return_exception('O recurso já está ativo.')
+        return True
+
+    def validar_arquivo_foto(self, arquivo) -> bool:
+        """Valida presença, tipo e tamanho máximo do arquivo de imagem."""
+        if arquivo is None:
+            raise ValidationException('É necessário enviar um arquivo de imagem.')
+
+        content_type = getattr(arquivo, 'content_type', '') or ''
+        if content_type and content_type not in TIPOS_IMAGEM_PERMITIDOS:
+            raise ValidationException('Formato de imagem não suportado. Use JPEG, PNG ou WebP.')
+
+        tamanho = getattr(arquivo, 'size', None)
+        if tamanho is not None and tamanho > TAMANHO_MAXIMO_FOTO_BYTES:
+            raise ValidationException('A imagem deve ter no máximo 3 MB.')
+        return True
+
+    def validar_orientacao_retrato(self, largura: int, altura: int) -> bool:
+        """A foto original (após EXIF) deve estar na orientação retrato."""
+        if altura <= largura:
+            raise ValidationException('A foto deve estar na orientação retrato.')
+        return True
+
+    def validar_resolucao_minima_foto(self, largura: int, altura: int) -> bool:
+        """Após o recorte 3:4, a imagem deve ter no mínimo 480×640 pixels."""
+        if largura < LARGURA_MINIMA or altura < ALTURA_MINIMA:
+            raise ValidationException(
+                f'A foto deve ter no mínimo {LARGURA_MINIMA}×{ALTURA_MINIMA} pixels '
+                'após o recorte em retrato 3:4.'
+            )
         return True

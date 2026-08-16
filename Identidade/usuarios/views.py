@@ -488,18 +488,16 @@ class ObterFotoSecundariaView(AllowAnyMixin, BasicGetAPIView):
     def get(self, request, *args, **kwargs):
         from botocore.exceptions import ClientError
 
-        from Identidade.usuarios.fotos.s3_helper import (
-            iterar_foto_secundaria_do_s3,
-            normalizar_s3_key,
-        )
+        from AppCore.common.storage.s3 import iterar_objeto_s3, normalizar_chave_s3
+        from Identidade.usuarios.foto import PREFIXO_S3
 
         usuario = self.get_object()
-        s3_key = normalizar_s3_key(usuario.foto_secundaria)
+        s3_key = normalizar_chave_s3(usuario.foto_secundaria, prefixo=PREFIXO_S3)
         if not s3_key:
             raise Http404('Foto secundária não encontrada.')
 
         try:
-            stream, content_type = iterar_foto_secundaria_do_s3(s3_key)
+            stream, content_type = iterar_objeto_s3(s3_key)
         except (ClientError, ValueError):
             raise Http404('Foto secundária não encontrada.')
         except Exception as exc:

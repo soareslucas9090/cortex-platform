@@ -157,17 +157,15 @@ class UsuarioBusiness(ModelInstanceBusiness):
     def atualizar_foto_secundaria(self, arquivo):
         """Envia a foto secundária para o S3 e persiste a chave do objeto."""
         try:
-            from Identidade.usuarios.fotos.s3_helper import (
-                remover_foto_secundaria_do_s3,
-                upload_foto_secundaria,
-            )
+            from AppCore.common.storage.s3 import enviar_arquivo_s3, remover_objeto_s3
+            from Identidade.usuarios.foto import PREFIXO_S3
             self.object_instance.rules.validar_arquivo_foto(arquivo)
             chave_antiga = self.object_instance.foto_secundaria
-            nova_chave = upload_foto_secundaria(self.object_instance.pk, arquivo)
+            nova_chave = enviar_arquivo_s3(PREFIXO_S3, self.object_instance.pk, arquivo)
             self.object_instance.foto_secundaria = nova_chave
             self.object_instance.save(update_fields=['foto_secundaria'])
             if chave_antiga and chave_antiga != nova_chave:
-                remover_foto_secundaria_do_s3(chave_antiga)
+                remover_objeto_s3(chave_antiga, prefixo=PREFIXO_S3)
         except ValueError as e:
             raise ValidationException(str(e))
         except Exception as e:
@@ -176,12 +174,13 @@ class UsuarioBusiness(ModelInstanceBusiness):
     def remover_foto_secundaria(self):
         """Remove a foto secundária do usuário e tenta apagar o objeto no S3."""
         try:
-            from Identidade.usuarios.fotos.s3_helper import remover_foto_secundaria_do_s3
+            from AppCore.common.storage.s3 import remover_objeto_s3
+            from Identidade.usuarios.foto import PREFIXO_S3
             chave_antiga = self.object_instance.foto_secundaria
             self.object_instance.foto_secundaria = None
             self.object_instance.save(update_fields=['foto_secundaria'])
             if chave_antiga:
-                remover_foto_secundaria_do_s3(chave_antiga)
+                remover_objeto_s3(chave_antiga, prefixo=PREFIXO_S3)
         except Exception as e:
             self.relancar_ou_erro_sistema(e, 'Não foi possível remover a foto secundária.', logger)
 

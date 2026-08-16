@@ -714,3 +714,5 @@ nome_app/
 | Todas as exceções          | `AppCore.core.exceptions.exceptions`   |
 | `BaseLoginSerializer`      | `AppCore.basics.auth.serializers`      |
 | `BaseTypedLoginSerializer` | `AppCore.basics.auth.serializers`      |
+| Cliente e objetos S3       | `AppCore.common.storage.s3`            |
+| Imagens (abrir/recorte)    | `AppCore.common.storage.imagens`       |

@@ -97,6 +97,7 @@ class CadastroRecursosValidacaoTest(APITestCase):
         self.assertEqual(resposta.status_code, status.HTTP_201_CREATED)
         self.assertEqual(resposta.data['dados']['codigo'], 'CHV-002')
         self.assertEqual(resposta.data['dados']['sala']['id'], self.sala.pk)
+        self.assertIsNone(resposta.data['dados']['foto'])
 
     def test_midia_sem_sala_cria_com_sucesso(self):
         resposta = self.client.post(self.url_recursos, {
@@ -105,3 +106,4 @@ class CadastroRecursosValidacaoTest(APITestCase):
         })
         self.assertEqual(resposta.status_code, status.HTTP_201_CREATED)
         self.assertIsNone(resposta.data['dados']['sala'])
+        self.assertIsNone(resposta.data['dados']['foto'])

@@ -1177,10 +1177,10 @@ class AtualizarFotoSecundariaViewTest(APITestCase):
         path = reverse('identidade:usuario-foto-secundaria', kwargs={'pk': self.usuario.pk})
         return f'http://testserver{path}?v=abc'
 
-    def _mock_upload(self, usuario_id, arquivo):
+    def _mock_upload(self, prefixo, objeto_id, arquivo, **kwargs):
         return self.s3_key
 
-    @patch('Identidade.usuarios.fotos.s3_helper.upload_foto_secundaria')
+    @patch('AppCore.common.storage.s3.enviar_arquivo_s3')
     def test_dono_envia_foto_secundaria(self, mock_upload):
         mock_upload.side_effect = self._mock_upload
         self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token_usuario}')
@@ -1191,7 +1191,7 @@ class AtualizarFotoSecundariaViewTest(APITestCase):
         self.assertEqual(self.usuario.foto_secundaria, self.s3_key)
         mock_upload.assert_called_once()
 
-    @patch('Identidade.usuarios.fotos.s3_helper.upload_foto_secundaria')
+    @patch('AppCore.common.storage.s3.enviar_arquivo_s3')
     def test_admin_pode_enviar_foto_secundaria_de_outro_usuario(self, mock_upload):
         mock_upload.side_effect = self._mock_upload
         self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token_admin}')
@@ -1205,7 +1205,7 @@ class AtualizarFotoSecundariaViewTest(APITestCase):
         self.assertEqual(resposta.status_code, status.HTTP_403_FORBIDDEN)
 
     @patch('Identidade.usuarios.rules.TAMANHO_MAXIMO_FOTO_SECUNDARIA_BYTES', 10)
-    @patch('Identidade.usuarios.fotos.s3_helper.upload_foto_secundaria')
+    @patch('AppCore.common.storage.s3.enviar_arquivo_s3')
     def test_rejeita_foto_secundaria_acima_de_3mb(self, mock_upload):
         arquivo_grande = criar_arquivo_imagem_teste(nome='foto_grande.png')
         self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token_usuario}')
@@ -1214,7 +1214,7 @@ class AtualizarFotoSecundariaViewTest(APITestCase):
         self.assertIn('3 MB', str(resposta.data))
         mock_upload.assert_not_called()
 
-    @patch('Identidade.usuarios.fotos.s3_helper.remover_foto_secundaria_do_s3')
+    @patch('AppCore.common.storage.s3.remover_objeto_s3')
     def test_dono_remove_foto_secundaria(self, mock_remover):
         self.usuario.foto_secundaria = self.s3_key
         self.usuario.save()
@@ -1223,7 +1223,7 @@ class AtualizarFotoSecundariaViewTest(APITestCase):
         self.assertEqual(resposta.status_code, status.HTTP_204_NO_CONTENT)
         self.usuario.refresh_from_db()
         self.assertIsNone(self.usuario.foto_secundaria)
-        mock_remover.assert_called_once_with(self.s3_key)
+        mock_remover.assert_called_once_with(self.s3_key, prefixo='Cortex/usuarios/fotos')
 
     def test_get_detalhe_retorna_ambas_fotos(self):
         self.usuario.foto = self.url_primaria
@@ -1236,7 +1236,7 @@ class AtualizarFotoSecundariaViewTest(APITestCase):
         self.assertEqual(resposta.data['dados']['foto'], self.url_primaria)
         self.assertEqual(resposta.data['dados']['foto_secundaria'], self._url_proxy_esperada())
 
-    @patch('Identidade.usuarios.fotos.s3_helper.iterar_foto_secundaria_do_s3')
+    @patch('AppCore.common.storage.s3.iterar_objeto_s3')
     def test_get_proxy_foto_secundaria_sem_autenticacao(self, mock_iterar):
         self.usuario.foto_secundaria = self.s3_key
         self.usuario.save()
