@@ -87,6 +87,22 @@ class RecursoFotoViewTest(APITestCase):
     def _mock_upload(self, prefixo, objeto_id, arquivo, **kwargs):
         return f'Cortex/infraestrutura/recursos/fotos/{objeto_id}/abc123.jpg'
 
+    def test_criar_recurso_com_foto_paisagem_nao_persiste(self):
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token_cadastrador}')
+        codigo = 'MID-FOTO-PAISAGEM'
+        resposta = self.client.post(
+            self.url_list,
+            {
+                'codigo': codigo,
+                'tipo': TipoRecurso.MIDIA,
+                'foto': criar_arquivo_imagem(tamanho=(800, 600)),
+            },
+            format='multipart',
+        )
+        self.assertEqual(resposta.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('retrato', str(resposta.data).lower())
+        self.assertFalse(Recurso.objects.filter(codigo=codigo).exists())
+
     @patch('AppCore.common.storage.s3.enviar_arquivo_s3')
     def test_cadastrador_cria_recurso_com_foto_retrato(self, mock_upload):
         mock_upload.side_effect = self._mock_upload

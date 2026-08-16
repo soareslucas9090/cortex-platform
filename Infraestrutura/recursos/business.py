@@ -18,11 +18,15 @@ class RecursoBusiness(ModelInstanceBusiness):
     ):
         """Cria um novo recurso validando código e regras por tipo."""
         try:
+            from .constantes import ANEXO_FOTO
             from .models import Recurso
             foto = kwargs.pop('foto', None)
             self.object_instance.rules.codigo_unico(codigo)
             self.object_instance.rules.validar_sala_por_tipo(tipo, sala_id)
             self.object_instance.rules.validar_sala_ativa(sala_id)
+            foto_processada = None
+            if foto:
+                foto_processada = self._processar_foto_para_upload(foto)
             recurso = Recurso.objects.create(
                 codigo=codigo,
                 tipo=tipo,
@@ -30,8 +34,15 @@ class RecursoBusiness(ModelInstanceBusiness):
                 descricao=descricao,
                 **kwargs,
             )
-            if foto:
-                recurso.business.atualizar_foto(foto)
+            if foto_processada:
+                nova_chave = ANEXO_FOTO.enviar(
+                    recurso.pk,
+                    foto_processada,
+                    extensao='jpg',
+                    content_type='image/jpeg',
+                )
+                recurso.foto = nova_chave
+                recurso.save(update_fields=['foto'])
             return recurso
         except Exception as e:
             self.relancar_ou_erro_sistema(e, 'Não foi possível criar o recurso.', logger)
@@ -73,27 +84,31 @@ class RecursoBusiness(ModelInstanceBusiness):
         except Exception as e:
             self.relancar_ou_erro_sistema(e, 'Não foi possível reativar o recurso.', logger)
 
+    def _processar_foto_para_upload(self, arquivo):
+        """Valida, recorta e reencoda a foto antes do envio ao S3."""
+        from AppCore.common.storage.imagens import (
+            abrir_imagem,
+            recortar_central,
+            reencode_jpeg,
+        )
+        from .constantes import (
+            PROPORCAO_FOTO_ALTURA,
+            PROPORCAO_FOTO_LARGURA,
+        )
+        self.object_instance.rules.validar_arquivo_foto(arquivo)
+        imagem = abrir_imagem(arquivo)
+        largura, altura = imagem.size
+        self.object_instance.rules.validar_orientacao_retrato(largura, altura)
+        recortada = recortar_central(imagem, PROPORCAO_FOTO_LARGURA, PROPORCAO_FOTO_ALTURA)
+        largura_final, altura_final = recortada.size
+        self.object_instance.rules.validar_resolucao_minima_foto(largura_final, altura_final)
+        return reencode_jpeg(recortada)
+
     def atualizar_foto(self, arquivo):
         """Processa a foto (retrato 3:4), envia ao S3 e persiste a chave."""
         try:
-            from AppCore.common.storage.imagens import (
-                abrir_imagem,
-                recortar_central,
-                reencode_jpeg,
-            )
-            from .constantes import (
-                ANEXO_FOTO,
-                PROPORCAO_FOTO_ALTURA,
-                PROPORCAO_FOTO_LARGURA,
-            )
-            self.object_instance.rules.validar_arquivo_foto(arquivo)
-            imagem = abrir_imagem(arquivo)
-            largura, altura = imagem.size
-            self.object_instance.rules.validar_orientacao_retrato(largura, altura)
-            recortada = recortar_central(imagem, PROPORCAO_FOTO_LARGURA, PROPORCAO_FOTO_ALTURA)
-            largura_final, altura_final = recortada.size
-            self.object_instance.rules.validar_resolucao_minima_foto(largura_final, altura_final)
-            processada = reencode_jpeg(recortada)
+            from .constantes import ANEXO_FOTO
+            processada = self._processar_foto_para_upload(arquivo)
             chave_antiga = self.object_instance.foto
             nova_chave = ANEXO_FOTO.enviar(
                 self.object_instance.pk,

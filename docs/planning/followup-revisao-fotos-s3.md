@@ -53,7 +53,7 @@ Ordem sugerida (dependências na coluna “Depende”). Pode pular a ordem se a 
 | FOTO-S3-1 | Restringir proxy S3 ao prefixo do anexo | Importante | — | Concluída (2026-08-16) |
 | FOTO-S3-2 | Validar formato real da imagem (não só Content-Type) | Importante | — | Concluída (2026-08-16) |
 | FOTO-S3-3 | Erro de config S3 não vira 400 de validação | Importante | — | Concluída (2026-08-16) |
-| FOTO-S3-4 | Validar/processar foto **antes** do `create` do recurso | Importante | FOTO-S3-2 (recomendado) | Pendente |
+| FOTO-S3-4 | Validar/processar foto **antes** do `create` do recurso | Importante | FOTO-S3-2 (recomendado) | Concluída (2026-08-16) |
 | FOTO-S3-5 | Tirar ORM do hook `CriarRecursoView` | Importante | — | Pendente |
 | FOTO-S3-6 | Atualizar `documentacao_infraestrutura()` | Importante | — | Pendente |
 | FOTO-S3-7 | `@extend_schema` no `get` + `BasicRetrieveAPIView` no proxy | Importante | — | Pendente |
@@ -224,7 +224,7 @@ Implemente SOMENTE FOTO-S3-3 de docs/planning/followup-revisao-fotos-s3.md
 
 | | |
 |--|--|
-| **Status** | Pendente |
+| **Status** | Concluída (2026-08-16) |
 | **Severidade** | Importante |
 | **Pré-requisito** | FOTO-S3-2 recomendado (senão a validação “antes” ainda aceita formato forjado) |
 | **Quem / onde** | |
@@ -248,9 +248,9 @@ Implemente SOMENTE FOTO-S3-3 de docs/planning/followup-revisao-fotos-s3.md
 
 ### Critério de saída
 
-- [ ] POST `/recursos/` multipart com paisagem → 400 e **nenhum** `Recurso` com aquele `codigo`.
-- [ ] POST com retrato válido continua 201 e persiste a chave S3 (upload mockado).
-- [ ] `criar_recurso` sem foto permanece igual.
+- [x] POST `/recursos/` multipart com paisagem → 400 e **nenhum** `Recurso` com aquele `codigo`.
+- [x] POST com retrato válido continua 201 e persiste a chave S3 (upload mockado).
+- [x] `criar_recurso` sem foto permanece igual.
 
 ### Testes mínimos desta etapa
 
@@ -483,7 +483,7 @@ A suíte atual cobre retrato, recorte, 3 MB, L1 403, substitui/remove, GET anôn
 
 ### Cenários obrigatórios (marcar quando existir no código)
 
-- [ ] `test_criar_recurso_com_foto_paisagem_nao_persiste` — 400 e recurso não criado (FOTO-S3-4)
+- [x] `test_criar_recurso_com_foto_paisagem_nao_persiste` — 400 e recurso não criado (FOTO-S3-4)
 - [x] `test_rejeita_gif_com_content_type_jpeg` — 400; `enviar_arquivo_s3` não chamado (FOTO-S3-2)
 - [ ] `test_get_proxy_foto_recurso_inexistente` — 404
 - [ ] `test_get_proxy_foto_retorna_404_sem_foto` — já existe; conferir se ainda passa após FOTO-S3-1
