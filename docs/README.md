@@ -27,6 +27,7 @@ Documentos de planejamento de implementação e marcos.
 - [Milestone 5: Integração e Consolidação Final Plan](planning/milestone-5-integracao-e-consolidacao-final-plan.md)
 - [Milestone: Importação de Usuários](planning/milestone-importacao-usuarios.md)
 - [Milestone: Infraestrutura (v1)](planning/milestone-infraestrutura-plan.md)
+- [Follow-up: revisão fotos S3 (recursos + AppCore)](planning/followup-revisao-fotos-s3.md) — 9 etapas (FOTO-S3-1 a FOTO-S3-9); retomar por ID em outro computador/conversa
 
 ### 🔌 API
 Especificações e especificações de integração das APIs.
