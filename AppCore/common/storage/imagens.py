@@ -9,6 +9,8 @@ from io import BytesIO
 
 from PIL import Image, ImageOps, UnidentifiedImageError
 
+from AppCore.core.exceptions.exceptions import ValidationException
+
 TIPOS_IMAGEM_PERMITIDOS = {
     'image/jpeg',
     'image/png',
@@ -79,10 +81,10 @@ def abrir_imagem(arquivo) -> Image.Image:
         imagem = Image.open(arquivo)
         imagem.load()
     except (UnidentifiedImageError, OSError) as exc:
-        raise ValueError('Arquivo de imagem inválido.') from exc
+        raise ValidationException('Arquivo de imagem inválido.') from exc
 
     if imagem.format not in FORMATOS_PIL_PERMITIDOS:
-        raise ValueError(MENSAGEM_FORMATO_IMAGEM_NAO_SUPORTADO)
+        raise ValidationException(MENSAGEM_FORMATO_IMAGEM_NAO_SUPORTADO)
 
     imagem = ImageOps.exif_transpose(imagem) or imagem
     if imagem.mode != 'RGB':
@@ -100,7 +102,7 @@ def recortar_central(
     '''
     largura, altura = imagem.size
     if largura <= 0 or altura <= 0:
-        raise ValueError('Arquivo de imagem inválido.')
+        raise ValidationException('Arquivo de imagem inválido.')
 
     alvo_ratio = proporcao_largura / proporcao_altura
     atual_ratio = largura / altura

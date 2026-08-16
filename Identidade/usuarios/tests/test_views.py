@@ -12,6 +12,7 @@ from rest_framework.test import APITestCase
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from Identidade.usuarios.models import Usuario
+from AppCore.common.textos.mensagens import RESPONSE_ERRO_INTERNO_SERVIDOR
 from Infraestrutura.permissoes.choices import capacidades_infraestrutura_vazias
 from Identidade.usuarios.importacao.importacao_parser import ImportacaoUsuariosParser
 from Identidade.usuarios.importacao.importacao_dtos import (
@@ -1190,6 +1191,16 @@ class AtualizarFotoSecundariaViewTest(APITestCase):
         self.usuario.refresh_from_db()
         self.assertEqual(self.usuario.foto_secundaria, self.s3_key)
         mock_upload.assert_called_once()
+
+    @patch('AppCore.common.storage.s3.enviar_arquivo_s3')
+    def test_s3_nao_configurado_retorna_500(self, mock_upload):
+        mock_upload.side_effect = ValueError('Configuração de armazenamento S3 inválida.')
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token_usuario}')
+        resposta = self.client.post(self.url, {'foto': self.arquivo_imagem}, format='multipart')
+        self.assertEqual(resposta.status_code, status.HTTP_500_INTERNAL_SERVER_ERROR)
+        self.assertEqual(resposta.data['detail'], RESPONSE_ERRO_INTERNO_SERVIDOR)
+        self.assertNotIn('Configuração', str(resposta.data))
+        self.assertNotIn('S3', str(resposta.data))
 
     @patch('AppCore.common.storage.s3.enviar_arquivo_s3')
     def test_admin_pode_enviar_foto_secundaria_de_outro_usuario(self, mock_upload):

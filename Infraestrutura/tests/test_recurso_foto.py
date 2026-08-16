@@ -8,6 +8,7 @@ from rest_framework import status
 from rest_framework.test import APITestCase
 from rest_framework_simplejwt.tokens import RefreshToken
 
+from AppCore.common.textos.mensagens import RESPONSE_ERRO_INTERNO_SERVIDOR
 from AppCore.core.exceptions.exceptions import NotFoundException
 from Identidade.usuarios.models import Usuario
 from Infraestrutura.blocos.models import Bloco
@@ -115,6 +116,20 @@ class RecursoFotoViewTest(APITestCase):
         )
         self.assertEqual(resposta.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn('retrato', str(resposta.data).lower())
+
+    @patch('AppCore.common.storage.s3.enviar_arquivo_s3')
+    def test_s3_nao_configurado_retorna_500(self, mock_upload):
+        mock_upload.side_effect = ValueError('Configuração de armazenamento S3 inválida.')
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token_cadastrador}')
+        resposta = self.client.post(
+            self.url_foto,
+            {'foto': criar_arquivo_imagem()},
+            format='multipart',
+        )
+        self.assertEqual(resposta.status_code, status.HTTP_500_INTERNAL_SERVER_ERROR)
+        self.assertEqual(resposta.data['detail'], RESPONSE_ERRO_INTERNO_SERVIDOR)
+        self.assertNotIn('Configuração', str(resposta.data))
+        self.assertNotIn('S3', str(resposta.data))
 
     def test_quadrado_retorna_400(self):
         self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token_cadastrador}')

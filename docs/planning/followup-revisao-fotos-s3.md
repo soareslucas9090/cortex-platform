@@ -52,7 +52,7 @@ Ordem sugerida (dependências na coluna “Depende”). Pode pular a ordem se a 
 |----|--------|------------|---------|--------|
 | FOTO-S3-1 | Restringir proxy S3 ao prefixo do anexo | Importante | — | Concluída (2026-08-16) |
 | FOTO-S3-2 | Validar formato real da imagem (não só Content-Type) | Importante | — | Concluída (2026-08-16) |
-| FOTO-S3-3 | Erro de config S3 não vira 400 de validação | Importante | — | Pendente |
+| FOTO-S3-3 | Erro de config S3 não vira 400 de validação | Importante | — | Concluída (2026-08-16) |
 | FOTO-S3-4 | Validar/processar foto **antes** do `create` do recurso | Importante | FOTO-S3-2 (recomendado) | Pendente |
 | FOTO-S3-5 | Tirar ORM do hook `CriarRecursoView` | Importante | — | Pendente |
 | FOTO-S3-6 | Atualizar `documentacao_infraestrutura()` | Importante | — | Pendente |
@@ -174,10 +174,10 @@ Implemente SOMENTE FOTO-S3-2 de docs/planning/followup-revisao-fotos-s3.md
 
 | | |
 |--|--|
-| **Status** | Pendente |
+| **Status** | Concluída (2026-08-16) |
 | **Severidade** | Importante |
 | **Pré-requisito** | Nenhum |
-| **Quem / onde** | |
+| **Quem / onde** | Implementação local / Cursor |
 
 ### Por quê
 
@@ -203,9 +203,9 @@ except ValueError as e:
 
 ### Critério de saída
 
-- [ ] S3 sem credencial no upload → 500 genérico (`RESPONSE_ERRO_INTERNO_SERVIDOR`), não 400.
-- [ ] Arquivo ilegível / formato inválido continua 400 com mensagem de arquivo.
-- [ ] Nenhum `ValidationException(str(e))` genérico nesses métodos.
+- [x] S3 sem credencial no upload → 500 genérico (`RESPONSE_ERRO_INTERNO_SERVIDOR`), não 400.
+- [x] Arquivo ilegível / formato inválido continua 400 com mensagem de arquivo.
+- [x] Nenhum `ValidationException(str(e))` genérico nesses métodos.
 
 ### Testes mínimos desta etapa
 
@@ -489,7 +489,7 @@ A suíte atual cobre retrato, recorte, 3 MB, L1 403, substitui/remove, GET anôn
 - [ ] `test_get_proxy_foto_retorna_404_sem_foto` — já existe; conferir se ainda passa após FOTO-S3-1
 - [ ] `test_patch_recurso_nao_aceita_foto` — PATCH com arquivo/string `foto` não altera a chave
 - [ ] `test_iterar_rejeita_chave_fora_do_prefixo` — 404; S3 não chamado (FOTO-S3-1)
-- [ ] `test_s3_nao_configurado_retorna_500` — upload com S3 inválido → 500 sem detalhe de config (FOTO-S3-3)
+- [x] `test_s3_nao_configurado_retorna_500` — upload com S3 inválido → 500 sem detalhe de config (FOTO-S3-3)
 
 Não duplicar teste que a etapa anterior já tiver adicionado: nesta etapa só complete o que ainda estiver em aberto.
 

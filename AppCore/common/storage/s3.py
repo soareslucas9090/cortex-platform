@@ -16,7 +16,13 @@ from botocore.exceptions import ClientError
 from django.conf import settings
 from django.urls import reverse
 
-from .imagens import content_type_por_extensao, obter_extensao_imagem
+from AppCore.core.exceptions.exceptions import SystemErrorException, ValidationException
+
+from .imagens import (
+    MENSAGEM_FORMATO_IMAGEM_NAO_SUPORTADO,
+    content_type_por_extensao,
+    obter_extensao_imagem,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -120,11 +126,11 @@ def enviar_arquivo_s3(
     '''
     s3_client, bucket_name = obter_cliente_s3()
     if not s3_client:
-        raise ValueError('Configuração de armazenamento S3 inválida.')
+        raise SystemErrorException('Configuração de armazenamento S3 inválida.')
 
     extensao = extensao or obter_extensao_imagem(arquivo)
     if not extensao:
-        raise ValueError('Formato de imagem não suportado. Use JPEG, PNG ou WebP.')
+        raise ValidationException(MENSAGEM_FORMATO_IMAGEM_NAO_SUPORTADO)
 
     content_type = content_type or content_type_por_extensao(extensao)
     s3_key = f'{prefixo}/{objeto_id}/{uuid.uuid4().hex}.{extensao}'
@@ -143,7 +149,7 @@ def iterar_objeto_s3(
     '''Obtém o stream e o content-type de um objeto no S3.'''
     s3_client, bucket_name = obter_cliente_s3()
     if not s3_client:
-        raise ValueError('Configuração de armazenamento S3 inválida.')
+        raise SystemErrorException('Configuração de armazenamento S3 inválida.')
 
     try:
         response = s3_client.get_object(Bucket=bucket_name, Key=s3_key)

@@ -165,8 +165,6 @@ class UsuarioBusiness(ModelInstanceBusiness):
             self.object_instance.save(update_fields=['foto_secundaria'])
             if chave_antiga and chave_antiga != nova_chave:
                 ANEXO_FOTO_SECUNDARIA.remover(chave_antiga)
-        except ValueError as e:
-            raise ValidationException(str(e))
         except Exception as e:
             self.relancar_ou_erro_sistema(e, 'Não foi possível atualizar a foto secundária.', logger)
 

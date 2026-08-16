@@ -1,7 +1,7 @@
 import logging
 
 from AppCore.core.business.business import ModelInstanceBusiness
-from AppCore.core.exceptions.exceptions import NotFoundException, ValidationException
+from AppCore.core.exceptions.exceptions import NotFoundException
 
 logger = logging.getLogger(__name__)
 
@@ -105,8 +105,6 @@ class RecursoBusiness(ModelInstanceBusiness):
             self.object_instance.save(update_fields=['foto'])
             if chave_antiga and chave_antiga != nova_chave:
                 ANEXO_FOTO.remover(chave_antiga)
-        except ValueError as e:
-            raise ValidationException(str(e))
         except Exception as e:
             self.relancar_ou_erro_sistema(e, 'Não foi possível atualizar a foto do recurso.', logger)
 
