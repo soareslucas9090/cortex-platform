@@ -58,7 +58,7 @@ Ordem sugerida (dependências na coluna “Depende”). Pode pular a ordem se a 
 | FOTO-S3-6 | Atualizar `documentacao_infraestrutura()` | Importante | — | Concluída (2026-08-16) |
 | FOTO-S3-7 | `@extend_schema` no `get` + `BasicRetrieveAPIView` no proxy | Importante | — | Concluída (2026-08-16) |
 | FOTO-S3-8 | `URLField` → `CharField` para chave S3 | Sugestão | — | Concluída (2026-08-16) |
-| FOTO-S3-9 | Testes que travam os itens 2–4 e lacunas de API | Sugestão | FOTO-S3-1 a FOTO-S3-4 (cenários novos); o resto pode entrar junto de cada etapa | Pendente |
+| FOTO-S3-9 | Testes que travam os itens 2–4 e lacunas de API | Sugestão | FOTO-S3-1 a FOTO-S3-4 (cenários novos); o resto pode entrar junto de cada etapa | Concluída (2026-08-16) |
 
 **Paralelizáveis sem conflito de arquivo:** 1, 5, 6, 7, 8.  
 **Melhor em sequência:** 2 → 3 → 4 → 9.
@@ -465,10 +465,10 @@ Use a skill django-safe-migration na migration.
 
 | | |
 |--|--|
-| **Status** | Pendente |
+| **Status** | Concluída (2026-08-16) |
 | **Severidade** | Sugestão |
 | **Pré-requisito** | Ideal depois de FOTO-S3-1..4 (os asserts dependem do comportamento novo). Pode ir **parcialmente** junto de cada etapa. |
-| **Quem / onde** | |
+| **Quem / onde** | Implementação local / Cursor |
 
 ### Por quê
 
@@ -485,18 +485,18 @@ A suíte atual cobre retrato, recorte, 3 MB, L1 403, substitui/remove, GET anôn
 
 - [x] `test_criar_recurso_com_foto_paisagem_nao_persiste` — 400 e recurso não criado (FOTO-S3-4)
 - [x] `test_rejeita_gif_com_content_type_jpeg` — 400; `enviar_arquivo_s3` não chamado (FOTO-S3-2)
-- [ ] `test_get_proxy_foto_recurso_inexistente` — 404
-- [ ] `test_get_proxy_foto_retorna_404_sem_foto` — já existe; conferir se ainda passa após FOTO-S3-1
-- [ ] `test_patch_recurso_nao_aceita_foto` — PATCH com arquivo/string `foto` não altera a chave
-- [ ] `test_iterar_rejeita_chave_fora_do_prefixo` — 404; S3 não chamado (FOTO-S3-1)
+- [x] `test_get_proxy_foto_recurso_inexistente` — 404
+- [x] `test_get_proxy_foto_retorna_404_sem_foto` — já existe; conferir se ainda passa após FOTO-S3-1
+- [x] `test_patch_recurso_nao_aceita_foto` — PATCH com arquivo/string `foto` não altera a chave
+- [x] `test_iterar_rejeita_chave_fora_do_prefixo` — 404; S3 não chamado (FOTO-S3-1)
 - [x] `test_s3_nao_configurado_retorna_500` — upload com S3 inválido → 500 sem detalhe de config (FOTO-S3-3)
 
 Não duplicar teste que a etapa anterior já tiver adicionado: nesta etapa só complete o que ainda estiver em aberto.
 
 ### Critério de saída
 
-- [ ] Todos os checkboxes acima existem (aqui ou nascidos nas etapas 1–4).
-- [ ] `python manage.py test Infraestrutura.tests.test_recurso_foto Identidade.usuarios.tests.test_views` (ou o módulo equivalente da foto secundária) passa.
+- [x] Todos os checkboxes acima existem (aqui ou nascidos nas etapas 1–4).
+- [x] `python manage.py test Infraestrutura.tests.test_recurso_foto Identidade.usuarios.tests.test_views` (ou o módulo equivalente da foto secundária) passa.
 
 ### Prompt curto
 

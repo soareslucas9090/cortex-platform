@@ -331,6 +331,34 @@ class RecursoFotoViewTest(APITestCase):
         resposta = self.client.get(self.url_foto)
         self.assertEqual(resposta.status_code, status.HTTP_404_NOT_FOUND)
 
+    def test_get_proxy_foto_recurso_inexistente(self):
+        url = reverse('infraestrutura:recurso-foto', kwargs={'pk': 999999})
+        resposta = self.client.get(url)
+        self.assertEqual(resposta.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_patch_recurso_nao_aceita_foto(self):
+        self.recurso.foto = self.s3_key
+        self.recurso.save(update_fields=['foto'])
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token_cadastrador}')
+
+        resposta = self.client.patch(
+            self.url_detail,
+            {'foto': 'Cortex/outro/prefixo/x.jpg', 'descricao': 'sem troca de foto'},
+            format='json',
+        )
+        self.assertEqual(resposta.status_code, status.HTTP_200_OK)
+        self.recurso.refresh_from_db()
+        self.assertEqual(self.recurso.foto, self.s3_key)
+
+        resposta = self.client.patch(
+            self.url_detail,
+            {'foto': criar_arquivo_imagem(), 'descricao': 'ainda sem troca de foto'},
+            format='multipart',
+        )
+        self.assertEqual(resposta.status_code, status.HTTP_200_OK)
+        self.recurso.refresh_from_db()
+        self.assertEqual(self.recurso.foto, self.s3_key)
+
     @patch('AppCore.common.storage.s3.iterar_objeto_s3')
     def test_iterar_rejeita_chave_fora_do_prefixo(self, mock_iterar):
         chave_invalida = 'Cortex/outro/prefixo/x.jpg'
