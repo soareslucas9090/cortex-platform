@@ -80,7 +80,7 @@ class Usuario(ModelHelperMixin, ModelBusinessMixin, ModelRulesMixin, UserModelPe
         blank=True,
         help_text='URL pública da foto vinda de sistemas externos.',
     )
-    foto_secundaria = models.URLField(
+    foto_secundaria = models.CharField(
         'Foto secundária',
         max_length=500,
         null=True,

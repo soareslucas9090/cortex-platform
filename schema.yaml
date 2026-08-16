@@ -1459,11 +1459,6 @@ paths:
   /cortex/identidade/usuarios/{id}/foto-secundaria/:
     get:
       operationId: identidade_usuarios_foto_secundaria_retrieve
-      description: "\n    Retorna o arquivo de imagem da foto secundária via proxy
-        da API.\n\n    **Permissões:** Público (não requer autenticação).\n\n    O
-        bucket S3 permanece privado; este endpoint faz o stream da imagem para o navegador.\n
-        \   "
-      summary: Obter foto secundária do usuário
       parameters:
       - in: path
         name: id
@@ -1471,26 +1466,12 @@ paths:
           type: integer
         required: true
       tags:
-      - Identidade
+      - identidade
       security:
       - jwtAuth: []
       responses:
         '200':
-          content:
-            application/json:
-              schema:
-                description: Imagem retornada com sucesso.
-                content:
-                  image/jpeg: {}
-                  image/png: {}
-                  image/webp: {}
-          description: ''
-        '404':
-          content:
-            application/json:
-              schema:
-                description: Usuário ou foto não encontrados.
-          description: ''
+          description: No response body
     post:
       operationId: identidade_usuarios_foto_secundaria_create
       description: "\n    Faz upload da foto secundária para o S3 e persiste a referência
@@ -3144,11 +3125,6 @@ paths:
   /cortex/infraestrutura/recursos/{id}/foto/:
     get:
       operationId: infraestrutura_recursos_foto_retrieve
-      description: "\n    Retorna o arquivo de imagem da foto do recurso via proxy
-        da API.\n\n    **Permissões:** Público (AllowAny — não requer autenticação).\n\n
-        \   O bucket S3 permanece privado; este endpoint faz o stream da imagem para
-        o navegador.\n    "
-      summary: Obter foto do recurso
       parameters:
       - in: path
         name: id
@@ -3156,26 +3132,12 @@ paths:
           type: integer
         required: true
       tags:
-      - Infraestrutura · Recursos
+      - infraestrutura
       security:
       - jwtAuth: []
       responses:
         '200':
-          content:
-            application/json:
-              schema:
-                description: Imagem retornada com sucesso.
-                content:
-                  image/jpeg: {}
-                  image/png: {}
-                  image/webp: {}
-          description: ''
-        '404':
-          content:
-            application/json:
-              schema:
-                description: Recurso ou foto não encontrados.
-          description: ''
+          description: No response body
     post:
       operationId: infraestrutura_recursos_foto_create
       description: "\n    Faz upload da foto do recurso para o S3 e persiste a referência.\n\n
@@ -7080,7 +7042,6 @@ components:
           maxLength: 500
         foto_secundaria:
           type: string
-          format: uri
           nullable: true
           title: Foto secundária
           description: Chave S3 da foto enviada pelo próprio usuário (servida via

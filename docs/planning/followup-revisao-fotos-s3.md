@@ -57,7 +57,7 @@ Ordem sugerida (dependências na coluna “Depende”). Pode pular a ordem se a 
 | FOTO-S3-5 | Tirar ORM do hook `CriarRecursoView` | Importante | — | Concluída (2026-08-16) |
 | FOTO-S3-6 | Atualizar `documentacao_infraestrutura()` | Importante | — | Concluída (2026-08-16) |
 | FOTO-S3-7 | `@extend_schema` no `get` + `BasicRetrieveAPIView` no proxy | Importante | — | Concluída (2026-08-16) |
-| FOTO-S3-8 | `URLField` → `CharField` para chave S3 | Sugestão | — | Pendente |
+| FOTO-S3-8 | `URLField` → `CharField` para chave S3 | Sugestão | — | Concluída (2026-08-16) |
 | FOTO-S3-9 | Testes que travam os itens 2–4 e lacunas de API | Sugestão | FOTO-S3-1 a FOTO-S3-4 (cenários novos); o resto pode entrar junto de cada etapa | Pendente |
 
 **Paralelizáveis sem conflito de arquivo:** 1, 5, 6, 7, 8.  
@@ -414,7 +414,7 @@ Implemente SOMENTE FOTO-S3-7 de docs/planning/followup-revisao-fotos-s3.md
 
 | | |
 |--|--|
-| **Status** | Pendente |
+| **Status** | Concluída (2026-08-16) |
 | **Severidade** | Sugestão |
 | **Pré-requisito** | Nenhum |
 | **Quem / onde** | |
@@ -442,10 +442,10 @@ O mesmo vale para `Usuario.foto_secundaria` (e só ela; `Usuario.foto` primária
 
 ### Critério de saída
 
-- [ ] Models não usam `URLField` para chave S3.
-- [ ] Migration aplica em banco vazio e em banco que já tem `0002_recurso_foto`.
-- [ ] Upload + listagem/detalhe continuam devolvendo URL de proxy.
-- [ ] `Usuario.foto` (primária) permanece `URLField`.
+- [x] Models não usam `URLField` para chave S3.
+- [x] Migration aplica em banco vazio e em banco que já tem `0002_recurso_foto`.
+- [x] Upload + listagem/detalhe continuam devolvendo URL de proxy.
+- [x] `Usuario.foto` (primária) permanece `URLField`.
 
 ### Testes mínimos desta etapa
 

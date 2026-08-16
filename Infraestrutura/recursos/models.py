@@ -32,7 +32,7 @@ class Recurso(ModelHelperMixin, ModelBusinessMixin, ModelRulesMixin, BasicModel)
         verbose_name='Sala',
     )
     descricao = models.CharField('Descrição', max_length=500, blank=True, default='')
-    foto = models.URLField(
+    foto = models.CharField(
         'Foto',
         max_length=500,
         null=True,
