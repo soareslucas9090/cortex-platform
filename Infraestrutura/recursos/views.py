@@ -91,7 +91,6 @@ class CriarRecursoView(PodeCadastrarInfraestruturaMixin, BasicPostAPIView):
 
     def do_action_post(self, serializer_data, request, *args, **kwargs):
         recurso = Recurso().business.criar_recurso(**serializer_data)
-        recurso = Recurso.objects.select_related('sala').get(pk=recurso.pk)
         return {
             'mensagem': self.mensagem_sucesso,
             'dados': RecursoSerializer(recurso, context={'request': request}).data,

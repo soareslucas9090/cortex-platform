@@ -54,7 +54,7 @@ Ordem sugerida (dependências na coluna “Depende”). Pode pular a ordem se a 
 | FOTO-S3-2 | Validar formato real da imagem (não só Content-Type) | Importante | — | Concluída (2026-08-16) |
 | FOTO-S3-3 | Erro de config S3 não vira 400 de validação | Importante | — | Concluída (2026-08-16) |
 | FOTO-S3-4 | Validar/processar foto **antes** do `create` do recurso | Importante | FOTO-S3-2 (recomendado) | Concluída (2026-08-16) |
-| FOTO-S3-5 | Tirar ORM do hook `CriarRecursoView` | Importante | — | Pendente |
+| FOTO-S3-5 | Tirar ORM do hook `CriarRecursoView` | Importante | — | Concluída (2026-08-16) |
 | FOTO-S3-6 | Atualizar `documentacao_infraestrutura()` | Importante | — | Pendente |
 | FOTO-S3-7 | `@extend_schema` no `get` + `BasicRetrieveAPIView` no proxy | Importante | — | Pendente |
 | FOTO-S3-8 | `URLField` → `CharField` para chave S3 | Sugestão | — | Pendente |
@@ -270,10 +270,10 @@ Implemente SOMENTE FOTO-S3-4 de docs/planning/followup-revisao-fotos-s3.md
 
 | | |
 |--|--|
-| **Status** | Pendente |
+| **Status** | Concluída (2026-08-16) |
 | **Severidade** | Importante |
 | **Pré-requisito** | Nenhum |
-| **Quem / onde** | |
+| **Quem / onde** | Implementação local / Cursor |
 
 ### Por quê
 
@@ -305,8 +305,8 @@ return {
 
 ### Critério de saída
 
-- [ ] `CriarRecursoView` sem `.objects.get` / `.filter` / `.create`.
-- [ ] POST de criação (com e sem foto) continua 201 com `sala` e `foto` (URL de proxy) corretos.
+- [x] `CriarRecursoView` sem `.objects.get` / `.filter` / `.create`.
+- [x] POST de criação (com e sem foto) continua 201 com `sala` e `foto` (URL de proxy) corretos.
 
 ### Testes mínimos desta etapa
 

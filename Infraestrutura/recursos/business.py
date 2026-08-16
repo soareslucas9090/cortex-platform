@@ -43,7 +43,7 @@ class RecursoBusiness(ModelInstanceBusiness):
                 )
                 recurso.foto = nova_chave
                 recurso.save(update_fields=['foto'])
-            return recurso
+            return self.object_instance.helper.obter_por_pk_com_sala(recurso.pk)
         except Exception as e:
             self.relancar_ou_erro_sistema(e, 'Não foi possível criar o recurso.', logger)
 
