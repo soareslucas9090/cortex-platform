@@ -8,10 +8,12 @@ from rest_framework import status
 from rest_framework.test import APITestCase
 from rest_framework_simplejwt.tokens import RefreshToken
 
+from AppCore.core.exceptions.exceptions import NotFoundException
 from Identidade.usuarios.models import Usuario
 from Infraestrutura.blocos.models import Bloco
 from Infraestrutura.permissoes.models import PermissaoFuncaoInfraestrutura
 from Infraestrutura.recursos.choices import TipoRecurso
+from Infraestrutura.recursos.constantes import ANEXO_FOTO
 from Infraestrutura.recursos.models import Recurso
 from Infraestrutura.salas.models import Sala
 from Organizacional.funcoes.models import Funcao
@@ -232,6 +234,26 @@ class RecursoFotoViewTest(APITestCase):
     def test_get_proxy_foto_retorna_404_sem_foto(self):
         resposta = self.client.get(self.url_foto)
         self.assertEqual(resposta.status_code, status.HTTP_404_NOT_FOUND)
+
+    @patch('AppCore.common.storage.s3.iterar_objeto_s3')
+    def test_iterar_rejeita_chave_fora_do_prefixo(self, mock_iterar):
+        chave_invalida = 'Cortex/outro/prefixo/x.jpg'
+        with self.assertRaises(NotFoundException):
+            ANEXO_FOTO.iterar(chave_invalida, content_type_padrao='image/jpeg')
+        mock_iterar.assert_not_called()
+
+    @patch('AppCore.common.storage.s3.remover_objeto_s3')
+    def test_remover_ignora_chave_fora_do_prefixo(self, mock_remover):
+        ANEXO_FOTO.remover('Cortex/outro/prefixo/x.jpg')
+        mock_remover.assert_not_called()
+
+    @patch('AppCore.common.storage.s3.iterar_objeto_s3')
+    def test_get_proxy_foto_chave_fora_do_prefixo_retorna_404(self, mock_iterar):
+        self.recurso.foto = 'Cortex/outro/prefixo/x.jpg'
+        self.recurso.save()
+        resposta = self.client.get(self.url_foto)
+        self.assertEqual(resposta.status_code, status.HTTP_404_NOT_FOUND)
+        mock_iterar.assert_not_called()
 
     @patch('AppCore.common.storage.s3.enviar_arquivo_s3')
     def test_listagem_e_detalhe_retornam_url_do_proxy(self, mock_upload):

@@ -1252,6 +1252,14 @@ class AtualizarFotoSecundariaViewTest(APITestCase):
         resposta = self.client.get(self.url)
         self.assertEqual(resposta.status_code, status.HTTP_404_NOT_FOUND)
 
+    @patch('AppCore.common.storage.s3.iterar_objeto_s3')
+    def test_get_proxy_foto_secundaria_chave_fora_do_prefixo_retorna_404(self, mock_iterar):
+        self.usuario.foto_secundaria = 'Cortex/outro/prefixo/x.jpg'
+        self.usuario.save()
+        resposta = self.client.get(self.url)
+        self.assertEqual(resposta.status_code, status.HTTP_404_NOT_FOUND)
+        mock_iterar.assert_not_called()
+
     def test_patch_usuario_nao_atualiza_campo_foto(self):
         self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token_usuario}')
         url_detalhe = reverse('identidade:usuario-detail', kwargs={'pk': self.usuario.pk})

@@ -50,7 +50,7 @@ Ordem sugerida (dependências na coluna “Depende”). Pode pular a ordem se a 
 
 | ID | Título | Severidade | Depende | Status |
 |----|--------|------------|---------|--------|
-| FOTO-S3-1 | Restringir proxy S3 ao prefixo do anexo | Importante | — | Pendente |
+| FOTO-S3-1 | Restringir proxy S3 ao prefixo do anexo | Importante | — | Concluída (2026-08-16) |
 | FOTO-S3-2 | Validar formato real da imagem (não só Content-Type) | Importante | — | Pendente |
 | FOTO-S3-3 | Erro de config S3 não vira 400 de validação | Importante | — | Pendente |
 | FOTO-S3-4 | Validar/processar foto **antes** do `create` do recurso | Importante | FOTO-S3-2 (recomendado) | Pendente |
@@ -80,10 +80,10 @@ Ordem sugerida (dependências na coluna “Depende”). Pode pular a ordem se a 
 
 | | |
 |--|--|
-| **Status** | Pendente |
+| **Status** | Concluída (2026-08-16) |
 | **Severidade** | Importante |
 | **Pré-requisito** | Nenhum |
-| **Quem / onde** | |
+| **Quem / onde** | Implementação local / Cursor |
 
 ### Por quê
 
@@ -105,10 +105,10 @@ O GET da foto é anônimo. Hoje `AnexoS3.iterar` e `chave_normalizada` aceitam q
 
 ### Critério de saída
 
-- [ ] Chave fora do prefixo do anexo não dispara `get_object` no S3.
-- [ ] GET público de foto válida continua 200.
-- [ ] GET sem foto / recurso inexistente continua 404.
-- [ ] Remoção só tenta apagar objeto do próprio prefixo.
+- [x] Chave fora do prefixo do anexo não dispara `get_object` no S3.
+- [x] GET público de foto válida continua 200.
+- [x] GET sem foto / recurso inexistente continua 404.
+- [x] Remoção só tenta apagar objeto do próprio prefixo.
 
 ### Testes mínimos desta etapa
 
