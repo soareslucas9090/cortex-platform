@@ -1,12 +1,11 @@
-import logging
-
-from django.http import Http404, StreamingHttpResponse
+from django.http import StreamingHttpResponse
 from rest_framework import status
 from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
 
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import OpenApiParameter, extend_schema
 
+from AppCore.basics.decorators.decorators import handle_exceptions
 from AppCore.basics.mixins.mixins import AllowAnyMixin, IsAuthenticatedMixin
 from AppCore.basics.pagination.pagination import PaginacaoCustomizada
 from AppCore.basics.views.basic_views import (
@@ -27,8 +26,6 @@ from .serializers import (
     RecursoSerializer,
     SerializerVazio,
 )
-
-logger = logging.getLogger(__name__)
 
 
 @extend_schema(
@@ -198,25 +195,9 @@ class ObterFotoRecursoView(AllowAnyMixin, BasicGetAPIView):
     queryset = Recurso.objects.all()
     serializer_class = SerializerVazio
 
+    @handle_exceptions
     def get(self, request, *args, **kwargs):
-        from botocore.exceptions import ClientError
-
-        from AppCore.common.storage.s3 import iterar_objeto_s3, normalizar_chave_s3
-        from .foto import PREFIXO_S3
-
-        recurso = self.get_object()
-        s3_key = normalizar_chave_s3(recurso.foto, prefixo=PREFIXO_S3)
-        if not s3_key:
-            raise Http404('Foto do recurso não encontrada.')
-
-        try:
-            stream, content_type = iterar_objeto_s3(s3_key, content_type_padrao='image/jpeg')
-        except (ClientError, ValueError):
-            raise Http404('Foto do recurso não encontrada.')
-        except Exception as exc:
-            logger.error('Erro ao obter foto do recurso no S3 (%s): %s', s3_key, exc)
-            raise Http404('Erro ao recuperar a foto do recurso.')
-
+        stream, content_type = self.get_object().business.obter_stream_foto()
         response = StreamingHttpResponse(stream, content_type=content_type)
         response['Cache-Control'] = 'public, max-age=86400'
         return response

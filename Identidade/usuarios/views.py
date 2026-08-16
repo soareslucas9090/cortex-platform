@@ -10,6 +10,7 @@ from rest_framework.response import Response
 from drf_spectacular.utils import extend_schema, OpenApiParameter
 from drf_spectacular.types import OpenApiTypes
 
+from AppCore.basics.decorators.decorators import handle_exceptions
 from AppCore.basics.mixins.mixins import AllowAnyMixin, IsAdminMixin, IsOwnerOrAdminMixin, IsAuthenticatedMixin
 from AppCore.basics.pagination.pagination import PaginacaoCustomizada
 from AppCore.basics.views.basic_views import (
@@ -485,25 +486,9 @@ class ObterFotoSecundariaView(AllowAnyMixin, BasicGetAPIView):
     queryset = Usuario.objects.all()
     serializer_class = SerializerVazio
 
+    @handle_exceptions
     def get(self, request, *args, **kwargs):
-        from botocore.exceptions import ClientError
-
-        from AppCore.common.storage.s3 import iterar_objeto_s3, normalizar_chave_s3
-        from Identidade.usuarios.foto import PREFIXO_S3
-
-        usuario = self.get_object()
-        s3_key = normalizar_chave_s3(usuario.foto_secundaria, prefixo=PREFIXO_S3)
-        if not s3_key:
-            raise Http404('Foto secundária não encontrada.')
-
-        try:
-            stream, content_type = iterar_objeto_s3(s3_key)
-        except (ClientError, ValueError):
-            raise Http404('Foto secundária não encontrada.')
-        except Exception as exc:
-            logger.error('Erro ao obter foto secundária do S3 (%s): %s', s3_key, exc)
-            raise Http404('Erro ao recuperar a foto secundária.')
-
+        stream, content_type = self.get_object().business.obter_stream_foto_secundaria()
         response = StreamingHttpResponse(stream, content_type=content_type)
         response['Cache-Control'] = 'public, max-age=86400'
         return response

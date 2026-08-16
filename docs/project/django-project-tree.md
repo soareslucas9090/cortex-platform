@@ -93,7 +93,7 @@ Responsável por:
 - exceptions;
 - paginação;
 - helpers e componentes compartilhados;
-- armazenamento S3 e processamento de imagem em `AppCore/common/storage/`.
+- armazenamento S3, descritor `AnexoS3` e processamento de imagem em `AppCore/common/storage/`.
 
 ---
 
@@ -209,9 +209,12 @@ app_interno/
 Arquivos opcionais:
 
 - `choices.py`
+- `constantes.py` (anexos S3, política de imagem e demais constantes do app; cada constante com docstring acima)
 - `state.py`
 - `selectors.py`, se um dia o projeto formalizar esse padrão
 - outros arquivos auxiliares justificados
+
+O `__init__.py` do app e dos pacotes do AppCore é marcador de pacote, não barrel file: não reexportar módulos ali. Importe o caminho concreto (`from AppCore.common.storage.anexo import AnexoS3`).
 
 ---
 

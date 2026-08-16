@@ -518,6 +518,7 @@ AppNome/
 ├── choices.py       # Choices para campos (opcional)
 ├── rules.py         # Regras de validação (opcional)
 ├── helpers.py       # Queries e utilitários (opcional)
+├── constantes.py    # Constantes do app (opcional)
 ├── models.py        # Models Django
 ├── serializers.py   # DRF Serializers
 ├── state.py         # Classes de estados e máquina de estados (opcional)
@@ -528,7 +529,7 @@ AppNome/
 ### Estilo de Código
 
 - **Aspas simples**: SEMPRE use `'texto'` (nunca aspas duplas)
-- **Imports**: Organizados (stdlib → Django → DRF → AppCore → apps locais)
+- **Imports**: Organizados (stdlib → Django → DRF → AppCore → apps locais). Importe o módulo concreto; **não** use `__init__.py` como barrel file (`from AppCore.common.storage.anexo import AnexoS3`, não `from AppCore.common.storage import AnexoS3`). `__init__.py` permanece vazio (só marca o pacote) para evitar importações circulares; reexportar só em momentos realmente oportunos, com justificativa.
 - **Nomenclatura Geral**:
   - Módulos principais: PascalCase (`AppCore`, `Cortex`)
   - Apps: snake_case minúsculo (`usuarios`, `auth`)
@@ -550,7 +551,7 @@ AppNome/
 
 ### Armazenamento de arquivos (S3)
 
-Upload, download, remoção e URL de proxy de arquivos no bucket do projeto ficam em `AppCore.common.storage.s3`. Apps de domínio **não** devem copiar helpers S3: usam `enviar_arquivo_s3`, `iterar_objeto_s3`, `remover_objeto_s3`, `montar_url_proxy_arquivo` e `normalizar_chave_s3`, guardando só o prefixo e o nome da rota no app (`foto.py`). Processamento genérico de imagem (abrir, recorte central por proporção, reencode JPEG) fica em `AppCore.common.storage.imagens`.
+Upload, download, remoção e URL de proxy de arquivos no bucket do projeto ficam em `AppCore.common.storage.s3`. O descritor `AnexoS3` (`AppCore.common.storage.anexo`) agrupa prefixo, nome da rota e path de fallback; cada app declara instâncias (e política de imagem, se houver) em `constantes.py`, com docstring acima de cada constante. Apps de domínio **não** devem copiar helpers S3. Importe o módulo concreto (`from AppCore.common.storage.anexo import AnexoS3`); **não** reexporte pelo `__init__.py` do pacote. Processamento genérico de imagem (abrir, recorte central por proporção, reencode JPEG) fica em `AppCore.common.storage.imagens`.
 
 O cliente S3 (`obter_cliente_s3`) é o ponto único de configuração (`AWS_S3_ENDPOINT_URL`, `AWS_STORAGE_BUCKET_NAME`, chaves). Fluxos específicos (ex.: planilha de importação) podem continuar no app, mas reutilizam esse cliente.
 
@@ -587,7 +588,7 @@ python manage.py createsuperuser
 ```bash
 mkdir NomeApp
 cd NomeApp
-# Criar: __init__.py, apps.py, models.py, business.py, rules.py, helpers.py, serializers.py, views.py, urls.py
+# Criar: __init__.py, apps.py, models.py, business.py, rules.py, helpers.py, constantes.py, serializers.py, views.py, urls.py
 ```
 
 ## Stack Técnica
@@ -930,6 +931,7 @@ usuarios/
 ├── business.py
 ├── rules.py
 ├── helpers.py
+├── constantes.py
 ├── serializers.py
 ├── views.py
 ├── urls.py

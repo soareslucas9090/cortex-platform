@@ -60,6 +60,7 @@ Aplicar a cada arquivo gerado ou modificado **antes de considerar a implementaç
 - [ ] O app está dentro do módulo de domínio correto (ex: `Identidade/identidade/`), não na raiz do repositório
 - [ ] `apps.py` usa `name = 'Modulo.app'` (caminho completo)
 - [ ] O módulo tem `__init__.py` e `urls.py` com `app_name`
+- [ ] `__init__.py` não reexporta módulos — import pelo caminho concreto (`from pacote.modulo import Nome`)
 
 ### URLs
 
@@ -660,6 +661,7 @@ urlpatterns = [
 
 - Sempre aspas **simples**: `'texto'` (nunca aspas duplas).
 - Imports organizados: stdlib → Django → DRF → AppCore → apps locais.
+- `__init__.py` permanece limpo (só marca o pacote). Não reexporte módulos ali; importe o caminho concreto (`from AppCore.common.storage.anexo import AnexoS3`). Reexportar só em momento realmente oportuno, com justificativa.
 - `logger = logging.getLogger(__name__)` no topo de todo arquivo com logging.
 
 ### Nomenclatura
@@ -685,6 +687,7 @@ nome_app/
 ├── choices.py       (se houver choices)
 ├── rules.py         (se houver regras de negócio)
 ├── helpers.py       (se houver queries reutilizáveis)
+├── constantes.py    (se houver constantes do app)
 ├── business.py      (se houver lógica de negócio)
 ├── serializers.py
 ├── views.py
@@ -715,4 +718,5 @@ nome_app/
 | `BaseLoginSerializer`      | `AppCore.basics.auth.serializers`      |
 | `BaseTypedLoginSerializer` | `AppCore.basics.auth.serializers`      |
 | Cliente e objetos S3       | `AppCore.common.storage.s3`            |
+| Anexo S3 (descritor)       | `AppCore.common.storage.anexo`         |
 | Imagens (abrir/recorte)    | `AppCore.common.storage.imagens`       |

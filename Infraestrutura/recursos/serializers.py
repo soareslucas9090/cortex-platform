@@ -27,15 +27,8 @@ class RecursoSerializer(serializers.ModelSerializer):
 
     @extend_schema_field(serializers.CharField(allow_null=True))
     def get_foto(self, obj) -> str | None:
-        from AppCore.common.storage.s3 import montar_url_proxy_arquivo
-        from .foto import NOME_URL_PROXY, caminho_fallback_proxy
-        return montar_url_proxy_arquivo(
-            obj.pk,
-            obj.foto,
-            NOME_URL_PROXY,
-            self.context.get('request'),
-            caminho_fallback=caminho_fallback_proxy(obj.pk),
-        )
+        from .constantes import ANEXO_FOTO
+        return ANEXO_FOTO.url_proxy(obj.pk, obj.foto, self.context.get('request'))
 
     @extend_schema_field(serializers.CharField())
     def get_estado_derivado_display(self, obj):

@@ -1,7 +1,7 @@
 import logging
 
 from AppCore.core.business.business import ModelInstanceBusiness
-from AppCore.core.exceptions.exceptions import ValidationException
+from AppCore.core.exceptions.exceptions import NotFoundException, ValidationException
 
 logger = logging.getLogger(__name__)
 
@@ -81,23 +81,21 @@ class RecursoBusiness(ModelInstanceBusiness):
                 recortar_central,
                 reencode_jpeg,
             )
-            from AppCore.common.storage.s3 import enviar_arquivo_s3, remover_objeto_s3
-            from .foto import (
-                PREFIXO_S3,
-                PROPORCAO_ALTURA,
-                PROPORCAO_LARGURA,
+            from .constantes import (
+                ANEXO_FOTO,
+                PROPORCAO_FOTO_ALTURA,
+                PROPORCAO_FOTO_LARGURA,
             )
             self.object_instance.rules.validar_arquivo_foto(arquivo)
             imagem = abrir_imagem(arquivo)
             largura, altura = imagem.size
             self.object_instance.rules.validar_orientacao_retrato(largura, altura)
-            recortada = recortar_central(imagem, PROPORCAO_LARGURA, PROPORCAO_ALTURA)
+            recortada = recortar_central(imagem, PROPORCAO_FOTO_LARGURA, PROPORCAO_FOTO_ALTURA)
             largura_final, altura_final = recortada.size
             self.object_instance.rules.validar_resolucao_minima_foto(largura_final, altura_final)
             processada = reencode_jpeg(recortada)
             chave_antiga = self.object_instance.foto
-            nova_chave = enviar_arquivo_s3(
-                PREFIXO_S3,
+            nova_chave = ANEXO_FOTO.enviar(
                 self.object_instance.pk,
                 processada,
                 extensao='jpg',
@@ -106,7 +104,7 @@ class RecursoBusiness(ModelInstanceBusiness):
             self.object_instance.foto = nova_chave
             self.object_instance.save(update_fields=['foto'])
             if chave_antiga and chave_antiga != nova_chave:
-                remover_objeto_s3(chave_antiga, prefixo=PREFIXO_S3)
+                ANEXO_FOTO.remover(chave_antiga)
         except ValueError as e:
             raise ValidationException(str(e))
         except Exception as e:
@@ -115,12 +113,25 @@ class RecursoBusiness(ModelInstanceBusiness):
     def remover_foto(self):
         """Remove a foto do recurso e tenta apagar o objeto no S3."""
         try:
-            from AppCore.common.storage.s3 import remover_objeto_s3
-            from .foto import PREFIXO_S3
+            from .constantes import ANEXO_FOTO
             chave_antiga = self.object_instance.foto
             self.object_instance.foto = None
             self.object_instance.save(update_fields=['foto'])
-            if chave_antiga:
-                remover_objeto_s3(chave_antiga, prefixo=PREFIXO_S3)
+            ANEXO_FOTO.remover(chave_antiga)
         except Exception as e:
             self.relancar_ou_erro_sistema(e, 'Não foi possível remover a foto do recurso.', logger)
+
+    def obter_stream_foto(self):
+        """Obtém o stream e o content-type da foto do recurso no S3."""
+        try:
+            from botocore.exceptions import ClientError
+
+            from .constantes import ANEXO_FOTO
+            chave = ANEXO_FOTO.chave_normalizada(self.object_instance.foto)
+            if not chave:
+                raise NotFoundException('Foto do recurso não encontrada.')
+            return ANEXO_FOTO.iterar(chave, content_type_padrao='image/jpeg')
+        except ClientError:
+            raise NotFoundException('Foto do recurso não encontrada.')
+        except Exception as e:
+            self.relancar_ou_erro_sistema(e, 'Não foi possível obter a foto do recurso.', logger)

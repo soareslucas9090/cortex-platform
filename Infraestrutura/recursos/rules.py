@@ -8,7 +8,7 @@ from AppCore.common.storage.imagens import (
 )
 
 from .choices import TipoRecurso
-from .foto import ALTURA_MINIMA, LARGURA_MINIMA
+from .constantes import ALTURA_MINIMA_FOTO, LARGURA_MINIMA_FOTO
 
 
 class RecursoRules(ModelInstanceRules):
@@ -75,9 +75,9 @@ class RecursoRules(ModelInstanceRules):
 
     def validar_resolucao_minima_foto(self, largura: int, altura: int) -> bool:
         """Após o recorte 3:4, a imagem deve ter no mínimo 480×640 pixels."""
-        if largura < LARGURA_MINIMA or altura < ALTURA_MINIMA:
+        if largura < LARGURA_MINIMA_FOTO or altura < ALTURA_MINIMA_FOTO:
             raise ValidationException(
-                f'A foto deve ter no mínimo {LARGURA_MINIMA}×{ALTURA_MINIMA} pixels '
+                f'A foto deve ter no mínimo {LARGURA_MINIMA_FOTO}×{ALTURA_MINIMA_FOTO} pixels '
                 'após o recorte em retrato 3:4.'
             )
         return True

@@ -325,6 +325,7 @@ def update_dados(self, dados): ...
 
 - [ ] Ordem: stdlib → Django → DRF → AppCore → apps locais.
 - [ ] Sem imports não utilizados.
+- [ ] `__init__.py` não reexporta módulos (import pelo caminho concreto).
 
 ### Exceções
 
