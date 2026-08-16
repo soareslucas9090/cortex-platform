@@ -459,33 +459,33 @@ class AtualizarFotoPrimariaView(IsAdminMixin, BasicPatchAPIView):
         }
 
 
-@extend_schema(
-    tags=['Identidade'],
-    summary='Obter foto secundária do usuário',
-    description='''
-    Retorna o arquivo de imagem da foto secundária via proxy da API.
-
-    **Permissões:** Público (não requer autenticação).
-
-    O bucket S3 permanece privado; este endpoint faz o stream da imagem para o navegador.
-    ''',
-    responses={
-        status.HTTP_200_OK: {
-            'description': 'Imagem retornada com sucesso.',
-            'content': {
-                'image/jpeg': {},
-                'image/png': {},
-                'image/webp': {},
-            },
-        },
-        status.HTTP_404_NOT_FOUND: {'description': 'Usuário ou foto não encontrados.'},
-    },
-)
-class ObterFotoSecundariaView(AllowAnyMixin, BasicGetAPIView):
+class ObterFotoSecundariaView(AllowAnyMixin, BasicRetrieveAPIView):
     """GET /cortex/identidade/usuarios/{pk}/foto-secundaria/"""
     queryset = Usuario.objects.all()
     serializer_class = SerializerVazio
 
+    @extend_schema(
+        tags=['Identidade'],
+        summary='Obter foto secundária do usuário',
+        description='''
+        Retorna o arquivo de imagem da foto secundária via proxy da API.
+
+        **Permissões:** Público (não requer autenticação).
+
+        O bucket S3 permanece privado; este endpoint faz o stream da imagem para o navegador.
+        ''',
+        responses={
+            status.HTTP_200_OK: {
+                'description': 'Imagem retornada com sucesso.',
+                'content': {
+                    'image/jpeg': {},
+                    'image/png': {},
+                    'image/webp': {},
+                },
+            },
+            status.HTTP_404_NOT_FOUND: {'description': 'Usuário ou foto não encontrados.'},
+        },
+    )
     @handle_exceptions
     def get(self, request, *args, **kwargs):
         stream, content_type = self.get_object().business.obter_stream_foto_secundaria()

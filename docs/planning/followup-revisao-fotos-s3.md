@@ -56,7 +56,7 @@ Ordem sugerida (dependências na coluna “Depende”). Pode pular a ordem se a 
 | FOTO-S3-4 | Validar/processar foto **antes** do `create` do recurso | Importante | FOTO-S3-2 (recomendado) | Concluída (2026-08-16) |
 | FOTO-S3-5 | Tirar ORM do hook `CriarRecursoView` | Importante | — | Concluída (2026-08-16) |
 | FOTO-S3-6 | Atualizar `documentacao_infraestrutura()` | Importante | — | Concluída (2026-08-16) |
-| FOTO-S3-7 | `@extend_schema` no `get` + `BasicRetrieveAPIView` no proxy | Importante | — | Pendente |
+| FOTO-S3-7 | `@extend_schema` no `get` + `BasicRetrieveAPIView` no proxy | Importante | — | Concluída (2026-08-16) |
 | FOTO-S3-8 | `URLField` → `CharField` para chave S3 | Sugestão | — | Pendente |
 | FOTO-S3-9 | Testes que travam os itens 2–4 e lacunas de API | Sugestão | FOTO-S3-1 a FOTO-S3-4 (cenários novos); o resto pode entrar junto de cada etapa | Pendente |
 
@@ -366,7 +366,7 @@ Implemente SOMENTE FOTO-S3-6 de docs/planning/followup-revisao-fotos-s3.md
 
 | | |
 |--|--|
-| **Status** | Pendente |
+| **Status** | Concluída (2026-08-16) |
 | **Severidade** | Importante |
 | **Pré-requisito** | Nenhum |
 | **Quem / onde** | |
@@ -393,9 +393,9 @@ Aplicar nos dois proxies (recurso **e** foto secundária) para não deixar o de 
 
 ### Critério de saída
 
-- [ ] GET anônimo da foto (recurso e usuário) continua 200 com bytes e content-type.
-- [ ] `@extend_schema` está no método `get`.
-- [ ] Classe herda `BasicRetrieveAPIView` (uma view base só).
+- [x] GET anônimo da foto (recurso e usuário) continua 200 com bytes e content-type.
+- [x] `@extend_schema` está no método `get`.
+- [x] Classe herda `BasicRetrieveAPIView` (uma view base só).
 
 ### Testes mínimos desta etapa
 

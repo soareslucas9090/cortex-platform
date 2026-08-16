@@ -167,33 +167,33 @@ class ReativarRecursoView(PodeCadastrarInfraestruturaMixin, BasicPostAPIView):
         self.get_object().business.reativar()
 
 
-@extend_schema(
-    tags=['Infraestrutura · Recursos'],
-    summary='Obter foto do recurso',
-    description='''
-    Retorna o arquivo de imagem da foto do recurso via proxy da API.
-
-    **Permissões:** Público (AllowAny — não requer autenticação).
-
-    O bucket S3 permanece privado; este endpoint faz o stream da imagem para o navegador.
-    ''',
-    responses={
-        status.HTTP_200_OK: {
-            'description': 'Imagem retornada com sucesso.',
-            'content': {
-                'image/jpeg': {},
-                'image/png': {},
-                'image/webp': {},
-            },
-        },
-        status.HTTP_404_NOT_FOUND: {'description': 'Recurso ou foto não encontrados.'},
-    },
-)
-class ObterFotoRecursoView(AllowAnyMixin, BasicGetAPIView):
+class ObterFotoRecursoView(AllowAnyMixin, BasicRetrieveAPIView):
     """GET /cortex/infraestrutura/recursos/{pk}/foto/"""
     queryset = Recurso.objects.all()
     serializer_class = SerializerVazio
 
+    @extend_schema(
+        tags=['Infraestrutura · Recursos'],
+        summary='Obter foto do recurso',
+        description='''
+        Retorna o arquivo de imagem da foto do recurso via proxy da API.
+
+        **Permissões:** Público (AllowAny — não requer autenticação).
+
+        O bucket S3 permanece privado; este endpoint faz o stream da imagem para o navegador.
+        ''',
+        responses={
+            status.HTTP_200_OK: {
+                'description': 'Imagem retornada com sucesso.',
+                'content': {
+                    'image/jpeg': {},
+                    'image/png': {},
+                    'image/webp': {},
+                },
+            },
+            status.HTTP_404_NOT_FOUND: {'description': 'Recurso ou foto não encontrados.'},
+        },
+    )
     @handle_exceptions
     def get(self, request, *args, **kwargs):
         stream, content_type = self.get_object().business.obter_stream_foto()
