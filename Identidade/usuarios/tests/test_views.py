@@ -1204,6 +1204,20 @@ class AtualizarFotoSecundariaViewTest(APITestCase):
         resposta = self.client.post(self.url, {'foto': self.arquivo_imagem}, format='multipart')
         self.assertEqual(resposta.status_code, status.HTTP_403_FORBIDDEN)
 
+    @patch('AppCore.common.storage.s3.enviar_arquivo_s3')
+    def test_rejeita_gif_com_content_type_jpeg(self, mock_upload):
+        from PIL import Image
+
+        buffer = BytesIO()
+        Image.new('RGB', (1, 1), color='red').save(buffer, format='GIF')
+        buffer.seek(0)
+        arquivo = SimpleUploadedFile('foto.gif', buffer.read(), content_type='image/jpeg')
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token_usuario}')
+        resposta = self.client.post(self.url, {'foto': arquivo}, format='multipart')
+        self.assertEqual(resposta.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('Formato de imagem não suportado', str(resposta.data))
+        mock_upload.assert_not_called()
+
     @patch('Identidade.usuarios.rules.TAMANHO_MAXIMO_FOTO_SECUNDARIA_BYTES', 10)
     @patch('AppCore.common.storage.s3.enviar_arquivo_s3')
     def test_rejeita_foto_secundaria_acima_de_3mb(self, mock_upload):

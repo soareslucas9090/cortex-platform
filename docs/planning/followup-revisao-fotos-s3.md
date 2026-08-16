@@ -51,7 +51,7 @@ Ordem sugerida (dependências na coluna “Depende”). Pode pular a ordem se a 
 | ID | Título | Severidade | Depende | Status |
 |----|--------|------------|---------|--------|
 | FOTO-S3-1 | Restringir proxy S3 ao prefixo do anexo | Importante | — | Concluída (2026-08-16) |
-| FOTO-S3-2 | Validar formato real da imagem (não só Content-Type) | Importante | — | Pendente |
+| FOTO-S3-2 | Validar formato real da imagem (não só Content-Type) | Importante | — | Concluída (2026-08-16) |
 | FOTO-S3-3 | Erro de config S3 não vira 400 de validação | Importante | — | Pendente |
 | FOTO-S3-4 | Validar/processar foto **antes** do `create` do recurso | Importante | FOTO-S3-2 (recomendado) | Pendente |
 | FOTO-S3-5 | Tirar ORM do hook `CriarRecursoView` | Importante | — | Pendente |
@@ -127,10 +127,10 @@ Implemente SOMENTE FOTO-S3-1 de docs/planning/followup-revisao-fotos-s3.md
 
 | | |
 |--|--|
-| **Status** | Pendente |
+| **Status** | Concluída (2026-08-16) |
 | **Severidade** | Importante |
 | **Pré-requisito** | Nenhum (melhor antes de FOTO-S3-4) |
-| **Quem / onde** | |
+| **Quem / onde** | Implementação local / Cursor |
 
 ### Por quê
 
@@ -152,9 +152,9 @@ Implemente SOMENTE FOTO-S3-1 de docs/planning/followup-revisao-fotos-s3.md
 
 ### Critério de saída
 
-- [ ] GIF/BMP/TIFF (mesmo com `Content-Type: image/jpeg`) → 400.
-- [ ] JPEG, PNG e WebP válidos continuam aceitos (recurso reencodeia para JPEG; usuário pode manter o formato original).
-- [ ] Arquivo sem `content_type` não burla a regra se o bytes não for JPEG/PNG/WebP.
+- [x] GIF/BMP/TIFF (mesmo com `Content-Type: image/jpeg`) → 400.
+- [x] JPEG, PNG e WebP válidos continuam aceitos (recurso reencodeia para JPEG; usuário pode manter o formato original).
+- [x] Arquivo sem `content_type` não burla a regra se o bytes não for JPEG/PNG/WebP.
 
 ### Testes mínimos desta etapa
 
@@ -484,7 +484,7 @@ A suíte atual cobre retrato, recorte, 3 MB, L1 403, substitui/remove, GET anôn
 ### Cenários obrigatórios (marcar quando existir no código)
 
 - [ ] `test_criar_recurso_com_foto_paisagem_nao_persiste` — 400 e recurso não criado (FOTO-S3-4)
-- [ ] `test_rejeita_gif_com_content_type_jpeg` — 400; `enviar_arquivo_s3` não chamado (FOTO-S3-2)
+- [x] `test_rejeita_gif_com_content_type_jpeg` — 400; `enviar_arquivo_s3` não chamado (FOTO-S3-2)
 - [ ] `test_get_proxy_foto_recurso_inexistente` — 404
 - [ ] `test_get_proxy_foto_retorna_404_sem_foto` — já existe; conferir se ainda passa após FOTO-S3-1
 - [ ] `test_patch_recurso_nao_aceita_foto` — PATCH com arquivo/string `foto` não altera a chave

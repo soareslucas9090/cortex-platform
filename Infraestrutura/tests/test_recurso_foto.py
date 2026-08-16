@@ -50,6 +50,13 @@ def criar_arquivo_imagem(nome='foto.jpg', tamanho=(600, 800), formato='JPEG'):
     return SimpleUploadedFile(nome, buffer.read(), content_type=content_type)
 
 
+def criar_arquivo_gif(nome='foto.gif', tamanho=(600, 800), content_type='image/jpeg'):
+    buffer = BytesIO()
+    Image.new('RGB', tamanho, color='red').save(buffer, format='GIF')
+    buffer.seek(0)
+    return SimpleUploadedFile(nome, buffer.read(), content_type=content_type)
+
+
 class RecursoFotoViewTest(APITestCase):
 
     def setUp(self):
@@ -167,6 +174,64 @@ class RecursoFotoViewTest(APITestCase):
         arquivo = SimpleUploadedFile('nota.txt', b'nao-e-imagem', content_type='text/plain')
         resposta = self.client.post(self.url_foto, {'foto': arquivo}, format='multipart')
         self.assertEqual(resposta.status_code, status.HTTP_400_BAD_REQUEST)
+
+    @patch('AppCore.common.storage.s3.enviar_arquivo_s3')
+    def test_rejeita_gif_com_content_type_jpeg(self, mock_upload):
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token_cadastrador}')
+        resposta = self.client.post(
+            self.url_foto,
+            {'foto': criar_arquivo_gif(content_type='image/jpeg')},
+            format='multipart',
+        )
+        self.assertEqual(resposta.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('Formato de imagem não suportado', str(resposta.data))
+        mock_upload.assert_not_called()
+
+    @patch('AppCore.common.storage.s3.enviar_arquivo_s3')
+    def test_aceita_png_valido_em_retrato(self, mock_upload):
+        mock_upload.side_effect = self._mock_upload
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token_cadastrador}')
+        resposta = self.client.post(
+            self.url_foto,
+            {'foto': criar_arquivo_imagem(nome='foto.png', formato='PNG')},
+            format='multipart',
+        )
+        self.assertEqual(resposta.status_code, status.HTTP_200_OK)
+        mock_upload.assert_called_once()
+
+    @patch('AppCore.common.storage.s3.enviar_arquivo_s3')
+    def test_aceita_webp_valido_em_retrato(self, mock_upload):
+        mock_upload.side_effect = self._mock_upload
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token_cadastrador}')
+        resposta = self.client.post(
+            self.url_foto,
+            {'foto': criar_arquivo_imagem(nome='foto.webp', formato='WEBP')},
+            format='multipart',
+        )
+        self.assertEqual(resposta.status_code, status.HTTP_200_OK)
+        mock_upload.assert_called_once()
+
+    @patch('AppCore.common.storage.s3.enviar_arquivo_s3')
+    def test_rejeita_gif_sem_content_type(self, mock_upload):
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token_cadastrador}')
+        resposta = self.client.post(
+            self.url_foto,
+            {'foto': criar_arquivo_gif(content_type='')},
+            format='multipart',
+        )
+        self.assertEqual(resposta.status_code, status.HTTP_400_BAD_REQUEST)
+        mock_upload.assert_not_called()
+
+    @patch('AppCore.common.storage.s3.enviar_arquivo_s3')
+    def test_rejeita_bmp_sem_content_type(self, mock_upload):
+        buffer = BytesIO()
+        Image.new('RGB', (600, 800), color='red').save(buffer, format='BMP')
+        buffer.seek(0)
+        arquivo = SimpleUploadedFile('foto.bmp', buffer.read())
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token_cadastrador}')
+        resposta = self.client.post(self.url_foto, {'foto': arquivo}, format='multipart')
+        self.assertEqual(resposta.status_code, status.HTTP_400_BAD_REQUEST)
+        mock_upload.assert_not_called()
 
     def test_l1_nao_pode_enviar_nem_remover_foto(self):
         self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token_l1}')

@@ -14,6 +14,10 @@ TIPOS_IMAGEM_PERMITIDOS = {
     'image/png',
     'image/webp',
 }
+FORMATOS_PIL_PERMITIDOS = {'JPEG', 'PNG', 'WEBP'}
+MENSAGEM_FORMATO_IMAGEM_NAO_SUPORTADO = (
+    'Formato de imagem não suportado. Use JPEG, PNG ou WebP.'
+)
 EXTENSOES_IMAGEM_PERMITIDAS = {'jpg', 'jpeg', 'png', 'webp'}
 TAMANHO_MAXIMO_IMAGEM_BYTES = 3 * 1024 * 1024
 QUALIDADE_JPEG = 85
@@ -43,6 +47,30 @@ def content_type_por_extensao(extensao: str) -> str:
     return content_type
 
 
+def inspecionar_formato_imagem(arquivo) -> str | None:
+    '''
+    Abre o arquivo, carrega os pixels e retorna o formato PIL sem converter.
+    Reposiciona o cursor do arquivo em 0 para reabertura posterior.
+    '''
+    if hasattr(arquivo, 'seek'):
+        arquivo.seek(0)
+    try:
+        imagem = Image.open(arquivo)
+        imagem.load()
+        formato = imagem.format
+    except (UnidentifiedImageError, OSError):
+        formato = None
+    if hasattr(arquivo, 'seek'):
+        arquivo.seek(0)
+    return formato
+
+
+def formato_imagem_permitido(arquivo) -> bool:
+    '''Indica se o conteúdo real do arquivo é JPEG, PNG ou WebP.'''
+    formato = inspecionar_formato_imagem(arquivo)
+    return formato in FORMATOS_PIL_PERMITIDOS
+
+
 def abrir_imagem(arquivo) -> Image.Image:
     '''Abre o arquivo, aplica orientação EXIF e converte para RGB.'''
     if hasattr(arquivo, 'seek'):
@@ -52,6 +80,9 @@ def abrir_imagem(arquivo) -> Image.Image:
         imagem.load()
     except (UnidentifiedImageError, OSError) as exc:
         raise ValueError('Arquivo de imagem inválido.') from exc
+
+    if imagem.format not in FORMATOS_PIL_PERMITIDOS:
+        raise ValueError(MENSAGEM_FORMATO_IMAGEM_NAO_SUPORTADO)
 
     imagem = ImageOps.exif_transpose(imagem) or imagem
     if imagem.mode != 'RGB':
