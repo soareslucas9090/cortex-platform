@@ -178,6 +178,13 @@ class ImportacaoLote(BasicModel):
         verbose_name = 'Importação de Lote de Usuários'
         verbose_name_plural = 'Importações de Lote de Usuários'
         ordering = ['-created_at']
+        constraints = [
+            models.UniqueConstraint(
+                fields=['status'],
+                condition=models.Q(status=StatusImportacao.EM_ANDAMENTO),
+                name='usuarios_importacao_lote_unico_em_andamento',
+            ),
+        ]
 
     def __str__(self):
         return f"Importação {self.pk} - {self.get_status_display()} ({self.linhas_processadas}/{self.total_linhas})"

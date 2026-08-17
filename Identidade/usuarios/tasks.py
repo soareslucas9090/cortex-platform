@@ -1,9 +1,17 @@
 from celery import shared_task
-from django.db import transaction
 import logging
-from AppCore.core.exceptions.exceptions import ValidationException
 
 logger = logging.getLogger(__name__)
+
+MENSAGEM_ERRO_FATAL_IMPORTACAO = 'Falha interna na importação.'
+
+
+def _importacao_ainda_em_andamento(importacao):
+    from .models import StatusImportacao
+
+    importacao.refresh_from_db()
+    return importacao.status == StatusImportacao.EM_ANDAMENTO
+
 
 @shared_task
 def processar_importacao_usuarios_task(importacao_id):
@@ -12,42 +20,67 @@ def processar_importacao_usuarios_task(importacao_id):
     try:
         importacao = ImportacaoLote.objects.get(id=importacao_id)
     except ImportacaoLote.DoesNotExist:
-        logger.error(f"Importação {importacao_id} não encontrada.")
+        logger.error('Importação %s não encontrada.', importacao_id)
+        return
+
+    if importacao.status != StatusImportacao.EM_ANDAMENTO:
+        logger.info(
+            'Importação %s não está em andamento (status=%s). Abortando.',
+            importacao_id,
+            importacao.status,
+        )
         return
 
     try:
-        # Garante que o arquivo da importação esteja localmente no worker
         from .importacao.s3_helper import download_importacao_from_s3_if_needed
-        download_importacao_from_s3_if_needed(importacao)
 
-        # Passa a importacao para o business para atualizar o progresso
+        if not download_importacao_from_s3_if_needed(importacao):
+            if not _importacao_ainda_em_andamento(importacao):
+                return
+            importacao.status = StatusImportacao.ERRO
+            resultado = importacao.resultado_json or {}
+            if not isinstance(resultado, dict):
+                resultado = {}
+            resultado['erro_fatal'] = MENSAGEM_ERRO_FATAL_IMPORTACAO
+            importacao.resultado_json = resultado
+            importacao.save()
+            return
+
         resultado = Usuario().business.importar_usuarios_em_lote(importacao)
-        
-        # Após concluir, atualiza o status baseado no resultado
-        if resultado.sucesso:
-            importacao.status = StatusImportacao.CONCLUIDA
-        else:
-            # Pode ser considerado concluída com parcial sucesso ou Erro dependendo do domínio
-            # Se for sucesso parcial (erros != 0 mas success = True), vou manter CONCLUIDA, mas com erros.
-            importacao.status = StatusImportacao.CONCLUIDA
-            
+
+        if not _importacao_ainda_em_andamento(importacao):
+            logger.info(
+                'Importação %s foi interrompida (status=%s). Não sobrescrever.',
+                importacao_id,
+                importacao.status,
+            )
+            return
+
+        importacao.status = StatusImportacao.CONCLUIDA
         importacao.resultado_json = {
             'resumo': resultado.resumo.__dict__,
             'erros': [erro.__dict__ for erro in resultado.erros],
         }
         importacao.save()
-        
+
     except Exception as exc:
-        logger.exception(f"Erro catastrófico na importação {importacao_id}: {exc}")
+        logger.exception(
+            'Erro catastrófico na importação %s: %s', importacao_id, exc
+        )
         try:
-            importacao.refresh_from_db()
+            if not _importacao_ainda_em_andamento(importacao):
+                return
             importacao.status = StatusImportacao.ERRO
             resultado = importacao.resultado_json or {}
             if not isinstance(resultado, dict):
                 resultado = {}
             if 'erro_fatal' not in resultado:
-                resultado['erro_fatal'] = str(exc)
+                resultado['erro_fatal'] = MENSAGEM_ERRO_FATAL_IMPORTACAO
             importacao.resultado_json = resultado
             importacao.save()
         except Exception as save_exc:
-            logger.exception(f"Erro ao salvar status de erro da importação {importacao_id}: {save_exc}")
+            logger.exception(
+                'Erro ao salvar status de erro da importação %s: %s',
+                importacao_id,
+                save_exc,
+            )

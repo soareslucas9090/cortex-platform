@@ -3,7 +3,14 @@ import logging
 from django.db import transaction
 
 from AppCore.core.business.business import ModelInstanceBusiness
-from AppCore.core.exceptions.exceptions import NotFoundException, ValidationException
+from django.db import IntegrityError
+
+from AppCore.core.exceptions.exceptions import (
+    BusinessRuleException,
+    NotFoundException,
+    SystemErrorException,
+    ValidationException,
+)
 from AppCore.common.util.util import normalizar_cpf, normalizar_cep
 
 from Identidade.usuarios.importacao.importacao_parser import ImportacaoUsuariosParser
@@ -308,8 +315,83 @@ class UsuarioBusiness(ModelInstanceBusiness):
         except Exception as e:
             self.relancar_ou_erro_sistema(e, 'Não foi possível adicionar a matrícula.', logger)
 
+    def _validar_sem_importacao_em_andamento(self):
+        from .models import ImportacaoLote, StatusImportacao
+
+        if ImportacaoLote.objects.filter(status=StatusImportacao.EM_ANDAMENTO).exists():
+            raise ValidationException(
+                'Já existe uma importação em andamento. Aguarde o término.'
+            )
+
+    def iniciar_importacao(self, arquivo):
+        """Cria lote, envia arquivo ao S3 e enfileira processamento assíncrono."""
+        try:
+            from .importacao.s3_helper import upload_importacao_to_s3
+            from .models import ImportacaoLote, StatusImportacao
+            from .tasks import processar_importacao_usuarios_task
+
+            self._validar_sem_importacao_em_andamento()
+
+            importacao = ImportacaoLote.objects.create(arquivo=arquivo)
+
+            if not upload_importacao_to_s3(importacao):
+                raise SystemErrorException('Não foi possível iniciar a importação.')
+
+            transaction.on_commit(
+                lambda: processar_importacao_usuarios_task.delay(importacao.id)
+            )
+            return importacao.id
+        except IntegrityError:
+            raise BusinessRuleException(
+                'Já existe uma importação em andamento. Aguarde o término.'
+            )
+        except Exception as e:
+            self.relancar_ou_erro_sistema(e, 'Não foi possível iniciar a importação.', logger)
+
+    def cancelar_importacoes_em_andamento(self):
+        """Cancela importações com status EM_ANDAMENTO."""
+        try:
+            from .models import ImportacaoLote, StatusImportacao
+
+            importacoes = list(
+                ImportacaoLote.objects.filter(status=StatusImportacao.EM_ANDAMENTO)
+            )
+            if not importacoes:
+                raise ValidationException(
+                    'Não há nenhuma importação em andamento para ser cancelada.'
+                )
+
+            for importacao in importacoes:
+                importacao.status = StatusImportacao.ERRO
+                resultado = importacao.resultado_json or {}
+                resultado['erro_fatal'] = (
+                    'Importação cancelada manualmente pelo administrador.'
+                )
+                importacao.resultado_json = resultado
+                importacao.save()
+        except Exception as e:
+            self.relancar_ou_erro_sistema(
+                e, 'Não foi possível cancelar a importação.', logger
+            )
+
+    def obter_status_recente(self):
+        """Retorna a importação mais recente ou levanta NotFoundException."""
+        try:
+            from .models import ImportacaoLote
+
+            ultima_importacao = ImportacaoLote.objects.order_by('-created_at').first()
+            if not ultima_importacao:
+                raise NotFoundException('Nenhuma importação encontrada.')
+            return ultima_importacao
+        except Exception as e:
+            self.relancar_ou_erro_sistema(
+                e, 'Não foi possível obter o status da importação.', logger
+            )
+
     def pre_visualizar_importacao(self, arquivo):
         try:
+            self._validar_sem_importacao_em_andamento()
+
             parser = ImportacaoUsuariosParser()
             estrutura = parser.parse(arquivo)
             resumo = ResumoImportacaoDTO()
@@ -357,11 +439,19 @@ class UsuarioBusiness(ModelInstanceBusiness):
             importacao_lote.save(update_fields=['total_linhas'])
             def _incrementar_progresso():
                 importacao_lote.linhas_processadas += 1
-                if importacao_lote.linhas_processadas % 10 == 0 or importacao_lote.linhas_processadas == importacao_lote.total_linhas:
-                    from .models import ImportacaoLote, StatusImportacao
-                    status_atual = ImportacaoLote.objects.filter(id=importacao_lote.id).values_list('status', flat=True).first()
-                    if status_atual == StatusImportacao.ERRO:
-                        raise Exception("Importação cancelada manualmente pelo administrador.")
+                from .models import ImportacaoLote, StatusImportacao
+
+                status_atual = ImportacaoLote.objects.filter(
+                    id=importacao_lote.id
+                ).values_list('status', flat=True).first()
+                if status_atual != StatusImportacao.EM_ANDAMENTO:
+                    raise Exception(
+                        'Importação cancelada manualmente pelo administrador.'
+                    )
+                if (
+                    importacao_lote.linhas_processadas % 10 == 0
+                    or importacao_lote.linhas_processadas == importacao_lote.total_linhas
+                ):
                     importacao_lote.save(update_fields=['linhas_processadas'])
             mapa_matriculas = {
                 m.usuario_id_planilha: m.matricula

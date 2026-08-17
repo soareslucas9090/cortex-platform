@@ -116,7 +116,7 @@ Ordem sugerida (dependências na coluna “Depende”). Pode pular a ordem se a 
 | PREPROD-6 | JWT 30 min + blacklist | Crítico | — | Concluída (2026-08-17) |
 | PREPROD-7 | Settings/Docker de produção (DEBUG, Gunicorn, toolbar) | Crítico | — | Concluída (2026-08-17) |
 | PREPROD-8 | Empréstimo: duplicatas, IntegrityError, lock, desativar recurso | Crítico | PREPROD-1 | Concluída (2026-08-17) |
-| PREPROD-9 | Importação: business, lock, S3, cancelamento | Crítico | — | Pendente |
+| PREPROD-9 | Importação: business, lock, S3, cancelamento | Crítico | — | Concluída (2026-08-17) |
 | PREPROD-10 | Unique global de matrícula + login | Importante | — | Pendente |
 | PREPROD-11 | AlunoCurso: revalidar ativo no PATCH + unique parcial | Crítico | — | Pendente |
 | PREPROD-12 | SetorVinculo: função NOT NULL + unique no banco | Importante | PREPROD-4 | Pendente |
@@ -133,7 +133,7 @@ Ordem sugerida (dependências na coluna “Depende”). Pode pular a ordem se a 
 **Paralelizáveis sem conflito de arquivo (enquanto 1–2 não estiverem em andamento no mesmo checkout):** 3, 4, 10, 14, 15, 17.  
 **Melhor em sequência (go-live):** 1 → 2 → 6 → 7 → 8 → 9 → 11.
 
-**Não ir para produção com usuários reais** enquanto PREPROD-1, 2, 6, 7, 8, 9 e 11 estiverem `Pendente`.
+**Não ir para produção com usuários reais** enquanto PREPROD-11 estiver `Pendente`.
 
 ---
 
@@ -534,7 +534,7 @@ Implemente SOMENTE PREPROD-8 de docs/planning/followup-revisao-pre-producao.md
 
 | | |
 |--|--|
-| **Status** | Pendente |
+| **Status** | Concluída (2026-08-17) |
 | **Severidade** | Crítico |
 | **Pré-requisito** | Nenhum |
 | **Quem / onde** | |
@@ -566,10 +566,10 @@ Implemente SOMENTE PREPROD-8 de docs/planning/followup-revisao-pre-producao.md
 
 ### Critério de saída
 
-- [ ] Nenhuma view de importação faz `.objects.create` / `.save` / `transaction.on_commit`.
-- [ ] Falha de S3 não retorna 202 com task enfileirada.
-- [ ] Cancelar + task lenta não vira `CONCLUIDA`.
-- [ ] Segunda importação paralela → 400.
+- [x] Nenhuma view de importação faz `.objects.create` / `.save` / `transaction.on_commit`.
+- [x] Falha de S3 não retorna 202 com task enfileirada.
+- [x] Cancelar + task lenta não vira `CONCLUIDA`.
+- [x] Segunda importação paralela → 400.
 
 ### Testes mínimos desta etapa
 

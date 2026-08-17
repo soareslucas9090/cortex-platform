@@ -1,8 +1,7 @@
 import logging
 
-from django.db import transaction
 from django.http import StreamingHttpResponse
-from rest_framework import status
+from rest_framework import parsers, status
 from rest_framework.parsers import MultiPartParser
 from rest_framework.response import Response
 
@@ -696,12 +695,6 @@ class PreVisualizarImportacaoUsuariosView(IsAdminMixin, BasicPostAPIView):
     mensagem_sucesso = 'Pré-visualização concluída com sucesso.'
 
     def do_action_post(self, serializer_data, request):
-        from .models import ImportacaoLote, StatusImportacao
-        from rest_framework.exceptions import ValidationError
-
-        if ImportacaoLote.objects.filter(status=StatusImportacao.EM_ANDAMENTO).exists():
-            raise ValidationError('Já existe uma importação em andamento. Aguarde o término.')
-
         resultado = Usuario().business.pre_visualizar_importacao(
             arquivo=serializer_data['file']
         )
@@ -716,9 +709,6 @@ class PreVisualizarImportacaoUsuariosView(IsAdminMixin, BasicPostAPIView):
             },
             'status_code': status.HTTP_200_OK,
         }
-
-
-from rest_framework import parsers
 
 
 @extend_schema(
@@ -757,26 +747,12 @@ class ImportarUsuariosLoteView(IsAdminMixin, BasicPostAPIView):
     mensagem_sucesso = 'Importação enviada para fila de processamento.'
 
     def do_action_post(self, serializer_data, request):
-        from .models import ImportacaoLote, StatusImportacao
-        from .tasks import processar_importacao_usuarios_task
-        from rest_framework.exceptions import ValidationError
-
-        if ImportacaoLote.objects.filter(status=StatusImportacao.EM_ANDAMENTO).exists():
-            raise ValidationError('Já existe uma importação em andamento. Aguarde o término.')
-
-        importacao = ImportacaoLote.objects.create(
+        importacao_id = Usuario().business.iniciar_importacao(
             arquivo=serializer_data['file']
         )
-        
-        # Faz upload para o S3 para compartilhar o arquivo com o container do worker Celery
-        from .importacao.s3_helper import upload_importacao_to_s3
-        upload_importacao_to_s3(importacao)
-        
-        transaction.on_commit(lambda: processar_importacao_usuarios_task.delay(importacao.id))
-
         return {
             'mensagem': self.mensagem_sucesso,
-            'dados': {'importacao_id': importacao.id},
+            'dados': {'importacao_id': importacao_id},
             'status_code': status.HTTP_202_ACCEPTED,
         }
 
@@ -802,17 +778,15 @@ class StatusImportacaoLoteView(IsAdminMixin, BasicGetAPIView):
     serializer_class = StatusImportacaoLoteSerializer
     mensagem_sucesso = 'Status retornado com sucesso.'
 
-    def get_queryset(self):
-        from .models import ImportacaoLote
-        return ImportacaoLote.objects.all()
-
+    @handle_exceptions
     def get(self, request, *args, **kwargs):
-        from django.http import Http404
-        ultima_importacao = self.get_queryset().first()
-        if not ultima_importacao:
-            raise Http404('Nenhuma importação encontrada.')
-
-        return Response(self.serializer_class(ultima_importacao).data, status=status.HTTP_200_OK)
+        importacao = Usuario().business.obter_status_recente()
+        serializer = self.get_serializer(importacao)
+        return Response({
+            'status': 'success',
+            'mensagem': self.mensagem_sucesso,
+            'dados': serializer.data,
+        }, status=status.HTTP_200_OK)
 
 
 @extend_schema(
@@ -837,24 +811,7 @@ class CancelarImportacaoView(IsAdminMixin, BasicPostAPIView):
     mensagem_sucesso = 'Importação cancelada com sucesso.'
 
     def do_action_post(self, serializer_data, request):
-        from .models import ImportacaoLote, StatusImportacao
-        from rest_framework.exceptions import ValidationError
-
-        importacoes_travadas = ImportacaoLote.objects.filter(status=StatusImportacao.EM_ANDAMENTO)
-        
-        if not importacoes_travadas.exists():
-            raise ValidationError('Não há nenhuma importação em andamento para ser cancelada.')
-
-        for importacao in importacoes_travadas:
-            importacao.status = StatusImportacao.ERRO
-            
-            # Se já existir algum resultado, preserva e adiciona o erro fatal
-            resultado = importacao.resultado_json or {}
-            resultado['erro_fatal'] = 'Importação cancelada manualmente pelo administrador.'
-            
-            importacao.resultado_json = resultado
-            importacao.save()
-            
+        Usuario().business.cancelar_importacoes_em_andamento()
         return {
             'mensagem': self.mensagem_sucesso,
             'dados': {},

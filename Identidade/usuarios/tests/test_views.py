@@ -720,20 +720,9 @@ class ImportacaoUsuariosApiTests(TestCase):
         self.assertEqual(response.data['status'], 'success')
         self.assertIn('dados', response.data)
 
-    @patch('Identidade.usuarios.business.UsuarioBusiness.importar_usuarios_em_lote')
-    def test_endpoint_importacao_deve_retornar_200(self, mock_importar):
-        mock_importar.return_value = ResultadoImportacaoDTO(
-            sucesso=True,
-            mensagem='Importação concluída com sucesso.',
-            resumo=ResumoImportacaoDTO(
-                total_abas_processadas=1,
-                total_linhas_processadas=1,
-                total_linhas_com_erro=0,
-                usuarios_criados=1,
-            ),
-            erros=[],
-            metadados={'modo': 'importacao'},
-        )
+    @patch('Identidade.usuarios.business.UsuarioBusiness.iniciar_importacao')
+    def test_endpoint_importacao_deve_retornar_202(self, mock_iniciar):
+        mock_iniciar.return_value = 1
 
         arquivo = SimpleUploadedFile(
             'modelo-importacao-usuarios.ods',
@@ -750,6 +739,52 @@ class ImportacaoUsuariosApiTests(TestCase):
         self.assertEqual(response.status_code, 202)
         self.assertEqual(response.data['status'], 'success')
         self.assertIn('dados', response.data)
+        self.assertEqual(response.data['dados']['importacao_id'], 1)
+
+    @patch('Identidade.usuarios.importacao.s3_helper.upload_importacao_to_s3')
+    def test_endpoint_importacao_falha_s3_nao_retorna_202(self, mock_upload):
+        mock_upload.return_value = False
+
+        arquivo = SimpleUploadedFile(
+            'modelo-importacao-usuarios.ods',
+            b'fake-content',
+            content_type='application/vnd.oasis.opendocument.spreadsheet',
+        )
+
+        response = self.client.post(
+            reverse('identidade:usuarios-importacao'),
+            {'file': arquivo},
+            format='multipart',
+        )
+
+        self.assertNotEqual(response.status_code, 202)
+        self.assertEqual(response.status_code, 500)
+
+    @patch('Identidade.usuarios.importacao.s3_helper.upload_importacao_to_s3')
+    @patch('Identidade.usuarios.tasks.processar_importacao_usuarios_task.delay')
+    def test_segunda_importacao_paralela_retorna_400(self, mock_delay, mock_upload):
+        from Identidade.usuarios.models import ImportacaoLote, StatusImportacao
+
+        mock_upload.return_value = True
+        ImportacaoLote.objects.create(
+            status=StatusImportacao.EM_ANDAMENTO,
+            arquivo='dummy.ods',
+        )
+
+        arquivo = SimpleUploadedFile(
+            'modelo-importacao-usuarios.ods',
+            b'fake-content',
+            content_type='application/vnd.oasis.opendocument.spreadsheet',
+        )
+
+        response = self.client.post(
+            reverse('identidade:usuarios-importacao'),
+            {'file': arquivo},
+            format='multipart',
+        )
+
+        self.assertEqual(response.status_code, 400)
+        mock_delay.assert_not_called()
 
     def test_endpoint_preview_deve_exigir_autenticacao(self):
         self.client.force_authenticate(user=None)
@@ -825,6 +860,42 @@ class CancelarImportacaoViewTests(TestCase):
     def test_deve_retornar_erro_se_nao_ha_importacao_em_andamento(self):
         response = self.client.post(reverse('identidade:usuarios-importacao-cancelar'))
         self.assertEqual(response.status_code, 400)
+
+    @patch('Identidade.usuarios.business.UsuarioBusiness.importar_usuarios_em_lote')
+    def test_task_nao_sobrescreve_status_erro_apos_cancelamento(self, mock_importar):
+        from Identidade.usuarios.models import ImportacaoLote, StatusImportacao
+        from Identidade.usuarios.tasks import processar_importacao_usuarios_task
+
+        mock_importar.return_value = ResultadoImportacaoDTO(
+            sucesso=True,
+            mensagem='Importação concluída com sucesso.',
+            resumo=ResumoImportacaoDTO(
+                total_abas_processadas=1,
+                total_linhas_processadas=1,
+                total_linhas_com_erro=0,
+                usuarios_criados=1,
+            ),
+            erros=[],
+            metadados={'modo': 'importacao'},
+        )
+
+        importacao = ImportacaoLote.objects.create(
+            status=StatusImportacao.ERRO,
+            arquivo='dummy.ods',
+            resultado_json={
+                'erro_fatal': 'Importação cancelada manualmente pelo administrador.',
+            },
+        )
+
+        processar_importacao_usuarios_task(importacao.id)
+
+        importacao.refresh_from_db()
+        self.assertEqual(importacao.status, StatusImportacao.ERRO)
+        self.assertEqual(
+            importacao.resultado_json['erro_fatal'],
+            'Importação cancelada manualmente pelo administrador.',
+        )
+        mock_importar.assert_not_called()
 
 
 class AutenticacaoUsuarioTest(APITestCase):
