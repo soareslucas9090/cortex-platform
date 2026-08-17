@@ -270,7 +270,7 @@ class DetalheEmprestimoView(IsAuthenticatedMixin, BasicRetrieveAPIView):
     mensagem_sucesso = 'Empréstimo obtido com sucesso.'
 
     def validate_retrieve(self, request, *args, **kwargs):
-        self.object.rules.pode_consultar(request.user)
+        self.object.business.verificar_consulta(request.user)
 
 
 @extend_schema(

@@ -11,6 +11,13 @@ logger = logging.getLogger(__name__)
 
 class EmprestimoBusiness(ModelInstanceBusiness):
 
+    def verificar_consulta(self, usuario):
+        """Valida se o usuário autenticado pode consultar o empréstimo."""
+        try:
+            self.object_instance.rules.pode_consultar(usuario)
+        except Exception as e:
+            self.relancar_ou_erro_sistema(e, 'Não foi possível consultar o empréstimo.', logger)
+
     def realizar_emprestimo(
         self,
         solicitante_id: int,

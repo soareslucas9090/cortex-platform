@@ -8,37 +8,36 @@ Esta camada é responsável por:
 - Não deve conter lógica de orquestração (isso é do business)
 
 Métodos padrões que toda classe de Rules deve ter:
-- return_exception(msg: str): Lança exceção para ser tratada no business
-- return_not_allowed(): Retorna False quando regra não é satisfeita
-- return_response(msg: str, execute_exception: bool = False): Retorna mensagem negativa
-- Métodos can_* para verificar regras específicas
+- return_exception(msg, type_exception=BusinessRuleException): lança exceção de domínio
+- return_not_allowed(msg): lança AuthorizationException (403)
+- return_response(msg, execute_exception=False): retorna False ou lança exceção
 """
-from AppCore.core.exceptions.exceptions import BusinessRuleException
+from AppCore.core.exceptions.exceptions import AuthorizationException, BusinessRuleException
 
 class ModelInstanceRules:
     def __init__(self, object_instance=None):
         self.object_instance = object_instance
 
-    def return_exception(self, message='', details=None):
+    def return_exception(self, message='', details=None, type_exception=BusinessRuleException):
         """
         Lança uma exceção com a mensagem para ser tratada no business.
-        
-        Args:
-            msg: Mensagem de erro
-            
-        Raises:
-            BaseRuleException: Sempre lança exceção
-        """
-        raise BusinessRuleException(message, details)
 
-    def return_not_allowed(self):
+        Args:
+            message: Mensagem de erro
+            details: Detalhes opcionais da exceção
+            type_exception: Classe de exceção de domínio a levantar
         """
-        Retorna False para indicar que a ação não é permitida.
-        
-        Returns:
-            bool: Sempre retorna False
+        raise type_exception(message, details)
+
+    def return_not_allowed(self, message='', details=None):
         """
-        return False
+        Lança AuthorizationException quando a ação não é permitida (403).
+        """
+        self.return_exception(
+            message or 'Você não tem permissão para realizar esta ação.',
+            details,
+            AuthorizationException,
+        )
 
     def return_response(self, message='', details=None, execute_exception=False):
         """

@@ -108,7 +108,7 @@ Ordem sugerida (dependências na coluna “Depende”). Pode pular a ordem se a 
 
 | ID | Título | Severidade | Depende | Status |
 |----|--------|------------|---------|--------|
-| PREPROD-1 | Corrigir GET detalhe de empréstimo (500) | Crítico | — | Pendente |
+| PREPROD-1 | Corrigir GET detalhe de empréstimo (500) | Crítico | — | Concluída (2026-08-17) |
 | PREPROD-2 | Impedir L1/L2 de ligar `usuario_coletivo` | Crítico | — | Pendente |
 | PREPROD-3 | Corrigir filtro `tipo_perfil` (tupla) | Importante | — | Pendente |
 | PREPROD-4 | Corrigir `SetorVinculo.__str__` | Importante | — | Pendente |
@@ -141,7 +141,7 @@ Ordem sugerida (dependências na coluna “Depende”). Pode pular a ordem se a 
 
 | | |
 |--|--|
-| **Status** | Pendente |
+| **Status** | Concluída (2026-08-17) |
 | **Severidade** | Crítico |
 | **Pré-requisito** | Nenhum |
 | **Quem / onde** | |
@@ -174,10 +174,10 @@ Ordem sugerida (dependências na coluna “Depende”). Pode pular a ordem se a 
 
 ### Critério de saída
 
-- [ ] `GET reverse('infraestrutura:emprestimo-detail')` não retorna 500.
-- [ ] L1: 200 no empréstimo **ativo próprio**; 403 no encerrado próprio e no ativo de outro.
-- [ ] Quem tem `operar`: 200 em qualquer empréstimo.
-- [ ] View não chama `.rules` nem `.helper`.
+- [x] `GET reverse('infraestrutura:emprestimo-detail')` não retorna 500.
+- [x] L1: 200 no empréstimo **ativo próprio**; 403 no encerrado próprio e no ativo de outro.
+- [x] Quem tem `operar`: 200 em qualquer empréstimo.
+- [x] View não chama `.rules` nem `.helper`.
 
 ### Testes mínimos desta etapa
 

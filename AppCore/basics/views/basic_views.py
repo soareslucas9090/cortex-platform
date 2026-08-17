@@ -215,12 +215,12 @@ class BasicRetrieveAPIView(GenericAPIView):
 
     @handle_exceptions
     def get(self, request, *args, **kwargs):
-        self.validate_retrieve(request, *args, **kwargs)
-
         try:
             self.object = self.get_object()
         except Http404:
             raise NotFoundException(RESPONSE_ALGUM_DADO_NAO_FOI_ENCONTRADO)
+
+        self.validate_retrieve(request, *args, **kwargs)
 
         serializer = self.get_serializer(self.object)
 

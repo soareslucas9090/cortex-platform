@@ -56,6 +56,8 @@ class EmprestimosViewsTest(APITestCase):
         )
         self.url_lista = reverse('infraestrutura:emprestimos-list')
         self.url_solicitantes = reverse('infraestrutura:emprestimos-solicitantes-elegiveis')
+        self.outro_solicitante = criar_usuario('33333333333', nome='Outro Solicitante')
+        SetorVinculo.objects.create(usuario=self.outro_solicitante, setor=setor, funcao=None)
 
     def test_l1_nao_pode_listar_solicitantes_elegiveis(self):
         self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token_l1}')
@@ -162,6 +164,68 @@ class EmprestimosViewsTest(APITestCase):
         resposta = self.client.get(self.url_lista)
         ids = [item['id'] for item in resposta.data['dados']]
         self.assertNotIn(emprestimo_id, ids)
+
+    def _criar_emprestimo_ativo(self, solicitante=None):
+        solicitante = solicitante or self.solicitante
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token_operador}')
+        resposta = self.client.post(self.url_lista, {
+            'solicitante_id': solicitante.pk,
+            'recurso_ids': [self.chave.pk],
+        })
+        self.assertEqual(resposta.status_code, status.HTTP_201_CREATED)
+        return resposta.data['dados']['id']
+
+    def _encerrar_emprestimo(self, emprestimo_id):
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token_operador}')
+        item_id = Emprestimo.objects.get(pk=emprestimo_id).itens.first().pk
+        url_devolver = reverse('infraestrutura:emprestimo-devolver', kwargs={'pk': emprestimo_id})
+        resposta = self.client.post(url_devolver, {'item_ids': [item_id]})
+        self.assertEqual(resposta.status_code, status.HTTP_200_OK)
+
+    def test_l1_detalhe_emprestimo_ativo_proprio(self):
+        emprestimo_id = self._criar_emprestimo_ativo()
+        url_detalhe = reverse('infraestrutura:emprestimo-detail', kwargs={'pk': emprestimo_id})
+
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token_l1}')
+        resposta = self.client.get(url_detalhe)
+        self.assertEqual(resposta.status_code, status.HTTP_200_OK)
+        self.assertEqual(resposta.data['dados']['id'], emprestimo_id)
+
+    def test_l1_detalhe_emprestimo_encerrado_proprio_retorna_403(self):
+        emprestimo_id = self._criar_emprestimo_ativo()
+        self._encerrar_emprestimo(emprestimo_id)
+        url_detalhe = reverse('infraestrutura:emprestimo-detail', kwargs={'pk': emprestimo_id})
+
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token_l1}')
+        resposta = self.client.get(url_detalhe)
+        self.assertEqual(resposta.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_l1_detalhe_emprestimo_ativo_de_outro_retorna_403(self):
+        emprestimo_id = self._criar_emprestimo_ativo(solicitante=self.outro_solicitante)
+        url_detalhe = reverse('infraestrutura:emprestimo-detail', kwargs={'pk': emprestimo_id})
+
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token_l1}')
+        resposta = self.client.get(url_detalhe)
+        self.assertEqual(resposta.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_operador_detalhe_emprestimo_ativo_retorna_200(self):
+        emprestimo_id = self._criar_emprestimo_ativo()
+        url_detalhe = reverse('infraestrutura:emprestimo-detail', kwargs={'pk': emprestimo_id})
+
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token_operador}')
+        resposta = self.client.get(url_detalhe)
+        self.assertEqual(resposta.status_code, status.HTTP_200_OK)
+        self.assertEqual(resposta.data['dados']['id'], emprestimo_id)
+
+    def test_operador_detalhe_emprestimo_encerrado_retorna_200(self):
+        emprestimo_id = self._criar_emprestimo_ativo()
+        self._encerrar_emprestimo(emprestimo_id)
+        url_detalhe = reverse('infraestrutura:emprestimo-detail', kwargs={'pk': emprestimo_id})
+
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token_operador}')
+        resposta = self.client.get(url_detalhe)
+        self.assertEqual(resposta.status_code, status.HTTP_200_OK)
+        self.assertEqual(resposta.data['dados']['id'], emprestimo_id)
 
 
 class EmprestimoUsuarioColetivoViewsTest(APITestCase):

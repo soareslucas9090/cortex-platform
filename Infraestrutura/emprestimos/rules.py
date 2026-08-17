@@ -2,7 +2,6 @@ from django.apps import apps
 from django.conf import settings
 
 from AppCore.core.rules.rules import ModelInstanceRules
-
 from Infraestrutura.permissoes.access import usuario_pode_operar_infraestrutura
 
 
@@ -96,5 +95,5 @@ class EmprestimoRules(ModelInstanceRules):
             usuario,
             self.object_instance,
         ):
-            self.return_not_allowed()
+            self.return_not_allowed('Você não tem permissão para consultar este empréstimo.')
         return True
