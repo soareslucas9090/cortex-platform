@@ -6,9 +6,11 @@ from rest_framework_simplejwt.tokens import RefreshToken
 
 from Identidade.usuarios.models import Usuario
 from Infraestrutura.blocos.models import Bloco
+from Infraestrutura.emprestimos.models import Emprestimo
 from Infraestrutura.permissoes.models import PermissaoFuncaoInfraestrutura
 from Infraestrutura.recursos.choices import TipoRecurso
-from Infraestrutura.salas.models import Sala
+from Infraestrutura.recursos.models import Recurso
+from Infraestrutura.salas.models import Sala, SalaSetor
 from Organizacional.funcoes.models import Funcao
 from Organizacional.setores.models import Setor
 from Organizacional.vinculos.models import SetorVinculo
@@ -27,6 +29,14 @@ def conceder_capacidade_cadastrar(usuario):
     funcao = Funcao.objects.create(papel_funcao=f'CAD_{usuario.cpf}', descricao='Cadastrador')
     setor = Setor.objects.create(sigla=f'S{usuario.cpf[-3:]}', nome='Setor Teste')
     PermissaoFuncaoInfraestrutura().business.criar_permissao(funcao_id=funcao.pk, cadastrar=True)
+    SetorVinculo.objects.create(usuario=usuario, setor=setor, funcao=funcao)
+    return usuario
+
+
+def conceder_capacidade_operar(usuario):
+    funcao = Funcao.objects.create(papel_funcao=f'OP_{usuario.cpf}', descricao='Operador')
+    setor = Setor.objects.create(sigla=f'O{usuario.cpf[-3:]}', nome='Setor Operador')
+    PermissaoFuncaoInfraestrutura().business.criar_permissao(funcao_id=funcao.pk, operar=True)
     SetorVinculo.objects.create(usuario=usuario, setor=setor, funcao=funcao)
     return usuario
 
@@ -107,3 +117,27 @@ class CadastroRecursosValidacaoTest(APITestCase):
         self.assertEqual(resposta.status_code, status.HTTP_201_CREATED)
         self.assertIsNone(resposta.data['dados']['sala'])
         self.assertIsNone(resposta.data['dados']['foto'])
+
+    def test_nao_desativa_recurso_com_emprestimo_em_aberto(self):
+        solicitante = criar_usuario('44444444444', nome='Solicitante Emp')
+        operador = conceder_capacidade_operar(criar_usuario('55555555555', nome='Operador Emp'))
+        setor = Setor.objects.create(sigla='EMP', nome='Setor Emp')
+        SalaSetor.objects.create(sala=self.sala, setor=setor)
+        SetorVinculo.objects.create(usuario=solicitante, setor=setor, funcao=None)
+
+        recurso = Recurso.objects.create(
+            codigo='CHV-EMP',
+            tipo=TipoRecurso.CHAVE,
+            sala=self.sala,
+        )
+        Emprestimo().business.realizar_emprestimo(
+            solicitante_id=solicitante.pk,
+            conta_autenticada=operador,
+            recurso_ids=[recurso.pk],
+        )
+
+        url_desativar = reverse('infraestrutura:recurso-desativar', kwargs={'pk': recurso.pk})
+        resposta = self.client.post(url_desativar)
+        self.assertEqual(resposta.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('empréstimo em aberto', str(resposta.data).lower())
+        self.assertTrue(Recurso.objects.get(pk=recurso.pk).ativo)

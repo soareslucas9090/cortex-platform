@@ -48,6 +48,8 @@ class EmprestimoRules(ModelInstanceRules):
     def validar_recursos_informados(self, recurso_ids: list, recursos) -> bool:
         if not recurso_ids:
             self.return_exception('Informe ao menos um recurso para o empréstimo.')
+        if len(recurso_ids) != len(set(recurso_ids)):
+            self.return_exception('IDs de recurso duplicados.')
         ids_encontrados = {recurso.pk for recurso in recursos}
         if len(ids_encontrados) != len(set(recurso_ids)):
             self.return_exception('Um ou mais recursos informados não foram encontrados.')
@@ -77,6 +79,8 @@ class EmprestimoRules(ModelInstanceRules):
     def validar_itens_para_devolucao(self, itens, item_ids: list) -> bool:
         if not item_ids:
             self.return_exception('Informe ao menos um item para devolução.')
+        if len(item_ids) != len(set(item_ids)):
+            self.return_exception('IDs de item duplicados.')
         ids_encontrados = {item.pk for item in itens}
         if len(ids_encontrados) != len(set(item_ids)):
             self.return_exception('Um ou mais itens informados não pertencem a este empréstimo.')

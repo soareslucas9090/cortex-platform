@@ -44,9 +44,14 @@ class RecursoRules(ModelInstanceRules):
         return True
 
     def pode_desativar(self) -> bool:
-        """Recurso só pode ser desativado se estiver ativo."""
+        """Recurso só pode ser desativado se estiver ativo e sem empréstimo em aberto."""
         if not self.object_instance.ativo:
             self.return_exception('O recurso já está inativo.')
+        from Infraestrutura.emprestimos.models import Emprestimo
+        if Emprestimo().helper.recurso_esta_emprestado(self.object_instance):
+            self.return_exception(
+                'O recurso possui empréstimo em aberto e não pode ser desativado.',
+            )
         return True
 
     def pode_reativar(self) -> bool:

@@ -3,6 +3,7 @@ import datetime
 from django.test import TestCase
 from django.utils import timezone
 
+from AppCore.core.exceptions.exceptions import BusinessRuleException
 from Identidade.usuarios.models import Usuario
 from Infraestrutura.autorizacoes.models import Autorizacao
 from Infraestrutura.blocos.models import Bloco
@@ -263,12 +264,33 @@ class EmprestimoOperacoesTest(TestCase):
             conta_autenticada=self.operador,
             recurso_ids=[self.chave1.pk],
         )
-        with self.assertRaises(Exception):
+        with self.assertRaises(BusinessRuleException) as ctx:
             Emprestimo().business.realizar_emprestimo(
                 solicitante_id=self.solicitante.pk,
                 conta_autenticada=self.operador,
                 recurso_ids=[self.chave1.pk],
             )
+        self.assertIn('empréstimo em aberto', str(ctx.exception).lower())
+
+    def test_rejeita_recurso_ids_duplicados(self):
+        with self.assertRaises(BusinessRuleException) as ctx:
+            Emprestimo().business.realizar_emprestimo(
+                solicitante_id=self.solicitante.pk,
+                conta_autenticada=self.operador,
+                recurso_ids=[self.chave1.pk, self.chave1.pk],
+            )
+        self.assertIn('duplicados', str(ctx.exception).lower())
+
+    def test_rejeita_item_ids_duplicados_na_devolucao(self):
+        emprestimo = Emprestimo().business.realizar_emprestimo(
+            solicitante_id=self.solicitante.pk,
+            conta_autenticada=self.operador,
+            recurso_ids=[self.chave1.pk],
+        )
+        item_id = emprestimo.itens.first().pk
+        with self.assertRaises(BusinessRuleException) as ctx:
+            emprestimo.business.devolver_itens(self.operador, [item_id, item_id])
+        self.assertIn('duplicados', str(ctx.exception).lower())
 
     def test_devolucao_parcial_mantem_emprestimo_ativo(self):
         emprestimo = Emprestimo().business.realizar_emprestimo(

@@ -227,6 +227,25 @@ class EmprestimosViewsTest(APITestCase):
         self.assertEqual(resposta.status_code, status.HTTP_200_OK)
         self.assertEqual(resposta.data['dados']['id'], emprestimo_id)
 
+    def test_operador_rejeita_recurso_ids_duplicados(self):
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token_operador}')
+        resposta = self.client.post(self.url_lista, {
+            'solicitante_id': self.solicitante.pk,
+            'recurso_ids': [self.chave.pk, self.chave.pk],
+        })
+        self.assertEqual(resposta.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('duplicados', str(resposta.data).lower())
+
+    def test_operador_rejeita_segundo_emprestimo_no_mesmo_recurso(self):
+        self._criar_emprestimo_ativo()
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token_operador}')
+        resposta = self.client.post(self.url_lista, {
+            'solicitante_id': self.solicitante.pk,
+            'recurso_ids': [self.chave.pk],
+        })
+        self.assertEqual(resposta.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('empréstimo em aberto', str(resposta.data).lower())
+
 
 class EmprestimoUsuarioColetivoViewsTest(APITestCase):
 

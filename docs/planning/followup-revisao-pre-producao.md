@@ -115,7 +115,7 @@ Ordem sugerida (dependências na coluna “Depende”). Pode pular a ordem se a 
 | PREPROD-5 | Senha obrigatória na API; importação sem senha=CPF | Crítico | — | Desnecessária (2026-08-17) |
 | PREPROD-6 | JWT 30 min + blacklist | Crítico | — | Concluída (2026-08-17) |
 | PREPROD-7 | Settings/Docker de produção (DEBUG, Gunicorn, toolbar) | Crítico | — | Concluída (2026-08-17) |
-| PREPROD-8 | Empréstimo: duplicatas, IntegrityError, lock, desativar recurso | Crítico | PREPROD-1 | Pendente |
+| PREPROD-8 | Empréstimo: duplicatas, IntegrityError, lock, desativar recurso | Crítico | PREPROD-1 | Concluída (2026-08-17) |
 | PREPROD-9 | Importação: business, lock, S3, cancelamento | Crítico | — | Pendente |
 | PREPROD-10 | Unique global de matrícula + login | Importante | — | Pendente |
 | PREPROD-11 | AlunoCurso: revalidar ativo no PATCH + unique parcial | Crítico | — | Pendente |
@@ -484,7 +484,7 @@ Implemente SOMENTE PREPROD-7 de docs/planning/followup-revisao-pre-producao.md
 
 | | |
 |--|--|
-| **Status** | Pendente |
+| **Status** | Concluída (2026-08-17) |
 | **Severidade** | Crítico |
 | **Pré-requisito** | PREPROD-1 (detalhe e business de consulta já no lugar) |
 | **Quem / onde** | |
@@ -512,9 +512,9 @@ Implemente SOMENTE PREPROD-7 de docs/planning/followup-revisao-pre-producao.md
 
 ### Critério de saída
 
-- [ ] `recurso_ids=[1,1]` → 400, não 500.
-- [ ] Segundo empréstimo no mesmo recurso (corrida ou sequencial) → 400 com mensagem de negócio, não 500.
-- [ ] Desativar recurso com item aberto → 400.
+- [x] `recurso_ids=[1,1]` → 400, não 500.
+- [x] Segundo empréstimo no mesmo recurso (corrida ou sequencial) → 400 com mensagem de negócio, não 500.
+- [x] Desativar recurso com item aberto → 400.
 
 ### Testes mínimos desta etapa
 

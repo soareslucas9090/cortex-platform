@@ -2,9 +2,11 @@ import logging
 
 from django.apps import apps
 from django.conf import settings
+from django.db import IntegrityError
 from django.utils import timezone
 
 from AppCore.core.business.business import ModelInstanceBusiness
+from AppCore.core.exceptions.exceptions import BusinessRuleException
 
 logger = logging.getLogger(__name__)
 
@@ -41,7 +43,9 @@ class EmprestimoBusiness(ModelInstanceBusiness):
                     responsavel_id=responsavel_id,
                 )
             recursos = list(
-                Recurso.objects.filter(pk__in=recurso_ids).select_related('sala'),
+                Recurso.objects.select_for_update(of=('self',))
+                .filter(pk__in=recurso_ids)
+                .select_related('sala'),
             )
             self.object_instance.rules.validar_recursos_informados(recurso_ids, recursos)
             self.object_instance.rules.validar_solicitante_ativo(solicitante_id)
@@ -66,6 +70,8 @@ class EmprestimoBusiness(ModelInstanceBusiness):
                     recurso=recurso,
                 )
             return emprestimo
+        except IntegrityError:
+            raise BusinessRuleException('O recurso já possui empréstimo em aberto.')
         except Exception as e:
             self.relancar_ou_erro_sistema(e, 'Não foi possível realizar o empréstimo.', logger)
 
