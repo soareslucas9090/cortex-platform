@@ -735,9 +735,9 @@ paths:
         (com ou sem máscara).\n\n        **Exemplos de identificador:**\n        -
         E-mail: `usuario@email.com`\n        - CPF sem máscara: `12345678901`\n        -
         CPF com máscara: `123.456.789-01`\n\n        **Token de acesso:** válido por
-        1 dia.\n        **Token de renovação:** válido por 7 dias.\n\n        Em caso
-        de falha, a resposta é sempre genérica e não revela\n        o motivo específico
-        (usuário inexistente, senha incorreta ou inativo).\n        "
+        30 minutos.\n        **Token de renovação:** válido por 7 dias.\n\n        Em
+        caso de falha, a resposta é sempre genérica e não revela\n        o motivo
+        específico (usuário inexistente, senha incorreta ou inativo).\n        "
       summary: Login — obter tokens JWT
       tags:
       - Auth
@@ -941,9 +941,13 @@ paths:
           type: string
           enum:
           - aluno
+          - alunos
           - servidor
+          - servidores
           - terceirizado
-        description: 'Filtra por tipo de perfil: alunos, terceirizados ou servidores.'
+          - terceirizados
+        description: 'Filtra por tipo de perfil: aluno/alunos, terceirizado/terceirizados
+          ou servidor/servidores.'
       tags:
       - Identidade
       security:
@@ -1065,17 +1069,19 @@ paths:
     patch:
       operationId: identidade_usuarios_partial_update
       description: "\n    Atualiza parcialmente os dados básicos do usuário (nome,
-        e-mail, deficiência,\n    colaborador_externo, usuario_coletivo).\n\n    A
-        flag `usuario_coletivo` pode ser alterada aqui; o pool de associações é mantido\n
-        \   em `GET/PUT /usuarios/{pk}/coletivo/`. Ao desativar a flag, o pool é limpo.\n\n
-        \   **Permissões:** O próprio usuário ou administradores.\n\n    CPF não é
-        alterável neste endpoint.\n\n    **Normalização de Deficiência (campo `deficiencia`):**\n
-        \   O campo é normalizado automaticamente no save (removendo acentos, convertendo
-        para caixa baixa e substituindo espaços por `_`).\n    - Opções válidas resultantes:
-        `deficiencia_intelectual`, `deficiencia_visual`, `deficiencia_auditiva`, `deficiencia_multipla`,
-        `deficiencia_fisica`.\n    - Se a string enviada (ex: \"Deficiência Múltipla\")
-        equivaler a uma das chaves após a normalização, ela será associada.\n    -
-        Se não houver correspondência, o valor será gravado como `null`.\n    "
+        e-mail, deficiência,\n    colaborador_externo).\n\n    A flag `usuario_coletivo`
+        **não** é alterável neste endpoint — use a criação\n    do usuário (L3) para
+        definir a conta coletiva. O pool de associações é mantido\n    em `GET/PUT
+        /usuarios/{pk}/coletivo/` (L3).\n\n    **Permissões:** L2+ (LER_TUDO) lê;
+        escrita pelo dono (L1) ou L3 (EDITAR_TUDO).\n    O campo `usuario_coletivo`
+        não é aceito neste PATCH.\n\n    CPF não é alterável neste endpoint.\n\n    **Normalização
+        de Deficiência (campo `deficiencia`):**\n    O campo é normalizado automaticamente
+        no save (removendo acentos, convertendo para caixa baixa e substituindo espaços
+        por `_`).\n    - Opções válidas resultantes: `deficiencia_intelectual`, `deficiencia_visual`,
+        `deficiencia_auditiva`, `deficiencia_multipla`, `deficiencia_fisica`.\n    -
+        Se a string enviada (ex: \"Deficiência Múltipla\") equivaler a uma das chaves
+        após a normalização, ela será associada.\n    - Se não houver correspondência,
+        o valor será gravado como `null`.\n    "
       summary: Atualizar dados do usuário
       parameters:
       - in: path
@@ -1133,8 +1139,8 @@ paths:
     get:
       operationId: identidade_usuarios_coletivo_retrieve
       description: "\n    Retorna o pool do usuário coletivo (empresas, cargos, funções
-        e setores).\n\n    A flag `usuario_coletivo` é definida na criação/edição
-        do usuário; as associações\n    do pool são mantidas apenas por estes endpoints
+        e setores).\n\n    A flag `usuario_coletivo` é definida na criação do usuário
+        (L3); as associações\n    do pool são mantidas apenas por estes endpoints
         dedicados.\n\n    **Permissões:** Administradores (L3).\n    "
       summary: Obter configuração do usuário coletivo
       parameters:
@@ -6955,8 +6961,6 @@ components:
             chave de escolha.'
         colaborador_externo:
           type: boolean
-        usuario_coletivo:
-          type: boolean
     PatchedAtualizarVinculoFuncao:
       type: object
       properties:
@@ -7553,7 +7557,6 @@ components:
           readOnly: true
         refresh:
           type: string
-          writeOnly: true
       required:
       - access
       - refresh
