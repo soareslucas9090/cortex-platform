@@ -768,34 +768,27 @@ class ImportacaoUsuariosApiTests(TestCase):
 
         self.assertIn(response.status_code, [401, 403])
 
-    @patch('boto3.client')
-    def test_endpoint_download_modelo_sucesso(self, mock_boto_client):
-        from unittest.mock import MagicMock
-        mock_s3 = MagicMock()
-        mock_boto_client.return_value = mock_s3
-        
-        def mock_download(bucket, key, fileobj):
-            fileobj.write(b'fake ods spreadsheet content')
-            
-        mock_s3.download_fileobj.side_effect = mock_download
-        
+    @patch('AppCore.common.storage.s3.iterar_objeto_s3')
+    def test_endpoint_download_modelo_sucesso(self, mock_iterar):
+        mock_iterar.return_value = (
+            iter([b'fake ods spreadsheet content']),
+            'application/vnd.oasis.opendocument.spreadsheet',
+        )
+
         response = self.client.get(reverse('identidade:usuarios-importacao-modelo'))
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.headers['Content-Type'], 'application/vnd.oasis.opendocument.spreadsheet')
         self.assertEqual(b''.join(response.streaming_content), b'fake ods spreadsheet content')
 
-    @patch('boto3.client')
-    @patch('Identidade.usuarios.views.logger')
-    def test_endpoint_download_modelo_falha_s3(self, mock_views_logger, mock_boto_client):
-        from unittest.mock import MagicMock
+    @patch('AppCore.common.storage.s3.iterar_objeto_s3')
+    def test_endpoint_download_modelo_falha_s3(self, mock_iterar):
         from botocore.exceptions import ClientError
-        mock_s3 = MagicMock()
-        mock_boto_client.return_value = mock_s3
-        mock_s3.download_fileobj.side_effect = ClientError(
+
+        mock_iterar.side_effect = ClientError(
             error_response={'Error': {'Code': 'NoSuchKey', 'Message': 'Not Found'}},
-            operation_name='GetObject'
+            operation_name='GetObject',
         )
-        
+
         response = self.client.get(reverse('identidade:usuarios-importacao-modelo'))
         self.assertEqual(response.status_code, 404)
 
@@ -1193,6 +1186,17 @@ class AtualizarFotoSecundariaViewTest(APITestCase):
         mock_upload.assert_called_once()
 
     @patch('AppCore.common.storage.s3.enviar_arquivo_s3')
+    def test_png_com_nome_jpg_envia_extensao_png(self, mock_upload):
+        mock_upload.return_value = f'Cortex/usuarios/fotos/{self.usuario.pk}/abc.png'
+        arquivo = criar_arquivo_imagem_teste(nome='foto.jpg')
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token_usuario}')
+        resposta = self.client.post(self.url, {'foto': arquivo}, format='multipart')
+        self.assertEqual(resposta.status_code, status.HTTP_200_OK)
+        mock_upload.assert_called_once()
+        self.assertEqual(mock_upload.call_args.kwargs.get('extensao'), 'png')
+        self.assertEqual(mock_upload.call_args.kwargs.get('content_type'), 'image/png')
+
+    @patch('AppCore.common.storage.s3.enviar_arquivo_s3')
     def test_s3_nao_configurado_retorna_500(self, mock_upload):
         mock_upload.side_effect = ValueError('Configuração de armazenamento S3 inválida.')
         self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token_usuario}')
@@ -1292,3 +1296,56 @@ class AtualizarFotoSecundariaViewTest(APITestCase):
         self.assertIn(resposta.status_code, (status.HTTP_200_OK, status.HTTP_400_BAD_REQUEST))
         self.usuario.refresh_from_db()
         self.assertIsNone(self.usuario.foto)
+
+
+class BaixarModeloImportacaoUsuariosViewTest(APITestCase):
+
+    def setUp(self):
+        self.admin = criar_usuario('20000000004', nome='Admin Modelo', is_admin=True)
+        self.token_admin = obter_tokens(self.admin)
+        self.url = reverse('identidade:usuarios-importacao-modelo')
+
+    @patch('AppCore.common.storage.s3.iterar_objeto_s3')
+    def test_admin_baixa_modelo_ods(self, mock_iterar):
+        mock_iterar.return_value = (
+            iter([b'conteudo-modelo-ods']),
+            'application/vnd.oasis.opendocument.spreadsheet',
+        )
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token_admin}')
+        resposta = self.client.get(self.url)
+        self.assertEqual(resposta.status_code, status.HTTP_200_OK)
+        self.assertIn('attachment', resposta['Content-Disposition'])
+        self.assertIn('modelo-importacao-usuarios.ods', resposta['Content-Disposition'])
+        self.assertEqual(
+            resposta['Content-Type'],
+            'application/vnd.oasis.opendocument.spreadsheet',
+        )
+        self.assertEqual(b''.join(resposta.streaming_content), b'conteudo-modelo-ods')
+        mock_iterar.assert_called_once_with(
+            'Cortex/modelo-importacao-usuarios.ods',
+            content_type_padrao='application/vnd.oasis.opendocument.spreadsheet',
+        )
+
+    @patch('AppCore.common.storage.s3.iterar_objeto_s3')
+    def test_modelo_nao_encontrado_retorna_404(self, mock_iterar):
+        from botocore.exceptions import ClientError
+
+        mock_iterar.side_effect = ClientError(
+            {'Error': {'Code': 'NoSuchKey', 'Message': 'Not found'}},
+            'GetObject',
+        )
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token_admin}')
+        resposta = self.client.get(self.url)
+        self.assertEqual(resposta.status_code, status.HTTP_404_NOT_FOUND)
+
+    @patch('AppCore.common.storage.s3.iterar_objeto_s3')
+    def test_s3_nao_configurado_retorna_500(self, mock_iterar):
+        from AppCore.core.exceptions.exceptions import SystemErrorException
+
+        mock_iterar.side_effect = SystemErrorException('Configuração de armazenamento S3 inválida.')
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token_admin}')
+        resposta = self.client.get(self.url)
+        self.assertEqual(resposta.status_code, status.HTTP_500_INTERNAL_SERVER_ERROR)
+        self.assertEqual(resposta.data['detail'], RESPONSE_ERRO_INTERNO_SERVIDOR)
+        self.assertNotIn('Configuração', str(resposta.data))
+        self.assertNotIn('S3', str(resposta.data))

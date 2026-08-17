@@ -17,6 +17,7 @@ class RecursoBusiness(ModelInstanceBusiness):
         **kwargs,
     ):
         """Cria um novo recurso validando código e regras por tipo."""
+        nova_chave = None
         try:
             from .constantes import ANEXO_FOTO
             from .models import Recurso
@@ -45,6 +46,9 @@ class RecursoBusiness(ModelInstanceBusiness):
                 recurso.save(update_fields=['foto'])
             return self.object_instance.helper.obter_por_pk_com_sala(recurso.pk)
         except Exception as e:
+            if nova_chave:
+                from .constantes import ANEXO_FOTO
+                ANEXO_FOTO.remover(nova_chave)
             self.relancar_ou_erro_sistema(e, 'Não foi possível criar o recurso.', logger)
 
     def atualizar_dados(self, dados: dict):
@@ -86,26 +90,30 @@ class RecursoBusiness(ModelInstanceBusiness):
 
     def _processar_foto_para_upload(self, arquivo):
         """Valida, recorta e reencoda a foto antes do envio ao S3."""
-        from AppCore.common.storage.imagens import (
-            abrir_imagem,
-            recortar_central,
-            reencode_jpeg,
-        )
-        from .constantes import (
-            PROPORCAO_FOTO_ALTURA,
-            PROPORCAO_FOTO_LARGURA,
-        )
-        self.object_instance.rules.validar_arquivo_foto(arquivo)
-        imagem = abrir_imagem(arquivo)
-        largura, altura = imagem.size
-        self.object_instance.rules.validar_orientacao_retrato(largura, altura)
-        recortada = recortar_central(imagem, PROPORCAO_FOTO_LARGURA, PROPORCAO_FOTO_ALTURA)
-        largura_final, altura_final = recortada.size
-        self.object_instance.rules.validar_resolucao_minima_foto(largura_final, altura_final)
-        return reencode_jpeg(recortada)
+        try:
+            from AppCore.common.storage.imagens import (
+                abrir_imagem,
+                recortar_central,
+                reencode_jpeg,
+            )
+            from .constantes import (
+                PROPORCAO_FOTO_ALTURA,
+                PROPORCAO_FOTO_LARGURA,
+            )
+            self.object_instance.rules.validar_arquivo_foto(arquivo)
+            imagem = abrir_imagem(arquivo)
+            largura, altura = imagem.size
+            self.object_instance.rules.validar_orientacao_retrato(largura, altura)
+            recortada = recortar_central(imagem, PROPORCAO_FOTO_LARGURA, PROPORCAO_FOTO_ALTURA)
+            largura_final, altura_final = recortada.size
+            self.object_instance.rules.validar_resolucao_minima_foto(largura_final, altura_final)
+            return reencode_jpeg(recortada)
+        except Exception as e:
+            self.relancar_ou_erro_sistema(e, 'Não foi possível processar a foto do recurso.', logger)
 
     def atualizar_foto(self, arquivo):
         """Processa a foto (retrato 3:4), envia ao S3 e persiste a chave."""
+        nova_chave = None
         try:
             from .constantes import ANEXO_FOTO
             processada = self._processar_foto_para_upload(arquivo)
@@ -121,6 +129,9 @@ class RecursoBusiness(ModelInstanceBusiness):
             if chave_antiga and chave_antiga != nova_chave:
                 ANEXO_FOTO.remover(chave_antiga)
         except Exception as e:
+            if nova_chave:
+                from .constantes import ANEXO_FOTO
+                ANEXO_FOTO.remover(nova_chave)
             self.relancar_ou_erro_sistema(e, 'Não foi possível atualizar a foto do recurso.', logger)
 
     def remover_foto(self):

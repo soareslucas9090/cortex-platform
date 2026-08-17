@@ -1,8 +1,7 @@
-import logging, os
-from pathlib import Path
+import logging
 
 from django.db import transaction
-from django.http import FileResponse, Http404, StreamingHttpResponse
+from django.http import StreamingHttpResponse
 from rest_framework import status
 from rest_framework.parsers import MultiPartParser
 from rest_framework.response import Response
@@ -650,48 +649,12 @@ class BaixarModeloImportacaoUsuariosView(IsAdminMixin, BasicGetAPIView):
     serializer_class = SerializerVazio
     mensagem_sucesso = 'Modelo de importação localizado com sucesso.'
 
+    @handle_exceptions
     def get(self, request, *args, **kwargs):
-        import io
-        import boto3
-        from botocore.client import Config
-        from botocore.exceptions import ClientError
-        from django.conf import settings
-
-        endpoint_url = getattr(settings, 'AWS_S3_ENDPOINT_URL', None)
-        bucket_name = getattr(settings, 'AWS_STORAGE_BUCKET_NAME', None)
-        access_key = getattr(settings, 'AWS_ACCESS_KEY_ID', None)
-        secret_key = getattr(settings, 'AWS_SECRET_ACCESS_KEY', None)
-
-        if not all([endpoint_url, bucket_name, access_key, secret_key]):
-            logger.error("Credenciais de armazenamento do modelo não configuradas completamente.")
-            raise Http404("Configuração de armazenamento inválida.")
-
-        try:
-            s3_client = boto3.client(
-                's3',
-                endpoint_url=endpoint_url,
-                aws_access_key_id=access_key,
-                aws_secret_access_key=secret_key,
-                config=Config(signature_version='s3v4')
-            )
-            
-            file_obj = io.BytesIO()
-            s3_client.download_fileobj(bucket_name, 'Cortex/modelo-importacao-usuarios.ods', file_obj)
-            file_obj.seek(0)
-            
-            return FileResponse(
-                file_obj,
-                as_attachment=True,
-                filename='modelo-importacao-usuarios.ods',
-                content_type='application/vnd.oasis.opendocument.spreadsheet',
-            )
-
-        except ClientError as e:
-            logger.error(f"Erro ao baixar o modelo do bucket S3: {e}")
-            raise Http404("Arquivo modelo de importação não encontrado no bucket.")
-        except Exception as e:
-            logger.error(f"Erro inesperado ao baixar o modelo: {e}")
-            raise Http404("Erro interno ao recuperar o arquivo modelo.")
+        stream, content_type = Usuario().business.obter_arquivo_modelo_importacao()
+        response = StreamingHttpResponse(stream, content_type=content_type)
+        response['Content-Disposition'] = 'attachment; filename="modelo-importacao-usuarios.ods"'
+        return response
 
 
 @extend_schema(

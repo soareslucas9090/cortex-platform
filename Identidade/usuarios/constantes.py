@@ -12,3 +12,9 @@ ANEXO_FOTO_SECUNDARIA = AnexoS3(
     nome_url='identidade:usuario-foto-secundaria',
     caminho_fallback='/cortex/identidade/usuarios/{id}/foto-secundaria/',
 )
+
+'''
+Chave S3 do arquivo modelo `.ods` para importação em lote de usuários.
+Usado no download administrativo (GET /usuarios/importacao/modelo/).
+'''
+CHAVE_MODELO_IMPORTACAO = 'Cortex/modelo-importacao-usuarios.ods'

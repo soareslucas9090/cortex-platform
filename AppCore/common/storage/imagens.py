@@ -28,6 +28,11 @@ _MAPA_EXTENSAO_CONTENT_TYPE = {
     'image/png': 'png',
     'image/webp': 'webp',
 }
+_MAPA_FORMATO_PIL_EXTENSAO = {
+    'JPEG': 'jpg',
+    'PNG': 'png',
+    'WEBP': 'webp',
+}
 
 
 def obter_extensao_imagem(arquivo) -> str:
@@ -65,6 +70,12 @@ def inspecionar_formato_imagem(arquivo) -> str | None:
     if hasattr(arquivo, 'seek'):
         arquivo.seek(0)
     return formato
+
+
+def obter_extensao_pelo_conteudo(arquivo) -> str:
+    '''Infere a extensão permitida a partir do formato real do arquivo (PIL).'''
+    formato = inspecionar_formato_imagem(arquivo)
+    return _MAPA_FORMATO_PIL_EXTENSAO.get(formato or '', '')
 
 
 def formato_imagem_permitido(arquivo) -> bool:

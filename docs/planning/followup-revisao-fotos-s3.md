@@ -59,6 +59,11 @@ Ordem sugerida (dependências na coluna “Depende”). Pode pular a ordem se a 
 | FOTO-S3-7 | `@extend_schema` no `get` + `BasicRetrieveAPIView` no proxy | Importante | — | Concluída (2026-08-16) |
 | FOTO-S3-8 | `URLField` → `CharField` para chave S3 | Sugestão | — | Concluída (2026-08-16) |
 | FOTO-S3-9 | Testes que travam os itens 2–4 e lacunas de API | Sugestão | FOTO-S3-1 a FOTO-S3-4 (cenários novos); o resto pode entrar junto de cada etapa | Concluída (2026-08-16) |
+| FOTO-S3-10 | Compensar objeto S3 se o `save` falhar após upload | Importante | — | Concluída (2026-08-16) |
+| FOTO-S3-11 | Contrato try/except em `_processar_foto_para_upload` | Importante | — | Concluída (2026-08-16) |
+| FOTO-S3-12 | Download do modelo ODS via `iterar_objeto_s3` + business | Sugestão | — | Concluída (2026-08-16) |
+| FOTO-S3-13 | Extensão da foto secundária pelo conteúdo real (PIL) | Sugestão | FOTO-S3-2 (recomendado) | Concluída (2026-08-16) |
+| FOTO-S3-14 | Testes de rollback na criação, PNG como `.jpg`, download ODS | Sugestão | FOTO-S3-10 a FOTO-S3-13 | Concluída (2026-08-16) |
 
 **Paralelizáveis sem conflito de arquivo:** 1, 5, 6, 7, 8.  
 **Melhor em sequência:** 2 → 3 → 4 → 9.
@@ -507,7 +512,21 @@ Não refatore produção além do indispensável para um teste. Complete só os 
 
 ---
 
-## Verificação final (quando as 9 estiverem Concluída)
+## Segunda revisão (2026-08-16) — FOTO-S3-10 a FOTO-S3-14
+
+Achados da segunda revisão da branch `feat/imagens-recursos` (exceto remoção do PDF local, feita manualmente).
+
+| ID | Resumo | Arquivos principais |
+|----|--------|---------------------|
+| FOTO-S3-10 | `nova_chave` removida no `except` se upload ok e persistência falhar (`criar_recurso`, `atualizar_foto`, `atualizar_foto_secundaria`) | `Infraestrutura/recursos/business.py`, `Identidade/usuarios/business.py` |
+| FOTO-S3-11 | `_processar_foto_para_upload` com `try/except` + `relancar_ou_erro_sistema` | `Infraestrutura/recursos/business.py` |
+| FOTO-S3-12 | `CHAVE_MODELO_IMPORTACAO`, `obter_arquivo_modelo_importacao()`, view sem `boto3` | `Identidade/usuarios/constantes.py`, `business.py`, `views.py` |
+| FOTO-S3-13 | `obter_extensao_pelo_conteudo()` em `imagens.py`; envio da foto secundária com extensão/content-type do PIL | `AppCore/common/storage/imagens.py`, `Identidade/usuarios/business.py` |
+| FOTO-S3-14 | Testes: rollback criação S3, compensação no save, PNG como `.jpg`, download ODS 200/404/500 | `Infraestrutura/tests/test_recurso_foto.py`, `Identidade/usuarios/tests/test_views.py` |
+
+---
+
+## Verificação final (quando as 14 estiverem Concluída)
 
 Rodar, no ambiente do projeto:
 
@@ -520,7 +539,9 @@ Conferir à mão:
 1. Nenhuma view de recurso com ORM no `do_action_*`.
 2. `AnexoS3.iterar` recusa chave fora do prefixo.
 3. `documentacao_infraestrutura` cita GET público e escrita da foto.
-4. `Recurso.foto` e `Usuario.foto_secundaria` são `CharField` (se FOTO-S3-8 foi feita).
+4. `Recurso.foto` e `Usuario.foto_secundaria` são `CharField`.
+5. Upload com falha de persistência não deixa objeto órfão no S3 (FOTO-S3-10).
+6. Download do modelo ODS usa `AppCore.common.storage.s3` (FOTO-S3-12).
 
 Depois disso, este follow-up pode ser arquivado (status geral Concluído no progresso) sem apagar o arquivo — serve de histórico.
 

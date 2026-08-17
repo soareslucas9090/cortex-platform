@@ -9,7 +9,7 @@ from rest_framework.test import APITestCase
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from AppCore.common.textos.mensagens import RESPONSE_ERRO_INTERNO_SERVIDOR
-from AppCore.core.exceptions.exceptions import NotFoundException
+from AppCore.core.exceptions.exceptions import NotFoundException, SystemErrorException
 from Identidade.usuarios.models import Usuario
 from Infraestrutura.blocos.models import Bloco
 from Infraestrutura.permissoes.models import PermissaoFuncaoInfraestrutura
@@ -122,6 +122,55 @@ class RecursoFotoViewTest(APITestCase):
         recurso = Recurso.objects.get(pk=recurso_id)
         self.assertEqual(recurso.foto, f'Cortex/infraestrutura/recursos/fotos/{recurso_id}/abc123.jpg')
         mock_upload.assert_called_once()
+
+    @patch('AppCore.common.storage.s3.enviar_arquivo_s3')
+    def test_criar_recurso_s3_falha_nao_persiste(self, mock_upload):
+        mock_upload.side_effect = SystemErrorException('Configuração de armazenamento S3 inválida.')
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token_cadastrador}')
+        codigo = 'MID-FOTO-S3-FALHA'
+        resposta = self.client.post(
+            self.url_list,
+            {
+                'codigo': codigo,
+                'tipo': TipoRecurso.MIDIA,
+                'foto': criar_arquivo_imagem(tamanho=(600, 800)),
+            },
+            format='multipart',
+        )
+        self.assertEqual(resposta.status_code, status.HTTP_500_INTERNAL_SERVER_ERROR)
+        self.assertEqual(resposta.data['detail'], RESPONSE_ERRO_INTERNO_SERVIDOR)
+        self.assertFalse(Recurso.objects.filter(codigo=codigo).exists())
+
+    @patch('AppCore.common.storage.s3.remover_objeto_s3')
+    @patch('AppCore.common.storage.s3.enviar_arquivo_s3')
+    def test_criar_recurso_save_falha_remove_objeto_s3(self, mock_upload, mock_remover):
+        nova_chave = 'Cortex/infraestrutura/recursos/fotos/1/compensar.jpg'
+        mock_upload.return_value = nova_chave
+        original_save = Recurso.save
+
+        def save_com_falha_na_foto(self, *args, **kwargs):
+            if kwargs.get('update_fields') == ['foto']:
+                raise RuntimeError('Falha simulada ao persistir a foto.')
+            return original_save(self, *args, **kwargs)
+
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token_cadastrador}')
+        codigo = 'MID-FOTO-SAVE-FALHA'
+        with patch.object(Recurso, 'save', save_com_falha_na_foto):
+            resposta = self.client.post(
+                self.url_list,
+                {
+                    'codigo': codigo,
+                    'tipo': TipoRecurso.MIDIA,
+                    'foto': criar_arquivo_imagem(tamanho=(600, 800)),
+                },
+                format='multipart',
+            )
+        self.assertEqual(resposta.status_code, status.HTTP_500_INTERNAL_SERVER_ERROR)
+        self.assertFalse(Recurso.objects.filter(codigo=codigo).exists())
+        mock_remover.assert_called_once_with(
+            nova_chave,
+            prefixo='Cortex/infraestrutura/recursos/fotos',
+        )
 
     def test_paisagem_retorna_400(self):
         self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token_cadastrador}')
