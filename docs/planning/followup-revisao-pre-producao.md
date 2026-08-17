@@ -114,7 +114,7 @@ Ordem sugerida (dependências na coluna “Depende”). Pode pular a ordem se a 
 | PREPROD-4 | Corrigir `SetorVinculo.__str__` | Importante | — | Concluída (2026-08-17) |
 | PREPROD-5 | Senha obrigatória na API; importação sem senha=CPF | Crítico | — | Desnecessária (2026-08-17) |
 | PREPROD-6 | JWT 30 min + blacklist | Crítico | — | Concluída (2026-08-17) |
-| PREPROD-7 | Settings/Docker de produção (DEBUG, Gunicorn, toolbar) | Crítico | — | Pendente |
+| PREPROD-7 | Settings/Docker de produção (DEBUG, Gunicorn, toolbar) | Crítico | — | Concluída (2026-08-17) |
 | PREPROD-8 | Empréstimo: duplicatas, IntegrityError, lock, desativar recurso | Crítico | PREPROD-1 | Pendente |
 | PREPROD-9 | Importação: business, lock, S3, cancelamento | Crítico | — | Pendente |
 | PREPROD-10 | Unique global de matrícula + login | Importante | — | Pendente |
@@ -434,7 +434,7 @@ Implemente SOMENTE PREPROD-6 de docs/planning/followup-revisao-pre-producao.md
 
 | | |
 |--|--|
-| **Status** | Pendente |
+| **Status** | Concluída (2026-08-17) |
 | **Severidade** | Crítico |
 | **Pré-requisito** | Nenhum |
 | **Quem / onde** | |
@@ -463,10 +463,10 @@ Implemente SOMENTE PREPROD-6 de docs/planning/followup-revisao-pre-producao.md
 
 ### Critério de saída
 
-- [ ] `DEBUG=False` + `ALLOWED_HOSTS=*` recusa subir.
-- [ ] Toolbar ausente quando `DEBUG=False`.
-- [ ] Imagem de produção não inicia `runserver`.
-- [ ] Compose production não publica portas do banco/redis.
+- [x] `DEBUG=False` + `ALLOWED_HOSTS=*` recusa subir.
+- [x] Toolbar ausente quando `DEBUG=False`.
+- [x] Imagem de produção não inicia `runserver`.
+- [x] Compose production não publica portas do banco/redis.
 
 ### Testes mínimos desta etapa
 

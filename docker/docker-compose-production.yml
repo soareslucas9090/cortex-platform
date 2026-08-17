@@ -6,8 +6,6 @@ services:
       POSTGRES_DB: ${DATABASE_NAME:-cortex}
       POSTGRES_USER: ${DATABASE_USER:-cortex}
       POSTGRES_PASSWORD: ${DATABASE_PASSWORD:-cortex}
-    ports:
-      - '5432:5432'
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -19,8 +17,6 @@ services:
   redis:
     image: redis:7-alpine
     container_name: cortex_redis
-    ports:
-      - '6379:6379'
     volumes:
       - redis_data:/data
     healthcheck:
@@ -31,18 +27,20 @@ services:
 
   web:
     build:
-      context: .
+      context: ..
+      dockerfile: docker/Dockerfile
     container_name: cortex_web
     command: >
-      sh -c "python manage.py migrate && python manage.py runserver 0.0.0.0:8000"
+      sh -c "python manage.py migrate && gunicorn Cortex.wsgi:application --bind 0.0.0.0:8000 --workers 3"
     env_file:
       - .env.docker
+    environment:
+      DJANGO_DEBUG: "False"
+      DATABASE_HOST: db
+      CELERY_BROKER_URL: redis://redis:6379/0
+      CELERY_RESULT_BACKEND: redis://redis:6379/0
     ports:
       - '8000:8000'
-    volumes:
-      - .:/app
-    stdin_open: true
-    tty: true
     depends_on:
       db:
         condition: service_healthy
@@ -51,15 +49,17 @@ services:
 
   worker:
     build:
-      context: .
+      context: ..
+      dockerfile: docker/Dockerfile
     container_name: cortex_worker
     command: celery -A Cortex worker -l INFO --pool=prefork --concurrency=${CELERY_CONCURRENCY:-4}
     env_file:
       - .env.docker
-    volumes:
-      - .:/app
-    stdin_open: true
-    tty: true
+    environment:
+      DJANGO_DEBUG: "False"
+      DATABASE_HOST: db
+      CELERY_BROKER_URL: redis://redis:6379/0
+      CELERY_RESULT_BACKEND: redis://redis:6379/0
     depends_on:
       db:
         condition: service_healthy
