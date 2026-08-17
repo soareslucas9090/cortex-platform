@@ -493,3 +493,21 @@ class AtualizarVinculoFuncaoViewTest(APITestCase):
         self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token_admin}')
         resposta = self.client.patch(self.url, {'funcao': funcao_aluno.pk})
         self.assertEqual(resposta.status_code, status.HTTP_200_OK)
+
+
+class SetorVinculoStrTest(APITestCase):
+
+    def setUp(self):
+        self.usuario = criar_usuario_comum()
+        self.setor = criar_setor()
+
+    def test_str_com_funcao_preenchida(self):
+        funcao = criar_funcao(papel_funcao='COORD')
+        vinculo = criar_vinculo(self.usuario, self.setor, funcao)
+        self.assertEqual(str(vinculo), f'{self.usuario} — {self.setor} (COORD)')
+
+    def test_str_com_funcao_nula(self):
+        vinculo = SetorVinculo.objects.create(
+            usuario=self.usuario, setor=self.setor, funcao=None,
+        )
+        self.assertEqual(str(vinculo), f'{self.usuario} — {self.setor} (sem função)')

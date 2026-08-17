@@ -111,7 +111,7 @@ Ordem sugerida (dependências na coluna “Depende”). Pode pular a ordem se a 
 | PREPROD-1 | Corrigir GET detalhe de empréstimo (500) | Crítico | — | Concluída (2026-08-17) |
 | PREPROD-2 | Impedir L1/L2 de ligar `usuario_coletivo` | Crítico | — | Concluída (2026-08-17) |
 | PREPROD-3 | Corrigir filtro `tipo_perfil` (tupla) | Importante | — | Concluída (2026-08-17) |
-| PREPROD-4 | Corrigir `SetorVinculo.__str__` | Importante | — | Pendente |
+| PREPROD-4 | Corrigir `SetorVinculo.__str__` | Importante | — | Concluída (2026-08-17) |
 | PREPROD-5 | Senha obrigatória na API; importação sem senha=CPF | Crítico | — | Pendente |
 | PREPROD-6 | JWT 30 min + blacklist | Crítico | — | Pendente |
 | PREPROD-7 | Settings/Docker de produção (DEBUG, Gunicorn, toolbar) | Crítico | — | Pendente |
@@ -292,7 +292,7 @@ Implemente SOMENTE PREPROD-3 de docs/planning/followup-revisao-pre-producao.md
 
 | | |
 |--|--|
-| **Status** | Pendente |
+| **Status** | Concluída (2026-08-17) |
 | **Severidade** | Importante |
 | **Pré-requisito** | Nenhum |
 | **Quem / onde** | |
@@ -312,7 +312,7 @@ Implemente SOMENTE PREPROD-3 de docs/planning/followup-revisao-pre-producao.md
 
 ### Critério de saída
 
-- [ ] `str(vinculo)` não levanta `AttributeError` com função nula ou preenchida.
+- [x] `str(vinculo)` não levanta `AttributeError` com função nula ou preenchida.
 
 ### Testes mínimos desta etapa
 

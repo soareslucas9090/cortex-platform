@@ -44,4 +44,5 @@ class SetorVinculo(ModelHelperMixin, ModelBusinessMixin, ModelRulesMixin, BasicM
         ordering = ['setor__nome', 'usuario__nome']
 
     def __str__(self):
-        return f'{self.usuario} — {self.setor} ({self.funcao.sigla})'
+        papel = self.funcao.papel_funcao if self.funcao else 'sem função'
+        return f'{self.usuario} — {self.setor} ({papel})'
