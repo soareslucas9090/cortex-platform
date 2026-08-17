@@ -50,6 +50,7 @@ Liste as etapas Crítico ainda Pendentes em docs/planning/followup-revisao-pre-p
 | `Pendente` | Ainda não começou |
 | `Em andamento` | Alguém está fazendo agora (preencher “Quem / onde”) |
 | `Concluída (AAAA-MM-DD)` | Critério de saída atendido e testes da etapa ok |
+| `Desnecessária (AAAA-MM-DD)` | Não será implementada; regra vigente permanece — escrever o motivo na etapa |
 | `Adiada` | Decidiu não fazer agora; escrever o motivo na etapa |
 
 Marque **somente** a etapa que acabou de fechar. Não reescreva etapas já concluídas além do status.
@@ -93,18 +94,17 @@ Revisão da base Django/DRF do Cortex (Identidade, Organizacional, Pessoas Insti
 2. Capacidades de Infraestrutura (`operar` / `cadastrar` / `autorizar` / `retirada_irrestrita`) **não** se fundem com Cortex L1–L3.
 3. Flag `usuario_coletivo` e o pool M2M só são **escritos** por L3 (`IsAdminMixin` / `EDITAR_TUDO`). L1/L2 não ligam a flag.
 4. Access JWT: **30 minutos**. Refresh: **7 dias**. Rotação de refresh + blacklist após rotação.
-5. Criação de usuário **via API**: `password` **obrigatório** e passa em `validate_password`. Nunca senha = CPF/matrícula.
-6. Importação em lote: senha gerada **aleatória** que atende a complexidade; **não** usar CPF/matrícula; **não** devolver a senha no JSON de resultado/erros. Até existir reset, senha de importados é definida depois no Django admin (ou etapa futura de reset).
-7. `__init__.py` de pacotes AppCore permanece vazio (sem barrel). Import pelo módulo concreto.
-8. Business: corpo inteiro em `try/except` + `relancar_ou_erro_sistema`. Não expor `str(e)` de erro interno ao cliente.
-9. Setor **pode** existir sem responsável no momento da criação do setor (fluxo atual: cria setor, depois vínculos). A invariante “sempre um responsável” vale ao **remover** o último responsável — não exigir responsável no `POST` de setor. Atualizar a doc na etapa de documentação, não mudar o fluxo.
-10. Terceirizado **pode** ter `Cargo` (FK opcional no código). A frase “terceirizados não possuem Cargo” em `04-aggregates-and-invariants.md` está errada — corrigir a **doc**, não remover o campo.
+5. Criação de usuário **via API** e importação em lote: política de senha **mantida como está** (senha padrão = CPF/matrícula quando `password` vazio). PREPROD-5 marcada desnecessária (2026-08-17).
+6. `__init__.py` de pacotes AppCore permanece vazio (sem barrel). Import pelo módulo concreto.
+7. Business: corpo inteiro em `try/except` + `relancar_ou_erro_sistema`. Não expor `str(e)` de erro interno ao cliente.
+8. Setor **pode** existir sem responsável no momento da criação do setor (fluxo atual: cria setor, depois vínculos). A invariante “sempre um responsável” vale ao **remover** o último responsável — não exigir responsável no `POST` de setor. Atualizar a doc na etapa de documentação, não mudar o fluxo.
+9. Terceirizado **pode** ter `Cargo` (FK opcional no código). A frase “terceirizados não possuem Cargo” em `04-aggregates-and-invariants.md` está errada — corrigir a **doc**, não remover o campo.
 
 ---
 
 ## Progresso
 
-Ordem sugerida (dependências na coluna “Depende”). Pode pular a ordem se a etapa estiver `Pendente` e os pré-requisitos já estiverem `Concluída`.
+Ordem sugerida (dependências na coluna “Depende”). Pode pular a ordem se a etapa estiver `Pendente` e os pré-requisitos já estiverem `Concluída` ou `Desnecessária`.
 
 | ID | Título | Severidade | Depende | Status |
 |----|--------|------------|---------|--------|
@@ -112,11 +112,11 @@ Ordem sugerida (dependências na coluna “Depende”). Pode pular a ordem se a 
 | PREPROD-2 | Impedir L1/L2 de ligar `usuario_coletivo` | Crítico | — | Concluída (2026-08-17) |
 | PREPROD-3 | Corrigir filtro `tipo_perfil` (tupla) | Importante | — | Concluída (2026-08-17) |
 | PREPROD-4 | Corrigir `SetorVinculo.__str__` | Importante | — | Concluída (2026-08-17) |
-| PREPROD-5 | Senha obrigatória na API; importação sem senha=CPF | Crítico | — | Pendente |
+| PREPROD-5 | Senha obrigatória na API; importação sem senha=CPF | Crítico | — | Desnecessária (2026-08-17) |
 | PREPROD-6 | JWT 30 min + blacklist | Crítico | — | Pendente |
 | PREPROD-7 | Settings/Docker de produção (DEBUG, Gunicorn, toolbar) | Crítico | — | Pendente |
 | PREPROD-8 | Empréstimo: duplicatas, IntegrityError, lock, desativar recurso | Crítico | PREPROD-1 | Pendente |
-| PREPROD-9 | Importação: business, lock, S3, cancelamento | Crítico | PREPROD-5 | Pendente |
+| PREPROD-9 | Importação: business, lock, S3, cancelamento | Crítico | — | Pendente |
 | PREPROD-10 | Unique global de matrícula + login | Importante | — | Pendente |
 | PREPROD-11 | AlunoCurso: revalidar ativo no PATCH + unique parcial | Crítico | — | Pendente |
 | PREPROD-12 | SetorVinculo: função NOT NULL + unique no banco | Importante | PREPROD-4 | Pendente |
@@ -131,9 +131,9 @@ Ordem sugerida (dependências na coluna “Depende”). Pode pular a ordem se a 
 | PREPROD-21 | Rate-limit no login (ops/nginx ou lib) | Sugestão | PREPROD-6 | Pendente |
 
 **Paralelizáveis sem conflito de arquivo (enquanto 1–2 não estiverem em andamento no mesmo checkout):** 3, 4, 10, 14, 15, 17.  
-**Melhor em sequência (go-live):** 1 → 2 → 5 → 6 → 7 → 8 → 9 → 11.
+**Melhor em sequência (go-live):** 1 → 2 → 6 → 7 → 8 → 9 → 11.
 
-**Não ir para produção com usuários reais** enquanto PREPROD-1, 2, 5, 6, 7, 8, 9 e 11 estiverem `Pendente`.
+**Não ir para produção com usuários reais** enquanto PREPROD-1, 2, 6, 7, 8, 9 e 11 estiverem `Pendente`.
 
 ---
 
@@ -330,10 +330,12 @@ Implemente SOMENTE PREPROD-4 de docs/planning/followup-revisao-pre-producao.md
 
 | | |
 |--|--|
-| **Status** | Pendente |
+| **Status** | Desnecessária (2026-08-17) |
 | **Severidade** | Crítico |
 | **Pré-requisito** | Nenhum |
 | **Quem / onde** | |
+
+**Motivo:** a política de senha vigente (CPF/matrícula quando `password` vazio na API e na importação) **permanece**. Não implementar obrigatoriedade de senha forte nem geração aleatória na importação.
 
 ### Por quê
 
@@ -534,7 +536,7 @@ Implemente SOMENTE PREPROD-8 de docs/planning/followup-revisao-pre-producao.md
 |--|--|
 | **Status** | Pendente |
 | **Severidade** | Crítico |
-| **Pré-requisito** | PREPROD-5 (política de senha da importação já definida) |
+| **Pré-requisito** | Nenhum |
 | **Quem / onde** | |
 
 ### Por quê
@@ -1127,7 +1129,7 @@ Se a etapa for só documentação de nginx, o prompt é o mesmo: não adicionar 
 ## Itens conscientemente fora do plano (não criar etapa)
 
 - Refatorar **todas** as listagens para tirar `Model.objects` de `get_queryset` (padrão exemplificado nas regras).
-- Reset de senha por e-mail / first-login obrigatório (produto; PREPROD-5 mitiga o pior).
+- Reset de senha por e-mail / first-login obrigatório (produto; mitiga senha padrão = CPF/matrícula).
 - Login social Google (comentado de propósito).
 - Máquina de estados (`state.py`) — ainda “futuro” nas regras.
 - Remover migrations históricas `emprestimos/0002` e `0004` (cargo servente) — débito; não reescrever histórico.
