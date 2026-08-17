@@ -5,26 +5,31 @@ from simple_history.models import HistoricalRecords
 
 from AppCore.core.exceptions.exceptions import NotFoundException
 
+_NOT_FOUND_EXCEPTION_CLASSES = {}
 
-class BaseManager(Manager):
-    _exception_class = None
 
-    @property
-    def exception_class(self):
-        if self._exception_class is None:
-            name = f"{self.model.__name__}NotFoundException"
-            self._exception_class = type(
-                name,
-                (NotFoundException, self.model.DoesNotExist),
-                {}
-            )
-        return self._exception_class
+def _not_found_exception_class(model):
+    cached = _NOT_FOUND_EXCEPTION_CLASSES.get(model)
+    if cached is None:
+        name = f"{model.__name__}NotFoundException"
+        cached = type(name, (NotFoundException, model.DoesNotExist), {})
+        _NOT_FOUND_EXCEPTION_CLASSES[model] = cached
+    return cached
 
+
+class BaseQuerySet(models.QuerySet):
     def get(self, *args, **kwargs):
         try:
             return super().get(*args, **kwargs)
-        except self.model.DoesNotExist as e:
-            raise self.exception_class(f"{self.model._meta.verbose_name} não encontrado.")
+        except self.model.DoesNotExist:
+            raise _not_found_exception_class(self.model)(
+                f"{self.model._meta.verbose_name} não encontrado.",
+            )
+
+
+class BaseManager(Manager):
+    def get_queryset(self):
+        return BaseQuerySet(self.model, using=self._db)
 
 
 class BaseManagerUser(BaseUserManager, BaseManager):
