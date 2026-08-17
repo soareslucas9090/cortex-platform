@@ -118,8 +118,9 @@ class DocumentarPermissoesView(IsAuthenticatedMixin, BasicGetAPIView):
         ),
         OpenApiParameter(
             'tipo_perfil', OpenApiTypes.STR, OpenApiParameter.QUERY,
-            required=False, description='Filtra por tipo de perfil: alunos, terceirizados ou servidores.',
-            enum=['aluno', 'terceirizado', 'servidor'],
+            required=False,
+            description='Filtra por tipo de perfil: aluno/alunos, terceirizado/terceirizados ou servidor/servidores.',
+            enum=['aluno', 'alunos', 'terceirizado', 'terceirizados', 'servidor', 'servidores'],
         ),
         OpenApiParameter(
             'paginacao', OpenApiTypes.INT, OpenApiParameter.QUERY,
@@ -161,11 +162,11 @@ class ListarUsuariosView(IsOwnerOrAdminMixin, BasicGetAPIView):
         tipo_perfil = self.request.query_params.get('tipo_perfil')
         if tipo_perfil:
             tipo_perfil = tipo_perfil.lower()
-            if tipo_perfil in ('aluno'):
+            if tipo_perfil in ('aluno', 'alunos'):
                 qs = qs.filter(aluno__isnull=False)
-            elif tipo_perfil in ('terceirizado'):
+            elif tipo_perfil in ('terceirizado', 'terceirizados'):
                 qs = qs.filter(terceirizado__isnull=False)
-            elif tipo_perfil in ('servidor'):
+            elif tipo_perfil in ('servidor', 'servidores'):
                 qs = qs.filter(servidor__isnull=False)
                 
         return qs

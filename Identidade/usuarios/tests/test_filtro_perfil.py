@@ -77,8 +77,22 @@ class FiltroPerfilUsuariosViewTest(APITestCase):
         self.assertEqual(len(cpfs), 1)
         self.assertIn(self.usuario_aluno.cpf, cpfs)
 
+    def test_filtro_alunos_plural(self):
+        resposta = self.client.get(self.url, {'tipo_perfil': 'alunos'})
+        self.assertEqual(resposta.status_code, status.HTTP_200_OK)
+        cpfs = [u['cpf'] for u in resposta.data['dados']]
+        self.assertEqual(len(cpfs), 1)
+        self.assertIn(self.usuario_aluno.cpf, cpfs)
+
     def test_filtro_terceirizados_singular(self):
         resposta = self.client.get(self.url, {'tipo_perfil': 'terceirizado'})
+        self.assertEqual(resposta.status_code, status.HTTP_200_OK)
+        cpfs = [u['cpf'] for u in resposta.data['dados']]
+        self.assertEqual(len(cpfs), 1)
+        self.assertIn(self.usuario_terceirizado.cpf, cpfs)
+
+    def test_filtro_terceirizados_plural(self):
+        resposta = self.client.get(self.url, {'tipo_perfil': 'terceirizados'})
         self.assertEqual(resposta.status_code, status.HTTP_200_OK)
         cpfs = [u['cpf'] for u in resposta.data['dados']]
         self.assertEqual(len(cpfs), 1)
@@ -90,6 +104,23 @@ class FiltroPerfilUsuariosViewTest(APITestCase):
         cpfs = [u['cpf'] for u in resposta.data['dados']]
         self.assertEqual(len(cpfs), 1)
         self.assertIn(self.usuario_servidor.cpf, cpfs)
+
+    def test_filtro_servidores_plural(self):
+        resposta = self.client.get(self.url, {'tipo_perfil': 'servidores'})
+        self.assertEqual(resposta.status_code, status.HTTP_200_OK)
+        cpfs = [u['cpf'] for u in resposta.data['dados']]
+        self.assertEqual(len(cpfs), 1)
+        self.assertIn(self.usuario_servidor.cpf, cpfs)
+
+    def test_filtro_perfil_valor_lixo_ignorado(self):
+        resposta = self.client.get(self.url, {'tipo_perfil': 'xyz'})
+        self.assertEqual(resposta.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(resposta.data['dados']), 5)
+
+    def test_filtro_perfil_substring_nao_filtra(self):
+        resposta = self.client.get(self.url, {'tipo_perfil': 'a'})
+        self.assertEqual(resposta.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(resposta.data['dados']), 5)
 
     def test_filtro_perfil_combinado_com_ativo(self):
         # Desativa o aluno

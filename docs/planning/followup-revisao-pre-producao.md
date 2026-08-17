@@ -110,7 +110,7 @@ Ordem sugerida (dependências na coluna “Depende”). Pode pular a ordem se a 
 |----|--------|------------|---------|--------|
 | PREPROD-1 | Corrigir GET detalhe de empréstimo (500) | Crítico | — | Concluída (2026-08-17) |
 | PREPROD-2 | Impedir L1/L2 de ligar `usuario_coletivo` | Crítico | — | Concluída (2026-08-17) |
-| PREPROD-3 | Corrigir filtro `tipo_perfil` (tupla) | Importante | — | Pendente |
+| PREPROD-3 | Corrigir filtro `tipo_perfil` (tupla) | Importante | — | Concluída (2026-08-17) |
 | PREPROD-4 | Corrigir `SetorVinculo.__str__` | Importante | — | Pendente |
 | PREPROD-5 | Senha obrigatória na API; importação sem senha=CPF | Crítico | — | Pendente |
 | PREPROD-6 | JWT 30 min + blacklist | Crítico | — | Pendente |
@@ -245,7 +245,7 @@ Implemente SOMENTE PREPROD-2 de docs/planning/followup-revisao-pre-producao.md
 
 | | |
 |--|--|
-| **Status** | Pendente |
+| **Status** | Concluída (2026-08-17) |
 | **Severidade** | Importante |
 | **Pré-requisito** | Nenhum |
 | **Quem / onde** | |
@@ -273,8 +273,8 @@ if tipo_perfil in ('aluno'):  # isto é: tipo_perfil in 'aluno'
 
 ### Critério de saída
 
-- [ ] `tipo_perfil=alunos` filtra alunos.
-- [ ] `tipo_perfil=a` **não** filtra como aluno.
+- [x] `tipo_perfil=alunos` filtra alunos.
+- [x] `tipo_perfil=a` **não** filtra como aluno.
 
 ### Testes mínimos desta etapa
 
