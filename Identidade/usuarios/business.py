@@ -53,8 +53,7 @@ class UsuarioBusiness(ModelInstanceBusiness):
                     raise ValidationException(
                         'A matrícula é obrigatória caso o CPF não seja informado.'
                     )
-                if Matricula.objects.filter(matricula=matricula).exists():
-                    raise ValidationException('Já existe um usuário cadastrado com esta matrícula.')
+                self.object_instance.rules.matricula_nao_duplicada(matricula)
             senha_final = password if password else (cpf_normalizado if cpf_normalizado else matricula)
             with transaction.atomic():
                 user = Usuario.objects.create_user(
@@ -592,11 +591,19 @@ class UsuarioBusiness(ModelInstanceBusiness):
             matriculas_existentes_qs = Matricula.objects.filter(usuario_id__in=usuarios_ids)
             matriculas_existentes = {(m.usuario_id, m.matricula): m for m in matriculas_existentes_qs}
             matriculas_to_create = []
+            matriculas_em_lote = set()
             for linha in estrutura.matriculas:
                 _incrementar_progresso()
                 try:
                     usuario = self.object_instance.helper.obter_usuario_por_id_planilha(linha.usuario_id_planilha, mapa_usuarios)
                     self.object_instance.rules.usuario_referenciado_existe(usuario, 'matrícula')
+
+                    if linha.matricula in matriculas_em_lote:
+                        raise ValidationException(
+                            'A matrícula já foi informada para outro usuário nesta importação.'
+                        )
+                    self.object_instance.rules.matricula_nao_duplicada(linha.matricula)
+                    matriculas_em_lote.add(linha.matricula)
 
                     if (usuario.id, linha.matricula) not in matriculas_existentes:
                         nova_matricula = Matricula(usuario=usuario, matricula=linha.matricula)
@@ -809,6 +816,7 @@ class UsuarioBusiness(ModelInstanceBusiness):
                 last_login=linha.ultimo_login,
             )
             if matricula_planilha:
+                self.object_instance.rules.matricula_nao_duplicada(matricula_planilha)
                 Matricula.objects.get_or_create(
                     usuario=usuario,
                     matricula=matricula_planilha,
@@ -872,6 +880,7 @@ class UsuarioBusiness(ModelInstanceBusiness):
             matricula = Matricula.objects.filter(usuario=usuario, matricula=linha.matricula).first()
             if matricula:
                 return False
+            self.object_instance.rules.matricula_nao_duplicada(linha.matricula)
             Matricula.objects.create(
                 usuario=usuario,
                 matricula=linha.matricula,

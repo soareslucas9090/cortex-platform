@@ -117,7 +117,7 @@ Ordem sugerida (dependências na coluna “Depende”). Pode pular a ordem se a 
 | PREPROD-7 | Settings/Docker de produção (DEBUG, Gunicorn, toolbar) | Crítico | — | Concluída (2026-08-17) |
 | PREPROD-8 | Empréstimo: duplicatas, IntegrityError, lock, desativar recurso | Crítico | PREPROD-1 | Concluída (2026-08-17) |
 | PREPROD-9 | Importação: business, lock, S3, cancelamento | Crítico | — | Concluída (2026-08-17) |
-| PREPROD-10 | Unique global de matrícula + login | Importante | — | Pendente |
+| PREPROD-10 | Unique global de matrícula + login | Importante | — | Concluída (2026-08-17) |
 | PREPROD-11 | AlunoCurso: revalidar ativo no PATCH + unique parcial | Crítico | — | Pendente |
 | PREPROD-12 | SetorVinculo: função NOT NULL + unique no banco | Importante | PREPROD-4 | Pendente |
 | PREPROD-13 | Views de Infraestrutura/Identidade não chamam Helper/Rules | Importante | PREPROD-1, PREPROD-8 | Pendente |
@@ -588,7 +588,7 @@ Implemente SOMENTE PREPROD-9 de docs/planning/followup-revisao-pre-producao.md
 
 | | |
 |--|--|
-| **Status** | Pendente |
+| **Status** | Concluída (2026-08-17) |
 | **Severidade** | Importante |
 | **Pré-requisito** | Nenhum (migration: skill `django-safe-migration`) |
 | **Quem / onde** | |
@@ -615,9 +615,9 @@ Implemente SOMENTE PREPROD-9 de docs/planning/followup-revisao-pre-producao.md
 
 ### Critério de saída
 
-- [ ] Segunda matrícula com o mesmo número (outro usuário) → 400.
-- [ ] Login por matrícula continua 200 no caso feliz.
-- [ ] Migration recusa ambiente com duplicatas.
+- [x] Segunda matrícula com o mesmo número (outro usuário) → 400.
+- [x] Login por matrícula continua 200 no caso feliz.
+- [x] Migration recusa ambiente com duplicatas.
 
 ### Testes mínimos desta etapa
 

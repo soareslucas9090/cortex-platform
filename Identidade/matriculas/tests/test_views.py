@@ -119,6 +119,17 @@ class AdicionarMatriculaViewTest(APITestCase):
         resposta = self.client.post(self.url, self.payload_valido)
         self.assertEqual(resposta.status_code, status.HTTP_400_BAD_REQUEST)
 
+    def test_numero_matricula_duplicado_em_outro_usuario_retorna_400(self):
+        outro = criar_usuario('00000000005', nome='Outro Usuário')
+        Matricula.objects.create(
+            usuario=outro,
+            matricula='MAT2024001',
+            situacao=SituacaoMatricula.ATIVA,
+        )
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token_admin}')
+        resposta = self.client.post(self.url, self.payload_valido)
+        self.assertEqual(resposta.status_code, status.HTTP_400_BAD_REQUEST)
+
     def test_usuario_inexistente_retorna_404(self):
         self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token_admin}')
         url = reverse('identidade:matriculas', kwargs={'usuario_pk': 99999})

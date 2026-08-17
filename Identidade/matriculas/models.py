@@ -29,6 +29,12 @@ class Matricula(ModelBusinessMixin, BasicModel):
         verbose_name = 'Matrícula'
         verbose_name_plural = 'Matrículas'
         ordering = ['matricula']
+        constraints = [
+            models.UniqueConstraint(
+                fields=['matricula'],
+                name='matriculas_matricula_unica',
+            ),
+        ]
 
     def __str__(self):
         return f'{self.matricula} — {self.usuario}'

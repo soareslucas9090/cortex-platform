@@ -72,10 +72,16 @@ class EmailOrCpfBackend(ModelBackend):
             # 2. Se não encontrou por CPF, tentar busca por matrícula ativa (situação = 1)
             if not user:
                 try:
-                    user = UserModel._default_manager.filter(
+                    user = UserModel._default_manager.get(
                         matriculas__matricula=login,
                         matriculas__situacao=SituacaoMatricula.ATIVA,
-                    ).first()
+                    )
+                except (UserModel.DoesNotExist, NotFoundException):
+                    pass
+                except UserModel.MultipleObjectsReturned:
+                    logger.error(
+                        'Múltiplos usuários com a mesma matrícula ativa durante login.',
+                    )
                 except Exception:
                     logger.exception('Erro inesperado durante busca por matrícula.')
 

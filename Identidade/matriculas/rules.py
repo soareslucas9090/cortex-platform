@@ -9,14 +9,11 @@ class MatriculaRules(ModelInstanceRules):
     """
 
     def matricula_nao_duplicada(self, numero_matricula: str, excluir_id=None) -> bool:
-        """Valida que o número de matrícula não está duplicado para o mesmo usuário."""
+        """Valida que o número de matrícula não está duplicado globalmente."""
         from .models import Matricula
-        qs = Matricula.objects.filter(
-            usuario=self.object_instance,
-            matricula=numero_matricula,
-        )
+        qs = Matricula.objects.filter(matricula=numero_matricula)
         if excluir_id is not None:
             qs = qs.exclude(pk=excluir_id)
         if qs.exists():
-            self.return_exception('O usuário já possui essa matrícula registrada.')
+            self.return_exception('Já existe um usuário cadastrado com esta matrícula.')
         return True
