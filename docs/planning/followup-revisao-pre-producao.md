@@ -113,7 +113,7 @@ Ordem sugerida (dependências na coluna “Depende”). Pode pular a ordem se a 
 | PREPROD-3 | Corrigir filtro `tipo_perfil` (tupla) | Importante | — | Concluída (2026-08-17) |
 | PREPROD-4 | Corrigir `SetorVinculo.__str__` | Importante | — | Concluída (2026-08-17) |
 | PREPROD-5 | Senha obrigatória na API; importação sem senha=CPF | Crítico | — | Desnecessária (2026-08-17) |
-| PREPROD-6 | JWT 30 min + blacklist | Crítico | — | Pendente |
+| PREPROD-6 | JWT 30 min + blacklist | Crítico | — | Concluída (2026-08-17) |
 | PREPROD-7 | Settings/Docker de produção (DEBUG, Gunicorn, toolbar) | Crítico | — | Pendente |
 | PREPROD-8 | Empréstimo: duplicatas, IntegrityError, lock, desativar recurso | Crítico | PREPROD-1 | Pendente |
 | PREPROD-9 | Importação: business, lock, S3, cancelamento | Crítico | — | Pendente |
@@ -384,7 +384,7 @@ Implemente SOMENTE PREPROD-5 de docs/planning/followup-revisao-pre-producao.md
 
 | | |
 |--|--|
-| **Status** | Pendente |
+| **Status** | Concluída (2026-08-17) |
 | **Severidade** | Crítico |
 | **Pré-requisito** | Nenhum |
 | **Quem / onde** | |
@@ -413,9 +413,9 @@ Não implementar endpoint de logout nesta etapa, a menos que já exista gancho t
 
 ### Critério de saída
 
-- [ ] Settings: access 30 min; blacklist após rotação ligado.
-- [ ] App `token_blacklist` instalado; `migrate` aplica.
-- [ ] Texto Swagger de login = 30 min / 7 dias (já deve bater).
+- [x] Settings: access 30 min; blacklist após rotação ligado.
+- [x] App `token_blacklist` instalado; `migrate` aplica.
+- [x] Texto Swagger de login = 30 min / 7 dias (já deve bater).
 
 ### Testes mínimos desta etapa
 

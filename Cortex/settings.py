@@ -94,6 +94,7 @@ DEFAULT_ROOT_APPS = [
     'corsheaders',
     'debug_toolbar',
     'rest_framework_simplejwt',
+    'rest_framework_simplejwt.token_blacklist',
     'rest_framework',
     'drf_spectacular',
     'drf_spectacular_sidecar',
