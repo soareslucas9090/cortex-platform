@@ -130,7 +130,20 @@ class UsuarioColetivoViewsTest(APITestCase):
         self.assertEqual(resposta.status_code, status.HTTP_204_NO_CONTENT)
         self.assertEqual(self.conta.setores_coletivo.count(), 0)
 
-    def test_desativar_flag_limpa_pool(self):
+    def test_l1_nao_altera_flag_coletivo_via_patch(self):
+        self.assertFalse(self.comum.usuario_coletivo)
+        token_comum = obter_tokens(self.comum)
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {token_comum}')
+        resposta = self.client.patch(
+            reverse('identidade:usuario-detail', kwargs={'pk': self.comum.pk}),
+            {'usuario_coletivo': True},
+            format='json',
+        )
+        self.assertEqual(resposta.status_code, status.HTTP_200_OK)
+        self.comum.refresh_from_db()
+        self.assertFalse(self.comum.usuario_coletivo)
+
+    def test_patch_nao_altera_flag_coletivo_existente(self):
         self.conta.setores_coletivo.add(self.setor)
         self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token_admin}')
         resposta = self.client.patch(
@@ -139,6 +152,13 @@ class UsuarioColetivoViewsTest(APITestCase):
             format='json',
         )
         self.assertEqual(resposta.status_code, status.HTTP_200_OK)
+        self.conta.refresh_from_db()
+        self.assertTrue(self.conta.usuario_coletivo)
+        self.assertEqual(self.conta.setores_coletivo.count(), 1)
+
+    def test_desativar_flag_limpa_pool(self):
+        self.conta.setores_coletivo.add(self.setor)
+        self.conta.business.definir_flag_coletivo(False)
         self.conta.refresh_from_db()
         self.assertFalse(self.conta.usuario_coletivo)
         self.assertEqual(self.conta.setores_coletivo.count(), 0)

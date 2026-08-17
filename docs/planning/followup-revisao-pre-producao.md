@@ -109,7 +109,7 @@ Ordem sugerida (dependências na coluna “Depende”). Pode pular a ordem se a 
 | ID | Título | Severidade | Depende | Status |
 |----|--------|------------|---------|--------|
 | PREPROD-1 | Corrigir GET detalhe de empréstimo (500) | Crítico | — | Concluída (2026-08-17) |
-| PREPROD-2 | Impedir L1/L2 de ligar `usuario_coletivo` | Crítico | — | Pendente |
+| PREPROD-2 | Impedir L1/L2 de ligar `usuario_coletivo` | Crítico | — | Concluída (2026-08-17) |
 | PREPROD-3 | Corrigir filtro `tipo_perfil` (tupla) | Importante | — | Pendente |
 | PREPROD-4 | Corrigir `SetorVinculo.__str__` | Importante | — | Pendente |
 | PREPROD-5 | Senha obrigatória na API; importação sem senha=CPF | Crítico | — | Pendente |
@@ -196,7 +196,7 @@ Implemente SOMENTE PREPROD-1 de docs/planning/followup-revisao-pre-producao.md
 
 | | |
 |--|--|
-| **Status** | Pendente |
+| **Status** | Concluída (2026-08-17) |
 | **Severidade** | Crítico |
 | **Pré-requisito** | Nenhum |
 | **Quem / onde** | |
@@ -224,9 +224,9 @@ Implemente SOMENTE PREPROD-1 de docs/planning/followup-revisao-pre-producao.md
 
 ### Critério de saída
 
-- [ ] L1 PATCH no próprio usuário com `usuario_coletivo: true` **não** altera a flag (campo ignorado/400).
-- [ ] L3 continua podendo criar usuário coletivo e configurar o pool.
-- [ ] Teste de regressão no arquivo de coletivo.
+- [x] L1 PATCH no próprio usuário com `usuario_coletivo: true` **não** altera a flag (campo ignorado/400).
+- [x] L3 continua podendo criar usuário coletivo e configurar o pool.
+- [x] Teste de regressão no arquivo de coletivo.
 
 ### Testes mínimos desta etapa
 

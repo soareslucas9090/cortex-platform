@@ -249,12 +249,14 @@ class DetalheUsuarioView(IsOwnerOrAdminMixin, BasicRetrieveAPIView):
     summary='Atualizar dados do usuário',
     description='''
     Atualiza parcialmente os dados básicos do usuário (nome, e-mail, deficiência,
-    colaborador_externo, usuario_coletivo).
+    colaborador_externo).
 
-    A flag `usuario_coletivo` pode ser alterada aqui; o pool de associações é mantido
-    em `GET/PUT /usuarios/{pk}/coletivo/`. Ao desativar a flag, o pool é limpo.
+    A flag `usuario_coletivo` **não** é alterável neste endpoint — use a criação
+    do usuário (L3) para definir a conta coletiva. O pool de associações é mantido
+    em `GET/PUT /usuarios/{pk}/coletivo/` (L3).
 
-    **Permissões:** O próprio usuário ou administradores.
+    **Permissões:** L2+ (LER_TUDO) lê; escrita pelo dono (L1) ou L3 (EDITAR_TUDO).
+    O campo `usuario_coletivo` não é aceito neste PATCH.
 
     CPF não é alterável neste endpoint.
 
@@ -296,7 +298,7 @@ class AtualizarUsuarioView(IsOwnerOrAdminMixin, BasicPatchAPIView):
     description='''
     Retorna o pool do usuário coletivo (empresas, cargos, funções e setores).
 
-    A flag `usuario_coletivo` é definida na criação/edição do usuário; as associações
+    A flag `usuario_coletivo` é definida na criação do usuário (L3); as associações
     do pool são mantidas apenas por estes endpoints dedicados.
 
     **Permissões:** Administradores (L3).

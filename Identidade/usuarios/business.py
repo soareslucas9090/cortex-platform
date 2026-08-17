@@ -71,14 +71,12 @@ class UsuarioBusiness(ModelInstanceBusiness):
     # ------------------------------------------------------------------
 
     def atualizar_dados(self, dados: dict):
-        """Atualiza campos básicos do usuário."""
+        """Atualiza campos básicos do usuário (sem alterar usuario_coletivo)."""
         try:
-            flag_coletivo = dados.pop('usuario_coletivo', None)
+            dados.pop('usuario_coletivo', None)
             for attr, value in dados.items():
                 setattr(self.object_instance, attr, value)
             self.object_instance.save()
-            if flag_coletivo is not None:
-                self.definir_flag_coletivo(flag_coletivo)
         except Exception as e:
             self.relancar_ou_erro_sistema(e, 'Não foi possível atualizar os dados do usuário.', logger)
 

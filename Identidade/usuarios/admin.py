@@ -197,8 +197,11 @@ class UsuarioAdmin(DjangoUserAdmin, CortexModelAdmin):
         dados_atualizacao = {
             field: form.cleaned_data[field]
             for field in form.changed_data
-            if field not in {'cpf', 'password', 'password1', 'password2'}
+            if field not in {'cpf', 'password', 'password1', 'password2', 'usuario_coletivo'}
         }
+        if 'usuario_coletivo' in form.changed_data:
+            flag_coletivo = form.cleaned_data['usuario_coletivo']
+            run_business(lambda: obj.business.definir_flag_coletivo(flag_coletivo))
         if dados_atualizacao:
             run_business(lambda: obj.business.atualizar_dados(dados_atualizacao))
 

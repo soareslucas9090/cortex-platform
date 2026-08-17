@@ -252,7 +252,6 @@ class AtualizarUsuarioSerializer(serializers.Serializer):
         ),
     )
     colaborador_externo = serializers.BooleanField(required=False)
-    usuario_coletivo = serializers.BooleanField(required=False)
 
     def validate_deficiencia(self, value):
         from Identidade.usuarios.utils import normalizar_deficiencia

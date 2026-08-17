@@ -49,7 +49,9 @@ class PermissaoDocumentacao:
                 '- Pessoas e vínculos pessoais: L2+ vê todos; L1 vê só o próprio.\n'
                 '- Empresas: L2+ vê todas; L1 não vê nenhuma.\n\n'
                 '**Escrita:** apenas L3, exceto recursos do próprio usuário (ex.: atualizar '
-                'próprio perfil, contatos e endereço).\n\n'
+                'próprio perfil, contatos e endereço). A flag `usuario_coletivo` só pode ser '
+                'definida na criação do usuário (L3) ou no Django admin — não no PATCH de '
+                'atualização de perfil.\n\n'
                 'O payload `user.permissoes` no login/me retorna `{"cortex": "<nível>"}` e, '
                 'quando aplicável, chaves adicionais por módulo (ex.: `infraestrutura` com flags booleanas).'
             ),
