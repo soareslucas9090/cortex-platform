@@ -31,6 +31,9 @@ Detalhes e exemplos: `docs/project/guia-revisao-de-codigo.md`
 - [ ] Validação de formato no serializer; regra de negócio nas Rules
 - [ ] Campos coerentes com o domínio (`docs/domains/`)
 
+## Imports
+- [ ] `__init__.py` não reexporta módulos; import pelo caminho concreto
+
 ## URLs
 - [ ] Todo `path()` tem `name=`
 - [ ] Testes usam `reverse()`, não paths hardcoded

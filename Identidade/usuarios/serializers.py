@@ -52,9 +52,8 @@ class UsuarioSerializer(serializers.ModelSerializer):
     setores_coletivo_ids = serializers.SerializerMethodField()
 
     def get_foto_secundaria(self, obj) -> str | None:
-        from Identidade.usuarios.fotos.s3_helper import montar_url_proxy_foto_secundaria
-
-        return montar_url_proxy_foto_secundaria(
+        from Identidade.usuarios.constantes import ANEXO_FOTO_SECUNDARIA
+        return ANEXO_FOTO_SECUNDARIA.url_proxy(
             obj.pk,
             obj.foto_secundaria,
             self.context.get('request'),

@@ -3,9 +3,11 @@ from urllib.parse import urlparse
 
 from AppCore.core.rules.rules import ModelInstanceRules
 from AppCore.core.exceptions.exceptions import ValidationException
-from Identidade.usuarios.fotos.s3_helper import (
-    TAMANHO_MAXIMO_FOTO_SECUNDARIA_BYTES,
+from AppCore.common.storage.imagens import (
+    MENSAGEM_FORMATO_IMAGEM_NAO_SUPORTADO,
+    TAMANHO_MAXIMO_IMAGEM_BYTES as TAMANHO_MAXIMO_FOTO_SECUNDARIA_BYTES,
     TIPOS_IMAGEM_PERMITIDOS,
+    formato_imagem_permitido,
 )
 
 
@@ -108,11 +110,14 @@ class UsuarioRules(ModelInstanceRules):
 
         content_type = getattr(arquivo, 'content_type', '') or ''
         if content_type and content_type not in TIPOS_IMAGEM_PERMITIDOS:
-            raise ValidationException('Formato de imagem não suportado. Use JPEG, PNG ou WebP.')
+            raise ValidationException(MENSAGEM_FORMATO_IMAGEM_NAO_SUPORTADO)
 
         tamanho = getattr(arquivo, 'size', None)
         if tamanho is not None and tamanho > TAMANHO_MAXIMO_FOTO_SECUNDARIA_BYTES:
             raise ValidationException('A imagem deve ter no máximo 3 MB.')
+
+        if not formato_imagem_permitido(arquivo):
+            raise ValidationException(MENSAGEM_FORMATO_IMAGEM_NAO_SUPORTADO)
         return True
 
     def validar_configuracao_coletivo(

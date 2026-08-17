@@ -1459,11 +1459,6 @@ paths:
   /cortex/identidade/usuarios/{id}/foto-secundaria/:
     get:
       operationId: identidade_usuarios_foto_secundaria_retrieve
-      description: "\n    Retorna o arquivo de imagem da foto secundária via proxy
-        da API.\n\n    **Permissões:** Público (não requer autenticação).\n\n    O
-        bucket S3 permanece privado; este endpoint faz o stream da imagem para o navegador.\n
-        \   "
-      summary: Obter foto secundária do usuário
       parameters:
       - in: path
         name: id
@@ -1471,26 +1466,12 @@ paths:
           type: integer
         required: true
       tags:
-      - Identidade
+      - identidade
       security:
       - jwtAuth: []
       responses:
         '200':
-          content:
-            application/json:
-              schema:
-                description: Imagem retornada com sucesso.
-                content:
-                  image/jpeg: {}
-                  image/png: {}
-                  image/webp: {}
-          description: ''
-        '404':
-          content:
-            application/json:
-              schema:
-                description: Usuário ou foto não encontrados.
-          description: ''
+          description: No response body
     post:
       operationId: identidade_usuarios_foto_secundaria_create
       description: "\n    Faz upload da foto secundária para o S3 e persiste a referência
@@ -2938,7 +2919,7 @@ paths:
       operationId: infraestrutura_emprestimos_solicitantes_elegiveis_list
       description: "\n    Retorna usuários que podem ser solicitantes de empréstimo
         para **todos** os recursos\n    informados, conforme as regras de elegibilidade
-        (retirada irrestrita, autorização,\n    SalaSetor, servente de limpeza).\n\n
+        (retirada irrestrita, servidor,\n    terceirizado em chaves, SalaSetor, autorização).\n\n
         \   Informe um ou mais IDs em `recurso_id` e/ou `recurso_ids` (repetidos ou
         separados\n    por vírgula). A resposta contém apenas usuários elegíveis a
         cada recurso enviado.\n\n    **Permissões:** Capacidade `operar` em Infraestrutura.\n
@@ -3028,7 +3009,10 @@ paths:
     post:
       operationId: infraestrutura_recursos_create
       description: "\n    Cria um novo recurso. Tipo chave exige sala vinculada.\n\n
-        \   **Permissões:** Capacidade `cadastrar` em Infraestrutura.\n    "
+        \   A foto é opcional. Envie `multipart/form-data` para incluir o arquivo\n
+        \   (JPEG, PNG ou WebP, até 3 MB, orientação retrato, recorte 3:4, mínimo
+        480×640).\n    Cadastro em JSON sem foto continua válido.\n\n    **Permissões:**
+        Capacidade `cadastrar` em Infraestrutura.\n    "
       summary: Criar recurso
       tags:
       - Infraestrutura · Recursos
@@ -3137,6 +3121,125 @@ paths:
             application/json:
               schema:
                 description: Recurso desativado com sucesso.
+          description: ''
+  /cortex/infraestrutura/recursos/{id}/foto/:
+    get:
+      operationId: infraestrutura_recursos_foto_retrieve
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - infraestrutura
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          description: No response body
+    post:
+      operationId: infraestrutura_recursos_foto_create
+      description: "\n    Faz upload da foto do recurso para o S3 e persiste a referência.\n\n
+        \   A imagem deve estar na orientação retrato. O backend recorta o centro\n
+        \   para 3:4 (largura:altura) sem deformar. Após o recorte, o mínimo é 480×640.\n\n
+        \   **Limites do arquivo:** JPEG, PNG ou WebP, com tamanho máximo de 3 MB.\n\n
+        \   **Permissões:** Capacidade `cadastrar` em Infraestrutura.\n    "
+      summary: Enviar foto do recurso
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - Infraestrutura · Recursos
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                foto:
+                  type: string
+                  format: binary
+                  description: Arquivo de imagem (JPEG, PNG ou WebP, até 3 MB). Retrato
+                    3:4, mínimo 480×640 após recorte.
+              required:
+              - foto
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Recurso'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                description: Arquivo inválido.
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                description: Não autenticado.
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                description: Sem permissão.
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                description: Recurso não encontrado.
+          description: ''
+    delete:
+      operationId: infraestrutura_recursos_foto_destroy
+      description: "\n    Remove a foto do recurso e tenta apagar o arquivo correspondente
+        no S3.\n\n    **Permissões:** Capacidade `cadastrar` em Infraestrutura.\n
+        \   "
+      summary: Remover foto do recurso
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - Infraestrutura · Recursos
+      security:
+      - jwtAuth: []
+      responses:
+        '204':
+          content:
+            application/json:
+              schema:
+                description: Foto do recurso removida com sucesso.
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                description: Não autenticado.
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                description: Sem permissão.
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                description: Recurso não encontrado.
           description: ''
   /cortex/infraestrutura/recursos/{id}/reativar/:
     post:
@@ -5636,6 +5739,12 @@ components:
         em_avaria:
           type: boolean
           default: false
+        foto:
+          type: string
+          format: uri
+          nullable: true
+          description: Arquivo de imagem opcional (JPEG, PNG ou WebP, até 3 MB). Retrato
+            3:4, mínimo 480×640 após recorte.
       required:
       - codigo
       - tipo
@@ -6933,7 +7042,6 @@ components:
           maxLength: 500
         foto_secundaria:
           type: string
-          format: uri
           nullable: true
           title: Foto secundária
           description: Chave S3 da foto enviada pelo próprio usuário (servida via
@@ -7026,6 +7134,10 @@ components:
           type: string
           title: Descrição
           maxLength: 500
+        foto:
+          type: string
+          nullable: true
+          readOnly: true
         em_avaria:
           type: boolean
         ativo:
@@ -7045,6 +7157,7 @@ components:
       - created_at
       - estado_derivado
       - estado_derivado_display
+      - foto
       - id
       - sala
       - tipo

@@ -1,34 +1,14 @@
 import os
 import logging
-import boto3
-from botocore.client import Config
-from botocore.exceptions import ClientError
-from django.conf import settings
 
+from botocore.exceptions import ClientError
+
+from AppCore.common.storage.s3 import obter_cliente_s3
 logger = logging.getLogger(__name__)
 
+
 def _get_s3_client():
-    endpoint_url = getattr(settings, 'AWS_S3_ENDPOINT_URL', None)
-    bucket_name = getattr(settings, 'AWS_STORAGE_BUCKET_NAME', None)
-    access_key = getattr(settings, 'AWS_ACCESS_KEY_ID', None)
-    secret_key = getattr(settings, 'AWS_SECRET_ACCESS_KEY', None)
-
-    if not all([endpoint_url, bucket_name, access_key, secret_key]):
-        logger.error("Credenciais de S3 do modelo não configuradas completamente.")
-        return None, None
-
-    try:
-        s3_client = boto3.client(
-            's3',
-            endpoint_url=endpoint_url,
-            aws_access_key_id=access_key,
-            aws_secret_access_key=secret_key,
-            config=Config(signature_version='s3v4')
-        )
-        return s3_client, bucket_name
-    except Exception as e:
-        logger.error(f"Erro ao instanciar S3 client: {e}")
-        return None, None
+    return obter_cliente_s3()
 
 def upload_importacao_to_s3(importacao_lote):
     """

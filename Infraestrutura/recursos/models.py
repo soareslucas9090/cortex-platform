@@ -32,6 +32,13 @@ class Recurso(ModelHelperMixin, ModelBusinessMixin, ModelRulesMixin, BasicModel)
         verbose_name='Sala',
     )
     descricao = models.CharField('Descrição', max_length=500, blank=True, default='')
+    foto = models.CharField(
+        'Foto',
+        max_length=500,
+        null=True,
+        blank=True,
+        help_text='Chave S3 da foto enviada no cadastro (servida via proxy da API).',
+    )
     em_avaria = models.BooleanField('Em avaria', default=False)
     ativo = models.BooleanField('Ativo', default=True)
 

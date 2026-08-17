@@ -60,6 +60,6 @@ class Usuario(AbstractBaseUser, BasicModel):
 
 ### 3. Fotos do Usuário
 - **`foto` (primária):** URL pública vinda de sistemas externos; atualizada por administradores via `PATCH /usuarios/{pk}/foto-primaria/`.
-- **`foto_secundaria`:** upload pelo próprio usuário ou administrador via `POST /usuarios/{pk}/foto-secundaria/`; armazenada no S3.
+- **`foto_secundaria`:** upload pelo próprio usuário ou administrador via `POST /usuarios/{pk}/foto-secundaria/`; armazenada no S3 via `AppCore.common.storage.s3` (prefixo `Cortex/usuarios/fotos/`).
 - **Limites da foto secundária:** formatos JPEG, PNG ou WebP; tamanho máximo de **3 MB**. Arquivos acima do limite retornam `400 Bad Request`.
-- Para exibição no frontend, prefira `foto_secundaria` quando preenchida; caso contrário, use `foto`.
+- Para exibição no frontend, prefira `foto_secundaria` quando preenchida; caso contrário, use `foto`. A API devolve a URL do proxy (`GET /usuarios/{pk}/foto-secundaria/`), não a chave crua do bucket.

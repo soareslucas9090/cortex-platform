@@ -1,6 +1,7 @@
 import logging
 
 from AppCore.core.business.business import ModelInstanceBusiness
+from AppCore.core.exceptions.exceptions import NotFoundException
 
 logger = logging.getLogger(__name__)
 
@@ -16,19 +17,38 @@ class RecursoBusiness(ModelInstanceBusiness):
         **kwargs,
     ):
         """Cria um novo recurso validando código e regras por tipo."""
+        nova_chave = None
         try:
+            from .constantes import ANEXO_FOTO
             from .models import Recurso
+            foto = kwargs.pop('foto', None)
             self.object_instance.rules.codigo_unico(codigo)
             self.object_instance.rules.validar_sala_por_tipo(tipo, sala_id)
             self.object_instance.rules.validar_sala_ativa(sala_id)
-            return Recurso.objects.create(
+            foto_processada = None
+            if foto:
+                foto_processada = self._processar_foto_para_upload(foto)
+            recurso = Recurso.objects.create(
                 codigo=codigo,
                 tipo=tipo,
                 sala_id=sala_id,
                 descricao=descricao,
                 **kwargs,
             )
+            if foto_processada:
+                nova_chave = ANEXO_FOTO.enviar(
+                    recurso.pk,
+                    foto_processada,
+                    extensao='jpg',
+                    content_type='image/jpeg',
+                )
+                recurso.foto = nova_chave
+                recurso.save(update_fields=['foto'])
+            return self.object_instance.helper.obter_por_pk_com_sala(recurso.pk)
         except Exception as e:
+            if nova_chave:
+                from .constantes import ANEXO_FOTO
+                ANEXO_FOTO.remover(nova_chave)
             self.relancar_ou_erro_sistema(e, 'Não foi possível criar o recurso.', logger)
 
     def atualizar_dados(self, dados: dict):
@@ -67,3 +87,75 @@ class RecursoBusiness(ModelInstanceBusiness):
             self.object_instance.save(update_fields=['ativo'])
         except Exception as e:
             self.relancar_ou_erro_sistema(e, 'Não foi possível reativar o recurso.', logger)
+
+    def _processar_foto_para_upload(self, arquivo):
+        """Valida, recorta e reencoda a foto antes do envio ao S3."""
+        try:
+            from AppCore.common.storage.imagens import (
+                abrir_imagem,
+                recortar_central,
+                reencode_jpeg,
+            )
+            from .constantes import (
+                PROPORCAO_FOTO_ALTURA,
+                PROPORCAO_FOTO_LARGURA,
+            )
+            self.object_instance.rules.validar_arquivo_foto(arquivo)
+            imagem = abrir_imagem(arquivo)
+            largura, altura = imagem.size
+            self.object_instance.rules.validar_orientacao_retrato(largura, altura)
+            recortada = recortar_central(imagem, PROPORCAO_FOTO_LARGURA, PROPORCAO_FOTO_ALTURA)
+            largura_final, altura_final = recortada.size
+            self.object_instance.rules.validar_resolucao_minima_foto(largura_final, altura_final)
+            return reencode_jpeg(recortada)
+        except Exception as e:
+            self.relancar_ou_erro_sistema(e, 'Não foi possível processar a foto do recurso.', logger)
+
+    def atualizar_foto(self, arquivo):
+        """Processa a foto (retrato 3:4), envia ao S3 e persiste a chave."""
+        nova_chave = None
+        try:
+            from .constantes import ANEXO_FOTO
+            processada = self._processar_foto_para_upload(arquivo)
+            chave_antiga = self.object_instance.foto
+            nova_chave = ANEXO_FOTO.enviar(
+                self.object_instance.pk,
+                processada,
+                extensao='jpg',
+                content_type='image/jpeg',
+            )
+            self.object_instance.foto = nova_chave
+            self.object_instance.save(update_fields=['foto'])
+            if chave_antiga and chave_antiga != nova_chave:
+                ANEXO_FOTO.remover(chave_antiga)
+        except Exception as e:
+            if nova_chave:
+                from .constantes import ANEXO_FOTO
+                ANEXO_FOTO.remover(nova_chave)
+            self.relancar_ou_erro_sistema(e, 'Não foi possível atualizar a foto do recurso.', logger)
+
+    def remover_foto(self):
+        """Remove a foto do recurso e tenta apagar o objeto no S3."""
+        try:
+            from .constantes import ANEXO_FOTO
+            chave_antiga = self.object_instance.foto
+            self.object_instance.foto = None
+            self.object_instance.save(update_fields=['foto'])
+            ANEXO_FOTO.remover(chave_antiga)
+        except Exception as e:
+            self.relancar_ou_erro_sistema(e, 'Não foi possível remover a foto do recurso.', logger)
+
+    def obter_stream_foto(self):
+        """Obtém o stream e o content-type da foto do recurso no S3."""
+        try:
+            from botocore.exceptions import ClientError
+
+            from .constantes import ANEXO_FOTO
+            chave = ANEXO_FOTO.chave_normalizada(self.object_instance.foto)
+            if not chave:
+                raise NotFoundException('Foto do recurso não encontrada.')
+            return ANEXO_FOTO.iterar(chave, content_type_padrao='image/jpeg')
+        except ClientError:
+            raise NotFoundException('Foto do recurso não encontrada.')
+        except Exception as e:
+            self.relancar_ou_erro_sistema(e, 'Não foi possível obter a foto do recurso.', logger)

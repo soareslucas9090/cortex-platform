@@ -7,9 +7,10 @@ from .models import Recurso
 
 @admin.register(Recurso)
 class RecursoAdmin(AtivoModelAdmin):
-    list_display = ('codigo', 'tipo', 'sala', 'em_avaria', 'ativo', 'created_at')
+    list_display = ('codigo', 'tipo', 'sala', 'foto', 'em_avaria', 'ativo', 'created_at')
     list_filter = ('tipo', 'ativo', 'em_avaria', 'sala__bloco')
     search_fields = ('codigo', 'descricao', 'sala__nome')
+    readonly_fields = ('foto',)
     ordering = ('codigo',)
 
     def save_model(self, request, obj, form, change):

@@ -55,3 +55,8 @@ class RecursoHelpers(ModelInstanceHelpers):
         """Retorna recursos ativos vinculados a uma sala."""
         from .models import Recurso
         return Recurso.objects.filter(ativo=True, sala_id=sala_id)
+
+    def obter_por_pk_com_sala(self, pk: int):
+        """Retorna o recurso com sala pré-carregada para serialização."""
+        from .models import Recurso
+        return Recurso.objects.select_related('sala').get(pk=pk)

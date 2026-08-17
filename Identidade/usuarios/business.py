@@ -3,7 +3,7 @@ import logging
 from django.db import transaction
 
 from AppCore.core.business.business import ModelInstanceBusiness
-from AppCore.core.exceptions.exceptions import ValidationException, BusinessRuleException
+from AppCore.core.exceptions.exceptions import NotFoundException, ValidationException
 from AppCore.common.util.util import normalizar_cpf, normalizar_cep
 
 from Identidade.usuarios.importacao.importacao_parser import ImportacaoUsuariosParser
@@ -156,34 +156,79 @@ class UsuarioBusiness(ModelInstanceBusiness):
 
     def atualizar_foto_secundaria(self, arquivo):
         """Envia a foto secundária para o S3 e persiste a chave do objeto."""
+        nova_chave = None
         try:
-            from Identidade.usuarios.fotos.s3_helper import (
-                remover_foto_secundaria_do_s3,
-                upload_foto_secundaria,
+            from AppCore.common.storage.imagens import (
+                content_type_por_extensao,
+                obter_extensao_pelo_conteudo,
             )
+            from Identidade.usuarios.constantes import ANEXO_FOTO_SECUNDARIA
             self.object_instance.rules.validar_arquivo_foto(arquivo)
+            extensao = obter_extensao_pelo_conteudo(arquivo)
             chave_antiga = self.object_instance.foto_secundaria
-            nova_chave = upload_foto_secundaria(self.object_instance.pk, arquivo)
+            nova_chave = ANEXO_FOTO_SECUNDARIA.enviar(
+                self.object_instance.pk,
+                arquivo,
+                extensao=extensao,
+                content_type=content_type_por_extensao(extensao),
+            )
             self.object_instance.foto_secundaria = nova_chave
             self.object_instance.save(update_fields=['foto_secundaria'])
             if chave_antiga and chave_antiga != nova_chave:
-                remover_foto_secundaria_do_s3(chave_antiga)
-        except ValueError as e:
-            raise ValidationException(str(e))
+                ANEXO_FOTO_SECUNDARIA.remover(chave_antiga)
         except Exception as e:
+            if nova_chave:
+                from Identidade.usuarios.constantes import ANEXO_FOTO_SECUNDARIA
+                ANEXO_FOTO_SECUNDARIA.remover(nova_chave)
             self.relancar_ou_erro_sistema(e, 'Não foi possível atualizar a foto secundária.', logger)
 
     def remover_foto_secundaria(self):
         """Remove a foto secundária do usuário e tenta apagar o objeto no S3."""
         try:
-            from Identidade.usuarios.fotos.s3_helper import remover_foto_secundaria_do_s3
+            from Identidade.usuarios.constantes import ANEXO_FOTO_SECUNDARIA
             chave_antiga = self.object_instance.foto_secundaria
             self.object_instance.foto_secundaria = None
             self.object_instance.save(update_fields=['foto_secundaria'])
-            if chave_antiga:
-                remover_foto_secundaria_do_s3(chave_antiga)
+            ANEXO_FOTO_SECUNDARIA.remover(chave_antiga)
         except Exception as e:
             self.relancar_ou_erro_sistema(e, 'Não foi possível remover a foto secundária.', logger)
+
+    def obter_stream_foto_secundaria(self):
+        """Obtém o stream e o content-type da foto secundária no S3."""
+        try:
+            from botocore.exceptions import ClientError
+
+            from Identidade.usuarios.constantes import ANEXO_FOTO_SECUNDARIA
+            chave = ANEXO_FOTO_SECUNDARIA.chave_normalizada(
+                self.object_instance.foto_secundaria,
+            )
+            if not chave:
+                raise NotFoundException('Foto secundária não encontrada.')
+            return ANEXO_FOTO_SECUNDARIA.iterar(chave)
+        except ClientError:
+            raise NotFoundException('Foto secundária não encontrada.')
+        except Exception as e:
+            self.relancar_ou_erro_sistema(e, 'Não foi possível obter a foto secundária.', logger)
+
+    def obter_arquivo_modelo_importacao(self):
+        """Obtém o stream e o content-type do modelo ODS de importação no S3."""
+        try:
+            from botocore.exceptions import ClientError
+
+            from AppCore.common.storage.s3 import iterar_objeto_s3
+            from Identidade.usuarios.constantes import CHAVE_MODELO_IMPORTACAO
+            return iterar_objeto_s3(
+                CHAVE_MODELO_IMPORTACAO,
+                content_type_padrao='application/vnd.oasis.opendocument.spreadsheet',
+            )
+        except ClientError:
+            raise NotFoundException('Arquivo modelo de importação não encontrado no bucket.')
+        except Exception as e:
+            self.relancar_ou_erro_sistema(
+                e,
+                'Não foi possível obter o arquivo modelo de importação.',
+                logger,
+            )
 
     def atualizar_cpf(self, novo_cpf: str):
         """Atualiza o CPF do usuário com validação de formato e unicidade."""

@@ -1,8 +1,7 @@
-import logging, os
-from pathlib import Path
+import logging
 
 from django.db import transaction
-from django.http import FileResponse, Http404, StreamingHttpResponse
+from django.http import StreamingHttpResponse
 from rest_framework import status
 from rest_framework.parsers import MultiPartParser
 from rest_framework.response import Response
@@ -10,6 +9,7 @@ from rest_framework.response import Response
 from drf_spectacular.utils import extend_schema, OpenApiParameter
 from drf_spectacular.types import OpenApiTypes
 
+from AppCore.basics.decorators.decorators import handle_exceptions
 from AppCore.basics.mixins.mixins import AllowAnyMixin, IsAdminMixin, IsOwnerOrAdminMixin, IsAuthenticatedMixin
 from AppCore.basics.pagination.pagination import PaginacaoCustomizada
 from AppCore.basics.views.basic_views import (
@@ -458,54 +458,36 @@ class AtualizarFotoPrimariaView(IsAdminMixin, BasicPatchAPIView):
         }
 
 
-@extend_schema(
-    tags=['Identidade'],
-    summary='Obter foto secundária do usuário',
-    description='''
-    Retorna o arquivo de imagem da foto secundária via proxy da API.
-
-    **Permissões:** Público (não requer autenticação).
-
-    O bucket S3 permanece privado; este endpoint faz o stream da imagem para o navegador.
-    ''',
-    responses={
-        status.HTTP_200_OK: {
-            'description': 'Imagem retornada com sucesso.',
-            'content': {
-                'image/jpeg': {},
-                'image/png': {},
-                'image/webp': {},
-            },
-        },
-        status.HTTP_404_NOT_FOUND: {'description': 'Usuário ou foto não encontrados.'},
-    },
-)
-class ObterFotoSecundariaView(AllowAnyMixin, BasicGetAPIView):
+class ObterFotoSecundariaView(AllowAnyMixin, BasicRetrieveAPIView):
     """GET /cortex/identidade/usuarios/{pk}/foto-secundaria/"""
     queryset = Usuario.objects.all()
     serializer_class = SerializerVazio
 
+    @extend_schema(
+        tags=['Identidade'],
+        summary='Obter foto secundária do usuário',
+        description='''
+        Retorna o arquivo de imagem da foto secundária via proxy da API.
+
+        **Permissões:** Público (não requer autenticação).
+
+        O bucket S3 permanece privado; este endpoint faz o stream da imagem para o navegador.
+        ''',
+        responses={
+            status.HTTP_200_OK: {
+                'description': 'Imagem retornada com sucesso.',
+                'content': {
+                    'image/jpeg': {},
+                    'image/png': {},
+                    'image/webp': {},
+                },
+            },
+            status.HTTP_404_NOT_FOUND: {'description': 'Usuário ou foto não encontrados.'},
+        },
+    )
+    @handle_exceptions
     def get(self, request, *args, **kwargs):
-        from botocore.exceptions import ClientError
-
-        from Identidade.usuarios.fotos.s3_helper import (
-            iterar_foto_secundaria_do_s3,
-            normalizar_s3_key,
-        )
-
-        usuario = self.get_object()
-        s3_key = normalizar_s3_key(usuario.foto_secundaria)
-        if not s3_key:
-            raise Http404('Foto secundária não encontrada.')
-
-        try:
-            stream, content_type = iterar_foto_secundaria_do_s3(s3_key)
-        except (ClientError, ValueError):
-            raise Http404('Foto secundária não encontrada.')
-        except Exception as exc:
-            logger.error('Erro ao obter foto secundária do S3 (%s): %s', s3_key, exc)
-            raise Http404('Erro ao recuperar a foto secundária.')
-
+        stream, content_type = self.get_object().business.obter_stream_foto_secundaria()
         response = StreamingHttpResponse(stream, content_type=content_type)
         response['Cache-Control'] = 'public, max-age=86400'
         return response
@@ -667,48 +649,12 @@ class BaixarModeloImportacaoUsuariosView(IsAdminMixin, BasicGetAPIView):
     serializer_class = SerializerVazio
     mensagem_sucesso = 'Modelo de importação localizado com sucesso.'
 
+    @handle_exceptions
     def get(self, request, *args, **kwargs):
-        import io
-        import boto3
-        from botocore.client import Config
-        from botocore.exceptions import ClientError
-        from django.conf import settings
-
-        endpoint_url = getattr(settings, 'AWS_S3_ENDPOINT_URL', None)
-        bucket_name = getattr(settings, 'AWS_STORAGE_BUCKET_NAME', None)
-        access_key = getattr(settings, 'AWS_ACCESS_KEY_ID', None)
-        secret_key = getattr(settings, 'AWS_SECRET_ACCESS_KEY', None)
-
-        if not all([endpoint_url, bucket_name, access_key, secret_key]):
-            logger.error("Credenciais de armazenamento do modelo não configuradas completamente.")
-            raise Http404("Configuração de armazenamento inválida.")
-
-        try:
-            s3_client = boto3.client(
-                's3',
-                endpoint_url=endpoint_url,
-                aws_access_key_id=access_key,
-                aws_secret_access_key=secret_key,
-                config=Config(signature_version='s3v4')
-            )
-            
-            file_obj = io.BytesIO()
-            s3_client.download_fileobj(bucket_name, 'Cortex/modelo-importacao-usuarios.ods', file_obj)
-            file_obj.seek(0)
-            
-            return FileResponse(
-                file_obj,
-                as_attachment=True,
-                filename='modelo-importacao-usuarios.ods',
-                content_type='application/vnd.oasis.opendocument.spreadsheet',
-            )
-
-        except ClientError as e:
-            logger.error(f"Erro ao baixar o modelo do bucket S3: {e}")
-            raise Http404("Arquivo modelo de importação não encontrado no bucket.")
-        except Exception as e:
-            logger.error(f"Erro inesperado ao baixar o modelo: {e}")
-            raise Http404("Erro interno ao recuperar o arquivo modelo.")
+        stream, content_type = Usuario().business.obter_arquivo_modelo_importacao()
+        response = StreamingHttpResponse(stream, content_type=content_type)
+        response['Content-Disposition'] = 'attachment; filename="modelo-importacao-usuarios.ods"'
+        return response
 
 
 @extend_schema(
