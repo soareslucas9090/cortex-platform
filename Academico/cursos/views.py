@@ -12,7 +12,6 @@ from AppCore.basics.views.basic_views import (
     BasicPatchAPIView,
 )
 
-from .choices import TurnoCurso
 from .models import Curso
 from .serializers import CursoSerializer, CriarCursoSerializer, AtualizarCursoSerializer
 
@@ -33,12 +32,6 @@ from .serializers import CursoSerializer, CriarCursoSerializer, AtualizarCursoSe
         OpenApiParameter(
             'ativo', OpenApiTypes.BOOL, OpenApiParameter.QUERY,
             required=False, description='Filtra por status: true = Ativo, false = Inativo.',
-        ),
-        OpenApiParameter(
-            'turno', OpenApiTypes.INT, OpenApiParameter.QUERY,
-            required=False,
-            description='Filtra por turno: 1 = Matutino, 2 = Vespertino, 3 = Noturno, 4 = Integral.',
-            enum=[t.value for t in TurnoCurso],
         ),
         OpenApiParameter(
             'nome', OpenApiTypes.STR, OpenApiParameter.QUERY,
@@ -70,15 +63,6 @@ class ListarCursosView(IsAuthenticatedMixin, BasicGetAPIView):
         ativo = self.request.query_params.get('ativo')
         if ativo is not None and ativo.lower() in ('true', 'false'):
             qs = qs.filter(ativo=ativo.lower() == 'true')
-
-        turno = self.request.query_params.get('turno')
-        if turno is not None:
-            try:
-                turno_int = int(turno)
-                if turno_int in TurnoCurso.values:
-                    qs = qs.filter(turno=turno_int)
-            except (ValueError, TypeError):
-                pass  # valor inválido: ignora silenciosamente
 
         nome = self.request.query_params.get('nome')
         if nome:

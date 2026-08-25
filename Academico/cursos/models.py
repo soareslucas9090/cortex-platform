@@ -5,8 +5,6 @@ from AppCore.core.business.business_mixin import ModelBusinessMixin
 from AppCore.core.helpers.helpers_mixin import ModelHelperMixin
 from AppCore.core.rules.rules_mixin import ModelRulesMixin
 
-from .choices import TurnoCurso
-
 
 class Curso(ModelHelperMixin, ModelBusinessMixin, ModelRulesMixin, BasicModel):
     from .business import CursoBusiness
@@ -19,12 +17,6 @@ class Curso(ModelHelperMixin, ModelBusinessMixin, ModelRulesMixin, BasicModel):
 
     nome = models.CharField('Nome', max_length=255)
     codigo_curso = models.CharField('Código do Curso', max_length=50, unique=True)
-    turno = models.IntegerField(
-        'Turno',
-        choices=TurnoCurso.choices,
-        null=True,
-        blank=True,
-    )
     ativo = models.BooleanField('Ativo', default=True)
 
     class Meta:

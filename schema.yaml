@@ -450,17 +450,6 @@ paths:
         schema:
           type: integer
         description: Tamanho da página (1–100, padrão 10).
-      - in: query
-        name: turno
-        schema:
-          type: integer
-          enum:
-          - 1
-          - 2
-          - 3
-          - 4
-        description: 'Filtra por turno: 1 = Matutino, 2 = Vespertino, 3 = Noturno,
-          4 = Integral.'
       tags:
       - Cursos
       security:
@@ -5684,11 +5673,6 @@ components:
         codigo_curso:
           type: string
           maxLength: 50
-        turno:
-          nullable: true
-          oneOf:
-          - $ref: '#/components/schemas/TurnoEnum'
-          - $ref: '#/components/schemas/NullEnum'
       required:
       - codigo_curso
       - nome
@@ -5904,16 +5888,6 @@ components:
           type: string
           title: Código do Curso
           maxLength: 50
-        turno:
-          nullable: true
-          minimum: -2147483648
-          maximum: 2147483647
-          oneOf:
-          - $ref: '#/components/schemas/TurnoEnum'
-          - $ref: '#/components/schemas/NullEnum'
-        turno_display:
-          type: string
-          readOnly: true
         ativo:
           type: boolean
         created_at:
@@ -5929,7 +5903,6 @@ components:
       - created_at
       - id
       - nome
-      - turno_display
       - updated_at
     DeficienciaEnum:
       enum:
@@ -6841,11 +6814,6 @@ components:
         codigo_curso:
           type: string
           maxLength: 50
-        turno:
-          nullable: true
-          oneOf:
-          - $ref: '#/components/schemas/TurnoEnum'
-          - $ref: '#/components/schemas/NullEnum'
     PatchedAtualizarEmpresaInstituicao:
       type: object
       properties:
@@ -7581,18 +7549,6 @@ components:
           nullable: true
       required:
       - novo_solicitante_id
-    TurnoEnum:
-      enum:
-      - 1
-      - 2
-      - 3
-      - 4
-      type: integer
-      description: |-
-        * `1` - Matutino
-        * `2` - Vespertino
-        * `3` - Noturno
-        * `4` - Integral
     Usuario:
       type: object
       properties:

@@ -7,8 +7,8 @@ from .models import Curso
 
 @admin.register(Curso)
 class CursoAdmin(AtivoModelAdmin):
-    list_display = ('nome', 'codigo_curso', 'turno', 'ativo', 'created_at')
-    list_filter = ('ativo', 'turno')
+    list_display = ('nome', 'codigo_curso', 'ativo', 'created_at')
+    list_filter = ('ativo',)
     search_fields = ('nome', 'codigo_curso')
     ordering = ('nome',)
 
@@ -18,7 +18,6 @@ class CursoAdmin(AtivoModelAdmin):
                 lambda: Curso().business.criar_curso(
                     nome=obj.nome,
                     codigo_curso=obj.codigo_curso,
-                    turno=obj.turno,
                     ativo=obj.ativo,
                 )
             )

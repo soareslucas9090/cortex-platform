@@ -6,7 +6,6 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from AppCore.core.exceptions.exceptions import BusinessRuleException
 from Identidade.usuarios.models import Usuario
 from Academico.cursos.models import Curso
-from Academico.cursos.choices import TurnoCurso
 
 
 def obter_token(usuario):
@@ -17,8 +16,8 @@ def criar_admin(cpf='00000000001', nome='Admin'):
     return Usuario.objects.create_superuser(cpf=cpf, password='Senha@123', nome=nome)
 
 
-def criar_curso(nome='Sistemas de Informação', codigo='SI-001', turno=TurnoCurso.NOTURNO):
-    return Curso.objects.create(nome=nome, codigo_curso=codigo, turno=turno)
+def criar_curso(nome='Sistemas de Informação', codigo='SI-001'):
+    return Curso.objects.create(nome=nome, codigo_curso=codigo)
 
 
 class CursoBusinessTestCase(APITestCase):
@@ -34,12 +33,6 @@ class CursoBusinessTestCase(APITestCase):
         with self.assertRaises(BusinessRuleException) as ctx:
             Curso().business.criar_curso(nome='Sistemas II', codigo_curso='SI-001')
         self.assertIn('Já existe um curso cadastrado com esse código', str(ctx.exception))
-
-    def test_criar_curso_com_turno(self):
-        curso = Curso().business.criar_curso(
-            nome='Sistemas de Informação', codigo_curso='SI-001', turno=TurnoCurso.NOTURNO
-        )
-        self.assertEqual(curso.turno, TurnoCurso.NOTURNO)
 
     def test_atualizar_dados_sucesso(self):
         curso = Curso().business.criar_curso(nome='Sistemas de Informação', codigo_curso='SI-001')
@@ -109,12 +102,6 @@ class CursosAPITestCase(APITestCase):
         self.curso.business.desativar()
         url = reverse('academico:curso-list')
         response = self.client.get(url, {'ativo': 'false'})
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(len(response.data['dados']), 1)
-
-    def test_listar_cursos_filtrar_turno(self):
-        url = reverse('academico:curso-list')
-        response = self.client.get(url, {'turno': TurnoCurso.NOTURNO})
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.data['dados']), 1)
 
