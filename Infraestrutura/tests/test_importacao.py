@@ -1,6 +1,7 @@
 from io import BytesIO
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
+import requests
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase
 from django.urls import reverse
@@ -8,6 +9,7 @@ from rest_framework import status
 from rest_framework.test import APIClient, APITestCase
 
 from Infraestrutura.blocos.models import Bloco
+from Infraestrutura.importacoes.helpers import baixar_imagem_de_url
 from Infraestrutura.importacoes.importacao.importacao_dtos import (
     ArquivoImportacaoInfraestruturaDTO,
     LinhaBlocoImportacaoDTO,
@@ -95,6 +97,93 @@ class ImportacaoInfraestruturaParserTests(TestCase):
 
         with self.assertRaises(Exception):
             parser.parse(arquivo)
+
+
+def _resposta_imagem_mock(
+    status_code=200,
+    content=b'\xff\xd8fake-jpeg',
+    content_type='image/jpeg',
+    extra_headers=None,
+):
+    resposta = MagicMock()
+    resposta.status_code = status_code
+    resposta.ok = 200 <= status_code < 400
+    resposta.headers = {'Content-Type': content_type}
+    if extra_headers:
+        resposta.headers.update(extra_headers)
+    resposta.iter_content.return_value = [content]
+    return resposta
+
+
+class BaixarImagemDeUrlTests(TestCase):
+
+    @patch('Infraestrutura.importacoes.helpers.requests.get')
+    def test_envia_user_agent_e_referer(self, mock_get):
+        mock_get.return_value = _resposta_imagem_mock()
+
+        arquivo = baixar_imagem_de_url('https://i.imgur.com/dMu6I7R.jpeg')
+
+        headers = mock_get.call_args.kwargs['headers']
+        self.assertIn('Mozilla', headers['User-Agent'])
+        self.assertEqual(headers['Referer'], 'https://i.imgur.com/')
+        self.assertEqual(arquivo.name, 'importacao-foto.jpg')
+        self.assertEqual(arquivo.content_type, 'image/jpeg')
+
+    @patch('Infraestrutura.importacoes.helpers.time.sleep')
+    @patch('Infraestrutura.importacoes.helpers.requests.get')
+    def test_retry_em_429_e_sucesso_na_segunda_tentativa(self, mock_get, mock_sleep):
+        mock_get.side_effect = [
+            _resposta_imagem_mock(status_code=429, extra_headers={'Retry-After': '2'}),
+            _resposta_imagem_mock(),
+        ]
+
+        arquivo = baixar_imagem_de_url('https://example.com/foto.jpg')
+
+        self.assertEqual(mock_get.call_count, 2)
+        mock_sleep.assert_called_once_with(2.0)
+        self.assertEqual(arquivo.name, 'importacao-foto.jpg')
+
+    @patch('Infraestrutura.importacoes.helpers.time.sleep')
+    @patch('Infraestrutura.importacoes.helpers.requests.get')
+    def test_429_esgotado_lanca_mensagem_clara(self, mock_get, mock_sleep):
+        mock_get.return_value = _resposta_imagem_mock(status_code=429)
+
+        with self.assertRaises(ValueError) as ctx:
+            baixar_imagem_de_url('https://i.imgur.com/dMu6I7R.jpeg')
+
+        self.assertIn('HTTP 429', str(ctx.exception))
+        self.assertIn('excesso de requisições', str(ctx.exception))
+        self.assertEqual(mock_get.call_count, 4)
+        self.assertEqual(mock_sleep.call_count, 3)
+
+    @patch('Infraestrutura.importacoes.helpers.requests.get')
+    def test_erro_de_rede_vira_mensagem_amigavel(self, mock_get):
+        mock_get.side_effect = requests.Timeout()
+
+        with self.assertRaises(ValueError) as ctx:
+            baixar_imagem_de_url('https://example.com/foto.jpg')
+
+        self.assertEqual(
+            str(ctx.exception),
+            'Não foi possível baixar a foto da URL informada.',
+        )
+
+    @patch('Infraestrutura.importacoes.helpers.requests.get')
+    def test_rejeita_imagem_maior_que_3mb(self, mock_get):
+        mock_get.return_value = _resposta_imagem_mock(
+            content=b'x' * (3 * 1024 * 1024 + 1),
+        )
+
+        with self.assertRaises(ValueError) as ctx:
+            baixar_imagem_de_url('https://example.com/foto.jpg')
+
+        self.assertIn('3 MB', str(ctx.exception))
+
+    def test_url_vazia_lanca_erro(self):
+        with self.assertRaises(ValueError) as ctx:
+            baixar_imagem_de_url('')
+
+        self.assertEqual(str(ctx.exception), 'URL da foto não informada.')
 
 
 class ImportacaoInfraestruturaBusinessPreviewTests(TestCase):
