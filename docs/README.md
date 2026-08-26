@@ -26,6 +26,7 @@ Documentos de planejamento de implementação e marcos.
 - [Milestone 4: Acadêmico Plan](planning/milestone-4-academico-plan.md)
 - [Milestone 5: Integração e Consolidação Final Plan](planning/milestone-5-integracao-e-consolidacao-final-plan.md)
 - [Milestone: Importação de Usuários](planning/milestone-importacao-usuarios.md)
+- [Milestone: Importação de Infraestrutura](planning/milestone-importacao-infraestrutura.md)
 - [Milestone: Infraestrutura (v1)](planning/milestone-infraestrutura-plan.md)
 - [Follow-up: revisão fotos S3 (recursos + AppCore)](planning/followup-revisao-fotos-s3.md) — FOTO-S3-1 a FOTO-S3-14 (concluídas); retomar por ID em outro computador/conversa
 - [Follow-up: revisão pré-produção (base completa)](planning/followup-revisao-pre-producao.md) — PREPROD-1 a PREPROD-21; retomar por ID em outro computador/conversa
@@ -33,11 +34,13 @@ Documentos de planejamento de implementação e marcos.
 ### 🔌 API
 Especificações e especificações de integração das APIs.
 - [Importação de Usuários OpenAPI](api/importacao-usuarios-openapi.md)
+- [Importação de Infraestrutura OpenAPI](api/importacao-infraestrutura-openapi.md)
 
 ### 📊 Schemas e Importação
 Modelagens de dados, mapeamentos e regras de carga.
 - [Dados Raízes da Importação](schema/dados-raizes-importacao.md)
 - [Importação de Usuários](schema/importacao-usuarios.md)
+- [Importação de Infraestrutura](schema/importacao-infraestrutura.md)
 - [Infraestrutura](schema/infraestrutura.md)
 - [Funcionamento do Chameco legado](schema/funcionamento-antigo-sigec.md)
 

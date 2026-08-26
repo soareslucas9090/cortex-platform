@@ -286,6 +286,7 @@ PROJECT_APPS = [
     'Infraestrutura.permissoes',
     'Infraestrutura.autorizacoes',
     'Infraestrutura.emprestimos',
+    'Infraestrutura.importacoes',
 ]
 ```
 
@@ -368,7 +369,8 @@ Infraestrutura/
 ├── recursos/
 ├── permissoes/
 ├── autorizacoes/
-└── emprestimos/
+├── emprestimos/
+└── importacoes/
 ```
 
 #### Responsabilidades
@@ -379,6 +381,7 @@ Infraestrutura/
 - `permissoes/` → model `PermissaoFuncaoInfraestrutura` (capacidades por função; sem rotas HTTP)
 - `autorizacoes/` → model principal `Autorizacao`
 - `emprestimos/` → models de empréstimo multi-item
+- `importacoes/` → model `ImportacaoLote` e rotinas de importação em lote (blocos, salas, recursos)
 
 ---
 

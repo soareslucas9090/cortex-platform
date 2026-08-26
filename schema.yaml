@@ -2957,6 +2957,258 @@ paths:
               schema:
                 $ref: '#/components/schemas/PaginatedEmprestimoUsuarioResumoList'
           description: ''
+  /cortex/infraestrutura/importacao/:
+    post:
+      operationId: infraestrutura_importacao_create
+      description: "\n    Inicia o processo de importação em lote enviando o arquivo
+        `.ods`.\n    O processamento ocorre em background (Celery).\n\n    **Permissões:**
+        cadastrar\n    "
+      summary: Importar infraestrutura em lote (Assíncrono)
+      tags:
+      - Infraestrutura · Importação
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: Arquivo para upload
+              required:
+              - file
+      security:
+      - jwtAuth: []
+      responses:
+        '202':
+          content:
+            application/json:
+              schema:
+                description: Importação enviada para fila de processamento.
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                description: Já existe uma importação em andamento ou arquivo inválido.
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                description: Não autenticado.
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                description: Sem permissão.
+          description: ''
+  /cortex/infraestrutura/importacao/cancelar/:
+    post:
+      operationId: infraestrutura_importacao_cancelar_create
+      description: "\n    Cancela uma importação com status EM_ANDAMENTO.\n\n    **Permissões:**
+        cadastrar\n    "
+      summary: Cancelar importação em lote de infraestrutura
+      tags:
+      - Infraestrutura · Importação
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                description: Importação cancelada com sucesso.
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                description: Não há importação em andamento.
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                description: Não autenticado.
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                description: Sem permissão.
+          description: ''
+  /cortex/infraestrutura/importacao/historico/:
+    get:
+      operationId: infraestrutura_importacao_historico_list
+      description: "\n    Retorna a lista paginada do histórico de importações.\n\n
+        \   **Permissões:** cadastrar\n\n    **Query params:**\n    - `status` (str,
+        opcional): EM_ANDAMENTO, CONCLUIDA, ERRO.\n    - `paginacao` (int, opcional):
+        tamanho da página, entre 1 e 100. Padrão: 10.\n    "
+      summary: Histórico de importações de infraestrutura
+      parameters:
+      - name: page
+        required: false
+        in: query
+        description: Um número de página dentro do conjunto de resultados paginado.
+        schema:
+          type: integer
+      - in: query
+        name: paginacao
+        schema:
+          type: integer
+        description: Tamanho da página (1–100, padrão 10).
+      - in: query
+        name: status
+        schema:
+          type: string
+          enum:
+          - CONCLUIDA
+          - EM_ANDAMENTO
+          - ERRO
+        description: Filtra pelo status (EM_ANDAMENTO, CONCLUIDA, ERRO).
+      tags:
+      - Infraestrutura · Importação
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedStatusImportacaoLoteInfraestruturaList'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                description: Não autenticado.
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                description: Sem permissão.
+          description: ''
+  /cortex/infraestrutura/importacao/modelo/:
+    get:
+      operationId: infraestrutura_importacao_modelo_retrieve
+      description: "\n    Retorna o arquivo modelo `.ods` para importação em lote
+        de blocos, salas e recursos.\n\n    **Permissões:** cadastrar\n    "
+      summary: Baixar modelo de importação de infraestrutura
+      tags:
+      - Infraestrutura · Importação
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                description: Arquivo retornado com sucesso.
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                description: Não autenticado.
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                description: Sem permissão.
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                description: Arquivo modelo não encontrado.
+          description: ''
+  /cortex/infraestrutura/importacao/pre-visualizar/:
+    post:
+      operationId: infraestrutura_importacao_pre_visualizar_create
+      description: "\n    Recebe um arquivo `.ods` e executa validação estrutural
+        sem persistir dados.\n\n    **Permissões:** cadastrar\n    "
+      summary: Pré-visualizar importação em lote de infraestrutura
+      tags:
+      - Infraestrutura · Importação
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: Arquivo para upload
+              required:
+              - file
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ImportacaoInfraestruturaPreviewResponse'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                description: Arquivo inválido ou estrutura inconsistente.
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                description: Não autenticado.
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                description: Sem permissão.
+          description: ''
+  /cortex/infraestrutura/importacao/status/:
+    get:
+      operationId: infraestrutura_importacao_status_retrieve
+      description: "\n    Retorna o status da importação atual ou da última importação
+        realizada.\n\n    **Permissões:** cadastrar\n    "
+      summary: Consultar status da importação de infraestrutura
+      tags:
+      - Infraestrutura · Importação
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StatusImportacaoLoteInfraestrutura'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                description: Não autenticado.
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                description: Sem permissão.
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                description: Nenhuma importação encontrada.
+          description: ''
   /cortex/infraestrutura/recursos/:
     get:
       operationId: infraestrutura_recursos_list
@@ -6173,6 +6425,48 @@ components:
       - codigo
       - mensagem
       - numero_linha
+    ImportacaoErroLinhaInfraestrutura:
+      type: object
+      properties:
+        aba:
+          type: string
+        numero_linha:
+          type: integer
+        campo:
+          type: string
+        valor:
+          nullable: true
+        codigo:
+          type: string
+        mensagem:
+          type: string
+      required:
+      - aba
+      - campo
+      - codigo
+      - mensagem
+      - numero_linha
+    ImportacaoInfraestruturaPreviewResponse:
+      type: object
+      properties:
+        sucesso:
+          type: boolean
+        mensagem:
+          type: string
+        resumo:
+          $ref: '#/components/schemas/ResumoImportacaoInfraestrutura'
+        erros:
+          type: array
+          items:
+            $ref: '#/components/schemas/ImportacaoErroLinhaInfraestrutura'
+        metadados:
+          type: object
+          additionalProperties: {}
+      required:
+      - erros
+      - mensagem
+      - resumo
+      - sucesso
     ImportacaoUsuariosPreviewResponse:
       type: object
       properties:
@@ -6702,6 +6996,29 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/SetorVinculo'
+    PaginatedStatusImportacaoLoteInfraestruturaList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/StatusImportacaoLoteInfraestrutura'
     PaginatedStatusImportacaoLoteList:
       type: object
       required:
@@ -7196,6 +7513,37 @@ components:
       - usuarios_atualizados
       - usuarios_criados
       - vinculos_aluno_curso_criados
+    ResumoImportacaoInfraestrutura:
+      type: object
+      properties:
+        total_abas_processadas:
+          type: integer
+        total_linhas_processadas:
+          type: integer
+        total_linhas_com_erro:
+          type: integer
+        blocos_criados:
+          type: integer
+        blocos_atualizados:
+          type: integer
+        salas_criadas:
+          type: integer
+        salas_atualizadas:
+          type: integer
+        recursos_criados:
+          type: integer
+        recursos_atualizados:
+          type: integer
+      required:
+      - blocos_atualizados
+      - blocos_criados
+      - recursos_atualizados
+      - recursos_criados
+      - salas_atualizadas
+      - salas_criadas
+      - total_abas_processadas
+      - total_linhas_com_erro
+      - total_linhas_processadas
     Sala:
       type: object
       properties:
@@ -7396,6 +7744,44 @@ components:
         * `CONCLUIDA` - Concluída
         * `ERRO` - Erro
     StatusImportacaoLote:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        status:
+          $ref: '#/components/schemas/StatusEnum'
+        total_linhas:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
+          title: Total de Linhas
+        linhas_processadas:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
+        porcentagem:
+          type: number
+          format: double
+          readOnly: true
+        resultado_json:
+          nullable: true
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - created_at
+      - id
+      - porcentagem
+      - resultado_json
+      - updated_at
+    StatusImportacaoLoteInfraestrutura:
       type: object
       properties:
         id:
