@@ -38,18 +38,9 @@ PERMISSAO_TI = (
     **Filtros:** os query params apenas reduzem o conjunto de resultados.
     ''',
     parameters=[
-        OpenApiParameter(
-            'ativo', OpenApiTypes.BOOL, OpenApiParameter.QUERY,
-            required=False, description='Filtra por status: true = Ativo, false = Inativo. Omitir para todos.',
-        ),
-        OpenApiParameter(
-            'busca', OpenApiTypes.STR, OpenApiParameter.QUERY,
-            required=False, description='Filtra por parte do apelido ou da descrição (ignora acentos e maiúsculas).',
-        ),
-        OpenApiParameter(
-            'paginacao', OpenApiTypes.INT, OpenApiParameter.QUERY,
-            required=False, description='Tamanho da página (1–100, padrão 10).',
-        ),
+        OpenApiParameter('ativo', OpenApiTypes.BOOL, OpenApiParameter.QUERY, required=False, description='Filtra por status: true = Ativo, false = Inativo. Omitir para todos.'),
+        OpenApiParameter('busca', OpenApiTypes.STR, OpenApiParameter.QUERY, required=False, description='Filtra por parte do apelido ou da descrição (ignora acentos e maiúsculas).'),
+        OpenApiParameter('paginacao', OpenApiTypes.INT, OpenApiParameter.QUERY, required=False, description='Tamanho da página (1–100, padrão 10).'),
     ],
     responses={
         status.HTTP_200_OK: PercursoSerializer(many=True),
