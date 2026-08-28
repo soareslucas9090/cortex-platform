@@ -69,3 +69,4 @@ Diretrizes e regras específicas por domínio de negócio.
 - [Organizacional](domains/organizacional.md)
 - [Pessoas Institucionais](domains/pessoas-institucionais.md)
 - [Acadêmico](domains/academico.md)
+- [Transporte](domains/transporte.md)

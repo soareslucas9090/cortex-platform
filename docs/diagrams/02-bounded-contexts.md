@@ -38,6 +38,8 @@ O Cortex será inicialmente dividido nos seguintes domínios:
 2. `Organizacional`
 3. `PessoasInstitucionais`
 4. `Academico`
+5. `Infraestrutura`
+6. `Transporte`
 
 ---
 
@@ -288,6 +290,7 @@ A organização inicial do Cortex será baseada em quatro domínios (Bounded Con
 - `PessoasInstitucionais` (com sub-apps `servidores`, `cargos`, `terceirizados`, `empresas_instituicoes`)
 - `Academico` (com sub-apps `alunos`, `cursos`, `aluno_cursos`)
 - `Infraestrutura` (com sub-apps `blocos`, `salas`, `recursos`, `permissoes`, `autorizacoes`, `emprestimos`)
+- `Transporte` (com sub-app `percursos`)
 
 Essa divisão busca:
 - refletir o negócio com mais fidelidade;
