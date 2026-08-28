@@ -99,7 +99,7 @@ class PercursosAPITestCase(APITestCase):
         self.admin = criar_admin()
         self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {obter_token(self.admin)}')
         self.percurso = criar_percurso()
-        self.url_list = reverse('transporte:percursos-list')
+        self.url_list = reverse('transporte:percursos')
 
     def test_listar_percursos(self):
         resposta = self.client.get(self.url_list)
@@ -143,13 +143,13 @@ class PercursosAPITestCase(APITestCase):
         self.assertEqual(resposta.status_code, status.HTTP_400_BAD_REQUEST)
 
     def test_detalhar_percurso(self):
-        url = reverse('transporte:percurso-detail', kwargs={'pk': self.percurso.pk})
+        url = reverse('transporte:percurso-detalhe', kwargs={'pk': self.percurso.pk})
         resposta = self.client.get(url)
         self.assertEqual(resposta.status_code, status.HTTP_200_OK)
         self.assertEqual(resposta.data['dados']['apelido'], 'Rota R.SÃ')
 
     def test_atualizar_percurso(self):
-        url = reverse('transporte:percurso-detail', kwargs={'pk': self.percurso.pk})
+        url = reverse('transporte:percurso-detalhe', kwargs={'pk': self.percurso.pk})
         resposta = self.client.patch(url, {'descricao': 'Trajeto atualizado'}, format='json')
         self.assertEqual(resposta.status_code, status.HTTP_200_OK)
         self.percurso.refresh_from_db()

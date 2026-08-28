@@ -12,24 +12,8 @@ from .views import (
 )
 
 urlpatterns = [
-    path(
-        'percursos/',
-        roteador_por_metodo(GET=ListarPercursosView, POST=CriarPercursoView),
-        name='percursos-list',
-    ),
-    path(
-        'percursos/<int:pk>/',
-        roteador_por_metodo(GET=DetalharPercursoView, PATCH=AtualizarPercursoView),
-        name='percurso-detail',
-    ),
-    path(
-        'percursos/<int:pk>/desativar/',
-        roteador_por_metodo(POST=DesativarPercursoView),
-        name='percurso-desativar',
-    ),
-    path(
-        'percursos/<int:pk>/reativar/',
-        roteador_por_metodo(POST=ReativarPercursoView),
-        name='percurso-reativar',
-    ),
+    path('percursos/', roteador_por_metodo(GET=ListarPercursosView, POST=CriarPercursoView), name='percursos'),
+    path('percursos/<int:pk>/', roteador_por_metodo(GET=DetalharPercursoView, PATCH=AtualizarPercursoView), name='percurso-detalhe'),
+    path('percursos/<int:pk>/desativar/', roteador_por_metodo(POST=DesativarPercursoView), name='percurso-desativar'),
+    path('percursos/<int:pk>/reativar/', roteador_por_metodo(POST=ReativarPercursoView), name='percurso-reativar'),
 ]
