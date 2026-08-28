@@ -153,6 +153,22 @@ Responsável pelos perfis acadêmicos e pelos vínculos do aluno com os cursos.
 
 ---
 
+## 5. Domínio: Transporte
+
+### Módulo Agregador
+`Transporte/`
+
+### Apps Django Internos e Entidades:
+- `percursos` -> Model principal: `Percurso` (apelido, descrição do trajeto, ativo)
+
+### Responsabilidade
+Cadastro de percursos das rotas de ônibus (MeuIF-Transporte, RF017). Acesso restrito a L3 (perfil TI).
+
+### Dependências
+- Não depende de outros domínios de negócio nesta v1.
+
+---
+
 ## Relações entre domínios
 
 ### Identidade
