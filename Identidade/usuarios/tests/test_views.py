@@ -1160,6 +1160,11 @@ class DocumentarPermissoesViewTest(APITestCase):
         self.assertIn('Servidor ativo', infraestrutura['secoes'][2]['itens'][1]['destaque'])
         self.assertIn('retirada_irrestrita', infraestrutura['capacidades'][3]['codigo'])
 
+        transporte = next(modulo for modulo in modulos if modulo['chave'] == 'transporte')
+        self.assertEqual(len(transporte['capacidades']), 1)
+        self.assertEqual(transporte['capacidades'][0]['codigo'], 'gerenciar')
+        self.assertGreaterEqual(len(transporte['exemplos']), 1)
+
     def test_nao_autenticado_retorna_401(self):
         resposta = self.client.get(self.url)
         self.assertEqual(resposta.status_code, status.HTTP_401_UNAUTHORIZED)
