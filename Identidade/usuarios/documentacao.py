@@ -512,11 +512,12 @@ class PermissaoDocumentacao:
             'chave': 'transporte',
             'titulo': 'Transporte',
             'resumo': (
-                'Gestão de percursos do transporte universitário, restrita ao perfil TI (L3).'
+                'Gestão de percursos e rotas do transporte universitário, restrita ao perfil TI (L3).'
             ),
             'texto': (
                 'O módulo transporte controla o cadastro de percursos (apelido, descrição e '
-                'status ativo/inativo). Toda a API exige L3 (EDITAR_TUDO): is_staff, is_admin '
+                'status ativo/inativo) e de rotas (percurso, horário de saída, dia da semana e '
+                'quantidade de vagas). Toda a API exige L3 (EDITAR_TUDO): is_staff, is_admin '
                 'ou superusuário. O payload user.permissoes.transporte.gerenciar indica se o '
                 'frontend deve exibir o menu Transporte.'
             ),
@@ -526,12 +527,12 @@ class PermissaoDocumentacao:
                     'nome': 'Gerenciar',
                     'quem_usa': 'TI / administradores',
                     'pode': (
-                        'Listar, criar, editar, desativar e reativar percursos.'
+                        'Listar, criar, editar, desativar e reativar percursos e rotas.'
                     ),
-                    'nao_sem_capacidade': 'Acessar qualquer endpoint de percursos.',
+                    'nao_sem_capacidade': 'Acessar qualquer endpoint de percursos ou rotas.',
                     'descricao': (
-                        'Acesso completo ao CRUD de percursos. Correspondente ao perfil TI '
-                        'do MeuIF-Transporte (RF017).'
+                        'Acesso completo ao CRUD de percursos e rotas. Correspondente ao perfil TI '
+                        'do MeuIF-Transporte (RF016 e RF017).'
                     ),
                 },
             ],
@@ -541,7 +542,7 @@ class PermissaoDocumentacao:
                     'capacidades': {'gerenciar': False},
                     'pode': [],
                     'nao_pode': [
-                        'listar ou cadastrar percursos',
+                        'listar ou cadastrar percursos e rotas',
                         'ver o menu Transporte no frontend',
                     ],
                 },
@@ -549,7 +550,7 @@ class PermissaoDocumentacao:
                     'perfil': 'TI (staff, admin ou superusuário)',
                     'capacidades': {'gerenciar': True},
                     'pode': [
-                        'cadastrar, editar, desativar e reativar percursos',
+                        'cadastrar, editar, desativar e reativar percursos e rotas',
                         'ver o menu Transporte no frontend',
                     ],
                     'nao_pode': [],
