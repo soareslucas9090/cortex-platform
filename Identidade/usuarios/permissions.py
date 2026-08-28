@@ -79,3 +79,16 @@ class UsuarioPermissions(UserModelPermission):
         return {
             'infraestrutura': PermissaoFuncaoInfraestrutura().helper.compilar_do_usuario(user),
         }
+
+    def permissoes_transporte(self) -> dict:
+        """
+        Acesso ao módulo Transporte (cadastro de percursos e demais cadastros de TI).
+        Apenas L3 (is_staff, is_admin ou superuser) recebe gerenciar=True, para o
+        frontend exibir o menu somente ao perfil TI.
+        """
+        user = self.object_instance
+        if not user:
+            return {'transporte': {'gerenciar': False}}
+
+        gerenciar = bool(user.is_staff or user.is_admin or user.is_superuser)
+        return {'transporte': {'gerenciar': gerenciar}}

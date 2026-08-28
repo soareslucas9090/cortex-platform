@@ -14,6 +14,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from Identidade.usuarios.models import Usuario
 from AppCore.common.textos.mensagens import RESPONSE_ERRO_INTERNO_SERVIDOR
 from Infraestrutura.permissoes.choices import capacidades_infraestrutura_vazias
+from Identidade.usuarios.choices import PERMISSAO_CORTEX_EDITAR_TUDO
 from Identidade.usuarios.importacao.importacao_parser import ImportacaoUsuariosParser
 from Identidade.usuarios.importacao.importacao_dtos import (
     ArquivoImportacaoUsuariosDTO,
@@ -45,6 +46,9 @@ def permissoes_esperadas(cortex_nivel):
     return {
         'cortex': cortex_nivel,
         'infraestrutura': capacidades_infraestrutura_vazias(),
+        'transporte': {
+            'gerenciar': cortex_nivel == PERMISSAO_CORTEX_EDITAR_TUDO,
+        },
     }
 
 
@@ -1124,9 +1128,9 @@ class DocumentarPermissoesViewTest(APITestCase):
         resposta = self.client.get(self.url)
         self.assertEqual(resposta.status_code, status.HTTP_200_OK)
         modulos = resposta.data['dados']['modulos']
-        self.assertEqual(len(modulos), 2)
+        self.assertEqual(len(modulos), 3)
         chaves = {modulo['chave'] for modulo in modulos}
-        self.assertEqual(chaves, {'cortex', 'infraestrutura'})
+        self.assertEqual(chaves, {'cortex', 'infraestrutura', 'transporte'})
 
         cortex = next(modulo for modulo in modulos if modulo['chave'] == 'cortex')
         self.assertEqual(len(cortex['niveis']), 3)
