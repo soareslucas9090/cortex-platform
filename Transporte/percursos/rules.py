@@ -16,9 +16,11 @@ class PercursoRules(ModelInstanceRules):
         return True
 
     def pode_desativar(self) -> bool:
-        """Percurso só pode ser desativado se já estiver ativo."""
+        """Percurso só pode ser desativado se estiver ativo e sem rotas ativas."""
         if not self.object_instance.ativo:
             self.return_exception('O percurso já está inativo.')
+        if self.object_instance.rotas.filter(ativo=True).exists():
+            self.return_exception('Não é possível desativar um percurso com rotas ativas.')
         return True
 
     def pode_reativar(self) -> bool:

@@ -28,5 +28,12 @@ class PercursoAdmin(AtivoModelAdmin):
             field: form.cleaned_data[field]
             for field in form.changed_data
         }
+        ativo_novo = dados.pop('ativo', None)
         if dados:
             run_business(lambda: obj.business.atualizar_dados(dados))
+        if ativo_novo is not None:
+            obj.refresh_from_db()
+            if ativo_novo:
+                run_business(lambda: obj.business.reativar())
+            else:
+                run_business(lambda: obj.business.desativar())

@@ -16,5 +16,6 @@ SPECTACULAR_SETTINGS = {
         'CategoriaFuncaoEnum': 'Organizacional.funcoes.choices.CategoriaFuncao',
         'TipoRecursoEnum': 'Infraestrutura.recursos.choices.TipoRecurso',
         'EstadoRecursoEnum': 'Infraestrutura.recursos.choices.EstadoRecurso',
+        'DiaSemanaEnum': 'Transporte.rotas.choices.DiaSemana',
     },
 }

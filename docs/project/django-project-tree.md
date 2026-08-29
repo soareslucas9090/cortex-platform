@@ -388,7 +388,7 @@ Infraestrutura/
 
 ### `Transporte/`
 
-Domínio responsável pelo transporte universitário. A v1 cobre o cadastro de percursos (RF017), restrito ao perfil TI (L3).
+Domínio responsável pelo transporte universitário. A v1 cobre percursos (RF017) e rotas (RF016), restrito ao perfil TI (L3).
 
 #### Estrutura atual
 
@@ -396,12 +396,14 @@ Domínio responsável pelo transporte universitário. A v1 cobre o cadastro de p
 Transporte/
 ├── __init__.py
 ├── urls.py
-└── percursos/
+├── percursos/
+└── rotas/
 ```
 
 #### Responsabilidades
 
 - `percursos/` → model principal `Percurso`
+- `rotas/` → model principal `Rota`
 
 ---
 
