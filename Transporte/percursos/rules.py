@@ -1,5 +1,7 @@
 from AppCore.core.rules.rules import ModelInstanceRules
 
+MENSAGEM_APELIDO_DUPLICADO = 'Já existe um percurso cadastrado com esse apelido.'
+
 
 class PercursoRules(ModelInstanceRules):
 
@@ -10,7 +12,7 @@ class PercursoRules(ModelInstanceRules):
         if excluir_id is not None:
             qs = qs.exclude(pk=excluir_id)
         if qs.exists():
-            self.return_exception('Já existe um percurso cadastrado com esse apelido.')
+            self.return_exception(MENSAGEM_APELIDO_DUPLICADO)
         return True
 
     def pode_desativar(self) -> bool:

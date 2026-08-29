@@ -1,6 +1,11 @@
 import logging
 
+from django.db import IntegrityError
+
 from AppCore.core.business.business import ModelInstanceBusiness
+from AppCore.core.exceptions.exceptions import BusinessRuleException
+
+from .rules import MENSAGEM_APELIDO_DUPLICADO
 
 logger = logging.getLogger(__name__)
 
@@ -13,6 +18,8 @@ class PercursoBusiness(ModelInstanceBusiness):
             from .models import Percurso
             self.object_instance.rules.validar_apelido_unico(apelido)
             return Percurso.objects.create(apelido=apelido, descricao=descricao, **kwargs)
+        except IntegrityError:
+            raise BusinessRuleException(MENSAGEM_APELIDO_DUPLICADO)
         except Exception as e:
             self.relancar_ou_erro_sistema(e, 'Não foi possível criar o percurso.', logger)
 
@@ -27,6 +34,8 @@ class PercursoBusiness(ModelInstanceBusiness):
             for attr, value in dados.items():
                 setattr(self.object_instance, attr, value)
             self.object_instance.save()
+        except IntegrityError:
+            raise BusinessRuleException(MENSAGEM_APELIDO_DUPLICADO)
         except Exception as e:
             self.relancar_ou_erro_sistema(e, 'Não foi possível atualizar o percurso.', logger)
 

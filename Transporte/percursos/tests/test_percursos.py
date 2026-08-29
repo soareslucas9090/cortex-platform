@@ -1,3 +1,6 @@
+from unittest.mock import patch
+
+from django.db.utils import IntegrityError
 from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APITestCase
@@ -8,6 +11,7 @@ from Identidade.usuarios.models import Usuario
 from PessoasInstitucionais.cargos.models import Cargo
 from PessoasInstitucionais.servidores.models import Servidor
 from Transporte.percursos.models import Percurso
+from Transporte.percursos.rules import MENSAGEM_APELIDO_DUPLICADO
 
 
 def obter_token(usuario):
@@ -47,7 +51,7 @@ class PercursoBusinessTestCase(APITestCase):
         Percurso().business.criar_percurso(apelido='Rota R.SÃ', descricao='Trajeto A')
         with self.assertRaises(BusinessRuleException) as ctx:
             Percurso().business.criar_percurso(apelido='rota r.sã', descricao='Trajeto B')
-        self.assertIn('Já existe um percurso cadastrado com esse apelido', str(ctx.exception))
+        self.assertIn(MENSAGEM_APELIDO_DUPLICADO, str(ctx.exception))
 
     def test_atualizar_dados_sucesso(self):
         percurso = Percurso().business.criar_percurso(apelido='Rota A', descricao='Desc A')
@@ -91,6 +95,27 @@ class PercursoBusinessTestCase(APITestCase):
         with self.assertRaises(BusinessRuleException):
             percurso.business.reativar()
 
+    def test_apelido_unico_no_banco_ignora_caixa(self):
+        Percurso.objects.create(apelido='Rota A', descricao='A')
+        with self.assertRaises(IntegrityError):
+            Percurso.objects.create(apelido='rota a', descricao='B')
+
+    def test_criar_percurso_converte_integrity_error(self):
+        Percurso.objects.create(apelido='Rota A', descricao='A')
+        alvo = Percurso()
+        with patch.object(alvo.rules, 'validar_apelido_unico', return_value=True):
+            with self.assertRaises(BusinessRuleException) as ctx:
+                alvo.business.criar_percurso(apelido='rota a', descricao='B')
+        self.assertIn(MENSAGEM_APELIDO_DUPLICADO, str(ctx.exception))
+
+    def test_atualizar_dados_converte_integrity_error(self):
+        Percurso.objects.create(apelido='Rota A', descricao='A')
+        alvo = Percurso.objects.create(apelido='Rota B', descricao='B')
+        with patch.object(alvo.rules, 'validar_apelido_unico', return_value=True):
+            with self.assertRaises(BusinessRuleException) as ctx:
+                alvo.business.atualizar_dados({'apelido': 'rota a'})
+        self.assertIn(MENSAGEM_APELIDO_DUPLICADO, str(ctx.exception))
+
 
 class PercursosAPITestCase(APITestCase):
 
@@ -131,6 +156,13 @@ class PercursosAPITestCase(APITestCase):
         apelidos = [item['apelido'] for item in resposta.data['dados']]
         self.assertEqual(apelidos, ['Rota Pontões'])
 
+    def test_listar_percursos_busca_ignora_acentos(self):
+        criar_percurso(apelido='Rota São Jorge', descricao='Trajeto com acento')
+        resposta = self.client.get(self.url_list, {'busca': 'Sao Jorge'})
+        self.assertEqual(resposta.status_code, status.HTTP_200_OK)
+        apelidos = [item['apelido'] for item in resposta.data['dados']]
+        self.assertEqual(apelidos, ['Rota São Jorge'])
+
     def test_criar_percurso(self):
         payload = {'apelido': 'Rota Centro', 'descricao': 'IFPI – Centro'}
         resposta = self.client.post(self.url_list, payload, format='json')
@@ -147,6 +179,23 @@ class PercursosAPITestCase(APITestCase):
         resposta = self.client.get(url)
         self.assertEqual(resposta.status_code, status.HTTP_200_OK)
         self.assertEqual(resposta.data['dados']['apelido'], 'Rota R.SÃ')
+
+    def test_percurso_inexistente_retorna_404(self):
+        kwargs = {'pk': 99999}
+        url_detalhe = reverse('transporte:percurso-detalhe', kwargs=kwargs)
+        self.assertEqual(self.client.get(url_detalhe).status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(
+            self.client.patch(url_detalhe, {'descricao': 'x'}, format='json').status_code,
+            status.HTTP_404_NOT_FOUND,
+        )
+        self.assertEqual(
+            self.client.post(reverse('transporte:percurso-desativar', kwargs=kwargs)).status_code,
+            status.HTTP_404_NOT_FOUND,
+        )
+        self.assertEqual(
+            self.client.post(reverse('transporte:percurso-reativar', kwargs=kwargs)).status_code,
+            status.HTTP_404_NOT_FOUND,
+        )
 
     def test_atualizar_percurso(self):
         url = reverse('transporte:percurso-detalhe', kwargs={'pk': self.percurso.pk})
@@ -207,6 +256,28 @@ class PercursosAPITestCase(APITestCase):
             format='json',
         )
         self.assertEqual(resposta.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_l2_nao_pode_detalhar_atualizar_desativar_nem_reativar(self):
+        servidor = criar_servidor()
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {obter_token(servidor)}')
+        url_detalhe = reverse('transporte:percurso-detalhe', kwargs={'pk': self.percurso.pk})
+        self.assertEqual(self.client.get(url_detalhe).status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(
+            self.client.patch(url_detalhe, {'descricao': 'x'}, format='json').status_code,
+            status.HTTP_403_FORBIDDEN,
+        )
+        self.assertEqual(
+            self.client.post(
+                reverse('transporte:percurso-desativar', kwargs={'pk': self.percurso.pk})
+            ).status_code,
+            status.HTTP_403_FORBIDDEN,
+        )
+        self.assertEqual(
+            self.client.post(
+                reverse('transporte:percurso-reativar', kwargs={'pk': self.percurso.pk})
+            ).status_code,
+            status.HTTP_403_FORBIDDEN,
+        )
 
     def test_l3_recebe_permissao_gerenciar_transporte(self):
         self.assertTrue(self.admin.permissoes['transporte']['gerenciar'])
