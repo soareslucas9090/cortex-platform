@@ -850,12 +850,13 @@ paths:
     get:
       operationId: identidade_permissoes_documentacao_retrieve
       description: "\n    Retorna a documentação narrativa e estruturada das permissões
-        de cada módulo registrado.\n\n    Inclui **cortex** (níveis L1–L3) e **infraestrutura**
+        de cada módulo registrado.\n\n    Inclui **cortex** (níveis L1–L3), **infraestrutura**
         (capacidades booleanas, secoes\n    estruturadas, acesso total de admin/superuser,
-        elegibilidade do solicitante). Novos módulos\n    entram automaticamente ao
-        implementar `documentacao_<modulo>()`.\n\n    **Permissões:** Qualquer usuário
-        autenticado.\n\n    **Manutenção:** toda alteração de regra de permissão deve
-        atualizar o método\n    `documentacao_<modulo>()` correspondente em `Identidade.usuarios.documentacao`.\n
+        elegibilidade do solicitante) e\n    **transporte** (capacidade `gerenciar`,
+        restrita a L3 / perfil TI). Novos módulos\n    entram automaticamente ao implementar
+        `documentacao_<modulo>()`.\n\n    **Permissões:** Qualquer usuário autenticado.\n\n
+        \   **Manutenção:** toda alteração de regra de permissão deve atualizar o
+        método\n    `documentacao_<modulo>()` correspondente em `Identidade.usuarios.documentacao`.\n
         \   "
       summary: Documentação de permissões por módulo
       tags:

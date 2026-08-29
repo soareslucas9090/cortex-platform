@@ -1164,6 +1164,9 @@ class DocumentarPermissoesViewTest(APITestCase):
         self.assertEqual(len(transporte['capacidades']), 1)
         self.assertEqual(transporte['capacidades'][0]['codigo'], 'gerenciar')
         self.assertGreaterEqual(len(transporte['exemplos']), 1)
+        self.assertIn('secoes', transporte)
+        self.assertGreaterEqual(len(transporte['secoes']), 2)
+        self.assertEqual(transporte['capacidades'][0]['quem_usa'], 'TI / administradores')
 
     def test_nao_autenticado_retorna_401(self):
         resposta = self.client.get(self.url)

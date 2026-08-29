@@ -49,8 +49,9 @@ logger = logging.getLogger(__name__)
     description='''
     Retorna a documentação narrativa e estruturada das permissões de cada módulo registrado.
 
-    Inclui **cortex** (níveis L1–L3) e **infraestrutura** (capacidades booleanas, secoes
-    estruturadas, acesso total de admin/superuser, elegibilidade do solicitante). Novos módulos
+    Inclui **cortex** (níveis L1–L3), **infraestrutura** (capacidades booleanas, secoes
+    estruturadas, acesso total de admin/superuser, elegibilidade do solicitante) e
+    **transporte** (capacidade `gerenciar`, restrita a L3 / perfil TI). Novos módulos
     entram automaticamente ao implementar `documentacao_<modulo>()`.
 
     **Permissões:** Qualquer usuário autenticado.

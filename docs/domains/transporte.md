@@ -43,9 +43,14 @@ Transporte/
 
 ### 3. Permissões (perfil TI)
 
-Toda a API de percursos e rotas exige **L3** (`EDITAR_TUDO`: `is_staff`, `is_admin` ou superusuário). Não é catálogo aberto.
+Toda a API de percursos e rotas exige **L3** (`EDITAR_TUDO`). Não é catálogo aberto: L1 e L2 recebem 403 em listagem, detalhe e escrita.
 
-O payload `user.permissoes.transporte.gerenciar` é `true` apenas para L3, para o frontend exibir o menu Transporte somente ao perfil TI.
+- **Views:** `IsAdminMixin` (`tem_acesso_elevado()`), o mesmo critério de L3: `is_staff`, `is_admin` ou superusuário.
+- **Payload (login/me):** `user.permissoes.transporte.gerenciar` é `true` só para L3, para o frontend exibir o menu Transporte só ao perfil TI.
+- **Compilação:** `UsuarioPermissions.permissoes_transporte()`.
+- **Documentação viva da API:** `GET /cortex/identidade/permissoes/documentacao/` (`documentacao_transporte()`). Toda mudança de regra deve atualizar esse método no mesmo PR.
+
+Swagger de cada endpoint de percursos e rotas declara `**Permissões:** L3 (EDITAR_TUDO) — perfil TI / administradores.`
 
 ### 4. Endpoints
 

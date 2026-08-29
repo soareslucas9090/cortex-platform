@@ -45,9 +45,12 @@ Derivação em `Identidade.usuarios.permissions.UsuarioPermissions.permissoes_co
 
 Query params **apenas estreitam** resultados após o escopo de permissão.
 
-### Extensibilidade (ex.: Infraestrutura)
+### Extensibilidade (ex.: Infraestrutura, Transporte)
 
-Novos produtos adicionam `permissoes_<modulo>()` em `UsuarioPermissions` e apps Django dentro de um módulo de domínio na raiz (`Infraestrutura/`), nunca em pasta genérica `APPs/`. Subdomínios = apps internos do módulo (`Infraestrutura/recursos/`, `Infraestrutura/emprestimos/`, etc.).
+Novos produtos adicionam `permissoes_<modulo>()` em `UsuarioPermissions` e apps Django dentro de um módulo de domínio na raiz (`Infraestrutura/`, `Transporte/`), nunca em pasta genérica `APPs/`. Subdomínios = apps internos do módulo (`Infraestrutura/recursos/`, `Transporte/percursos/`, etc.).
+
+- **Infraestrutura:** capacidades booleanas (`operar`, `cadastrar`, `autorizar`, `retirada_irrestrita`), independentes de L1–L3.
+- **Transporte:** capacidade `gerenciar` alinhada a L3 (`is_staff`, `is_admin` ou superusuário); toda a API de percursos e rotas usa `IsAdminMixin`.
 
 ### Documentação viva da API
 

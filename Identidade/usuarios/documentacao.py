@@ -52,8 +52,9 @@ class PermissaoDocumentacao:
                 'próprio perfil, contatos e endereço). A flag `usuario_coletivo` só pode ser '
                 'definida na criação do usuário (L3) ou no Django admin — não no PATCH de '
                 'atualização de perfil.\n\n'
-                'O payload `user.permissoes` no login/me retorna `{"cortex": "<nível>"}` e, '
-                'quando aplicável, chaves adicionais por módulo (ex.: `infraestrutura` com flags booleanas).'
+                'O payload `user.permissoes` no login/me retorna `{"cortex": "<nível>"}` e '
+                'chaves adicionais por módulo: `infraestrutura` (flags booleanas) e '
+                '`transporte` (`{"gerenciar": true|false}`).'
             ),
             'niveis': [
                 {
@@ -521,6 +522,36 @@ class PermissaoDocumentacao:
                 'ou superusuário. O payload user.permissoes.transporte.gerenciar indica se o '
                 'frontend deve exibir o menu Transporte.'
             ),
+            'secoes': [
+                {
+                    'titulo': 'Compilação (permissoes_transporte)',
+                    'itens': [
+                        {
+                            'destaque': 'gerenciar',
+                            'texto': (
+                                'true apenas se is_staff, is_admin ou is_superuser (mesmo critério '
+                                'de L3 / tem_acesso_elevado). Sem usuário: gerenciar=false.'
+                            ),
+                        },
+                        {
+                            'destaque': 'Payload típico',
+                            'texto': '{"transporte": {"gerenciar": false}}',
+                        },
+                    ],
+                },
+                {
+                    'titulo': 'API de percursos e rotas',
+                    'paragrafos': [
+                        (
+                            'Todas as operações (GET listagem/detalhe, POST criar, PATCH, '
+                            'desativar e reativar) usam IsAdminMixin. Não há leitura para L1/L2.'
+                        ),
+                        (
+                            'Bases: /cortex/transporte/percursos/ e /cortex/transporte/rotas/.'
+                        ),
+                    ],
+                },
+            ],
             'capacidades': [
                 {
                     'codigo': 'gerenciar',
