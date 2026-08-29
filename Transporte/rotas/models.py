@@ -41,6 +41,10 @@ class Rota(ModelHelperMixin, ModelBusinessMixin, ModelRulesMixin, BasicModel):
                 fields=['percurso', 'dia_semana', 'horario_saida'],
                 name='rotas_rota_percurso_dia_horario_unico',
             ),
+            models.CheckConstraint(
+                condition=models.Q(quantidade_vagas__gte=1),
+                name='rotas_rota_vagas_minimo_1',
+            ),
         ]
 
     def __str__(self):

@@ -12,6 +12,7 @@ from AppCore.basics.views.basic_views import (
     BasicRetrieveAPIView,
 )
 
+from .choices import DiaSemana, anotacao_ordem_dia_semana
 from .models import Rota
 from .serializers import (
     AtualizarRotaSerializer,
@@ -40,7 +41,7 @@ PERMISSAO_TI = (
     parameters=[
         OpenApiParameter('ativo', OpenApiTypes.BOOL, OpenApiParameter.QUERY, required=False, description='Filtra por status: true = Ativo, false = Inativo. Omitir para todos.'),
         OpenApiParameter('percurso_id', OpenApiTypes.INT, OpenApiParameter.QUERY, required=False, description='Filtra pelo identificador do percurso.'),
-        OpenApiParameter('dia_semana', OpenApiTypes.STR, OpenApiParameter.QUERY, required=False, description='Filtra pelo dia da semana (segunda, terca, quarta, quinta, sexta, sabado, domingo).'),
+        OpenApiParameter('dia_semana', OpenApiTypes.STR, OpenApiParameter.QUERY, required=False, description='Filtra pelo dia da semana (segunda, terca, quarta, quinta, sexta, sabado, domingo). Valores inválidos são ignorados.'),
         OpenApiParameter('busca', OpenApiTypes.STR, OpenApiParameter.QUERY, required=False, description='Filtra por parte do apelido do percurso (ignora acentos e maiúsculas).'),
         OpenApiParameter('paginacao', OpenApiTypes.INT, OpenApiParameter.QUERY, required=False, description='Tamanho da página (1–100, padrão 10).'),
     ],
@@ -57,7 +58,11 @@ class ListarRotasView(IsAdminMixin, BasicGetAPIView):
     mensagem_sucesso = 'Rotas listadas com sucesso.'
 
     def get_queryset(self):
-        qs = Rota.objects.select_related('percurso').all()
+        qs = (
+            Rota.objects.select_related('percurso')
+            .annotate(_ordem_dia=anotacao_ordem_dia_semana())
+            .order_by('_ordem_dia', 'horario_saida', 'percurso__apelido')
+        )
 
         ativo = self.request.query_params.get('ativo')
         if ativo is not None and ativo.lower() in ('true', 'false'):
@@ -68,7 +73,7 @@ class ListarRotasView(IsAdminMixin, BasicGetAPIView):
             qs = qs.filter(percurso_id=percurso_id)
 
         dia_semana = self.request.query_params.get('dia_semana')
-        if dia_semana:
+        if dia_semana in DiaSemana.values:
             qs = qs.filter(dia_semana=dia_semana)
 
         busca = self.request.query_params.get('busca')

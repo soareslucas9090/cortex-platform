@@ -34,11 +34,12 @@ Transporte/
 ### 2. Campos de Rota
 
 - `percurso`: FK obrigatória (`PROTECT`) para `Percurso` ativo.
-- `horario_saida`: horário de partida.
+- `horario_saida`: horário de partida no formato `hh:mm` (também aceita `hh:mm:ss` na entrada).
 - `dia_semana`: `segunda`, `terca`, `quarta`, `quinta`, `sexta`, `sabado`, `domingo`.
 - `quantidade_vagas`: inteiro ≥ 1.
-- Unicidade: par `percurso` + `dia_semana` + `horario_saida`.
+- Unicidade: par `percurso` + `dia_semana` + `horario_saida` (vale também para rotas inativas; o mesmo slot só volta com reativar).
 - `ativo`: desativar/reativar no lugar de DELETE HTTP.
+- Listagem ordena por dia da semana (segunda → domingo), depois horário e apelido do percurso.
 
 ### 3. Permissões (perfil TI)
 

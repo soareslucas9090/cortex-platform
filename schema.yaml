@@ -5506,6 +5506,608 @@ paths:
               schema:
                 $ref: '#/components/schemas/Terceirizado'
           description: ''
+  /cortex/transporte/percursos/:
+    get:
+      operationId: transporte_percursos_list
+      description: "\n    Lista os percursos cadastrados, com busca, filtro de status
+        e paginação.\n\n    **Permissões:** L3 (EDITAR_TUDO) — perfil TI / administradores.\n\n
+        \   **Paginação:** query param `paginacao` (padrão 10, máximo 100).\n\n    **Filtros:**
+        os query params apenas reduzem o conjunto de resultados.\n    "
+      summary: Listar percursos
+      parameters:
+      - in: query
+        name: ativo
+        schema:
+          type: boolean
+        description: 'Filtra por status: true = Ativo, false = Inativo. Omitir para
+          todos.'
+      - in: query
+        name: busca
+        schema:
+          type: string
+        description: Filtra por parte do apelido ou da descrição (ignora acentos e
+          maiúsculas).
+      - name: page
+        required: false
+        in: query
+        description: Um número de página dentro do conjunto de resultados paginado.
+        schema:
+          type: integer
+      - in: query
+        name: paginacao
+        schema:
+          type: integer
+        description: Tamanho da página (1–100, padrão 10).
+      tags:
+      - Transporte · Percursos
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedPercursoList'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                description: Não autenticado.
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                description: Sem permissão.
+          description: ''
+    post:
+      operationId: transporte_percursos_create
+      description: "\n    Cadastra um novo percurso.\n\n    **Permissões:** L3 (EDITAR_TUDO)
+        — perfil TI / administradores.\n    "
+      summary: Criar percurso
+      tags:
+      - Transporte · Percursos
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CriarPercurso'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/CriarPercurso'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/CriarPercurso'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Percurso'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                description: Dados inválidos ou apelido já em uso.
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                description: Não autenticado.
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                description: Sem permissão.
+          description: ''
+  /cortex/transporte/percursos/{id}/:
+    get:
+      operationId: transporte_percursos_retrieve
+      description: "\n    Retorna os dados de um percurso.\n\n    **Permissões:**
+        L3 (EDITAR_TUDO) — perfil TI / administradores.\n    "
+      summary: Detalhar percurso
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - Transporte · Percursos
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Percurso'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                description: Não autenticado.
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                description: Sem permissão.
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                description: Percurso não encontrado.
+          description: ''
+    patch:
+      operationId: transporte_percursos_partial_update
+      description: "\n    Atualiza parcialmente um percurso.\n\n    **Permissões:**
+        L3 (EDITAR_TUDO) — perfil TI / administradores.\n    "
+      summary: Atualizar percurso
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - Transporte · Percursos
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedAtualizarPercurso'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedAtualizarPercurso'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedAtualizarPercurso'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Percurso'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                description: Dados inválidos ou apelido já em uso.
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                description: Não autenticado.
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                description: Sem permissão.
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                description: Percurso não encontrado.
+          description: ''
+  /cortex/transporte/percursos/{id}/desativar/:
+    post:
+      operationId: transporte_percursos_desativar_create
+      description: "\n    Desativa um percurso ativo.\n\n    **Permissões:** L3 (EDITAR_TUDO)
+        — perfil TI / administradores.\n    "
+      summary: Desativar percurso
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - Transporte · Percursos
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Percurso'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                description: Percurso já está inativo.
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                description: Não autenticado.
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                description: Sem permissão.
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                description: Percurso não encontrado.
+          description: ''
+  /cortex/transporte/percursos/{id}/reativar/:
+    post:
+      operationId: transporte_percursos_reativar_create
+      description: "\n    Reativa um percurso inativo.\n\n    **Permissões:** L3 (EDITAR_TUDO)
+        — perfil TI / administradores.\n    "
+      summary: Reativar percurso
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - Transporte · Percursos
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Percurso'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                description: Percurso já está ativo.
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                description: Não autenticado.
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                description: Sem permissão.
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                description: Percurso não encontrado.
+          description: ''
+  /cortex/transporte/rotas/:
+    get:
+      operationId: transporte_rotas_list
+      description: "\n    Lista as rotas cadastradas, com filtros e paginação.\n\n
+        \   **Permissões:** L3 (EDITAR_TUDO) — perfil TI / administradores.\n\n    **Paginação:**
+        query param `paginacao` (padrão 10, máximo 100).\n\n    **Filtros:** os query
+        params apenas reduzem o conjunto de resultados.\n    "
+      summary: Listar rotas
+      parameters:
+      - in: query
+        name: ativo
+        schema:
+          type: boolean
+        description: 'Filtra por status: true = Ativo, false = Inativo. Omitir para
+          todos.'
+      - in: query
+        name: busca
+        schema:
+          type: string
+        description: Filtra por parte do apelido do percurso (ignora acentos e maiúsculas).
+      - in: query
+        name: dia_semana
+        schema:
+          type: string
+        description: Filtra pelo dia da semana (segunda, terca, quarta, quinta, sexta,
+          sabado, domingo). Valores inválidos são ignorados.
+      - name: page
+        required: false
+        in: query
+        description: Um número de página dentro do conjunto de resultados paginado.
+        schema:
+          type: integer
+      - in: query
+        name: paginacao
+        schema:
+          type: integer
+        description: Tamanho da página (1–100, padrão 10).
+      - in: query
+        name: percurso_id
+        schema:
+          type: integer
+        description: Filtra pelo identificador do percurso.
+      tags:
+      - Transporte · Rotas
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedRotaList'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                description: Não autenticado.
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                description: Sem permissão.
+          description: ''
+    post:
+      operationId: transporte_rotas_create
+      description: "\n    Cadastra uma nova rota vinculada a um percurso.\n\n    **Permissões:**
+        L3 (EDITAR_TUDO) — perfil TI / administradores.\n    "
+      summary: Criar rota
+      tags:
+      - Transporte · Rotas
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CriarRota'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/CriarRota'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/CriarRota'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Rota'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                description: Dados inválidos ou rota duplicada.
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                description: Não autenticado.
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                description: Sem permissão.
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                description: Percurso não encontrado.
+          description: ''
+  /cortex/transporte/rotas/{id}/:
+    get:
+      operationId: transporte_rotas_retrieve
+      description: "\n    Retorna os dados de uma rota.\n\n    **Permissões:** L3
+        (EDITAR_TUDO) — perfil TI / administradores.\n    "
+      summary: Detalhar rota
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - Transporte · Rotas
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Rota'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                description: Não autenticado.
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                description: Sem permissão.
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                description: Rota não encontrada.
+          description: ''
+    patch:
+      operationId: transporte_rotas_partial_update
+      description: "\n    Atualiza parcialmente uma rota.\n\n    **Permissões:** L3
+        (EDITAR_TUDO) — perfil TI / administradores.\n    "
+      summary: Atualizar rota
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - Transporte · Rotas
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedAtualizarRota'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedAtualizarRota'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedAtualizarRota'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Rota'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                description: Dados inválidos ou rota duplicada.
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                description: Não autenticado.
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                description: Sem permissão.
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                description: Rota não encontrada.
+          description: ''
+  /cortex/transporte/rotas/{id}/desativar/:
+    post:
+      operationId: transporte_rotas_desativar_create
+      description: "\n    Desativa uma rota ativa.\n\n    **Permissões:** L3 (EDITAR_TUDO)
+        — perfil TI / administradores.\n    "
+      summary: Desativar rota
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - Transporte · Rotas
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Rota'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                description: Rota já está inativa.
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                description: Não autenticado.
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                description: Sem permissão.
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                description: Rota não encontrada.
+          description: ''
+  /cortex/transporte/rotas/{id}/reativar/:
+    post:
+      operationId: transporte_rotas_reativar_create
+      description: "\n    Reativa uma rota inativa.\n\n    **Permissões:** L3 (EDITAR_TUDO)
+        — perfil TI / administradores.\n    "
+      summary: Reativar rota
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - Transporte · Rotas
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Rota'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                description: Rota já está ativa ou o percurso está inativo.
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                description: Não autenticado.
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                description: Sem permissão.
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                description: Rota não encontrada.
+          description: ''
 components:
   schemas:
     AdicionarItemColetivo:
@@ -5963,6 +6565,17 @@ components:
       - categoria
       - descricao
       - papel_funcao
+    CriarPercurso:
+      type: object
+      properties:
+        apelido:
+          type: string
+          maxLength: 255
+        descricao:
+          type: string
+      required:
+      - apelido
+      - descricao
     CriarRecurso:
       type: object
       properties:
@@ -5990,6 +6603,25 @@ components:
       required:
       - codigo
       - tipo
+    CriarRota:
+      type: object
+      properties:
+        percurso_id:
+          type: integer
+        horario_saida:
+          type: string
+          format: time
+          description: 'Horário no formato hh:mm (ex.: 07:00). Também aceita hh:mm:ss.'
+        dia_semana:
+          $ref: '#/components/schemas/DiaSemanaEnum'
+        quantidade_vagas:
+          type: integer
+          minimum: 1
+      required:
+      - dia_semana
+      - horario_saida
+      - percurso_id
+      - quantidade_vagas
     CriarSala:
       type: object
       properties:
@@ -6179,6 +6811,24 @@ components:
             type: integer
       required:
       - item_ids
+    DiaSemanaEnum:
+      enum:
+      - segunda
+      - terca
+      - quarta
+      - quinta
+      - sexta
+      - sabado
+      - domingo
+      type: string
+      description: |-
+        * `segunda` - Segunda-feira
+        * `terca` - Terça-feira
+        * `quarta` - Quarta-feira
+        * `quinta` - Quinta-feira
+        * `sexta` - Sexta-feira
+        * `sabado` - Sábado
+        * `domingo` - Domingo
     EmpresaInstituicao:
       type: object
       properties:
@@ -6858,6 +7508,29 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Matricula'
+    PaginatedPercursoList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Percurso'
     PaginatedRecursoList:
       type: object
       required:
@@ -6881,6 +7554,29 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Recurso'
+    PaginatedRotaList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Rota'
     PaginatedSalaList:
       type: object
       required:
@@ -7165,6 +7861,14 @@ components:
           type: boolean
         exige_aluno:
           type: boolean
+    PatchedAtualizarPercurso:
+      type: object
+      properties:
+        apelido:
+          type: string
+          maxLength: 255
+        descricao:
+          type: string
     PatchedAtualizarRecurso:
       type: object
       properties:
@@ -7181,6 +7885,20 @@ components:
           maxLength: 500
         em_avaria:
           type: boolean
+    PatchedAtualizarRota:
+      type: object
+      properties:
+        percurso_id:
+          type: integer
+        horario_saida:
+          type: string
+          format: time
+          description: 'Horário no formato hh:mm (ex.: 07:00). Também aceita hh:mm:ss.'
+        dia_semana:
+          $ref: '#/components/schemas/DiaSemanaEnum'
+        quantidade_vagas:
+          type: integer
+          minimum: 1
     PatchedAtualizarSala:
       type: object
       properties:
@@ -7267,6 +7985,43 @@ components:
           type: string
           default: ''
           maxLength: 20
+    Percurso:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        apelido:
+          type: string
+          maxLength: 255
+        descricao:
+          type: string
+          title: Descrição
+        ativo:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - apelido
+      - created_at
+      - descricao
+      - id
+    PercursoResumo:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        apelido:
+          type: string
+          maxLength: 255
+        ativo:
+          type: boolean
+      required:
+      - apelido
+      - id
     ProjectMe:
       type: object
       description: |-
@@ -7544,6 +8299,46 @@ components:
       - total_abas_processadas
       - total_linhas_com_erro
       - total_linhas_processadas
+    Rota:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        percurso:
+          allOf:
+          - $ref: '#/components/schemas/PercursoResumo'
+          readOnly: true
+        horario_saida:
+          type: string
+          format: time
+          readOnly: true
+        dia_semana:
+          allOf:
+          - $ref: '#/components/schemas/DiaSemanaEnum'
+          title: Dia da semana
+        dia_semana_display:
+          type: string
+          readOnly: true
+        quantidade_vagas:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+          title: Quantidade de vagas
+        ativo:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - created_at
+      - dia_semana
+      - dia_semana_display
+      - horario_saida
+      - id
+      - percurso
+      - quantidade_vagas
     Sala:
       type: object
       properties:

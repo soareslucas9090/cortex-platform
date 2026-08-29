@@ -2,6 +2,10 @@ from AppCore.core.rules.rules import ModelInstanceRules
 
 from .choices import DiaSemana
 
+MENSAGEM_ROTA_DUPLICADA = (
+    'Já existe uma rota com este percurso, dia da semana e horário de saída.'
+)
+
 
 class RotaRules(ModelInstanceRules):
 
@@ -43,9 +47,7 @@ class RotaRules(ModelInstanceRules):
         if excluir_id is not None:
             qs = qs.exclude(pk=excluir_id)
         if qs.exists():
-            self.return_exception(
-                'Já existe uma rota com este percurso, dia da semana e horário de saída.'
-            )
+            self.return_exception(MENSAGEM_ROTA_DUPLICADA)
         return True
 
     def pode_desativar(self) -> bool:

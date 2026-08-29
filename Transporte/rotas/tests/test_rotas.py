@@ -33,6 +33,10 @@ def criar_servidor(cpf='00000000003', nome='Servidor'):
     return usuario
 
 
+def criar_staff(cpf='00000000004', nome='Staff TI'):
+    return Usuario.objects.create_user(cpf=cpf, password='Senha@123', nome=nome, is_staff=True)
+
+
 def criar_percurso(apelido='Rota R.SÃ', descricao='IFPI – Posto R.Sã – FM', ativo=True):
     return Percurso.objects.create(apelido=apelido, descricao=descricao, ativo=ativo)
 
@@ -107,6 +111,33 @@ class RotaBusinessTestCase(APITestCase):
         rota.business.atualizar_dados({'quantidade_vagas': 30})
         rota.refresh_from_db()
         self.assertEqual(rota.quantidade_vagas, 30)
+
+    def test_atualizar_para_combinacao_duplicada(self):
+        Rota().business.criar_rota(
+            percurso_id=self.percurso.pk,
+            horario_saida=time(7, 0),
+            dia_semana=DiaSemana.SEGUNDA,
+            quantidade_vagas=40,
+        )
+        outra = Rota().business.criar_rota(
+            percurso_id=self.percurso.pk,
+            horario_saida=time(8, 0),
+            dia_semana=DiaSemana.SEGUNDA,
+            quantidade_vagas=40,
+        )
+        with self.assertRaises(BusinessRuleException):
+            outra.business.atualizar_dados({'horario_saida': time(7, 0)})
+
+    def test_atualizar_para_percurso_inativo(self):
+        rota = Rota().business.criar_rota(
+            percurso_id=self.percurso.pk,
+            horario_saida=time(7, 0),
+            dia_semana=DiaSemana.SEGUNDA,
+            quantidade_vagas=40,
+        )
+        inativo = criar_percurso(apelido='Inativo', ativo=False)
+        with self.assertRaises(BusinessRuleException):
+            rota.business.atualizar_dados({'percurso_id': inativo.pk})
 
     def test_desativar_e_reativar(self):
         rota = Rota().business.criar_rota(
@@ -189,26 +220,61 @@ class RotasAPITestCase(APITestCase):
         apelidos = [item['percurso']['apelido'] for item in resposta.data['dados']]
         self.assertEqual(apelidos, ['Rota Pontões'])
 
+    def test_listar_ordena_por_calendario(self):
+        criar_rota(self.percurso, horario_saida=time(6, 0), dia_semana=DiaSemana.DOMINGO)
+        resposta = self.client.get(self.url_list)
+        self.assertEqual(resposta.status_code, status.HTTP_200_OK)
+        dias = [item['dia_semana'] for item in resposta.data['dados']]
+        self.assertEqual(dias, [DiaSemana.SEGUNDA, DiaSemana.DOMINGO])
+
+    def test_listar_dia_semana_invalido_e_ignorado(self):
+        resposta = self.client.get(self.url_list, {'dia_semana': 'xyz'})
+        self.assertEqual(resposta.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(resposta.data['dados']), 1)
+
     def test_criar_rota(self):
         payload = {
             'percurso_id': self.percurso.pk,
-            'horario_saida': '12:00:00',
+            'horario_saida': '12:00',
             'dia_semana': DiaSemana.TERCA,
             'quantidade_vagas': 35,
         }
         resposta = self.client.post(self.url_list, payload, format='json')
         self.assertEqual(resposta.status_code, status.HTTP_201_CREATED)
         self.assertEqual(resposta.data['dados']['quantidade_vagas'], 35)
+        self.assertEqual(resposta.data['dados']['horario_saida'], '12:00')
+
+    def test_criar_rota_aceita_horario_com_segundos(self):
+        payload = {
+            'percurso_id': self.percurso.pk,
+            'horario_saida': '13:15:00',
+            'dia_semana': DiaSemana.QUARTA,
+            'quantidade_vagas': 20,
+        }
+        resposta = self.client.post(self.url_list, payload, format='json')
+        self.assertEqual(resposta.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(resposta.data['dados']['horario_saida'], '13:15')
 
     def test_criar_rota_duplicada(self):
         payload = {
             'percurso_id': self.percurso.pk,
-            'horario_saida': '07:00:00',
+            'horario_saida': '07:00',
             'dia_semana': DiaSemana.SEGUNDA,
             'quantidade_vagas': 10,
         }
         resposta = self.client.post(self.url_list, payload, format='json')
         self.assertEqual(resposta.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('Já existe uma rota', str(resposta.data))
+
+    def test_criar_rota_percurso_inexistente(self):
+        payload = {
+            'percurso_id': 99999,
+            'horario_saida': '10:00',
+            'dia_semana': DiaSemana.SEXTA,
+            'quantidade_vagas': 10,
+        }
+        resposta = self.client.post(self.url_list, payload, format='json')
+        self.assertEqual(resposta.status_code, status.HTTP_404_NOT_FOUND)
 
     def test_detalhar_rota(self):
         url = reverse('transporte:rota-detalhe', kwargs={'pk': self.rota.pk})
@@ -222,6 +288,38 @@ class RotasAPITestCase(APITestCase):
         self.assertEqual(resposta.status_code, status.HTTP_200_OK)
         self.rota.refresh_from_db()
         self.assertEqual(self.rota.quantidade_vagas, 25)
+
+    def test_atualizar_rota_duplicada(self):
+        criar_rota(self.percurso, horario_saida=time(9, 0), dia_semana=DiaSemana.TERCA)
+        url = reverse('transporte:rota-detalhe', kwargs={'pk': self.rota.pk})
+        resposta = self.client.patch(url, {
+            'dia_semana': DiaSemana.TERCA,
+            'horario_saida': '09:00',
+        }, format='json')
+        self.assertEqual(resposta.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_atualizar_rota_percurso_inativo(self):
+        inativo = criar_percurso(apelido='Percurso inativo', ativo=False)
+        url = reverse('transporte:rota-detalhe', kwargs={'pk': self.rota.pk})
+        resposta = self.client.patch(url, {'percurso_id': inativo.pk}, format='json')
+        self.assertEqual(resposta.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_rota_inexistente_retorna_404(self):
+        kwargs = {'pk': 99999}
+        url_detalhe = reverse('transporte:rota-detalhe', kwargs=kwargs)
+        self.assertEqual(self.client.get(url_detalhe).status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(
+            self.client.patch(url_detalhe, {'quantidade_vagas': 10}, format='json').status_code,
+            status.HTTP_404_NOT_FOUND,
+        )
+        self.assertEqual(
+            self.client.post(reverse('transporte:rota-desativar', kwargs=kwargs)).status_code,
+            status.HTTP_404_NOT_FOUND,
+        )
+        self.assertEqual(
+            self.client.post(reverse('transporte:rota-reativar', kwargs=kwargs)).status_code,
+            status.HTTP_404_NOT_FOUND,
+        )
 
     def test_desativar_rota(self):
         url = reverse('transporte:rota-desativar', kwargs={'pk': self.rota.pk})
@@ -249,7 +347,7 @@ class RotasAPITestCase(APITestCase):
         self.assertEqual(self.client.get(self.url_list).status_code, status.HTTP_403_FORBIDDEN)
         resposta = self.client.post(self.url_list, {
             'percurso_id': self.percurso.pk,
-            'horario_saida': '09:00:00',
+            'horario_saida': '09:00',
             'dia_semana': DiaSemana.QUARTA,
             'quantidade_vagas': 10,
         }, format='json')
@@ -261,8 +359,20 @@ class RotasAPITestCase(APITestCase):
         self.assertEqual(self.client.get(self.url_list).status_code, status.HTTP_403_FORBIDDEN)
         resposta = self.client.post(self.url_list, {
             'percurso_id': self.percurso.pk,
-            'horario_saida': '09:00:00',
+            'horario_saida': '09:00',
             'dia_semana': DiaSemana.QUARTA,
             'quantidade_vagas': 10,
         }, format='json')
         self.assertEqual(resposta.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_l3_staff_pode_listar_e_criar(self):
+        staff = criar_staff()
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {obter_token(staff)}')
+        self.assertEqual(self.client.get(self.url_list).status_code, status.HTTP_200_OK)
+        resposta = self.client.post(self.url_list, {
+            'percurso_id': self.percurso.pk,
+            'horario_saida': '16:00',
+            'dia_semana': DiaSemana.QUINTA,
+            'quantidade_vagas': 15,
+        }, format='json')
+        self.assertEqual(resposta.status_code, status.HTTP_201_CREATED)

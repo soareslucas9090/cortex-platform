@@ -17,12 +17,13 @@ Este documento não substitui o diagrama visual, mas funciona como sua traduçã
 
 ## Escopo atual
 
-O núcleo inicial do domínio do Cortex está organizado em quatro contextos principais:
+O núcleo inicial do domínio do Cortex está organizado nestes contextos principais:
 
 - `Identidade`
 - `Organizacional`
 - `PessoasInstitucionais`
 - `Academico`
+- `Transporte`
 
 O DER textual abaixo descreve as entidades centrais e seus relacionamentos.
 
@@ -516,7 +517,46 @@ A garantia de que todo setor possui responsável deve ser tratada como regra de 
 
 ---
 
-# 9. Pontos que podem evoluir depois
+# 9. Domínio Transporte
+
+## 9.1 Percurso
+
+Trajeto nomeado do ônibus universitário.
+
+### Atributos principais
+
+- `id`
+- `apelido` (único, case-insensitive)
+- `descricao`
+- `ativo`
+
+## 9.2 Rota
+
+Agendamento de um ônibus em um percurso, em um dia e horário.
+
+### Atributos principais
+
+- `id`
+- `percurso` (FK `PROTECT`, N:1)
+- `horario_saida`
+- `dia_semana`
+- `quantidade_vagas` (≥ 1)
+- `ativo`
+
+### Relacionamentos
+
+- Uma `Rota` pertence a exatamente um `Percurso`
+- Um `Percurso` pode ter várias `Rota`
+
+### Invariantes
+
+- Não vincular nem reativar rota em percurso inativo
+- Não desativar percurso com rotas ativas
+- Unicidade de `percurso` + `dia_semana` + `horario_saida`
+
+---
+
+# 10. Pontos que podem evoluir depois
 
 Os itens abaixo podem ser refinados em artefatos posteriores ou na modelagem detalhada:
 
@@ -526,16 +566,18 @@ Os itens abaixo podem ser refinados em artefatos posteriores ou na modelagem det
 - detalhamento da categoria do servidor
 - detalhamento da situação da matrícula
 - regras adicionais para aluno monitor
+- detalhamento de passageiros e ocupação das rotas
 
 ---
 
-# 10. Resumo executivo
+# 11. Resumo executivo
 
 O núcleo do Cortex parte de `Usuario` como centro da identidade, e organiza o restante do sistema em torno de:
 
 - estrutura organizacional (`Setor`, `Funcao`, `SetorVinculo`)
 - perfis institucionais (`Servidor`, `Terceirizado`, `Cargo`, `EmpresaInstituicao`)
 - perfis acadêmicos (`Aluno`, `Curso`, `AlunoCurso`)
+- transporte universitário (`Percurso`, `Rota`)
 
 As decisões mais importantes consolidadas neste ERD textual são:
 

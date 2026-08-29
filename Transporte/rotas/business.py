@@ -1,6 +1,11 @@
 import logging
 
+from django.db import IntegrityError
+
 from AppCore.core.business.business import ModelInstanceBusiness
+from AppCore.core.exceptions.exceptions import BusinessRuleException
+
+from .rules import MENSAGEM_ROTA_DUPLICADA
 
 logger = logging.getLogger(__name__)
 
@@ -30,6 +35,8 @@ class RotaBusiness(ModelInstanceBusiness):
                 quantidade_vagas=quantidade_vagas,
                 **kwargs,
             )
+        except IntegrityError:
+            raise BusinessRuleException(MENSAGEM_ROTA_DUPLICADA)
         except Exception as e:
             self.relancar_ou_erro_sistema(e, 'Não foi possível criar a rota.', logger)
 
@@ -59,6 +66,8 @@ class RotaBusiness(ModelInstanceBusiness):
             for attr, value in dados.items():
                 setattr(rota, attr, value)
             rota.save()
+        except IntegrityError:
+            raise BusinessRuleException(MENSAGEM_ROTA_DUPLICADA)
         except Exception as e:
             self.relancar_ou_erro_sistema(e, 'Não foi possível atualizar a rota.', logger)
 

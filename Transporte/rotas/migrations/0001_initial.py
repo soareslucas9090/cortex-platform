@@ -60,7 +60,10 @@ class Migration(migrations.Migration):
                 'verbose_name': 'Rota',
                 'verbose_name_plural': 'Rotas',
                 'ordering': ['dia_semana', 'horario_saida', 'percurso__apelido'],
-                'constraints': [models.UniqueConstraint(fields=('percurso', 'dia_semana', 'horario_saida'), name='rotas_rota_percurso_dia_horario_unico')],
+                'constraints': [
+                    models.UniqueConstraint(fields=('percurso', 'dia_semana', 'horario_saida'), name='rotas_rota_percurso_dia_horario_unico'),
+                    models.CheckConstraint(condition=models.Q(quantidade_vagas__gte=1), name='rotas_rota_vagas_minimo_1'),
+                ],
             },
             bases=(AppCore.core.helpers.helpers_mixin.ModelHelperMixin, AppCore.core.business.business_mixin.ModelBusinessMixin, AppCore.core.rules.rules_mixin.ModelRulesMixin, models.Model),
         ),
