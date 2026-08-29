@@ -38,6 +38,8 @@ O Cortex será inicialmente dividido nos seguintes domínios:
 2. `Organizacional`
 3. `PessoasInstitucionais`
 4. `Academico`
+5. `Infraestrutura`
+6. `Transporte`
 
 ---
 
@@ -148,6 +150,22 @@ Responsável pelos perfis acadêmicos e pelos vínculos do aluno com os cursos.
 ### Dependências
 - Depende de `Identidade`.
 - Em situações de monitoria, se relaciona conceitualmente com `Organizacional`.
+
+---
+
+## 5. Domínio: Transporte
+
+### Módulo Agregador
+`Transporte/`
+
+### Apps Django Internos e Entidades:
+- `percursos` -> Model principal: `Percurso` (apelido, descrição do trajeto, ativo)
+
+### Responsabilidade
+Cadastro de percursos das rotas de ônibus (MeuIF-Transporte, RF017). Acesso restrito a L3 (perfil TI).
+
+### Dependências
+- Não depende de outros domínios de negócio nesta v1.
 
 ---
 
@@ -288,6 +306,7 @@ A organização inicial do Cortex será baseada em quatro domínios (Bounded Con
 - `PessoasInstitucionais` (com sub-apps `servidores`, `cargos`, `terceirizados`, `empresas_instituicoes`)
 - `Academico` (com sub-apps `alunos`, `cursos`, `aluno_cursos`)
 - `Infraestrutura` (com sub-apps `blocos`, `salas`, `recursos`, `permissoes`, `autorizacoes`, `emprestimos`)
+- `Transporte` (com sub-app `percursos`)
 
 Essa divisão busca:
 - refletir o negócio com mais fidelidade;

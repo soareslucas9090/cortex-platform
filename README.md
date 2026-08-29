@@ -110,6 +110,9 @@ cortex-plataform/
 │   ├── permissoes/             # capacidades por função (sem rotas HTTP)
 │   ├── autorizacoes/
 │   └── emprestimos/
+├── Transporte/                 # Domínio: percursos do transporte universitário
+│   ├── urls.py
+│   └── percursos/
 │
 ├── docs/                       # Documentação do projeto
 │   ├── decisions/              # ADRs (Architecture Decision Records)
@@ -386,6 +389,12 @@ Cadastro de espaço físico, recursos, autorizações e empréstimos.
 - `Autorizacao` — autorização por sala ou recurso
 - `Emprestimo` — retirada e devolução multi-item
 - `PermissaoFuncaoInfraestrutura` — capacidades por função (app interno sem rotas HTTP)
+
+### Transporte _(implementado — percursos)_
+
+Cadastro de percursos das rotas de ônibus (RF017). Acesso restrito a L3 (perfil TI).
+
+- `Percurso` — apelido, descrição do trajeto e status ativo/inativo
 
 ## Decisões Técnicas
 

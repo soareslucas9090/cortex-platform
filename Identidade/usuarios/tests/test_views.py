@@ -14,6 +14,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from Identidade.usuarios.models import Usuario
 from AppCore.common.textos.mensagens import RESPONSE_ERRO_INTERNO_SERVIDOR
 from Infraestrutura.permissoes.choices import capacidades_infraestrutura_vazias
+from Identidade.usuarios.choices import PERMISSAO_CORTEX_EDITAR_TUDO
 from Identidade.usuarios.importacao.importacao_parser import ImportacaoUsuariosParser
 from Identidade.usuarios.importacao.importacao_dtos import (
     ArquivoImportacaoUsuariosDTO,
@@ -45,6 +46,9 @@ def permissoes_esperadas(cortex_nivel):
     return {
         'cortex': cortex_nivel,
         'infraestrutura': capacidades_infraestrutura_vazias(),
+        'transporte': {
+            'gerenciar': cortex_nivel == PERMISSAO_CORTEX_EDITAR_TUDO,
+        },
     }
 
 
@@ -1124,9 +1128,9 @@ class DocumentarPermissoesViewTest(APITestCase):
         resposta = self.client.get(self.url)
         self.assertEqual(resposta.status_code, status.HTTP_200_OK)
         modulos = resposta.data['dados']['modulos']
-        self.assertEqual(len(modulos), 2)
+        self.assertEqual(len(modulos), 3)
         chaves = {modulo['chave'] for modulo in modulos}
-        self.assertEqual(chaves, {'cortex', 'infraestrutura'})
+        self.assertEqual(chaves, {'cortex', 'infraestrutura', 'transporte'})
 
         cortex = next(modulo for modulo in modulos if modulo['chave'] == 'cortex')
         self.assertEqual(len(cortex['niveis']), 3)
@@ -1155,6 +1159,11 @@ class DocumentarPermissoesViewTest(APITestCase):
         self.assertIn('quem_usa', infraestrutura['capacidades'][0])
         self.assertIn('Servidor ativo', infraestrutura['secoes'][2]['itens'][1]['destaque'])
         self.assertIn('retirada_irrestrita', infraestrutura['capacidades'][3]['codigo'])
+
+        transporte = next(modulo for modulo in modulos if modulo['chave'] == 'transporte')
+        self.assertEqual(len(transporte['capacidades']), 1)
+        self.assertEqual(transporte['capacidades'][0]['codigo'], 'gerenciar')
+        self.assertGreaterEqual(len(transporte['exemplos']), 1)
 
     def test_nao_autenticado_retorna_401(self):
         resposta = self.client.get(self.url)

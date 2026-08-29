@@ -69,6 +69,7 @@ cortex-platform/
 ├── Infraestrutura/
 ├── Organizacional/
 ├── PessoasInstitucionais/
+├── Transporte/
 ├── docs/
 ├── manage.py
 ├── pyproject.toml
@@ -382,6 +383,25 @@ Infraestrutura/
 - `autorizacoes/` → model principal `Autorizacao`
 - `emprestimos/` → models de empréstimo multi-item
 - `importacoes/` → model `ImportacaoLote` e rotinas de importação em lote (blocos, salas, recursos)
+
+---
+
+### `Transporte/`
+
+Domínio responsável pelo transporte universitário. A v1 cobre o cadastro de percursos (RF017), restrito ao perfil TI (L3).
+
+#### Estrutura atual
+
+```text name=transporte-module-tree.txt
+Transporte/
+├── __init__.py
+├── urls.py
+└── percursos/
+```
+
+#### Responsabilidades
+
+- `percursos/` → model principal `Percurso`
 
 ---
 
