@@ -1,4 +1,5 @@
 from django.db import models
+from django.db.models.functions import Lower
 
 from AppCore.basics.models.models import BasicModel
 from AppCore.core.business.business_mixin import ModelBusinessMixin
@@ -15,7 +16,7 @@ class Percurso(ModelHelperMixin, ModelBusinessMixin, ModelRulesMixin, BasicModel
     helper_class = PercursoHelpers
     rules_class = PercursoRules
 
-    apelido = models.CharField('Apelido', max_length=255, unique=True)
+    apelido = models.CharField('Apelido', max_length=255)
     descricao = models.TextField('Descrição')
     ativo = models.BooleanField('Ativo', default=True)
 
@@ -23,6 +24,12 @@ class Percurso(ModelHelperMixin, ModelBusinessMixin, ModelRulesMixin, BasicModel
         verbose_name = 'Percurso'
         verbose_name_plural = 'Percursos'
         ordering = ['apelido']
+        constraints = [
+            models.UniqueConstraint(
+                Lower('apelido'),
+                name='percursos_percurso_apelido_lower_unico',
+            ),
+        ]
 
     def __str__(self):
         return self.apelido
