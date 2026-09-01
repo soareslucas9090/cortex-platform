@@ -47,6 +47,7 @@ Os agregados iniciais identificados no Cortex são:
 4. `TerceirizadoAggregate`
 5. `AlunoAggregate`
 6. `CursoAggregate`
+7. `ExecucaoRotaAggregate`
 
 ---
 
@@ -302,6 +303,40 @@ Representa o curso e sua relação com os vínculos acadêmicos dos alunos.
 - operações de manutenção do curso: `Academico/cursos/business.py`
 
 ---
+
+# 7. ExecucaoRotaAggregate
+
+### Aggregate Root
+
+`ExecucaoRota`
+
+### Entidades relacionadas
+
+- `ExecucaoRota`
+- `Ticket`
+- `Strike`
+- `Justificativa`
+
+### Invariantes
+
+1. Uma rota possui no máximo uma execução por data; outras rotas e horários são permitidos.
+2. Vagas e horário são congelados na execução.
+3. Um aluno possui no máximo um ticket não cancelado por execução.
+4. Reserva e promoção nunca podem ultrapassar a quantidade de vagas.
+5. Reserva, fila, cancelamento e saída da fila só ocorrem em dia útil, entre 00h
+   do dia da execução e o limite inclusivo de 30 minutos antes da saída.
+6. Reservas e fila priorizam PcD e mantêm FIFO dentro de cada grupo; a prioridade
+   reorganiza a posição, mas nunca remove uma reserva confirmada nem promove sem vaga.
+7. Cancelamento de reserva e promoção acontecem na mesma transação.
+8. Cada ticket ausente gera no máximo um strike.
+9. Três strikes ativos bloqueiam somente novas solicitações.
+10. QR Code só embarca ticket reservado em execução no estado de embarque.
+11. A aprovação da justificativa e a retirada do strike da contagem são atômicas.
+
+### Fronteira transacional
+
+`ExecucaoRota` é bloqueada durante reserva e cancelamento com promoção. Tickets,
+strikes e justificativas são bloqueados nas respectivas mudanças de estado.
 
 # Invariantes transversais
 

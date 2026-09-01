@@ -852,11 +852,11 @@ paths:
       description: "\n    Retorna a documentação narrativa e estruturada das permissões
         de cada módulo registrado.\n\n    Inclui **cortex** (níveis L1–L3), **infraestrutura**
         (capacidades booleanas, secoes\n    estruturadas, acesso total de admin/superuser,
-        elegibilidade do solicitante) e\n    **transporte** (capacidade `gerenciar`,
-        restrita a L3 / perfil TI). Novos módulos\n    entram automaticamente ao implementar
-        `documentacao_<modulo>()`.\n\n    **Permissões:** Qualquer usuário autenticado.\n\n
-        \   **Manutenção:** toda alteração de regra de permissão deve atualizar o
-        método\n    `documentacao_<modulo>()` correspondente em `Identidade.usuarios.documentacao`.\n
+        elegibilidade do solicitante) e\n    **transporte** (capacidades `gerenciar`
+        para L3 e `reservar` para aluno elegível). Novos módulos\n    entram automaticamente
+        ao implementar `documentacao_<modulo>()`.\n\n    **Permissões:** Qualquer
+        usuário autenticado.\n\n    **Manutenção:** toda alteração de regra de permissão
+        deve atualizar o método\n    `documentacao_<modulo>()` correspondente em `Identidade.usuarios.documentacao`.\n
         \   "
       summary: Documentação de permissões por módulo
       tags:
@@ -5507,6 +5507,650 @@ paths:
               schema:
                 $ref: '#/components/schemas/Terceirizado'
           description: ''
+  /cortex/transporte/execucoes-rotas/:
+    get:
+      operationId: transporte_execucoes_rotas_list
+      description: |-
+        Lista as ocorrências das rotas. Os filtros apenas reduzem o escopo já permitido ao usuário e não liberam execuções fora dele.
+
+        **Permissões:** Autenticado. L3 (EDITAR_TUDO) vê todas as execuções; demais usuários veem somente execuções abertas, em dia útil, da meia-noite do dia da viagem até exatamente 30 minutos antes da saída.
+      summary: Listar execuções de rotas
+      parameters:
+      - in: query
+        name: data
+        schema:
+          type: string
+          format: date
+      - name: page
+        required: false
+        in: query
+        description: Um número de página dentro do conjunto de resultados paginado.
+        schema:
+          type: integer
+      - in: query
+        name: paginacao
+        schema:
+          type: integer
+      - in: query
+        name: status
+        schema:
+          type: integer
+      tags:
+      - Transporte · Execuções de rotas
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedExecucaoRotaList'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                description: Não autenticado.
+          description: ''
+    post:
+      operationId: transporte_execucoes_rotas_create
+      description: |-
+        Cria manualmente uma ocorrência de uma rota.
+
+        **Permissões:** L3 (EDITAR_TUDO) — perfil TI / administradores.
+      summary: Criar execução de rota
+      tags:
+      - Transporte · Execuções de rotas
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CriarExecucaoRota'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/CriarExecucaoRota'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/CriarExecucaoRota'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExecucaoRota'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                description: Dados ou regras da rota inválidos.
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                description: Não autenticado.
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                description: Acesso administrativo obrigatório.
+          description: ''
+  /cortex/transporte/execucoes-rotas/{id}/:
+    get:
+      operationId: transporte_execucoes_rotas_retrieve
+      description: |-
+        Retorna uma execução de rota.
+
+        **Permissões:** Autenticado. L3 (EDITAR_TUDO) vê todas as execuções; demais usuários veem somente execuções abertas, em dia útil, da meia-noite do dia da viagem até exatamente 30 minutos antes da saída.
+      summary: Detalhar execução de rota
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - Transporte · Execuções de rotas
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExecucaoRota'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                description: Não autenticado.
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                description: Execução não encontrada no escopo.
+          description: ''
+  /cortex/transporte/execucoes-rotas/{id}/abrir-reservas/:
+    post:
+      operationId: transporte_execucoes_rotas_abrir_reservas_create
+      description: |-
+        Reabre as reservas de uma execução fechada.
+
+        **Permissões:** L3 (EDITAR_TUDO) — perfil TI / administradores.
+      summary: Abrir reservas
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - Transporte · Execuções de rotas
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExecucaoRota'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                description: Transição de status inválida.
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                description: Não autenticado.
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                description: Acesso administrativo obrigatório.
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                description: Execução não encontrada.
+          description: ''
+  /cortex/transporte/execucoes-rotas/{id}/cancelar/:
+    post:
+      operationId: transporte_execucoes_rotas_cancelar_create
+      description: |-
+        Cancela uma execução ainda não finalizada.
+
+        **Permissões:** L3 (EDITAR_TUDO) — perfil TI / administradores.
+      summary: Cancelar execução
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - Transporte · Execuções de rotas
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExecucaoRota'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                description: Transição de status inválida.
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                description: Não autenticado.
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                description: Acesso administrativo obrigatório.
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                description: Execução não encontrada.
+          description: ''
+  /cortex/transporte/execucoes-rotas/{id}/fechar-reservas/:
+    post:
+      operationId: transporte_execucoes_rotas_fechar_reservas_create
+      description: |-
+        Fecha as reservas de uma execução.
+
+        **Permissões:** L3 (EDITAR_TUDO) — perfil TI / administradores.
+      summary: Fechar reservas
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - Transporte · Execuções de rotas
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExecucaoRota'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                description: Transição de status inválida.
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                description: Não autenticado.
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                description: Acesso administrativo obrigatório.
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                description: Execução não encontrada.
+          description: ''
+  /cortex/transporte/execucoes-rotas/{id}/fila-espera/entrar/:
+    post:
+      operationId: transporte_execucoes_rotas_fila_espera_entrar_create
+      description: |-
+        Entra explicitamente na fila quando a execução está lotada, de segunda a sexta, da meia-noite até exatamente 30 minutos antes da saída.
+
+        **Permissões:** Usuário autenticado. A operação exige perfil de aluno ativo e matriculado; tickets são sempre escopados ao próprio aluno.
+      summary: Entrar na fila de espera
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - Transporte · Tickets
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Ticket'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                description: Regra da fila de espera não atendida.
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                description: Não autenticado.
+          description: ''
+  /cortex/transporte/execucoes-rotas/{id}/finalizar/:
+    post:
+      operationId: transporte_execucoes_rotas_finalizar_create
+      description: |-
+        Finaliza uma execução em embarque.
+
+        **Permissões:** L3 (EDITAR_TUDO) — perfil TI / administradores.
+      summary: Finalizar execução
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - Transporte · Execuções de rotas
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExecucaoRota'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                description: Transição de status inválida.
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                description: Não autenticado.
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                description: Acesso administrativo obrigatório.
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                description: Execução não encontrada.
+          description: ''
+  /cortex/transporte/execucoes-rotas/{id}/iniciar-embarque/:
+    post:
+      operationId: transporte_execucoes_rotas_iniciar_embarque_create
+      description: |-
+        Inicia o embarque e habilita a leitura dos QR Codes.
+
+        **Permissões:** L3 (EDITAR_TUDO) — perfil TI / administradores.
+      summary: Iniciar embarque
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - Transporte · Execuções de rotas
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExecucaoRota'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                description: Transição de status inválida.
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                description: Não autenticado.
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                description: Acesso administrativo obrigatório.
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                description: Execução não encontrada.
+          description: ''
+  /cortex/transporte/execucoes-rotas/{id}/reservar/:
+    post:
+      operationId: transporte_execucoes_rotas_reservar_create
+      description: |-
+        Reserva uma vaga disponível, de segunda a sexta, da meia-noite do dia da execução até exatamente 30 minutos antes da saída.
+
+        **Permissões:** Usuário autenticado. A operação exige perfil de aluno ativo e matriculado; tickets são sempre escopados ao próprio aluno.
+      summary: Reservar ticket
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - Transporte · Tickets
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Ticket'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                description: Regra de reserva não atendida.
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                description: Não autenticado.
+          description: ''
+  /cortex/transporte/justificativas/:
+    get:
+      operationId: transporte_justificativas_list
+      description: |-
+        Lista justificativas do aluno autenticado.
+
+        **Permissões:** Autenticado. L1 vê somente as próprias justificativas; L3 vê todas.
+      summary: Listar justificativas
+      parameters:
+      - name: page
+        required: false
+        in: query
+        description: Um número de página dentro do conjunto de resultados paginado.
+        schema:
+          type: integer
+      - name: paginacao
+        required: false
+        in: query
+        description: Número de resultados a serem retornados por página.
+        schema:
+          type: integer
+      tags:
+      - Transporte · Justificativas
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedJustificativaList'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                description: Não autenticado.
+          description: ''
+  /cortex/transporte/justificativas/{id}/:
+    get:
+      operationId: transporte_justificativas_retrieve
+      description: |-
+        Retorna os dados de uma justificativa específica.
+
+        **Permissões:** Autenticado. L1 vê somente justificativa própria; L3 vê qualquer uma.
+      summary: Detalhar justificativa
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - Transporte · Justificativas
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Justificativa'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                description: Não autenticado.
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                description: Justificativa não encontrada no escopo.
+          description: ''
+  /cortex/transporte/justificativas/{id}/aprovar/:
+    post:
+      operationId: transporte_justificativas_aprovar_create
+      description: |-
+        Aprova a justificativa e faz o strike deixar de contar.
+
+        **Permissões:** L3 (EDITAR_TUDO) — perfil TI / administradores.
+      summary: Aprovar justificativa
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - Transporte · Justificativas
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AnalisarJustificativa'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/AnalisarJustificativa'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/AnalisarJustificativa'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Justificativa'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                description: Justificativa não está pendente.
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                description: Não autenticado.
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                description: Acesso administrativo obrigatório.
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                description: Justificativa não encontrada.
+          description: ''
+  /cortex/transporte/justificativas/{id}/rejeitar/:
+    post:
+      operationId: transporte_justificativas_rejeitar_create
+      description: |-
+        Rejeita a justificativa e mantém o strike ativo.
+
+        **Permissões:** L3 (EDITAR_TUDO) — perfil TI / administradores.
+      summary: Rejeitar justificativa
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - Transporte · Justificativas
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AnalisarJustificativa'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/AnalisarJustificativa'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/AnalisarJustificativa'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Justificativa'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                description: Justificativa não está pendente.
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                description: Não autenticado.
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                description: Acesso administrativo obrigatório.
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                description: Justificativa não encontrada.
+          description: ''
   /cortex/transporte/percursos/:
     get:
       operationId: transporte_percursos_list
@@ -6109,6 +6753,362 @@ paths:
               schema:
                 description: Rota não encontrada.
           description: ''
+  /cortex/transporte/strikes/:
+    get:
+      operationId: transporte_strikes_list
+      description: |-
+        Lista os strikes do aluno autenticado.
+
+        **Permissões:** Autenticado. L1 vê somente os próprios strikes; L3 vê todos.
+      summary: Listar strikes
+      parameters:
+      - name: page
+        required: false
+        in: query
+        description: Um número de página dentro do conjunto de resultados paginado.
+        schema:
+          type: integer
+      - name: paginacao
+        required: false
+        in: query
+        description: Número de resultados a serem retornados por página.
+        schema:
+          type: integer
+      tags:
+      - Transporte · Strikes
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedStrikeList'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                description: Não autenticado.
+          description: ''
+  /cortex/transporte/strikes/{id}/justificativas/:
+    post:
+      operationId: transporte_strikes_justificativas_create
+      description: |-
+        Envia uma justificativa para qualquer strike ativo do próprio aluno.
+
+        **Permissões:** L1 (EDITAR_EU) — somente o aluno dono do strike.
+      summary: Enviar justificativa
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - Transporte · Justificativas
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CriarJustificativa'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/CriarJustificativa'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/CriarJustificativa'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Justificativa'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                description: Strike inelegível ou texto inválido.
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                description: Não autenticado.
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                description: Strike não encontrado.
+          description: ''
+  /cortex/transporte/tickets/:
+    get:
+      operationId: transporte_tickets_list
+      description: |-
+        Lista os tickets do aluno autenticado. L3 lista todos os tickets.
+
+        **Permissões:** Autenticado. L1 vê apenas os próprios tickets; L3 vê todos.
+      summary: Listar tickets
+      parameters:
+      - name: page
+        required: false
+        in: query
+        description: Um número de página dentro do conjunto de resultados paginado.
+        schema:
+          type: integer
+      - name: paginacao
+        required: false
+        in: query
+        description: Número de resultados a serem retornados por página.
+        schema:
+          type: integer
+      tags:
+      - Transporte · Tickets
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedTicketList'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                description: Não autenticado.
+          description: ''
+  /cortex/transporte/tickets/{codigo}/:
+    get:
+      operationId: transporte_tickets_retrieve
+      description: |-
+        Retorna o ticket e o conteúdo assinado usado pelo frontend para renderizar o QR Code.
+
+        **Permissões:** Autenticado. L1 vê apenas ticket próprio; L3 vê todos.
+      summary: Detalhar ticket
+      parameters:
+      - in: path
+        name: codigo
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - Transporte · Tickets
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Ticket'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                description: Não autenticado.
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                description: Ticket não encontrado no escopo.
+          description: ''
+  /cortex/transporte/tickets/{codigo}/cancelar/:
+    post:
+      operationId: transporte_tickets_cancelar_create
+      description: |-
+        Cancela uma reserva, de segunda a sexta, da meia-noite até exatamente 30 minutos antes da saída.
+
+        **Permissões:** Usuário autenticado. A operação exige perfil de aluno ativo e matriculado; tickets são sempre escopados ao próprio aluno.
+      summary: Cancelar ticket reservado
+      parameters:
+      - in: path
+        name: codigo
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - Transporte · Tickets
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResultadoCancelamentoTicket'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                description: Cancelamento não permitido.
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                description: Não autenticado.
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                description: Ticket não encontrado.
+          description: ''
+  /cortex/transporte/tickets/{codigo}/marcar-ausente/:
+    post:
+      operationId: transporte_tickets_marcar_ausente_create
+      description: |-
+        Marca um ticket reservado como ausente e cria um strike.
+
+        **Permissões:** L3 (EDITAR_TUDO) — perfil TI / administradores.
+      summary: Marcar aluno ausente
+      parameters:
+      - in: path
+        name: codigo
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - Transporte · Tickets
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResultadoAusenciaTicket'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                description: Ausência não pode ser registrada.
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                description: Não autenticado.
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                description: Acesso administrativo obrigatório.
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                description: Ticket não encontrado.
+          description: ''
+  /cortex/transporte/tickets/{codigo}/sair-fila/:
+    post:
+      operationId: transporte_tickets_sair_fila_create
+      description: |-
+        Remove o próprio ticket da fila, de segunda a sexta, da meia-noite até exatamente 30 minutos antes da saída.
+
+        **Permissões:** Usuário autenticado. A operação exige perfil de aluno ativo e matriculado; tickets são sempre escopados ao próprio aluno.
+      summary: Sair da fila de espera
+      parameters:
+      - in: path
+        name: codigo
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - Transporte · Tickets
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Ticket'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                description: Saída da fila não permitida.
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                description: Não autenticado.
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                description: Ticket não encontrado.
+          description: ''
+  /cortex/transporte/tickets/validar-qr/:
+    post:
+      operationId: transporte_tickets_validar_qr_create
+      description: |-
+        Valida o conteúdo assinado do QR Code e registra o embarque de forma idempotente.
+
+        **Permissões:** L3 (EDITAR_TUDO) — perfil TI / administradores.
+      summary: Validar QR Code de embarque
+      tags:
+      - Transporte · Tickets
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ValidarQr'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ValidarQr'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ValidarQr'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResultadoValidacaoQr'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                description: QR Code inválido ou embarque indisponível.
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                description: Não autenticado.
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                description: Acesso administrativo obrigatório.
+          description: ''
 components:
   schemas:
     AdicionarItemColetivo:
@@ -6240,6 +7240,30 @@ components:
       - curso_nome
       - id
       - updated_at
+    AlunoTicket:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        nome:
+          type: string
+          readOnly: true
+        foto:
+          type: string
+          format: uri
+          readOnly: true
+          nullable: true
+      required:
+      - foto
+      - id
+      - nome
+    AnalisarJustificativa:
+      type: object
+      properties:
+        observacao_analise:
+          type: string
+          maxLength: 5000
     Autorizacao:
       type: object
       properties:
@@ -6545,6 +7569,17 @@ components:
           default: true
       required:
       - nome
+    CriarExecucaoRota:
+      type: object
+      properties:
+        rota_id:
+          type: integer
+        data_execucao:
+          type: string
+          format: date
+      required:
+      - data_execucao
+      - rota_id
     CriarFuncao:
       type: object
       properties:
@@ -6566,6 +7601,15 @@ components:
       - categoria
       - descricao
       - papel_funcao
+    CriarJustificativa:
+      type: object
+      properties:
+        texto:
+          type: string
+          maxLength: 5000
+          minLength: 10
+      required:
+      - texto
     CriarPercurso:
       type: object
       properties:
@@ -7007,6 +8051,57 @@ components:
       - estado
       - logradouro
       - numero
+    ExecucaoRota:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        rota:
+          allOf:
+          - $ref: '#/components/schemas/Rota'
+          readOnly: true
+        data_execucao:
+          type: string
+          format: date
+          title: Data da execução
+        data_hora_saida:
+          type: string
+          format: date-time
+          title: Data e hora de saída
+        quantidade_vagas:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+          title: Quantidade de vagas
+        vagas_ocupadas:
+          type: integer
+          readOnly: true
+        vagas_disponiveis:
+          type: integer
+          readOnly: true
+        status:
+          allOf:
+          - $ref: '#/components/schemas/StatusExecucaoRotaEnum'
+          minimum: -2147483648
+          maximum: 2147483647
+        status_display:
+          type: string
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - created_at
+      - data_execucao
+      - data_hora_saida
+      - id
+      - quantidade_vagas
+      - rota
+      - status_display
+      - vagas_disponiveis
+      - vagas_ocupadas
     FormaIngressoEnum:
       enum:
       - 1
@@ -7160,6 +8255,48 @@ components:
       - ativo
       - id
       - recurso
+    Justificativa:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        strike:
+          allOf:
+          - $ref: '#/components/schemas/Strike'
+          readOnly: true
+        texto:
+          type: string
+          title: Justificativa
+        status:
+          allOf:
+          - $ref: '#/components/schemas/StatusJustificativaEnum'
+          minimum: -2147483648
+          maximum: 2147483647
+        status_display:
+          type: string
+          readOnly: true
+        observacao_analise:
+          type: string
+          title: Observação da análise
+        analisada_por_nome:
+          type: string
+          readOnly: true
+        analisada_em:
+          type: string
+          format: date-time
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - analisada_por_nome
+      - created_at
+      - id
+      - status_display
+      - strike
+      - texto
     LoginInput:
       type: object
       description: Documenta o input do login no Swagger.
@@ -7463,6 +8600,29 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/EmprestimoUsuarioResumo'
+    PaginatedExecucaoRotaList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/ExecucaoRota'
     PaginatedFuncaoList:
       type: object
       required:
@@ -7486,6 +8646,29 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Funcao'
+    PaginatedJustificativaList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Justificativa'
     PaginatedMatriculaList:
       type: object
       required:
@@ -7739,6 +8922,29 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/StatusImportacaoLote'
+    PaginatedStrikeList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Strike'
     PaginatedTerceirizadoList:
       type: object
       required:
@@ -7762,6 +8968,29 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Terceirizado'
+    PaginatedTicketList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Ticket'
     PaginatedUsuarioList:
       type: object
       required:
@@ -8023,6 +9252,33 @@ components:
       required:
       - apelido
       - id
+    PosicaoTicket:
+      type: object
+      properties:
+        tipo:
+          allOf:
+          - $ref: '#/components/schemas/PosicaoTicketTipoEnum'
+          readOnly: true
+        atual:
+          type: integer
+          minimum: 1
+          readOnly: true
+        total:
+          type: integer
+          minimum: 1
+          readOnly: true
+      required:
+      - atual
+      - tipo
+      - total
+    PosicaoTicketTipoEnum:
+      enum:
+      - RESERVA
+      - ESPERA
+      type: string
+      description: |-
+        * `RESERVA` - RESERVA
+        * `ESPERA` - ESPERA
     ProjectMe:
       type: object
       description: |-
@@ -8217,6 +9473,38 @@ components:
       required:
       - id
       - nome
+    ResultadoAusenciaTicket:
+      type: object
+      properties:
+        ticket:
+          $ref: '#/components/schemas/Ticket'
+        strike_id:
+          type: integer
+      required:
+      - strike_id
+      - ticket
+    ResultadoCancelamentoTicket:
+      type: object
+      properties:
+        ticket:
+          $ref: '#/components/schemas/Ticket'
+        ticket_promovido:
+          allOf:
+          - $ref: '#/components/schemas/Ticket'
+          nullable: true
+      required:
+      - ticket
+      - ticket_promovido
+    ResultadoValidacaoQr:
+      type: object
+      properties:
+        ticket:
+          $ref: '#/components/schemas/Ticket'
+        ja_validado:
+          type: boolean
+      required:
+      - ja_validado
+      - ticket
     ResumoImportacao:
       type: object
       properties:
@@ -8529,7 +9817,21 @@ components:
       description: |-
         * `1` - Ativa
         * `2` - Inativa
-    StatusEnum:
+    StatusExecucaoRotaEnum:
+      enum:
+      - 1
+      - 2
+      - 3
+      - 4
+      - 5
+      type: integer
+      description: |-
+        * `1` - Reservas abertas
+        * `2` - Reservas fechadas
+        * `3` - Em embarque
+        * `4` - Finalizada
+        * `5` - Cancelada
+    StatusImportacaoEnum:
       enum:
       - EM_ANDAMENTO
       - CONCLUIDA
@@ -8546,7 +9848,7 @@ components:
           type: integer
           readOnly: true
         status:
-          $ref: '#/components/schemas/StatusEnum'
+          $ref: '#/components/schemas/StatusImportacaoEnum'
         total_linhas:
           type: integer
           maximum: 2147483647
@@ -8584,7 +9886,7 @@ components:
           type: integer
           readOnly: true
         status:
-          $ref: '#/components/schemas/StatusEnum'
+          $ref: '#/components/schemas/StatusImportacaoEnum'
         total_linhas:
           type: integer
           maximum: 2147483647
@@ -8615,6 +9917,69 @@ components:
       - porcentagem
       - resultado_json
       - updated_at
+    StatusJustificativaEnum:
+      enum:
+      - 1
+      - 2
+      - 3
+      type: integer
+      description: |-
+        * `1` - Pendente
+        * `2` - Aprovada
+        * `3` - Rejeitada
+    StatusStrikeEnum:
+      enum:
+      - 1
+      - 2
+      type: integer
+      description: |-
+        * `1` - Ativo
+        * `2` - Justificado
+    StatusTicketEnum:
+      enum:
+      - 1
+      - 2
+      - 3
+      - 4
+      - 5
+      type: integer
+      description: |-
+        * `1` - Reservado
+        * `2` - Em espera
+        * `3` - Cancelado
+        * `4` - Embarcado
+        * `5` - Ausente
+    Strike:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        ticket:
+          allOf:
+          - $ref: '#/components/schemas/Ticket'
+          readOnly: true
+        status:
+          allOf:
+          - $ref: '#/components/schemas/StatusStrikeEnum'
+          minimum: -2147483648
+          maximum: 2147483647
+        status_display:
+          type: string
+          readOnly: true
+        bloqueia_novas_reservas:
+          type: boolean
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - bloqueia_novas_reservas
+      - created_at
+      - id
+      - status_display
+      - ticket
     SubstituirUsuarioColetivo:
       type: object
       properties:
@@ -8689,6 +10054,74 @@ components:
       - updated_at
       - usuario_cpf
       - usuario_nome
+    Ticket:
+      type: object
+      properties:
+        codigo:
+          type: string
+          format: uuid
+          readOnly: true
+          title: Código público
+        execucao_rota:
+          allOf:
+          - $ref: '#/components/schemas/ExecucaoRota'
+          readOnly: true
+        aluno:
+          allOf:
+          - $ref: '#/components/schemas/AlunoTicket'
+          readOnly: true
+        status:
+          allOf:
+          - $ref: '#/components/schemas/StatusTicketEnum'
+          minimum: -2147483648
+          maximum: 2147483647
+        status_display:
+          type: string
+          readOnly: true
+        posicao:
+          allOf:
+          - $ref: '#/components/schemas/PosicaoTicket'
+          readOnly: true
+        posicao_fila:
+          type: integer
+          readOnly: true
+        codigo_qr:
+          type: string
+          readOnly: true
+        reservado_em:
+          type: string
+          format: date-time
+          nullable: true
+        entrou_em_espera_em:
+          type: string
+          format: date-time
+          nullable: true
+        cancelado_em:
+          type: string
+          format: date-time
+          nullable: true
+        embarcado_em:
+          type: string
+          format: date-time
+          nullable: true
+        ausente_em:
+          type: string
+          format: date-time
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - aluno
+      - codigo
+      - codigo_qr
+      - created_at
+      - execucao_rota
+      - posicao
+      - posicao_fila
+      - status
+      - status_display
     TipoRecursoEnum:
       enum:
       - chave
@@ -8980,6 +10413,13 @@ components:
       - setor
       - setor_nome
       - setor_sigla
+    ValidarQr:
+      type: object
+      properties:
+        codigo_qr:
+          type: string
+      required:
+      - codigo_qr
   securitySchemes:
     jwtAuth:
       type: http

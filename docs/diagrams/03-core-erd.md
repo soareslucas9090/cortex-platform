@@ -425,6 +425,15 @@ Esse model permite preservar o histórico de vínculos acadêmicos sem sobrecarr
 - `Aluno` 1:N `AlunoCurso`
 - `Curso` 1:N `AlunoCurso`
 
+## Relações de transporte
+
+- `Percurso` 1:N `Rota`
+- `Rota` 1:N `ExecucaoRota`
+- `ExecucaoRota` 1:N `Ticket`
+- `Aluno` 1:N `Ticket`
+- `Ticket` 0..1:1 `Strike`
+- `Strike` 0..1:1 `Justificativa`
+
 ---
 
 # 6. Regras semânticas importantes
@@ -483,6 +492,15 @@ Terceirizados não possuem `Cargo`.
 - `Academico.alunos` -> Model: `Aluno`
 - `Academico.cursos` -> Model: `Curso`
 - `Academico.aluno_cursos` -> Model: `AlunoCurso`
+
+## Módulo: `Transporte/`
+
+- `Transporte.percursos` -> Model: `Percurso`
+- `Transporte.rotas` -> Model: `Rota`
+- `Transporte.execucoes_rotas` -> Model: `ExecucaoRota`
+- `Transporte.tickets` -> Model: `Ticket`
+- `Transporte.strikes` -> Model: `Strike`
+- `Transporte.justificativas` -> Model: `Justificativa`
 
 ---
 
@@ -554,6 +572,34 @@ Agendamento de um ônibus em um percurso, em um dia e horário.
 - Não desativar percurso com rotas ativas
 - Unicidade de `percurso` + `dia_semana` + `horario_saida`
 
+## 9.3 ExecucaoRota
+
+Ocorrência de uma rota em uma data e horário congelados.
+
+- `rota` (FK `PROTECT`)
+- `data_execucao`
+- `data_hora_saida`
+- `quantidade_vagas`
+- `status`
+- unicidade de `rota` + `data_execucao`
+
+Rotas distintas do mesmo percurso podem possuir execuções no mesmo dia quando
+seus horários forem diferentes.
+
+## 9.4 Ticket
+
+Vínculo entre `Aluno` e `ExecucaoRota`, identificado externamente por UUID.
+
+- estados: reservado, em espera, cancelado, embarcado e ausente;
+- no máximo um ticket não cancelado por aluno e execução;
+- tickets em espera formam a fila, sem entidades `Fila` ou `FilaEspera` separadas.
+
+## 9.5 Strike e Justificativa
+
+- `Strike` possui relação 1:1 com o ticket ausente;
+- `Justificativa` possui relação 1:1 com o strike;
+- justificativa aprovada faz o strike deixar de contar para o bloqueio.
+
 ---
 
 # 10. Pontos que podem evoluir depois
@@ -566,7 +612,7 @@ Os itens abaixo podem ser refinados em artefatos posteriores ou na modelagem det
 - detalhamento da categoria do servidor
 - detalhamento da situação da matrícula
 - regras adicionais para aluno monitor
-- detalhamento de passageiros e ocupação das rotas
+- notificações, perfis de conferente/motorista e entrada sem ticket
 
 ---
 
@@ -577,7 +623,7 @@ O núcleo do Cortex parte de `Usuario` como centro da identidade, e organiza o r
 - estrutura organizacional (`Setor`, `Funcao`, `SetorVinculo`)
 - perfis institucionais (`Servidor`, `Terceirizado`, `Cargo`, `EmpresaInstituicao`)
 - perfis acadêmicos (`Aluno`, `Curso`, `AlunoCurso`)
-- transporte universitário (`Percurso`, `Rota`)
+- transporte universitário (`Percurso`, `Rota`, `ExecucaoRota`, `Ticket`, `Strike`, `Justificativa`)
 
 As decisões mais importantes consolidadas neste ERD textual são:
 

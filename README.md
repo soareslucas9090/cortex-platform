@@ -110,10 +110,14 @@ cortex-plataform/
 │   ├── permissoes/             # capacidades por função (sem rotas HTTP)
 │   ├── autorizacoes/
 │   └── emprestimos/
-├── Transporte/                 # Domínio: percursos e rotas do transporte universitário
+├── Transporte/                 # Domínio do transporte universitário e tickets
 │   ├── urls.py
 │   ├── percursos/
-│   └── rotas/
+│   ├── rotas/
+│   ├── execucoes_rotas/
+│   ├── tickets/
+│   ├── strikes/
+│   └── justificativas/
 │
 ├── docs/                       # Documentação do projeto
 │   ├── decisions/              # ADRs (Architecture Decision Records)
@@ -391,12 +395,16 @@ Cadastro de espaço físico, recursos, autorizações e empréstimos.
 - `Emprestimo` — retirada e devolução multi-item
 - `PermissaoFuncaoInfraestrutura` — capacidades por função (app interno sem rotas HTTP)
 
-### Transporte _(implementado — percursos e rotas)_
+### Transporte _(implementado — rotas, tickets e embarque)_
 
-Cadastro de percursos e rotas de ônibus (RF016 e RF017). Acesso restrito a L3 (perfil TI).
+Cadastro administrativo de percursos, rotas e execuções; alunos elegíveis podem
+reservar tickets, acompanhar a fila PcD/FIFO e apresentar justificativas.
 
 - `Percurso` — apelido, descrição do trajeto e status ativo/inativo
 - `Rota` — percurso, horário de saída, dia da semana, quantidade de vagas e status ativo/inativo
+- `ExecucaoRota` — ocorrência datada com horário e capacidade congelados
+- `Ticket` — reserva, fila, cancelamento, embarque por QR Code ou ausência
+- `Strike` e `Justificativa` — bloqueio após três faltas ativas e revisão por L3
 
 ## Decisões Técnicas
 

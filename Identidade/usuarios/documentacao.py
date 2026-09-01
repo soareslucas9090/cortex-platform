@@ -54,7 +54,7 @@ class PermissaoDocumentacao:
                 'atualização de perfil.\n\n'
                 'O payload `user.permissoes` no login/me retorna `{"cortex": "<nível>"}` e '
                 'chaves adicionais por módulo: `infraestrutura` (flags booleanas) e '
-                '`transporte` (`{"gerenciar": true|false}`).'
+                '`transporte` (`{"gerenciar": true|false, "reservar": true|false}`).'
             ),
             'niveis': [
                 {
@@ -513,14 +513,14 @@ class PermissaoDocumentacao:
             'chave': 'transporte',
             'titulo': 'Transporte',
             'resumo': (
-                'Gestão de percursos e rotas do transporte universitário, restrita ao perfil TI (L3).'
+                'Gestão de rotas, execuções, tickets, fila de espera, strikes e justificativas.'
             ),
             'texto': (
                 'O módulo transporte controla o cadastro de percursos (apelido, descrição e '
                 'status ativo/inativo) e de rotas (percurso, horário de saída, dia da semana e '
-                'quantidade de vagas). Toda a API exige L3 (EDITAR_TUDO): is_staff, is_admin '
-                'ou superusuário. O payload user.permissoes.transporte.gerenciar indica se o '
-                'frontend deve exibir o menu Transporte.'
+                'quantidade de vagas). L3 administra esses cadastros e as execuções. Alunos '
+                'ativos e matriculados, com menos de três strikes ativos, podem solicitar '
+                'tickets e entrar em filas de espera. O payload expõe gerenciar e reservar.'
             ),
             'secoes': [
                 {
@@ -534,8 +534,15 @@ class PermissaoDocumentacao:
                             ),
                         },
                         {
+                            'destaque': 'reservar',
+                            'texto': (
+                                'true para usuário e aluno ativos, com situação matriculado e '
+                                'menos de três strikes ativos.'
+                            ),
+                        },
+                        {
                             'destaque': 'Payload típico',
-                            'texto': '{"transporte": {"gerenciar": false}}',
+                            'texto': '{"transporte": {"gerenciar": false, "reservar": true}}',
                         },
                     ],
                 },
@@ -548,6 +555,35 @@ class PermissaoDocumentacao:
                         ),
                         (
                             'Bases: /cortex/transporte/percursos/ e /cortex/transporte/rotas/.'
+                        ),
+                    ],
+                },
+                {
+                    'titulo': 'Execuções, tickets e fila de espera',
+                    'paragrafos': [
+                        (
+                            'L3 cria e controla execuções de rotas, inicia o embarque, valida '
+                            'QR Codes e registra ausências. Alunos consultam execuções abertas '
+                            'e seus próprios tickets.'
+                        ),
+                        (
+                            'Reserva, entrada e saída da fila e cancelamento funcionam somente '
+                            'de segunda a sexta, da meia-noite do dia da execução até exatamente '
+                            '30 minutos antes da saída.'
+                        ),
+                        (
+                            'Reservas confirmadas e fila priorizam alunos com '
+                            'Usuario.deficiencia preenchido e preservam a ordem de solicitação '
+                            'dentro dos grupos PcD e não PcD, sem retirar vagas confirmadas.'
+                        ),
+                        (
+                            'O payload posicao contém tipo, atual e total. Em RESERVA, o total '
+                            'é a capacidade da execução; em ESPERA, é a quantidade aguardando. '
+                            'O campo posicao_fila permanece disponível apenas para a espera.'
+                        ),
+                        (
+                            'O aluno pode enviar justificativa para qualquer strike ativo próprio, '
+                            'mesmo antes de atingir o bloqueio por três strikes.'
                         ),
                     ],
                 },
@@ -566,20 +602,34 @@ class PermissaoDocumentacao:
                         'do MeuIF-Transporte (RF016 e RF017).'
                     ),
                 },
+                {
+                    'codigo': 'reservar',
+                    'nome': 'Reservar ticket',
+                    'quem_usa': 'Alunos ativos e matriculados',
+                    'pode': 'Reservar ticket, entrar na fila e consultar recursos próprios.',
+                    'nao_sem_capacidade': 'Criar novos tickets ou entrar em novas filas.',
+                    'descricao': (
+                        'Fica indisponível quando o aluno possui três ou mais strikes ativos.'
+                    ),
+                },
             ],
             'exemplos': [
                 {
-                    'perfil': 'Aluno ou servidor (L1/L2)',
-                    'capacidades': {'gerenciar': False},
-                    'pode': [],
+                    'perfil': 'Aluno ativo e matriculado com menos de três strikes ativos',
+                    'capacidades': {'gerenciar': False, 'reservar': True},
+                    'pode': [
+                        'consultar execuções abertas',
+                        'reservar ticket e entrar na fila de espera',
+                        'consultar e cancelar os próprios tickets dentro do prazo',
+                    ],
                     'nao_pode': [
                         'listar ou cadastrar percursos e rotas',
-                        'ver o menu Transporte no frontend',
+                        'administrar execuções ou validar QR Codes',
                     ],
                 },
                 {
                     'perfil': 'TI (staff, admin ou superusuário)',
-                    'capacidades': {'gerenciar': True},
+                    'capacidades': {'gerenciar': True, 'reservar': False},
                     'pode': [
                         'cadastrar, editar, desativar e reativar percursos e rotas',
                         'ver o menu Transporte no frontend',

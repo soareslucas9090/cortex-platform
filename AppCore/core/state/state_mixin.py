@@ -1,13 +1,13 @@
 class ModelStateMixin:
-    _state = None
+    _domain_state_instance = None
     state_class_builder = None
 
     @property
     def state(self):
-        if not self._state:
-            self._state = self.get_model_state_class()
+        if not self._domain_state_instance:
+            self._domain_state_instance = self.get_model_state_class()
 
-        return self._state
+        return self._domain_state_instance
 
     def get_model_state_class(self):
         if not self.state_class_builder:
@@ -21,4 +21,4 @@ class ModelStateMixin:
         
         self.status = new_state
         self.save()
-        self._state = self.get_model_state_class()
+        self._domain_state_instance = self.get_model_state_class()
