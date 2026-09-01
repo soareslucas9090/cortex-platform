@@ -9,6 +9,7 @@ from rest_framework.test import APITestCase
 from AppCore.core.exceptions.exceptions import BusinessRuleException
 from Transporte.execucoes_rotas.choices import StatusExecucaoRota
 from Transporte.execucoes_rotas.models import ExecucaoRota
+from Transporte.execucoes_rotas.state import ExecucaoFechadaState
 from Transporte.percursos.models import Percurso
 from Transporte.rotas.models import Rota
 from Transporte.tests_utils import DIAS_POR_WEEKDAY, criar_aluno, criar_usuario, obter_token
@@ -76,6 +77,18 @@ class ExecucaoRotaTestCase(APITestCase):
         with self.assertRaises(BusinessRuleException):
             execucao.business.alterar_status(StatusExecucaoRota.ABERTA)
 
+    def test_state_valida_transicao_e_atualiza_estado_em_cache(self):
+        execucao = ExecucaoRota().business.criar_execucao(self.rota.pk, self.data)
+        estado_aberto = execucao.state
+
+        execucao.state.atualizar_status(StatusExecucaoRota.FECHADA)
+
+        self.assertEqual(execucao.status, StatusExecucaoRota.FECHADA)
+        self.assertIsNot(execucao.state, estado_aberto)
+        self.assertIsInstance(execucao.state, ExecucaoFechadaState)
+        with self.assertRaises(BusinessRuleException):
+            execucao.state.atualizar_status(999)
+
     def test_api_admin_cria_e_aluno_lista_abertas(self):
         admin = criar_usuario('10000000001', admin=True)
         self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {obter_token(admin)}')
@@ -104,6 +117,7 @@ class ExecucaoRotaTestCase(APITestCase):
 
     def test_listagem_disponivel_respeita_abertura_e_limite_exato(self):
         execucao = ExecucaoRota().business.criar_execucao(self.rota.pk, self.data)
+        aluno = criar_aluno('10000000005')
         abertura = timezone.localtime(execucao.data_hora_saida).replace(
             hour=0,
             minute=0,
@@ -116,25 +130,33 @@ class ExecucaoRotaTestCase(APITestCase):
             'Transporte.execucoes_rotas.helpers.now',
             return_value=abertura - timedelta(microseconds=1),
         ):
-            self.assertFalse(ExecucaoRota().helper.listar_disponiveis_para_aluno().exists())
+            self.assertFalse(
+                ExecucaoRota().business.listar_para_usuario(aluno.usuario).exists(),
+            )
 
         with patch(
             'Transporte.execucoes_rotas.helpers.now',
             return_value=abertura,
         ):
-            self.assertTrue(ExecucaoRota().helper.listar_disponiveis_para_aluno().exists())
+            self.assertTrue(
+                ExecucaoRota().business.listar_para_usuario(aluno.usuario).exists(),
+            )
 
         with patch(
             'Transporte.execucoes_rotas.helpers.now',
             return_value=limite,
         ):
-            self.assertTrue(ExecucaoRota().helper.listar_disponiveis_para_aluno().exists())
+            self.assertTrue(
+                ExecucaoRota().business.listar_para_usuario(aluno.usuario).exists(),
+            )
 
         with patch(
             'Transporte.execucoes_rotas.helpers.now',
             return_value=limite + timedelta(microseconds=1),
         ):
-            self.assertFalse(ExecucaoRota().helper.listar_disponiveis_para_aluno().exists())
+            self.assertFalse(
+                ExecucaoRota().business.listar_para_usuario(aluno.usuario).exists(),
+            )
 
     def test_aluno_nao_cria_execucao(self):
         aluno = criar_aluno('10000000003')

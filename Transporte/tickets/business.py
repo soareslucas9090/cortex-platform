@@ -1,7 +1,7 @@
 import logging
 
 from django.core.signing import BadSignature
-from django.db import IntegrityError, transaction
+from django.db import IntegrityError
 from django.utils import timezone
 
 from AppCore.core.business.business import ModelInstanceBusiness
@@ -13,15 +13,9 @@ logger = logging.getLogger(__name__)
 
 
 class TicketBusiness(ModelInstanceBusiness):
-    # TODO | feat/tickets-transporte | Lucas Soares | 01-09-2026: Esta função tem características de um helper, mas está sendo implementada como business
-    # Business serve para processamento de dados, mas isto é só uma query simples.
     def listar_para_usuario(self, usuario):
         try:
-            queryset = self.object_instance.helper.listar_com_relacionamentos()
-            if getattr(usuario, 'tem_acesso_elevado', lambda: False)():
-                return queryset
-            aluno = getattr(usuario, 'aluno', None)
-            return queryset.filter(aluno=aluno) if aluno is not None else queryset.none()
+            return self.object_instance.helper.listar_para_usuario(usuario)
         except Exception as e:
             self.relancar_ou_erro_sistema(e, 'Não foi possível listar os tickets.', logger)
 
@@ -31,23 +25,32 @@ class TicketBusiness(ModelInstanceBusiness):
 
             from .models import Ticket
 
-            # TODO | feat/tickets-transporte | Lucas Soares | 01-09-2026: Toda PostView já é atomica. Verificar a real necessidade deste atomic aqui
-            with transaction.atomic():
-                execucao = ExecucaoRota.objects.select_for_update().select_related(
-                    'rota',
-                    'rota__percurso',
-                ).get(pk=execucao_id)
-                rules = self.object_instance.rules
-                aluno = rules.validar_aluno_elegivel(usuario)
-                rules.validar_janela_solicitacao(execucao)
-                rules.validar_ticket_inexistente(execucao, aluno)
-                rules.validar_vaga_disponivel(execucao)
-                return Ticket.objects.create(
-                    execucao_rota=execucao,
-                    aluno=aluno,
-                    status=StatusTicket.RESERVADO,
-                    reservado_em=timezone.now(),
-                )
+            execucao = ExecucaoRota.objects.select_for_update().select_related(
+                'rota',
+                'rota__percurso',
+            ).get(pk=execucao_id)
+            rules = self.object_instance.rules
+            aluno = getattr(usuario, 'aluno', None)
+            quantidade_strikes_ativos = (
+                self.object_instance.helper.contar_strikes_ativos(aluno)
+                if aluno is not None
+                else 0
+            )
+            rules.validar_aluno_elegivel(usuario, quantidade_strikes_ativos)
+            rules.validar_janela_solicitacao(execucao)
+            rules.validar_ticket_inexistente(
+                self.object_instance.helper.existe_ticket_ativo(execucao, aluno),
+            )
+            rules.validar_vaga_disponivel(
+                execucao,
+                self.object_instance.helper.contar_reservas(execucao),
+            )
+            return Ticket.objects.create(
+                execucao_rota=execucao,
+                aluno=aluno,
+                status=StatusTicket.RESERVADO,
+                reservado_em=timezone.now(),
+            )
         except IntegrityError:
             raise BusinessRuleException('O aluno já possui um ticket ativo para esta execução.')
         except Exception as e:
@@ -58,47 +61,40 @@ class TicketBusiness(ModelInstanceBusiness):
             from Transporte.execucoes_rotas.models import ExecucaoRota
 
             from .models import Ticket
-            # TODO | feat/tickets-transporte | Lucas Soares | 01-09-2026: Toda PostView já é atomica. Verificar a real necessidade deste atomic aqui
-            with transaction.atomic():
-                execucao = ExecucaoRota.objects.select_for_update().select_related(
-                    'rota',
-                    'rota__percurso',
-                ).get(pk=execucao_id)
-                rules = self.object_instance.rules
-                aluno = rules.validar_aluno_elegivel(usuario)
-                rules.validar_janela_solicitacao(execucao)
-                rules.validar_ticket_inexistente(execucao, aluno)
-                rules.validar_execucao_lotada(execucao)
-                return Ticket.objects.create(
-                    execucao_rota=execucao,
-                    aluno=aluno,
-                    status=StatusTicket.EM_ESPERA,
-                    entrou_em_espera_em=timezone.now(),
-                )
+            execucao = ExecucaoRota.objects.select_for_update().select_related(
+                'rota',
+                'rota__percurso',
+            ).get(pk=execucao_id)
+            rules = self.object_instance.rules
+            aluno = getattr(usuario, 'aluno', None)
+            quantidade_strikes_ativos = (
+                self.object_instance.helper.contar_strikes_ativos(aluno)
+                if aluno is not None
+                else 0
+            )
+            rules.validar_aluno_elegivel(usuario, quantidade_strikes_ativos)
+            rules.validar_janela_solicitacao(execucao)
+            rules.validar_ticket_inexistente(
+                self.object_instance.helper.existe_ticket_ativo(execucao, aluno),
+            )
+            rules.validar_execucao_lotada(
+                execucao,
+                self.object_instance.helper.contar_reservas(execucao),
+            )
+            return Ticket.objects.create(
+                execucao_rota=execucao,
+                aluno=aluno,
+                status=StatusTicket.EM_ESPERA,
+                entrou_em_espera_em=timezone.now(),
+            )
         except IntegrityError:
             raise BusinessRuleException('O aluno já possui um ticket ativo para esta execução.')
         except Exception as e:
             self.relancar_ou_erro_sistema(e, 'Não foi possível entrar na fila de espera.', logger)
 
-    def obter_por_codigo(self, codigo, bloquear=False):
-        # TODO | feat/tickets-transporte | Lucas Soares | 01-09-2026: Esta função tem características de um helper, mas está sendo implementada como business
-        # Business serve para processamento de dados, mas isto é só uma query simples.
-        
-        # TODO | feat/tickets-transporte | Lucas Soares | 01-09-2026: nenhuma chamada está sendo feita com bloquear=True. Verificar necessidade
-        # Outra coisa é que em alguns caso um select_for_update é sempre necessário, talvez não seja responsabilidade da view dizer se sim ou se não
+    def obter_por_codigo(self, codigo):
         try:
-            from .models import Ticket
-
-            queryset = Ticket.objects.select_related(
-                'execucao_rota',
-                'execucao_rota__rota',
-                'execucao_rota__rota__percurso',
-                'aluno',
-                'aluno__usuario',
-            )
-            if bloquear:
-                queryset = queryset.select_for_update()
-            return queryset.get(codigo=codigo)
+            return self.object_instance.helper.obter_por_codigo(codigo)
         except Exception as e:
             self.relancar_ou_erro_sistema(e, 'Não foi possível obter o ticket.', logger)
 
@@ -108,27 +104,24 @@ class TicketBusiness(ModelInstanceBusiness):
 
             from .models import Ticket
 
-            with transaction.atomic():
-                ticket_base = self.object_instance
-                execucao = ExecucaoRota.objects.select_for_update().get(
-                    pk=ticket_base.execucao_rota_id,
-                )
-                ticket = Ticket.objects.select_for_update().select_related(
-                    'aluno__usuario',
-                    'execucao_rota',
-                ).get(pk=ticket_base.pk)
-                ticket.rules.validar_dono_ou_admin(usuario)
-                ticket.rules.validar_status(
-                    StatusTicket.RESERVADO,
-                    'Somente um ticket reservado pode ser cancelado por esta ação.',
-                )
-                ticket.rules.validar_limite_cancelamento()
-                ticket.rules.pode_transicionar_para(StatusTicket.CANCELADO)
-                ticket.status = StatusTicket.CANCELADO
-                ticket.cancelado_em = timezone.now()
-                ticket.save(update_fields=['status', 'cancelado_em', 'updated_at'])
-                promovido = self.promover_proximo_da_fila(execucao)
-                return ticket, promovido
+            ticket_base = self.object_instance
+            execucao = ExecucaoRota.objects.select_for_update().get(
+                pk=ticket_base.execucao_rota_id,
+            )
+            ticket = Ticket.objects.select_for_update().select_related(
+                'aluno__usuario',
+                'execucao_rota',
+            ).get(pk=ticket_base.pk)
+            ticket.rules.validar_dono_ou_admin(usuario)
+            ticket.rules.validar_status(
+                StatusTicket.RESERVADO,
+                'Somente um ticket reservado pode ser cancelado por esta ação.',
+            )
+            ticket.rules.validar_limite_cancelamento()
+            ticket.cancelado_em = timezone.now()
+            ticket.state.atualizar_status(StatusTicket.CANCELADO)
+            promovido = self._promover_proximo_da_fila(execucao)
+            return ticket, promovido
         except Exception as e:
             self.relancar_ou_erro_sistema(e, 'Não foi possível cancelar o ticket.', logger)
 
@@ -136,36 +129,31 @@ class TicketBusiness(ModelInstanceBusiness):
         try:
             from .models import Ticket
 
-            with transaction.atomic():
-                ticket = Ticket.objects.select_for_update().select_related(
-                    'aluno__usuario',
-                    'execucao_rota',
-                ).get(pk=self.object_instance.pk)
-                ticket.rules.validar_dono_ou_admin(usuario)
-                ticket.rules.validar_status(
-                    StatusTicket.EM_ESPERA,
-                    'Somente um ticket em espera pode sair da fila.',
-                )
-                ticket.rules.validar_limite_cancelamento()
-                ticket.rules.pode_transicionar_para(StatusTicket.CANCELADO)
-                ticket.status = StatusTicket.CANCELADO
-                ticket.cancelado_em = timezone.now()
-                ticket.save(update_fields=['status', 'cancelado_em', 'updated_at'])
-                return ticket
+            ticket = Ticket.objects.select_for_update().select_related(
+                'aluno__usuario',
+                'execucao_rota',
+            ).get(pk=self.object_instance.pk)
+            ticket.rules.validar_dono_ou_admin(usuario)
+            ticket.rules.validar_status(
+                StatusTicket.EM_ESPERA,
+                'Somente um ticket em espera pode sair da fila.',
+            )
+            ticket.rules.validar_limite_cancelamento()
+            ticket.cancelado_em = timezone.now()
+            ticket.state.atualizar_status(StatusTicket.CANCELADO)
+            return ticket
         except Exception as e:
             self.relancar_ou_erro_sistema(e, 'Não foi possível sair da fila de espera.', logger)
 
-    def promover_proximo_da_fila(self, execucao):
+    def _promover_proximo_da_fila(self, execucao):
         try:
             from .models import Ticket
 
             ticket = Ticket().helper.proximo_da_fila(execucao)
             if ticket is None:
                 return None
-            ticket.rules.pode_transicionar_para(StatusTicket.RESERVADO)
-            ticket.status = StatusTicket.RESERVADO
             ticket.reservado_em = timezone.now()
-            ticket.save(update_fields=['status', 'reservado_em', 'updated_at'])
+            ticket.state.atualizar_status(StatusTicket.RESERVADO)
             return ticket
         except Exception as e:
             self.relancar_ou_erro_sistema(e, 'Não foi possível promover o próximo ticket.', logger)
@@ -176,18 +164,15 @@ class TicketBusiness(ModelInstanceBusiness):
 
             from .models import Ticket
 
-            with transaction.atomic():
-                ticket = Ticket.objects.select_for_update().select_related(
-                    'execucao_rota',
-                    'aluno__usuario',
-                ).get(pk=self.object_instance.pk)
-                ticket.rules.pode_marcar_ausente()
-                ticket.rules.pode_transicionar_para(StatusTicket.AUSENTE)
-                ticket.status = StatusTicket.AUSENTE
-                ticket.ausente_em = timezone.now()
-                ticket.save(update_fields=['status', 'ausente_em', 'updated_at'])
-                strike = Strike().business.criar_para_ticket(ticket)
-                return ticket, strike
+            ticket = Ticket.objects.select_for_update().select_related(
+                'execucao_rota',
+                'aluno__usuario',
+            ).get(pk=self.object_instance.pk)
+            ticket.rules.pode_marcar_ausente()
+            ticket.ausente_em = timezone.now()
+            ticket.state.atualizar_status(StatusTicket.AUSENTE)
+            strike = Strike().business.criar_para_ticket(ticket)
+            return ticket, strike
         except Exception as e:
             self.relancar_ou_erro_sistema(e, 'Não foi possível marcar a ausência.', logger)
 
@@ -207,7 +192,10 @@ class TicketBusiness(ModelInstanceBusiness):
 
     def obter_posicao(self):
         try:
-            return self.object_instance.helper.obter_posicao()
+            posicoes = self.object_instance.helper.obter_posicoes_execucao(
+                self.object_instance.execucao_rota,
+            )
+            return posicoes.get(self.object_instance.pk)
         except Exception as e:
             self.relancar_ou_erro_sistema(e, 'Não foi possível calcular a posição do ticket.', logger)
 
@@ -221,29 +209,26 @@ class TicketBusiness(ModelInstanceBusiness):
         try:
             from .models import Ticket
 
-            with transaction.atomic():
-                try:
-                    dados = Ticket().helper.decodificar_qr(codigo_qr)
-                    codigo = dados['ticket']
-                    execucao_id = dados['execucao']
-                except (BadSignature, KeyError, TypeError):
-                    raise BusinessRuleException('QR Code inválido ou adulterado.')
+            try:
+                dados = Ticket().helper.decodificar_qr(codigo_qr)
+                codigo = dados['ticket']
+                execucao_id = dados['execucao']
+            except (BadSignature, KeyError, TypeError):
+                raise BusinessRuleException('QR Code inválido ou adulterado.')
 
-                ticket = Ticket.objects.select_for_update().select_related(
-                    'execucao_rota',
-                    'execucao_rota__rota',
-                    'execucao_rota__rota__percurso',
-                    'aluno__usuario',
-                ).get(codigo=codigo)
-                if ticket.execucao_rota_id != execucao_id:
-                    raise BusinessRuleException('QR Code inválido para esta execução.')
-                if ticket.status == StatusTicket.EMBARCADO:
-                    return ticket, True
-                ticket.rules.pode_validar_qr()
-                ticket.rules.pode_transicionar_para(StatusTicket.EMBARCADO)
-                ticket.status = StatusTicket.EMBARCADO
-                ticket.embarcado_em = timezone.now()
-                ticket.save(update_fields=['status', 'embarcado_em', 'updated_at'])
-                return ticket, False
+            ticket = Ticket.objects.select_for_update().select_related(
+                'execucao_rota',
+                'execucao_rota__rota',
+                'execucao_rota__rota__percurso',
+                'aluno__usuario',
+            ).get(codigo=codigo)
+            if ticket.execucao_rota_id != execucao_id:
+                raise BusinessRuleException('QR Code inválido para esta execução.')
+            if ticket.status == StatusTicket.EMBARCADO:
+                return ticket, True
+            ticket.rules.pode_validar_qr()
+            ticket.embarcado_em = timezone.now()
+            ticket.state.atualizar_status(StatusTicket.EMBARCADO)
+            return ticket, False
         except Exception as e:
             self.relancar_ou_erro_sistema(e, 'Não foi possível validar o QR Code.', logger)

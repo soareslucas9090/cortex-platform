@@ -7,7 +7,7 @@ from Transporte.strikes.choices import StatusStrike
 
 class JustificativaHelpers(ModelInstanceHelpers):
 
-    def listar_com_relacionamentos(self):
+    def _listar_com_relacionamentos(self):
         from .models import Justificativa
 
         return Justificativa.objects.select_related(
@@ -29,5 +29,16 @@ class JustificativaHelpers(ModelInstanceHelpers):
             ),
         )
 
-    def pertence_ao_usuario(self, usuario):
-        return self.object_instance.strike.ticket.aluno.usuario == usuario
+    def listar_para_usuario(self, usuario):
+        queryset = self._listar_com_relacionamentos()
+        if getattr(usuario, 'tem_acesso_elevado', lambda: False)():
+            return queryset
+        aluno = getattr(usuario, 'aluno', None)
+        return (
+            queryset.filter(strike__ticket__aluno=aluno)
+            if aluno is not None
+            else queryset.none()
+        )
+
+    def obter_por_id(self, justificativa_id):
+        return self._listar_com_relacionamentos().get(pk=justificativa_id)

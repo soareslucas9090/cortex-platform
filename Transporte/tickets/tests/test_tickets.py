@@ -24,6 +24,7 @@ from Transporte.tickets.choices import StatusTicket
 from Transporte.tickets.models import Ticket
 from Transporte.tickets.helpers import SALT_QR_TICKET
 from Transporte.tickets.serializers import TicketSerializer
+from Transporte.tickets.state import TicketCanceladoState
 
 
 class TicketBusinessTestCase(APITestCase):
@@ -208,6 +209,18 @@ class TicketBusinessTestCase(APITestCase):
             {'tipo': 'RESERVA', 'atual': 1, 'total': 1},
         )
         self.assertIsNone(ticket_pcd.business.obter_posicao_fila())
+
+    def test_transicao_atualiza_timestamp_e_estado_em_cache(self):
+        ticket = Ticket().business.solicitar_reserva(self.execucao.pk, self.aluno.usuario)
+        estado_reservado = ticket.state
+
+        ticket, _ = ticket.business.cancelar(self.aluno.usuario)
+
+        self.assertIsNotNone(ticket.cancelado_em)
+        self.assertIsNot(ticket.state, estado_reservado)
+        self.assertIsInstance(ticket.state, TicketCanceladoState)
+        with self.assertRaises(BusinessRuleException):
+            ticket.state.atualizar_status(StatusTicket.RESERVADO)
 
     def test_embarcado_conserva_posicao_de_reserva_e_cancelado_nao_tem_posicao(self):
         ticket = Ticket().business.solicitar_reserva(self.execucao.pk, self.aluno.usuario)

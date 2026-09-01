@@ -11,8 +11,6 @@ from Transporte.rotas.choices import DiaSemana
 from Transporte.rotas.models import Rota
 
 
-# TODO | feat/tickets-transporte | Lucas Soares | 01-09-2026: Adequar os testes para o padrão do projeto
-
 DIAS_POR_WEEKDAY = {
     0: DiaSemana.SEGUNDA,
     1: DiaSemana.TERCA,

@@ -4,6 +4,7 @@ from .choices import StatusTicket
 
 
 class TicketState(ModelInstanceState):
+    status_choices_class = StatusTicket
     transicoes_permitidas = frozenset()
 
 

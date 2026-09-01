@@ -7,7 +7,7 @@ from .choices import StatusStrike
 
 class StrikeHelpers(ModelInstanceHelpers):
 
-    def listar_com_relacionamentos(self):
+    def _listar_com_relacionamentos(self):
         from .models import Strike
 
         return Strike.objects.select_related(
@@ -27,7 +27,14 @@ class StrikeHelpers(ModelInstanceHelpers):
             ),
         )
 
-    def contar_ativos_do_aluno(self):
+    def listar_para_usuario(self, usuario):
+        queryset = self._listar_com_relacionamentos()
+        if getattr(usuario, 'tem_acesso_elevado', lambda: False)():
+            return queryset
+        aluno = getattr(usuario, 'aluno', None)
+        return queryset.filter(ticket__aluno=aluno) if aluno is not None else queryset.none()
+
+    def _contar_ativos_do_aluno(self):
         from .models import Strike
 
         aluno_id = self.object_instance.ticket.aluno_id
@@ -37,4 +44,4 @@ class StrikeHelpers(ModelInstanceHelpers):
         ).count()
 
     def aluno_esta_bloqueado(self):
-        return self.contar_ativos_do_aluno() >= 3
+        return self._contar_ativos_do_aluno() >= 3

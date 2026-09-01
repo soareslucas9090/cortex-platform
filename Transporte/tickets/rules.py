@@ -5,28 +5,23 @@ from django.utils.timezone import localtime, now
 from Academico.alunos.choices import SituacaoAluno
 from AppCore.core.rules.rules import ModelInstanceRules
 from Transporte.execucoes_rotas.choices import StatusExecucaoRota
-from Transporte.strikes.choices import StatusStrike
 
 from .choices import StatusTicket
 
 
 class TicketRules(ModelInstanceRules):
 
-    # TODO | feat/tickets-transporte | Lucas Soares | 01-09-2026: Rules retornam booleans somente
-    def validar_aluno_elegivel(self, usuario):
+    def validar_aluno_elegivel(self, usuario, quantidade_strikes_ativos) -> bool:
         aluno = getattr(usuario, 'aluno', None)
         if not usuario.ativo or aluno is None or not aluno.ativo:
             self.return_exception('Somente um aluno ativo pode solicitar um ticket.')
         if aluno.situacao != SituacaoAluno.MATRICULADO:
             self.return_exception('Somente um aluno matriculado pode solicitar um ticket.')
-        strikes_ativos = aluno.tickets_transporte.filter(
-            strike__status=StatusStrike.ATIVO,
-        ).count()
-        if strikes_ativos >= 3:
+        if quantidade_strikes_ativos >= 3:
             self.return_exception(
                 'O aluno possui três ou mais strikes ativos e não pode solicitar novos tickets.'
             )
-        return aluno
+        return True
 
     def validar_execucao_aberta(self, execucao) -> bool:
         if execucao.status != StatusExecucaoRota.ABERTA:
@@ -50,26 +45,20 @@ class TicketRules(ModelInstanceRules):
             )
         return True
 
-    def validar_ticket_inexistente(self, execucao, aluno) -> bool:
-        from .models import Ticket
-
-        if Ticket.objects.filter(execucao_rota=execucao, aluno=aluno).exclude(
-            status=StatusTicket.CANCELADO,
-        ).exists():
+    def validar_ticket_inexistente(self, existe_ticket_ativo) -> bool:
+        if existe_ticket_ativo:
             self.return_exception('O aluno já possui um ticket ativo para esta execução.')
         return True
 
-    def validar_vaga_disponivel(self, execucao) -> bool:
-        ocupadas = execucao.tickets.filter(status=StatusTicket.RESERVADO).count()
-        if ocupadas >= execucao.quantidade_vagas:
+    def validar_vaga_disponivel(self, execucao, vagas_ocupadas) -> bool:
+        if vagas_ocupadas >= execucao.quantidade_vagas:
             self.return_exception(
                 'Não há vagas disponíveis. Solicite explicitamente a entrada na fila de espera.'
             )
         return True
 
-    def validar_execucao_lotada(self, execucao) -> bool:
-        ocupadas = execucao.tickets.filter(status=StatusTicket.RESERVADO).count()
-        if ocupadas < execucao.quantidade_vagas:
+    def validar_execucao_lotada(self, execucao, vagas_ocupadas) -> bool:
+        if vagas_ocupadas < execucao.quantidade_vagas:
             self.return_exception('Ainda há vagas disponíveis; solicite uma reserva direta.')
         return True
 
@@ -100,18 +89,6 @@ class TicketRules(ModelInstanceRules):
     def validar_status(self, status_esperado, mensagem) -> bool:
         if self.object_instance.status != status_esperado:
             self.return_exception(mensagem)
-        return True
-
-    # TODO | feat/tickets-transporte | Lucas Soares | 01-09-2026: Não use mais desta forma. Esta função irá parar de existir. Use diretamente
-    # self.model_instance.state.atualizar_status(novo_status) para alterar o status, lá já tem toda a tratativa necessária
-    def pode_transicionar_para(self, novo_status) -> bool:
-        if novo_status not in StatusTicket.values:
-            self.return_exception('Status de ticket inválido.')
-        if not self.object_instance.state.pode_transicionar_para(novo_status):
-            self.return_exception(
-                f'Não é possível alterar o ticket de {self.object_instance.get_status_display()} '
-                f'para {StatusTicket(novo_status).label}.'
-            )
         return True
 
     def pode_marcar_ausente(self) -> bool:
