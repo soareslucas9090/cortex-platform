@@ -12,6 +12,7 @@ from .choices import StatusTicket
 
 class TicketRules(ModelInstanceRules):
 
+    # TODO | feat/tickets-transporte | Lucas Soares | 01-09-2026: Rules retornam booleans somente
     def validar_aluno_elegivel(self, usuario):
         aluno = getattr(usuario, 'aluno', None)
         if not usuario.ativo or aluno is None or not aluno.ativo:
@@ -101,6 +102,8 @@ class TicketRules(ModelInstanceRules):
             self.return_exception(mensagem)
         return True
 
+    # TODO | feat/tickets-transporte | Lucas Soares | 01-09-2026: Não use mais desta forma. Esta função irá parar de existir. Use diretamente
+    # self.model_instance.state.atualizar_status(novo_status) para alterar o status, lá já tem toda a tratativa necessária
     def pode_transicionar_para(self, novo_status) -> bool:
         if novo_status not in StatusTicket.values:
             self.return_exception('Status de ticket inválido.')

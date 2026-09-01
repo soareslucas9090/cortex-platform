@@ -20,7 +20,7 @@ class TicketHelpers(ModelInstanceHelpers):
             'aluno',
             'aluno__usuario',
         )
-
+    # TODO | feat/tickets-transporte | Lucas Soares | 01-09-2026: Já que este método é auxiliar de outros, deixe ele privado (_anotar_prioridade_pcd())
     def anotar_prioridade_pcd(self, queryset):
         return queryset.annotate(
             prioridade_pcd=Case(
@@ -60,6 +60,7 @@ class TicketHelpers(ModelInstanceHelpers):
             status=StatusTicket.EM_ESPERA,
         ).order_by('-prioridade_pcd', 'entrou_em_espera_em', 'pk')
 
+    # TODO | feat/tickets-transporte | Lucas Soares | 01-09-2026: Já que este método é auxiliar de outros, deixe ele privado (_obter_posicao())
     def obter_posicao(self):
         ticket = self.object_instance
         return self.obter_posicoes_execucao(ticket.execucao_rota).get(ticket.pk)

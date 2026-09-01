@@ -13,7 +13,8 @@ logger = logging.getLogger(__name__)
 
 
 class TicketBusiness(ModelInstanceBusiness):
-
+    # TODO | feat/tickets-transporte | Lucas Soares | 01-09-2026: Esta função tem características de um helper, mas está sendo implementada como business
+    # Business serve para processamento de dados, mas isto é só uma query simples.
     def listar_para_usuario(self, usuario):
         try:
             queryset = self.object_instance.helper.listar_com_relacionamentos()
@@ -30,6 +31,7 @@ class TicketBusiness(ModelInstanceBusiness):
 
             from .models import Ticket
 
+            # TODO | feat/tickets-transporte | Lucas Soares | 01-09-2026: Toda PostView já é atomica. Verificar a real necessidade deste atomic aqui
             with transaction.atomic():
                 execucao = ExecucaoRota.objects.select_for_update().select_related(
                     'rota',
@@ -56,7 +58,7 @@ class TicketBusiness(ModelInstanceBusiness):
             from Transporte.execucoes_rotas.models import ExecucaoRota
 
             from .models import Ticket
-
+            # TODO | feat/tickets-transporte | Lucas Soares | 01-09-2026: Toda PostView já é atomica. Verificar a real necessidade deste atomic aqui
             with transaction.atomic():
                 execucao = ExecucaoRota.objects.select_for_update().select_related(
                     'rota',
@@ -79,6 +81,11 @@ class TicketBusiness(ModelInstanceBusiness):
             self.relancar_ou_erro_sistema(e, 'Não foi possível entrar na fila de espera.', logger)
 
     def obter_por_codigo(self, codigo, bloquear=False):
+        # TODO | feat/tickets-transporte | Lucas Soares | 01-09-2026: Esta função tem características de um helper, mas está sendo implementada como business
+        # Business serve para processamento de dados, mas isto é só uma query simples.
+        
+        # TODO | feat/tickets-transporte | Lucas Soares | 01-09-2026: nenhuma chamada está sendo feita com bloquear=True. Verificar necessidade
+        # Outra coisa é que em alguns caso um select_for_update é sempre necessário, talvez não seja responsabilidade da view dizer se sim ou se não
         try:
             from .models import Ticket
 

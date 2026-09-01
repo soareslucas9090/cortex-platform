@@ -37,6 +37,8 @@ class ExecucaoRotaRules(ModelInstanceRules):
             self.return_exception(MENSAGEM_EXECUCAO_DUPLICADA)
         return True
 
+    # TODO | feat/tickets-transporte | Lucas Soares | 01-09-2026: Não use mais desta forma. Esta função irá parar de existir. Use diretamente
+    # self.model_instance.state.atualizar_status(novo_status) para alterar o status, lá já tem toda a tratativa necessária
     def pode_transicionar_para(self, novo_status) -> bool:
         if novo_status not in StatusExecucaoRota.values:
             self.return_exception('Status de execução inválido.')
