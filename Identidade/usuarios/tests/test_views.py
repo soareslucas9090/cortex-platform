@@ -42,12 +42,13 @@ def criar_usuario(cpf, nome='Usuário Teste', password='Senha@123', is_admin=Fal
     return usuario
 
 
-def permissoes_esperadas(cortex_nivel):
+def permissoes_esperadas(cortex_nivel, reservar=False):
     return {
         'cortex': cortex_nivel,
         'infraestrutura': capacidades_infraestrutura_vazias(),
         'transporte': {
             'gerenciar': cortex_nivel == PERMISSAO_CORTEX_EDITAR_TUDO,
+            'reservar': reservar,
         },
     }
 
@@ -980,7 +981,7 @@ class UsuarioPermissoesTest(APITestCase):
         user = criar_usuario('11111111111', nome='Aluno Teste')
         Aluno.objects.create(usuario=user, ativo=True)
 
-        self.assertEqual(user.permissoes, permissoes_esperadas('EDITAR_EU'))
+        self.assertEqual(user.permissoes, permissoes_esperadas('EDITAR_EU', reservar=True))
 
     def test_usuario_servidor_ativo_tem_permissao_ler_tudo(self):
         from PessoasInstitucionais.servidores.models import Servidor
@@ -998,7 +999,7 @@ class UsuarioPermissoesTest(APITestCase):
         Aluno.objects.create(usuario=user, ativo=True)
         Servidor.objects.create(usuario=user, cargo=self.cargo, categoria=1, ativo=False)
 
-        self.assertEqual(user.permissoes, permissoes_esperadas('EDITAR_EU'))
+        self.assertEqual(user.permissoes, permissoes_esperadas('EDITAR_EU', reservar=True))
 
     def test_usuario_terceirizado_ativo_tem_permissao_ler_tudo(self):
         from PessoasInstitucionais.terceirizados.models import Terceirizado
@@ -1161,8 +1162,9 @@ class DocumentarPermissoesViewTest(APITestCase):
         self.assertIn('retirada_irrestrita', infraestrutura['capacidades'][3]['codigo'])
 
         transporte = next(modulo for modulo in modulos if modulo['chave'] == 'transporte')
-        self.assertEqual(len(transporte['capacidades']), 1)
+        self.assertEqual(len(transporte['capacidades']), 2)
         self.assertEqual(transporte['capacidades'][0]['codigo'], 'gerenciar')
+        self.assertEqual(transporte['capacidades'][1]['codigo'], 'reservar')
         self.assertGreaterEqual(len(transporte['exemplos']), 1)
         self.assertIn('secoes', transporte)
         self.assertGreaterEqual(len(transporte['secoes']), 2)

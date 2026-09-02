@@ -144,6 +144,10 @@ PROJECT_APPS = [
     'Infraestrutura.importacoes',
     'Transporte.percursos',
     'Transporte.rotas',
+    'Transporte.execucoes_rotas',
+    'Transporte.tickets',
+    'Transporte.strikes',
+    'Transporte.justificativas',
 ]
 
 _DEBUG_APPS = ['debug_toolbar'] if DEBUG else []

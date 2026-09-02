@@ -388,7 +388,8 @@ Infraestrutura/
 
 ### `Transporte/`
 
-Domínio responsável pelo transporte universitário. A v1 cobre percursos (RF017) e rotas (RF016), restrito ao perfil TI (L3).
+Domínio responsável pelo transporte universitário: cadastros, execuções datadas,
+tickets, fila de espera, embarque e tratamento de ausências.
 
 #### Estrutura atual
 
@@ -397,13 +398,21 @@ Transporte/
 ├── __init__.py
 ├── urls.py
 ├── percursos/
-└── rotas/
+├── rotas/
+├── execucoes_rotas/
+├── tickets/
+├── strikes/
+└── justificativas/
 ```
 
 #### Responsabilidades
 
 - `percursos/` → model principal `Percurso`
 - `rotas/` → model principal `Rota`
+- `execucoes_rotas/` → model principal `ExecucaoRota`
+- `tickets/` → model principal `Ticket`; tickets em espera formam a fila
+- `strikes/` → model principal `Strike`
+- `justificativas/` → model principal `Justificativa`
 
 ---
 

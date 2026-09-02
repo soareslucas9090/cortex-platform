@@ -50,7 +50,11 @@ Query params **apenas estreitam** resultados após o escopo de permissão.
 Novos produtos adicionam `permissoes_<modulo>()` em `UsuarioPermissions` e apps Django dentro de um módulo de domínio na raiz (`Infraestrutura/`, `Transporte/`), nunca em pasta genérica `APPs/`. Subdomínios = apps internos do módulo (`Infraestrutura/recursos/`, `Transporte/percursos/`, etc.).
 
 - **Infraestrutura:** capacidades booleanas (`operar`, `cadastrar`, `autorizar`, `retirada_irrestrita`), independentes de L1–L3.
-- **Transporte:** capacidade `gerenciar` alinhada a L3 (`is_staff`, `is_admin` ou superusuário); toda a API de percursos e rotas usa `IsAdminMixin`.
+- **Transporte:** capacidade `gerenciar` alinhada a L3 (`is_staff`, `is_admin` ou
+  superusuário) e capacidade `reservar` para aluno ativo, matriculado e com menos
+  de três strikes ativos. Percursos, rotas, administração de execuções, ausências,
+  QR Code e análise de justificativas são L3; o aluno acessa execuções abertas e
+  recursos próprios de tickets, strikes e justificativas.
 
 ### Documentação viva da API
 

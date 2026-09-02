@@ -144,16 +144,17 @@ class ProdutoHelpers(ModelInstanceHelpers):
         return Produto.objects.filter(validade__lt=timezone.now()).delete()
 ```
 
-### 4. **State** (`state.py`) - Máquina de Estados ⚠️ FUTURO
+### 4. **State** (`state.py`) - Máquina de Estados
 
 - **Campo obrigatório**: `status` (IntegerField com choices)
 - **Pattern**: Cada estado do choice é uma classe que herda de uma superclasse base
 - **Métodos**: `posso_editar()`, `posso_excluir()`, `posso_ver_detalhes()` (retornam bool)
 - **Acesso**: Via `model.state.FUNCAO_EXEMPLO()`
-- **Status**: **Não implementado ainda** - aguardar primeiro modelo que precise de máquina de estados
+- **Status**: implementado inicialmente em `ExecucaoRota` e `Ticket`, no domínio Transporte.
+- **Mixin**: `ModelStateMixin` mantém a instância do estado em `_domain_state_instance`;
+  nunca use `_state`, pois esse nome pertence ao controle interno de models do Django.
 
 ```python
-# FUTURO - Exemplo de como será implementado
 class DocumentoState:
     def posso_aprovar(self): return False
 

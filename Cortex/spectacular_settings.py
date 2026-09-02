@@ -17,5 +17,10 @@ SPECTACULAR_SETTINGS = {
         'TipoRecursoEnum': 'Infraestrutura.recursos.choices.TipoRecurso',
         'EstadoRecursoEnum': 'Infraestrutura.recursos.choices.EstadoRecurso',
         'DiaSemanaEnum': 'Transporte.rotas.choices.DiaSemana',
+        'StatusImportacaoEnum': 'Identidade.usuarios.models.StatusImportacao',
+        'StatusExecucaoRotaEnum': 'Transporte.execucoes_rotas.choices.StatusExecucaoRota',
+        'StatusTicketEnum': 'Transporte.tickets.choices.StatusTicket',
+        'StatusStrikeEnum': 'Transporte.strikes.choices.StatusStrike',
+        'StatusJustificativaEnum': 'Transporte.justificativas.choices.StatusJustificativa',
     },
 }
