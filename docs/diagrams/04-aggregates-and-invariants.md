@@ -334,7 +334,8 @@ Representa o curso e sua relação com os vínculos acadêmicos dos alunos.
 10. QR Code só embarca ticket reservado em execução no estado de embarque.
 11. A aprovação da justificativa e a retirada do strike da contagem são atômicas.
 12. O conferente inicia o monitoramento somente se `now > T-30`; o aluno ainda
-    solicita no instante igual a T-30.
+    solicita no instante igual a T-30. Depois de `FINALIZADA` o monitoramento
+    não reinicia (replay de iniciar só em `EM_EMBARQUE`).
 13. Ao finalizar a execução, a espera que não couber fica `NAO_CONTEMPLADO`.
 14. Entrada sem ticket exige fila vazia e não promove quem está `EM_ESPERA`.
     Aluno que cancelou o ticket ou está `AUSENTE` nesta execução pode entrar por
@@ -343,6 +344,10 @@ Representa o curso e sua relação com os vínculos acadêmicos dos alunos.
 15. Depois de `EM_EMBARQUE` a execução não pode ser cancelada; só finaliza.
 16. Remover da espera na conferência só atinge tickets da fila visível
     (N = vagas restantes após a chamada).
+17. Conferência por ID no dia: `CANCELADA` não existe nesse escopo;
+    `FINALIZADA` permanece para consulta da execução e replay de finalizar,
+    não de iniciar. Filas da conferência só em `EM_EMBARQUE`.
+    A lista do dia mostra `FINALIZADA` e omite `CANCELADA`.
 
 ### Fronteira transacional
 

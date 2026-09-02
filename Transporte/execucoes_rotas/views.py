@@ -161,16 +161,22 @@ class FecharReservasExecucaoRotaView(AlterarStatusExecucaoRotaView):
     tags=['Transporte · Conferência'],
     summary='Iniciar embarque',
     description=(
-        'Inicia o monitoramento da execução do dia somente depois de 30 minutos antes da saída.\n\n'
+        'Inicia o monitoramento da execução do dia somente depois de 30 minutos antes da saída. '
+        'O campo pode_monitorar do payload indica se o botão de iniciar deve aparecer. '
+        'Não reinicia após FINALIZADA.\n\n'
         f'{PERMISSAO_CONFERIR}'
     ),
     request=SerializerVazio,
     responses={
         status.HTTP_200_OK: ExecucaoRotaSerializer,
-        status.HTTP_400_BAD_REQUEST: {'description': 'Fora da janela T-30 ou transição inválida.'},
+        status.HTTP_400_BAD_REQUEST: {
+            'description': 'Fora da janela T-30, execução já finalizada, ou transição inválida.',
+        },
         status.HTTP_401_UNAUTHORIZED: {'description': 'Não autenticado.'},
         status.HTTP_403_FORBIDDEN: {'description': 'Sem capacidade conferir.'},
-        status.HTTP_404_NOT_FOUND: {'description': 'Execução não encontrada.'},
+        status.HTTP_404_NOT_FOUND: {
+            'description': 'Execução de outro dia ou cancelada (fora do escopo da conferência).',
+        },
     },
 )
 class IniciarEmbarqueExecucaoRotaView(PodeConferirTransporteMixin, BasicPostAPIView):
@@ -196,7 +202,9 @@ class IniciarEmbarqueExecucaoRotaView(PodeConferirTransporteMixin, BasicPostAPIV
         status.HTTP_400_BAD_REQUEST: {'description': 'Chamada pendente ou transição inválida.'},
         status.HTTP_401_UNAUTHORIZED: {'description': 'Não autenticado.'},
         status.HTTP_403_FORBIDDEN: {'description': 'Sem capacidade conferir.'},
-        status.HTTP_404_NOT_FOUND: {'description': 'Execução não encontrada.'},
+        status.HTTP_404_NOT_FOUND: {
+            'description': 'Execução de outro dia ou cancelada (fora do escopo da conferência).',
+        },
     },
 )
 class FinalizarExecucaoRotaView(PodeConferirTransporteMixin, BasicPostAPIView):
@@ -234,7 +242,8 @@ class CancelarExecucaoRotaView(AlterarStatusExecucaoRotaView):
     tags=['Transporte · Conferência'],
     summary='Listar execuções do dia para conferência',
     description=(
-        'Lista somente as execuções do dia. Query params apenas reduzem o conjunto.\n\n'
+        'Lista as execuções do dia em ABERTA, FECHADA, EM_EMBARQUE e FINALIZADA. '
+        'Não inclui CANCELADA. Query params apenas reduzem o conjunto.\n\n'
         f'{PERMISSAO_CONFERIR}'
     ),
     parameters=[
@@ -298,7 +307,9 @@ class ListarExecucoesConferenciaView(PodeConferirTransporteMixin, BasicGetAPIVie
         status.HTTP_200_OK: TicketConferenciaSerializer(many=True),
         status.HTTP_401_UNAUTHORIZED: {'description': 'Não autenticado.'},
         status.HTTP_403_FORBIDDEN: {'description': 'Sem capacidade conferir.'},
-        status.HTTP_404_NOT_FOUND: {'description': 'Execução não encontrada no escopo.'},
+        status.HTTP_404_NOT_FOUND: {
+            'description': 'Execução de outro dia ou cancelada (fora do escopo da conferência).',
+        },
     },
 )
 class ListarReservasConferenciaView(PodeConferirTransporteMixin, BasicGetAPIView):
@@ -330,6 +341,9 @@ class ListarReservasConferenciaView(PodeConferirTransporteMixin, BasicGetAPIView
         status.HTTP_400_BAD_REQUEST: {'description': 'Chamada inválida.'},
         status.HTTP_401_UNAUTHORIZED: {'description': 'Não autenticado.'},
         status.HTTP_403_FORBIDDEN: {'description': 'Sem capacidade conferir.'},
+        status.HTTP_404_NOT_FOUND: {
+            'description': 'Execução de outro dia ou cancelada (fora do escopo da conferência).',
+        },
     },
 )
 class FinalizarChamadaConferenciaView(PodeConferirTransporteMixin, BasicPostAPIView):
@@ -368,6 +382,9 @@ class FinalizarChamadaConferenciaView(PodeConferirTransporteMixin, BasicPostAPIV
         status.HTTP_200_OK: TicketConferenciaSerializer(many=True),
         status.HTTP_401_UNAUTHORIZED: {'description': 'Não autenticado.'},
         status.HTTP_403_FORBIDDEN: {'description': 'Sem capacidade conferir.'},
+        status.HTTP_404_NOT_FOUND: {
+            'description': 'Execução de outro dia ou cancelada (fora do escopo da conferência).',
+        },
     },
 )
 class ListarFilaConferenciaView(PodeConferirTransporteMixin, BasicGetAPIView):
@@ -401,7 +418,12 @@ class ListarFilaConferenciaView(PodeConferirTransporteMixin, BasicGetAPIView):
         },
         status.HTTP_401_UNAUTHORIZED: {'description': 'Não autenticado.'},
         status.HTTP_403_FORBIDDEN: {'description': 'Sem capacidade conferir.'},
-        status.HTTP_404_NOT_FOUND: {'description': 'Ticket ou execução não encontrado.'},
+        status.HTTP_404_NOT_FOUND: {
+            'description': (
+                'Ticket inexistente, execução de outro dia ou cancelada '
+                '(fora do escopo da conferência).'
+            ),
+        },
     },
 )
 class RemoverFilaConferenciaView(PodeConferirTransporteMixin, BasicPostAPIView):

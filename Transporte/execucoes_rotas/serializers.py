@@ -44,7 +44,7 @@ class ExecucaoRotaSerializer(serializers.ModelSerializer):
 
     @extend_schema_field(OpenApiTypes.BOOL)
     def get_pode_monitorar(self, obj):
-        return obj.helper.pode_monitorar()
+        return obj.business.pode_monitorar()
 
     def _obter_resumo_vagas(self, obj):
         if not hasattr(self, '_resumo_vagas_por_execucao'):

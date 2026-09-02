@@ -7,6 +7,7 @@ from rest_framework import status
 from rest_framework.test import APITestCase
 
 from Transporte.execucoes_rotas.choices import StatusExecucaoRota
+from Transporte.execucoes_rotas.rules import MENSAGEM_MONITORAMENTO_APOS_FINALIZAR
 from Transporte.strikes.models import Strike
 from Transporte.tests_utils import (
     criar_aluno,
@@ -432,16 +433,126 @@ class ConferenciaTransporteTestCase(APITestCase):
         )
         self.assertEqual(resposta.status_code, status.HTTP_404_NOT_FOUND)
 
-    def test_lista_oculta_cancelada_e_mantem_finalizada(self):
+    def test_cancelada_do_dia_retorna_404_na_conferencia(self):
         _, cancelada = criar_execucao_hoje(vagas=1)
         cancelada.status = StatusExecucaoRota.CANCELADA
         cancelada.save(update_fields=['status'])
-        self.execucao.status = StatusExecucaoRota.FINALIZADA
-        self.execucao.save(update_fields=['status'])
+        iniciar = self.client.post(
+            reverse('transporte:conferencia-iniciar', kwargs={'pk': cancelada.pk}),
+        )
+        reservas = self.client.get(
+            reverse('transporte:conferencia-reservas', kwargs={'pk': cancelada.pk}),
+        )
+        self.assertEqual(iniciar.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(reservas.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_replay_finalizar_execucao_ja_finalizada(self):
+        with self._entrar_na_janela_monitoramento():
+            self.client.post(
+                reverse('transporte:conferencia-iniciar', kwargs={'pk': self.execucao.pk}),
+            )
+        self.client.post(
+            reverse('transporte:conferencia-finalizar-chamada', kwargs={'pk': self.execucao.pk}),
+            {'ausentes': []},
+            format='json',
+        )
+        primeira = self.client.post(
+            reverse('transporte:conferencia-finalizar', kwargs={'pk': self.execucao.pk}),
+        )
+        segunda = self.client.post(
+            reverse('transporte:conferencia-finalizar', kwargs={'pk': self.execucao.pk}),
+        )
+        self.assertEqual(primeira.status_code, status.HTTP_200_OK)
+        self.assertEqual(segunda.status_code, status.HTTP_200_OK)
+        self.execucao.refresh_from_db()
+        self.assertEqual(self.execucao.status, StatusExecucaoRota.FINALIZADA)
+
+    def _finalizar_conferencia_na_janela(self):
+        with self._entrar_na_janela_monitoramento():
+            iniciar = self.client.post(
+                reverse('transporte:conferencia-iniciar', kwargs={'pk': self.execucao.pk}),
+            )
+        self.assertEqual(iniciar.status_code, status.HTTP_200_OK)
+        chamada = self.client.post(
+            reverse('transporte:conferencia-finalizar-chamada', kwargs={'pk': self.execucao.pk}),
+            {'ausentes': []},
+            format='json',
+        )
+        self.assertEqual(chamada.status_code, status.HTTP_200_OK)
+        finalizar = self.client.post(
+            reverse('transporte:conferencia-finalizar', kwargs={'pk': self.execucao.pk}),
+        )
+        self.assertEqual(finalizar.status_code, status.HTTP_200_OK)
+        self.execucao.refresh_from_db()
+        self.assertEqual(self.execucao.status, StatusExecucaoRota.FINALIZADA)
+
+    def test_nao_inicia_apos_finalizar_conferencia(self):
+        self._finalizar_conferencia_na_janela()
+        with self._entrar_na_janela_monitoramento():
+            resposta = self.client.post(
+                reverse('transporte:conferencia-iniciar', kwargs={'pk': self.execucao.pk}),
+            )
+        self.assertEqual(resposta.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn(MENSAGEM_MONITORAMENTO_APOS_FINALIZAR, str(resposta.data))
+
+    def test_l3_nao_inicia_apos_finalizar_conferencia(self):
+        self._finalizar_conferencia_na_janela()
+        admin = criar_usuario('21000000096', admin=True)
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {obter_token(admin)}')
+        with self._entrar_na_janela_monitoramento():
+            resposta = self.client.post(
+                reverse('transporte:conferencia-iniciar', kwargs={'pk': self.execucao.pk}),
+            )
+        self.assertEqual(resposta.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn(MENSAGEM_MONITORAMENTO_APOS_FINALIZAR, str(resposta.data))
+
+    def test_pode_monitorar_falso_quando_finalizada(self):
+        self._finalizar_conferencia_na_janela()
+        admin = criar_usuario('21000000095', admin=True)
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {obter_token(admin)}')
+        resposta = self.client.get(
+            reverse('transporte:execucao-rota-detalhe', kwargs={'pk': self.execucao.pk}),
+        )
+        self.assertEqual(resposta.status_code, status.HTTP_200_OK)
+        self.assertFalse(resposta.data['dados']['pode_monitorar'])
+
+    def test_lista_pode_monitorar_true_apos_t30(self):
+        with self._entrar_na_janela_monitoramento():
+            resposta = self.client.get(reverse('transporte:conferencia-execucao-list'))
+        self.assertEqual(resposta.status_code, status.HTTP_200_OK)
+        item = next(dado for dado in resposta.data['dados'] if dado['id'] == self.execucao.pk)
+        self.assertTrue(item['pode_monitorar'])
+
+    def test_lista_mostra_finalizada_e_oculta_cancelada_para_conferente(self):
+        self._assert_lista_conferencia_mostra_finalizada_oculta_cancelada()
+
+    def test_lista_mostra_finalizada_e_oculta_cancelada_para_l3(self):
+        admin = criar_usuario('21000000097', admin=True)
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {obter_token(admin)}')
+        self._assert_lista_conferencia_mostra_finalizada_oculta_cancelada()
+
+    def _assert_lista_conferencia_mostra_finalizada_oculta_cancelada(self):
+        _, fechada = criar_execucao_hoje(vagas=1)
+        fechada.status = StatusExecucaoRota.FECHADA
+        fechada.save(update_fields=['status'])
+        _, em_embarque = criar_execucao_hoje(vagas=1)
+        em_embarque.status = StatusExecucaoRota.EM_EMBARQUE
+        em_embarque.save(update_fields=['status'])
+        _, finalizada = criar_execucao_hoje(vagas=1)
+        finalizada.status = StatusExecucaoRota.FINALIZADA
+        finalizada.save(update_fields=['status'])
+        _, cancelada = criar_execucao_hoje(vagas=1)
+        cancelada.status = StatusExecucaoRota.CANCELADA
+        cancelada.save(update_fields=['status'])
         resposta = self.client.get(reverse('transporte:conferencia-execucao-list'))
-        ids = [item['id'] for item in resposta.data['dados']]
-        self.assertIn(self.execucao.pk, ids)
-        self.assertNotIn(cancelada.pk, ids)
+        self.assertEqual(resposta.status_code, status.HTTP_200_OK)
+        por_id = {item['id']: item for item in resposta.data['dados']}
+        self.assertIn(self.execucao.pk, por_id)
+        self.assertIn(fechada.pk, por_id)
+        self.assertIn(em_embarque.pk, por_id)
+        self.assertIn(finalizada.pk, por_id)
+        self.assertNotIn(cancelada.pk, por_id)
+        self.assertFalse(por_id[finalizada.pk]['pode_monitorar'])
 
     def test_replay_iniciar_embarque_e_idempotente(self):
         with self._entrar_na_janela_monitoramento():

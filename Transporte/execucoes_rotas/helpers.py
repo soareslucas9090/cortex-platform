@@ -5,6 +5,14 @@ from django.utils.timezone import localdate, now
 from AppCore.core.helpers.helpers import ModelInstanceHelpers
 
 from .choices import StatusExecucaoRota
+from .rules import execucao_elegivel_para_iniciar_monitoramento
+
+STATUSES_LISTAGEM_CONFERENCIA = (
+    StatusExecucaoRota.ABERTA,
+    StatusExecucaoRota.FECHADA,
+    StatusExecucaoRota.EM_EMBARQUE,
+    StatusExecucaoRota.FINALIZADA,
+)
 
 
 class ExecucaoRotaHelpers(ModelInstanceHelpers):
@@ -81,10 +89,7 @@ class ExecucaoRotaHelpers(ModelInstanceHelpers):
         )
 
     def pode_monitorar(self) -> bool:
-        execucao = self.object_instance
-        if execucao.status not in (StatusExecucaoRota.ABERTA, StatusExecucaoRota.FECHADA):
-            return False
-        return now() > execucao.data_hora_saida - timedelta(minutes=30)
+        return execucao_elegivel_para_iniciar_monitoramento(self.object_instance)
 
     def listar_para_conferencia(self, data_param=None):
         from .models import ExecucaoRota
@@ -92,7 +97,8 @@ class ExecucaoRotaHelpers(ModelInstanceHelpers):
         data_hoje = localdate()
         queryset = ExecucaoRota.objects.select_related('rota', 'rota__percurso').filter(
             data_execucao=data_hoje,
-        ).exclude(status=StatusExecucaoRota.CANCELADA)
+            status__in=STATUSES_LISTAGEM_CONFERENCIA,
+        )
         if data_param:
             try:
                 data_valida = date.fromisoformat(data_param)

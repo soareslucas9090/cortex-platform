@@ -35,6 +35,16 @@ class ExecucaoRotaBusiness(ModelInstanceBusiness):
         except Exception as e:
             self.relancar_ou_erro_sistema(e, 'Não foi possível calcular as vagas da execução.', logger)
 
+    def pode_monitorar(self) -> bool:
+        try:
+            return self.object_instance.helper.pode_monitorar()
+        except Exception as e:
+            self.relancar_ou_erro_sistema(
+                e,
+                'Não foi possível verificar se o monitoramento pode ser iniciado.',
+                logger,
+            )
+
     def criar_execucao(self, rota_id, data_execucao):
         try:
             from Transporte.rotas.models import Rota

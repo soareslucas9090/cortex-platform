@@ -5905,6 +5905,13 @@ paths:
               schema:
                 description: Sem capacidade conferir.
           description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                description: Execução de outro dia ou cancelada (fora do escopo da
+                  conferência).
+          description: ''
   /cortex/transporte/execucoes-rotas/{id}/conferencia/fila/{codigo}/remover/:
     post:
       operationId: transporte_execucoes_rotas_conferencia_fila_remover_create
@@ -5959,7 +5966,8 @@ paths:
           content:
             application/json:
               schema:
-                description: Ticket ou execução não encontrado.
+                description: Ticket inexistente, execução de outro dia ou cancelada
+                  (fora do escopo da conferência).
           description: ''
   /cortex/transporte/execucoes-rotas/{id}/conferencia/finalizar/:
     post:
@@ -6008,7 +6016,8 @@ paths:
           content:
             application/json:
               schema:
-                description: Execução não encontrada.
+                description: Execução de outro dia ou cancelada (fora do escopo da
+                  conferência).
           description: ''
   /cortex/transporte/execucoes-rotas/{id}/conferencia/finalizar-chamada/:
     post:
@@ -6064,11 +6073,18 @@ paths:
               schema:
                 description: Sem capacidade conferir.
           description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                description: Execução de outro dia ou cancelada (fora do escopo da
+                  conferência).
+          description: ''
   /cortex/transporte/execucoes-rotas/{id}/conferencia/iniciar/:
     post:
       operationId: transporte_execucoes_rotas_conferencia_iniciar_create
       description: |-
-        Inicia o monitoramento da execução do dia somente depois de 30 minutos antes da saída.
+        Inicia o monitoramento da execução do dia somente depois de 30 minutos antes da saída. O campo pode_monitorar do payload indica se o botão de iniciar deve aparecer. Não reinicia após FINALIZADA.
 
         **Permissões:** capacidade transporte.conferir. Lê e opera execuções do dia e, após iniciar o monitoramento, as filas de ticket e de espera dessa execução. Não amplia cadastro nem recursos globais do módulo.
       summary: Iniciar embarque
@@ -6093,7 +6109,8 @@ paths:
           content:
             application/json:
               schema:
-                description: Fora da janela T-30 ou transição inválida.
+                description: Fora da janela T-30, execução já finalizada, ou transição
+                  inválida.
           description: ''
         '401':
           content:
@@ -6111,7 +6128,8 @@ paths:
           content:
             application/json:
               schema:
-                description: Execução não encontrada.
+                description: Execução de outro dia ou cancelada (fora do escopo da
+                  conferência).
           description: ''
   /cortex/transporte/execucoes-rotas/{id}/conferencia/reservas/:
     get:
@@ -6170,7 +6188,8 @@ paths:
           content:
             application/json:
               schema:
-                description: Execução não encontrada no escopo.
+                description: Execução de outro dia ou cancelada (fora do escopo da
+                  conferência).
           description: ''
   /cortex/transporte/execucoes-rotas/{id}/fechar-reservas/:
     post:
@@ -6299,7 +6318,7 @@ paths:
     get:
       operationId: transporte_execucoes_rotas_conferencia_list
       description: |-
-        Lista somente as execuções do dia. Query params apenas reduzem o conjunto.
+        Lista as execuções do dia em ABERTA, FECHADA, EM_EMBARQUE e FINALIZADA. Não inclui CANCELADA. Query params apenas reduzem o conjunto.
 
         **Permissões:** capacidade transporte.conferir. Lê e opera execuções do dia e, após iniciar o monitoramento, as filas de ticket e de espera dessa execução. Não amplia cadastro nem recursos globais do módulo.
       summary: Listar execuções do dia para conferência

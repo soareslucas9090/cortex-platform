@@ -69,15 +69,24 @@ Transporte/
 - Reservas e entradas na fila exigem estado `ABERTA`.
 - Para alunos, execuções disponíveis são exibidas somente de segunda a sexta,
   da meia-noite do próprio dia até exatamente 30 minutos antes da saída.
-- Conferente inicia o monitoramento (`EM_EMBARQUE`) somente depois de 30 minutos
-  antes da saída (`now > data_hora_saida − 30 min`). No instante exato do T-30
-  o aluno ainda pode solicitar ticket; o conferente ainda não inicia.
-  Depois do horário de saída, no mesmo dia, o conferente ainda pode iniciar.
-- A listagem da conferência no dia inclui `ABERTA`, `FECHADA`, `EM_EMBARQUE` e
-  `FINALIZADA`. Execuções `CANCELADA` não aparecem. `EM_EMBARQUE` serve para
-  continuar o monitoramento. L3 obedece a mesma data (hoje) e o mesmo T-30.
-  Se existir execução no sábado ou domingo, ela entra nessa lista; o aluno
-  continua sem reservar no fim de semana.
+- Conferente e L3 iniciam o monitoramento (`EM_EMBARQUE`) somente depois de
+  30 minutos antes da saída (`now > data_hora_saida − 30 min`), em execução
+  `ABERTA` ou `FECHADA`. No instante exato do T-30 o aluno ainda pode solicitar
+  ticket; o monitoramento ainda não inicia. Depois do horário de saída, no
+  mesmo dia, ainda é possível iniciar. Replay de iniciar só enquanto
+  `EM_EMBARQUE`. Depois de `FINALIZADA` (chamada de tickets e espera encerradas)
+  não se inicia de novo; o campo `pode_monitorar` no payload indica se o botão
+  de iniciar deve aparecer.
+- A listagem da conferência no dia inclui `ABERTA`, `FECHADA`, `EM_EMBARQUE`
+  e `FINALIZADA` (consulta; `pode_monitorar` falso). `CANCELADA` não aparece.
+  `EM_EMBARQUE` serve para continuar o monitoramento. L3 obedece a mesma data
+  (hoje) e o mesmo T-30. Se existir execução no sábado ou domingo, ela entra
+  nessa lista; o aluno continua sem reservar no fim de semana.
+- Abrir conferência por ID no mesmo dia: `CANCELADA` responde como não
+  encontrada (404). `FINALIZADA` permanece no escopo para consulta da execução
+  e replay de finalizar. Iniciar monitoramento nessa execução retorna 400.
+  Chamada e espera (GET/POST de filas) só existem em `EM_EMBARQUE`; em
+  `FINALIZADA` a lista basta. Outro dia continua 404.
 - Depois de `EM_EMBARQUE`, L3 **não** cancela a execução: só finaliza a
   conferência ou deixa o monitoramento seguir.
 

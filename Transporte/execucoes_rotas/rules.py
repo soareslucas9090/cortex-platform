@@ -19,6 +19,22 @@ DIAS_SEMANA_PYTHON = {
 }
 
 MENSAGEM_EXECUCAO_DUPLICADA = 'Já existe uma execução desta rota para a data informada.'
+MENSAGEM_MONITORAMENTO_APOS_FINALIZAR = (
+    'Não é possível iniciar o monitoramento após finalizar a conferência.'
+)
+MENSAGEM_MONITORAMENTO_STATUS = (
+    'Somente execuções abertas ou fechadas podem iniciar o embarque.'
+)
+MENSAGEM_MONITORAMENTO_T30 = (
+    'O monitoramento só fica disponível após 30 minutos antes da saída.'
+)
+
+
+def execucao_elegivel_para_iniciar_monitoramento(execucao) -> bool:
+    return (
+        execucao.status in (StatusExecucaoRota.ABERTA, StatusExecucaoRota.FECHADA)
+        and now() > execucao.data_hora_saida - timedelta(minutes=30)
+    )
 
 
 class ExecucaoRotaRules(ModelInstanceRules):
@@ -41,13 +57,13 @@ class ExecucaoRotaRules(ModelInstanceRules):
         return True
 
     def validar_janela_monitoramento(self, execucao) -> bool:
+        if execucao.status == StatusExecucaoRota.FINALIZADA:
+            self.return_exception(MENSAGEM_MONITORAMENTO_APOS_FINALIZAR)
+        if execucao_elegivel_para_iniciar_monitoramento(execucao):
+            return True
         if execucao.status not in (StatusExecucaoRota.ABERTA, StatusExecucaoRota.FECHADA):
-            self.return_exception('Somente execuções abertas ou fechadas podem iniciar o embarque.')
-        if now() <= execucao.data_hora_saida - timedelta(minutes=30):
-            self.return_exception(
-                'O monitoramento só fica disponível após 30 minutos antes da saída.'
-            )
-        return True
+            self.return_exception(MENSAGEM_MONITORAMENTO_STATUS)
+        self.return_exception(MENSAGEM_MONITORAMENTO_T30)
 
     def validar_chamada_para_finalizar(self, execucao) -> bool:
         if not execucao.chamada_tickets_concluida:
@@ -62,7 +78,10 @@ class ExecucaoRotaRules(ModelInstanceRules):
         return True
 
     def validar_execucao_do_dia(self, execucao) -> bool:
-        if execucao.data_execucao != localdate():
+        if (
+            execucao.data_execucao != localdate()
+            or execucao.status == StatusExecucaoRota.CANCELADA
+        ):
             self.return_exception(
                 'Execução não encontrada no escopo da conferência.',
                 type_exception=NotFoundException,
