@@ -10,6 +10,7 @@ from Transporte.execucoes_rotas.choices import StatusExecucaoRota
 from Transporte.strikes.models import Strike
 from Transporte.tests_utils import (
     criar_aluno,
+    criar_aluno_pcd,
     criar_conferente,
     criar_execucao_hoje,
     criar_rota_e_execucao,
@@ -127,6 +128,26 @@ class ConferenciaTransporteTestCase(APITestCase):
         self.assertEqual(chamada.status_code, status.HTTP_200_OK)
         fila = self.client.get(reverse('transporte:conferencia-fila', kwargs={'pk': self.execucao.pk}))
         self.assertEqual(fila.status_code, status.HTTP_200_OK)
+
+    def test_lista_monitoramento_indica_deficiencia(self):
+        pcd = criar_aluno_pcd('21000000012', nome='Aluno PcD')
+        Ticket.objects.create(
+            execucao_rota=self.execucao,
+            aluno=pcd,
+            status=StatusTicket.RESERVADO,
+            reservado_em=timezone.now(),
+        )
+        with self._entrar_na_janela_monitoramento():
+            self.client.post(
+                reverse('transporte:conferencia-iniciar', kwargs={'pk': self.execucao.pk}),
+            )
+        reservas = self.client.get(
+            reverse('transporte:conferencia-reservas', kwargs={'pk': self.execucao.pk}),
+        )
+        self.assertEqual(reservas.status_code, status.HTTP_200_OK)
+        por_nome = {item['aluno']['nome']: item['aluno'] for item in reservas.data['dados']}
+        self.assertTrue(por_nome['Aluno PcD']['tem_deficiencia'])
+        self.assertFalse(por_nome['Reservado']['tem_deficiencia'])
 
     def test_lote_ausente_gera_strike_e_demais_embarcam(self):
         segundo = criar_aluno('21000000011', nome='Segundo reservado')

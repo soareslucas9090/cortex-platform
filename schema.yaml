@@ -5861,7 +5861,7 @@ paths:
     get:
       operationId: transporte_execucoes_rotas_conferencia_fila_list
       description: |-
-        Lista somente quem caberia agora (PcD + FIFO, limitado às vagas restantes). Quem está além desse limite não aparece; a remoção nesta tela vale só para os tickets listados. A promoção de toda a espera ocorre ao finalizar.
+        Lista somente quem caberia agora (PcD + FIFO, limitado às vagas restantes). Quem está além desse limite não aparece; a remoção nesta tela vale só para os tickets listados. A promoção de toda a espera ocorre ao finalizar. Em `aluno.tem_deficiencia` o front recebe se há deficiência cadastrada (sem o tipo clínico).
 
         **Permissões:** capacidade transporte.conferir. Lê e opera execuções do dia e, após iniciar o monitoramento, as filas de ticket e de espera dessa execução. Não amplia cadastro nem recursos globais do módulo.
       summary: Listar fila de espera visível
@@ -6117,7 +6117,7 @@ paths:
     get:
       operationId: transporte_execucoes_rotas_conferencia_reservas_list
       description: |-
-        Lista os tickets da execução monitorada. O filtro cpf apenas reduz o conjunto.
+        Lista os tickets da execução monitorada. O filtro cpf apenas reduz o conjunto. Em `aluno.tem_deficiencia` o front recebe se há deficiência cadastrada (sem o tipo clínico).
 
         **Permissões:** capacidade transporte.conferir. Lê e opera execuções do dia e, após iniciar o monitoramento, as filas de ticket e de espera dessa execução. Não amplia cadastro nem recursos globais do módulo.
       summary: Listar tickets da chamada
@@ -7594,11 +7594,15 @@ components:
         cpf:
           type: string
           readOnly: true
+        tem_deficiencia:
+          type: boolean
+          readOnly: true
       required:
       - cpf
       - foto
       - id
       - nome
+      - tem_deficiencia
     AlunoCurso:
       type: object
       properties:

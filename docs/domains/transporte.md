@@ -133,7 +133,9 @@ a capacidade congelada da execução. Para `EM_ESPERA`, o total é a quantidade 
 de alunos aguardando. Alterar `Usuario.deficiencia` reposiciona dinamicamente os
 tickets existentes nos dois grupos. A prioridade altera apenas a ordem exibida e
 de atendimento: nunca remove uma reserva confirmada nem promove alguém sem vaga.
-O tipo de deficiência não é exposto nas respostas dos tickets.
+O tipo de deficiência não é exposto nas respostas dos tickets. Na listagem da
+conferência (`GET .../conferencia/reservas/` e a fila visível), `aluno.tem_deficiencia`
+indica só se o cadastro tem deficiência preenchida, para o selo no monitoramento.
 
 O payload `posicao` informa `tipo` (`RESERVA` ou `ESPERA`), `atual` e `total`.
 `posicao_fila` permanece como campo compatível e só contém valor para `EM_ESPERA`.
@@ -207,9 +209,11 @@ Base execuções: `/cortex/transporte/execucoes-rotas/`
 - `POST` `execucoes-rotas/<pk>/conferencia/iniciar/` e `.../conferencia/finalizar/`
   (capacidade `conferir`)
 - `GET` `execucoes-rotas/<pk>/conferencia/reservas/`
+  (`aluno.tem_deficiencia`: selo PcD sem o tipo clínico)
 - `POST` `execucoes-rotas/<pk>/conferencia/finalizar-chamada/`
 - `GET` `execucoes-rotas/<pk>/conferencia/fila/` — só os N primeiros da espera
-  (N = vagas restantes); quem não cabe agora não entra nesta lista
+  (N = vagas restantes); quem não cabe agora não entra nesta lista;
+  `aluno.tem_deficiencia` igual ao da listagem da chamada
 - `POST` `execucoes-rotas/<pk>/conferencia/fila/<uuid>/remover/`
   (somente UUID que o GET da fila devolveria agora)
 - `POST` `execucoes-rotas/<pk>/conferencia/entradas-sem-ticket/validar/`

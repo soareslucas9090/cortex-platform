@@ -601,7 +601,10 @@ class PermissaoDocumentacao:
                         (
                             'Reservas confirmadas e fila priorizam alunos com '
                             'Usuario.deficiencia preenchido e preservam a ordem de solicitação '
-                            'dentro dos grupos PcD e não PcD, sem retirar vagas confirmadas.'
+                            'dentro dos grupos PcD e não PcD, sem retirar vagas confirmadas. '
+                            'Nas listagens da conferência (reservas e fila visível), '
+                            'aluno.tem_deficiencia indica só se o cadastro tem deficiência; '
+                            'o tipo clínico não é enviado.'
                         ),
                         (
                             'O payload posicao contém tipo, atual e total. Em RESERVA, o total '

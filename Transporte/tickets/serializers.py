@@ -16,6 +16,12 @@ class AlunoTicketSerializer(serializers.Serializer):
 
 class AlunoConferenciaSerializer(AlunoTicketSerializer):
     cpf = serializers.CharField(source='usuario.cpf', read_only=True)
+    tem_deficiencia = serializers.SerializerMethodField()
+
+    @extend_schema_field(OpenApiTypes.BOOL)
+    def get_tem_deficiencia(self, obj) -> bool:
+        valor = getattr(obj.usuario, 'deficiencia', None)
+        return bool(valor and str(valor).strip())
 
 
 class PosicaoTicketSerializer(serializers.Serializer):

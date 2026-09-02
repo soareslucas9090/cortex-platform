@@ -33,6 +33,10 @@ PERMISSAO_CONFERIR = (
     'após iniciar o monitoramento, as filas de ticket e de espera dessa execução. '
     'Não amplia cadastro nem recursos globais do módulo.'
 )
+INDICATIVO_DEFICIENCIA = (
+    'Em `aluno.tem_deficiencia` o front recebe se há deficiência cadastrada '
+    '(sem o tipo clínico).'
+)
 
 
 @extend_schema(
@@ -270,7 +274,8 @@ class ListarExecucoesConferenciaView(PodeConferirTransporteMixin, BasicGetAPIVie
     tags=['Transporte · Conferência'],
     summary='Listar tickets da chamada',
     description=(
-        'Lista os tickets da execução monitorada. O filtro cpf apenas reduz o conjunto.\n\n'
+        'Lista os tickets da execução monitorada. O filtro cpf apenas reduz o conjunto. '
+        f'{INDICATIVO_DEFICIENCIA}\n\n'
         f'{PERMISSAO_CONFERIR}'
     ),
     parameters=[
@@ -346,7 +351,8 @@ class FinalizarChamadaConferenciaView(PodeConferirTransporteMixin, BasicPostAPIV
     description=(
         'Lista somente quem caberia agora (PcD + FIFO, limitado às vagas restantes). '
         'Quem está além desse limite não aparece; a remoção nesta tela vale só para '
-        'os tickets listados. A promoção de toda a espera ocorre ao finalizar.\n\n'
+        'os tickets listados. A promoção de toda a espera ocorre ao finalizar. '
+        f'{INDICATIVO_DEFICIENCIA}\n\n'
         f'{PERMISSAO_CONFERIR}'
     ),
     parameters=[
