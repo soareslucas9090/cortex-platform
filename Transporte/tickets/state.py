@@ -21,6 +21,7 @@ class TicketEmEsperaState(TicketState):
         StatusTicket.RESERVADO,
         StatusTicket.CANCELADO,
         StatusTicket.EMBARCADO,
+        StatusTicket.NAO_CONTEMPLADO,
     })
 
 
@@ -36,11 +37,16 @@ class TicketAusenteState(TicketState):
     pass
 
 
+class TicketNaoContempladoState(TicketState):
+    pass
+
+
 ESTADOS_TICKET = {
     StatusTicket.RESERVADO: TicketReservadoState,
     StatusTicket.EM_ESPERA: TicketEmEsperaState,
     StatusTicket.CANCELADO: TicketCanceladoState,
     StatusTicket.EMBARCADO: TicketEmbarcadoState,
     StatusTicket.AUSENTE: TicketAusenteState,
+    StatusTicket.NAO_CONTEMPLADO: TicketNaoContempladoState,
 }
 

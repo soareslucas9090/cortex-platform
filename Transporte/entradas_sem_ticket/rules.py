@@ -5,6 +5,11 @@ from Transporte.tickets.choices import StatusTicket
 
 class EntradaSemTicketRules(ModelInstanceRules):
 
+    def validar_cpf_informado(self, cpf) -> bool:
+        if not cpf or not str(cpf).strip():
+            self.return_exception('Informe o CPF do aluno.')
+        return True
+
     def validar_execucao_em_embarque(self, execucao) -> bool:
         if execucao.status != StatusExecucaoRota.EM_EMBARQUE:
             self.return_exception('A entrada sem ticket só é permitida durante o embarque.')
@@ -33,9 +38,10 @@ class EntradaSemTicketRules(ModelInstanceRules):
         if ticket is None:
             return True
         if ticket.status == StatusTicket.EM_ESPERA:
-            return True
+            self.return_exception(
+                'Aluno em espera deve ser tratado na fila, não pelo fluxo sem ticket.'
+            )
         self.return_exception('O aluno já possui ticket ou entrada nesta execução.')
-        return True
 
     def validar_entrada_inexistente(self, existe_entrada) -> bool:
         if existe_entrada:

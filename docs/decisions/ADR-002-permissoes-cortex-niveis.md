@@ -52,7 +52,7 @@ Novos produtos adicionam `permissoes_<modulo>()` em `UsuarioPermissions` e apps 
 - **Infraestrutura:** capacidades booleanas (`operar`, `cadastrar`, `autorizar`, `retirada_irrestrita`), independentes de L1–L3.
 - **Transporte:** capacidade `gerenciar` alinhada a L3; `reservar` para aluno
   elegível; `conferir` para L3 ou colaborador (servidor/terceirizado) com função
-  configurada. Percursos, rotas e análise de justificativas são L3; o conferente
+  **ou** permissão direta no usuário (OR). Percursos, rotas e análise de justificativas são L3; o conferente
   opera apenas as execuções do dia e as filas da execução monitorada.
 
 ### Documentação viva da API

@@ -20,14 +20,14 @@ from .views import (
 
 urlpatterns = [
     path(
-        'conferencia/execucoes/',
-        roteador_por_metodo(GET=ListarExecucoesConferenciaView),
-        name='conferencia-execucao-list',
-    ),
-    path(
         'execucoes-rotas/',
         roteador_por_metodo(GET=ListarExecucoesRotasView, POST=CriarExecucaoRotaView),
         name='execucao-rota-list',
+    ),
+    path(
+        'execucoes-rotas/conferencia/',
+        roteador_por_metodo(GET=ListarExecucoesConferenciaView),
+        name='conferencia-execucao-list',
     ),
     path(
         'execucoes-rotas/<int:pk>/',
@@ -45,19 +45,19 @@ urlpatterns = [
         name='execucao-rota-fechar-reservas',
     ),
     path(
-        'execucoes-rotas/<int:pk>/iniciar-embarque/',
-        roteador_por_metodo(POST=IniciarEmbarqueExecucaoRotaView),
-        name='execucao-rota-iniciar-embarque',
-    ),
-    path(
-        'execucoes-rotas/<int:pk>/finalizar/',
-        roteador_por_metodo(POST=FinalizarExecucaoRotaView),
-        name='execucao-rota-finalizar',
-    ),
-    path(
         'execucoes-rotas/<int:pk>/cancelar/',
         roteador_por_metodo(POST=CancelarExecucaoRotaView),
         name='execucao-rota-cancelar',
+    ),
+    path(
+        'execucoes-rotas/<int:pk>/conferencia/iniciar/',
+        roteador_por_metodo(POST=IniciarEmbarqueExecucaoRotaView),
+        name='conferencia-iniciar',
+    ),
+    path(
+        'execucoes-rotas/<int:pk>/conferencia/finalizar/',
+        roteador_por_metodo(POST=FinalizarExecucaoRotaView),
+        name='conferencia-finalizar',
     ),
     path(
         'execucoes-rotas/<int:pk>/conferencia/reservas/',

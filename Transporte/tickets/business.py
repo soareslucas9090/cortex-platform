@@ -256,12 +256,10 @@ class TicketBusiness(ModelInstanceBusiness):
 
     def remover_espera_conferencia(self, execucao):
         try:
-            from .models import Ticket
-
-            ticket = Ticket.objects.select_for_update().select_related(
-                'aluno__usuario',
-                'execucao_rota',
-            ).get(pk=self.object_instance.pk)
+            execucao.helper.obter_por_id(execucao.pk, bloquear=True)
+            ticket = self.object_instance.helper.obter_bloqueado_por_id(
+                self.object_instance.pk,
+            )
             ticket.rules.validar_status(
                 StatusTicket.EM_ESPERA,
                 'Somente um ticket em espera pode ser removido da fila da conferência.',
@@ -281,15 +279,12 @@ class TicketBusiness(ModelInstanceBusiness):
     def encerrar_fila_na_finalizacao(self, execucao):
         try:
             vagas = execucao.business.obter_resumo_vagas()['vagas_disponiveis']
-            fila = list(self.object_instance.helper._ordenar_fila(
-                execucao.tickets.select_for_update(),
-            ))
+            fila = list(self.object_instance.helper.listar_espera_bloqueada(execucao))
             for ticket in fila[:vagas]:
                 ticket.embarcado_em = timezone.now()
                 ticket.state.atualizar_status(StatusTicket.EMBARCADO)
             for ticket in fila[vagas:]:
-                ticket.cancelado_em = timezone.now()
-                ticket.state.atualizar_status(StatusTicket.CANCELADO)
+                ticket.state.atualizar_status(StatusTicket.NAO_CONTEMPLADO)
         except Exception as e:
             self.relancar_ou_erro_sistema(
                 e,

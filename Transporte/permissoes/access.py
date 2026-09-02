@@ -1,3 +1,4 @@
+from django.core.exceptions import ObjectDoesNotExist
 from rest_framework.permissions import BasePermission, IsAuthenticated
 
 
@@ -14,18 +15,13 @@ def usuario_e_administrador_transporte(user) -> bool:
 def usuario_tem_perfil_colaborador_ativo(user) -> bool:
     if not user:
         return False
-    try:
-        servidor = getattr(user, 'servidor', None)
-        if servidor is not None and getattr(servidor, 'ativo', False):
+    for atributo in ('servidor', 'terceirizado'):
+        try:
+            perfil = getattr(user, atributo)
+        except ObjectDoesNotExist:
+            continue
+        if perfil is not None and getattr(perfil, 'ativo', False):
             return True
-    except Exception:
-        pass
-    try:
-        terceirizado = getattr(user, 'terceirizado', None)
-        if terceirizado is not None and getattr(terceirizado, 'ativo', False):
-            return True
-    except Exception:
-        pass
     return False
 
 

@@ -612,7 +612,7 @@ Os itens abaixo podem ser refinados em artefatos posteriores ou na modelagem det
 - detalhamento da categoria do servidor
 - detalhamento da situação da matrícula
 - regras adicionais para aluno monitor
-- notificações, perfis de conferente/motorista e entrada sem ticket
+- notificações e perfis de motorista; entrada sem ticket pertence a `ExecucaoRota`
 
 ---
 
@@ -623,7 +623,8 @@ O núcleo do Cortex parte de `Usuario` como centro da identidade, e organiza o r
 - estrutura organizacional (`Setor`, `Funcao`, `SetorVinculo`)
 - perfis institucionais (`Servidor`, `Terceirizado`, `Cargo`, `EmpresaInstituicao`)
 - perfis acadêmicos (`Aluno`, `Curso`, `AlunoCurso`)
-- transporte universitário (`Percurso`, `Rota`, `ExecucaoRota`, `Ticket`, `Strike`, `Justificativa`)
+- transporte universitário (`Percurso`, `Rota`, `ExecucaoRota`, `Ticket`,
+  `EntradaSemTicket`, `Strike`, `Justificativa`)
 
 As decisões mais importantes consolidadas neste ERD textual são:
 

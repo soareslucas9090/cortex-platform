@@ -314,6 +314,7 @@ Representa o curso e sua relação com os vínculos acadêmicos dos alunos.
 
 - `ExecucaoRota`
 - `Ticket`
+- `EntradaSemTicket`
 - `Strike`
 - `Justificativa`
 
@@ -332,6 +333,12 @@ Representa o curso e sua relação com os vínculos acadêmicos dos alunos.
 9. Três strikes ativos bloqueiam somente novas solicitações.
 10. QR Code só embarca ticket reservado em execução no estado de embarque.
 11. A aprovação da justificativa e a retirada do strike da contagem são atômicas.
+12. O conferente inicia o monitoramento somente se `now > T-30`; o aluno ainda
+    solicita no instante igual a T-30.
+13. Ao finalizar a execução, a espera que não couber fica `NAO_CONTEMPLADO`.
+14. Entrada sem ticket exige fila vazia e não promove quem está `EM_ESPERA`.
+    Aluno que cancelou o ticket pode entrar por CPF nessas condições.
+15. Depois de `EM_EMBARQUE` a execução não pode ser cancelada; só finaliza.
 
 ### Fronteira transacional
 

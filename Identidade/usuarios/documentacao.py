@@ -520,8 +520,8 @@ class PermissaoDocumentacao:
                 'O módulo transporte controla o cadastro de percursos e rotas, as execuções '
                 'datadas, os tickets e a conferência de embarque. L3 administra cadastros. '
                 'Alunos elegíveis reservam tickets. Conferentes (L3 ou colaborador servidor/'
-                'terceirizado com função conferir) operam as execuções do dia. O payload expõe '
-                'gerenciar, reservar e conferir.'
+                'terceirizado com conferir por função ou por usuário) operam as execuções do dia. '
+                'O payload expõe gerenciar, reservar e conferir.'
             ),
             'secoes': [
                 {
@@ -544,9 +544,10 @@ class PermissaoDocumentacao:
                         {
                             'destaque': 'conferir',
                             'texto': (
-                                'true para L3 ou para servidor/terceirizado ativo com vínculo '
-                                'cuja função tem PermissaoFuncaoTransporte.conferir. L2 sozinho '
-                                'não abre o módulo de conferência.'
+                                'true para L3 ou para servidor/terceirizado ativo com '
+                                'PermissaoFuncaoTransporte.conferir na função do vínculo ativo '
+                                'ou PermissaoUsuarioTransporte.conferir (OR). L2 sozinho não '
+                                'abre o módulo de conferência.'
                             ),
                         },
                         {
@@ -574,9 +575,23 @@ class PermissaoDocumentacao:
                     'titulo': 'Execuções, tickets e conferência',
                     'paragrafos': [
                         (
-                            'L3 cria execuções, abre/fecha reservas e cancela. Conferentes '
-                            'listam execuções do dia e, após iniciar o monitoramento '
-                            '(EM_EMBARQUE), operam as filas de ticket e de espera dessa execução.'
+                            'L3 cria execuções, abre/fecha reservas e cancela somente antes do '
+                            'embarque. Conferentes listam execuções do dia (ABERTA, FECHADA, '
+                            'EM_EMBARQUE e FINALIZADA; sem CANCELADA), inclusive fim de semana '
+                            'se houver execução. O monitoramento inicia só depois de T-30 '
+                            '(now > data_hora_saida − 30 min); L3 obedece a mesma data e janela. '
+                            'Após EM_EMBARQUE, operam as filas de ticket e de espera dessa execução. '
+                            'QR Code permanece L3.'
+                        ),
+                        (
+                            'A chamada envia só ausentes (omitir = presença, com strike). '
+                            'Remover da espera cancela sem strike. Finalizar promove quem cabe '
+                            'e o restante fica NAO_CONTEMPLADO. A GET da fila mostra só quem '
+                            'caberia agora (vagas restantes); o restante da espera não aparece '
+                            'nessa lista. Entrada por CPF exige fila vazia; '
+                            'POST em entradas-sem-ticket/validar/ consulta sem gravar; o POST em '
+                            'entradas-sem-ticket/ persiste. Quem está EM_ESPERA não usa CPF; '
+                            'quem cancelou o ticket pode usar se a fila estiver vazia e houver vaga.'
                         ),
                         (
                             'Reserva, entrada e saída da fila e cancelamento pelo aluno funcionam '
@@ -628,7 +643,8 @@ class PermissaoDocumentacao:
                     'codigo': 'conferir',
                     'nome': 'Conferir embarque',
                     'quem_usa': (
-                        'L3 ou colaborador (servidor ou terceirizado) com função conferir'
+                        'L3 ou colaborador (servidor ou terceirizado) com conferir por função '
+                        'ou por usuário'
                     ),
                     'pode': (
                         'Listar execuções do dia e, após iniciar o monitoramento, operar as '
@@ -659,11 +675,11 @@ class PermissaoDocumentacao:
                     ],
                 },
                 {
-                    'perfil': 'Conferente (servidor ou terceirizado com função)',
+                    'perfil': 'Conferente (servidor ou terceirizado com função ou permissão no usuário)',
                     'capacidades': {'gerenciar': False, 'reservar': False, 'conferir': True},
                     'pode': [
                         'listar execuções do dia',
-                        'iniciar embarque após T-30',
+                        'iniciar embarque somente depois de T-30',
                         'operar filas de ticket e espera da execução monitorada',
                     ],
                     'nao_pode': [

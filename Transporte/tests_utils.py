@@ -14,7 +14,7 @@ from PessoasInstitucionais.servidores.models import Servidor
 from PessoasInstitucionais.terceirizados.models import Terceirizado
 from Transporte.execucoes_rotas.models import ExecucaoRota
 from Transporte.percursos.models import Percurso
-from Transporte.permissoes.models import PermissaoFuncaoTransporte
+from Transporte.permissoes.models import PermissaoFuncaoTransporte, PermissaoUsuarioTransporte
 from Transporte.rotas.choices import DiaSemana
 from Transporte.rotas.models import Rota
 
@@ -90,6 +90,14 @@ def criar_conferente(cpf='30000000001', nome='Conferente', terceirizado=False):
     else:
         cargo = Cargo.objects.create(nome=f'Cargo {cpf}')
         Servidor.objects.create(usuario=usuario, cargo=cargo, categoria=1, ativo=True)
+    return usuario
+
+
+def criar_conferente_por_usuario(cpf='30000000011', nome='Conferente usuário'):
+    usuario = criar_usuario(cpf, nome=nome)
+    cargo = Cargo.objects.create(nome=f'Cargo direto {cpf}')
+    Servidor.objects.create(usuario=usuario, cargo=cargo, categoria=1, ativo=True)
+    PermissaoUsuarioTransporte().business.criar_permissao(usuario.pk, conferir=True)
     return usuario
 
 

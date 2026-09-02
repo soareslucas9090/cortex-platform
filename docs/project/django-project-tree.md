@@ -414,7 +414,8 @@ Transporte/
 - `execucoes_rotas/` → model principal `ExecucaoRota`
 - `tickets/` → model principal `Ticket`; tickets em espera formam a fila
 - `entradas_sem_ticket/` → model principal `EntradaSemTicket`
-- `permissoes/` → model `PermissaoFuncaoTransporte` (capacidade `conferir`; sem rotas HTTP)
+- `permissoes/` → models `PermissaoFuncaoTransporte` e `PermissaoUsuarioTransporte`
+  (capacidade `conferir` em OR; sem rotas HTTP)
 - `strikes/` → model principal `Strike`
 - `justificativas/` → model principal `Justificativa`
 

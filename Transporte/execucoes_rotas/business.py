@@ -75,6 +75,8 @@ class ExecucaoRotaBusiness(ModelInstanceBusiness):
                 self.object_instance.pk,
                 bloquear=True,
             )
+            if novo_status == StatusExecucaoRota.CANCELADA:
+                execucao.rules.validar_cancelamento_antes_do_embarque(execucao)
             return execucao.state.atualizar_status(novo_status)
         except Exception as e:
             self.relancar_ou_erro_sistema(e, 'Não foi possível alterar o status da execução.', logger)
@@ -89,13 +91,13 @@ class ExecucaoRotaBusiness(ModelInstanceBusiness):
                 logger,
             )
 
-    def obter_para_conferencia(self, execucao_id, exigir_embarque=False, usuario=None):
+    def obter_para_conferencia(self, execucao_id, exigir_embarque=False):
         try:
-            return self.object_instance.helper.obter_para_conferencia(
-                execucao_id,
-                exigir_embarque=exigir_embarque,
-                usuario=usuario,
-            )
+            execucao = self.object_instance.helper.obter_por_id(execucao_id)
+            execucao.rules.validar_execucao_do_dia(execucao)
+            if exigir_embarque:
+                execucao.rules.validar_filas_apos_monitoramento(execucao)
+            return execucao
         except Exception as e:
             self.relancar_ou_erro_sistema(
                 e,
@@ -109,8 +111,14 @@ class ExecucaoRotaBusiness(ModelInstanceBusiness):
                 self.object_instance.pk,
                 bloquear=True,
             )
+            if execucao.status == StatusExecucaoRota.EM_EMBARQUE:
+                return execucao
             execucao.rules.validar_janela_monitoramento(execucao)
-            return execucao.state.atualizar_status(StatusExecucaoRota.EM_EMBARQUE)
+            execucao = execucao.state.atualizar_status(StatusExecucaoRota.EM_EMBARQUE)
+            if execucao.monitoramento_iniciado_em is None:
+                execucao.monitoramento_iniciado_em = timezone.now()
+                execucao.save(update_fields=['monitoramento_iniciado_em'])
+            return execucao
         except Exception as e:
             self.relancar_ou_erro_sistema(e, 'Não foi possível iniciar o embarque.', logger)
 
@@ -124,19 +132,17 @@ class ExecucaoRotaBusiness(ModelInstanceBusiness):
                 bloquear=True,
             )
             execucao.rules.validar_execucao_em_embarque(execucao)
+            ausentes = [str(codigo) for codigo in (ausentes or [])]
+            execucao.rules.validar_ausentes_sem_duplicata(ausentes)
+
             if execucao.chamada_tickets_concluida:
+                execucao.rules.validar_replay_chamada(
+                    ausentes,
+                    execucao.chamada_ausentes_codigos or [],
+                )
                 return execucao
 
-            ausentes = list(ausentes or [])
-            tickets = list(
-                Ticket.objects.select_for_update().select_related(
-                    'execucao_rota',
-                    'aluno__usuario',
-                ).filter(
-                    execucao_rota=execucao,
-                    status=StatusTicket.RESERVADO,
-                )
-            )
+            tickets = list(Ticket().helper.listar_reservados_bloqueados(execucao))
             por_codigo = {str(ticket.codigo): ticket for ticket in tickets}
             for codigo in ausentes:
                 ticket = por_codigo.get(str(codigo))
@@ -153,8 +159,17 @@ class ExecucaoRotaBusiness(ModelInstanceBusiness):
                 ticket.embarcado_em = timezone.now()
                 ticket.state.atualizar_status(StatusTicket.EMBARCADO)
 
+            agora = timezone.now()
             execucao.chamada_tickets_concluida = True
-            execucao.save(update_fields=['chamada_tickets_concluida'])
+            execucao.chamada_concluida_em = agora
+            execucao.chamada_ausentes_codigos = ausentes
+            execucao.save(
+                update_fields=[
+                    'chamada_tickets_concluida',
+                    'chamada_concluida_em',
+                    'chamada_ausentes_codigos',
+                ],
+            )
             return execucao
         except Exception as e:
             self.relancar_ou_erro_sistema(
@@ -171,9 +186,14 @@ class ExecucaoRotaBusiness(ModelInstanceBusiness):
                 self.object_instance.pk,
                 bloquear=True,
             )
+            if execucao.status == StatusExecucaoRota.FINALIZADA:
+                return execucao
             execucao.rules.validar_execucao_em_embarque(execucao)
             execucao.rules.validar_chamada_para_finalizar(execucao)
             Ticket().business.encerrar_fila_na_finalizacao(execucao)
-            return execucao.state.atualizar_status(StatusExecucaoRota.FINALIZADA)
+            execucao = execucao.state.atualizar_status(StatusExecucaoRota.FINALIZADA)
+            execucao.finalizada_em = timezone.now()
+            execucao.save(update_fields=['finalizada_em'])
+            return execucao
         except Exception as e:
             self.relancar_ou_erro_sistema(e, 'Não foi possível finalizar a execução.', logger)

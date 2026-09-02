@@ -98,7 +98,7 @@ class UsuarioPermissions(UserModelPermission):
         gerenciar = usuario_e_administrador_transporte(user)
         conferir = gerenciar
         if not conferir and usuario_tem_perfil_colaborador_ativo(user):
-            conferir = PermissaoFuncaoTransporte().helper.funcao_confere(user)
+            conferir = PermissaoFuncaoTransporte().helper.usuario_confere(user)
 
         reservar = False
         aluno = getattr(user, 'aluno', None)

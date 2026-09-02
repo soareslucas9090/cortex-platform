@@ -157,7 +157,7 @@ class FecharReservasExecucaoRotaView(AlterarStatusExecucaoRotaView):
     tags=['Transporte · Conferência'],
     summary='Iniciar embarque',
     description=(
-        'Inicia o monitoramento da execução do dia a partir de 30 minutos antes da saída.\n\n'
+        'Inicia o monitoramento da execução do dia somente depois de 30 minutos antes da saída.\n\n'
         f'{PERMISSAO_CONFERIR}'
     ),
     request=SerializerVazio,
@@ -174,7 +174,7 @@ class IniciarEmbarqueExecucaoRotaView(PodeConferirTransporteMixin, BasicPostAPIV
     mensagem_sucesso = 'Embarque iniciado com sucesso.'
 
     def do_action_post(self, serializer_data, request, *args, **kwargs):
-        execucao = ExecucaoRota().business.obter_para_conferencia(kwargs['pk'], usuario=request.user)
+        execucao = ExecucaoRota().business.obter_para_conferencia(kwargs['pk'])
         execucao = execucao.business.iniciar_embarque()
         return {'dados': ExecucaoRotaSerializer(execucao).data}
 
@@ -183,8 +183,8 @@ class IniciarEmbarqueExecucaoRotaView(PodeConferirTransporteMixin, BasicPostAPIV
     tags=['Transporte · Conferência'],
     summary='Finalizar execução',
     description=(
-        'Embarca a fila que cabe nas vagas restantes, cancela o restante da espera sem strike '
-        f'e finaliza a execução.\n\n{PERMISSAO_CONFERIR}'
+        'Embarca a fila que cabe nas vagas restantes, marca o restante da espera '
+        f'como não contemplado (sem strike) e finaliza a execução.\n\n{PERMISSAO_CONFERIR}'
     ),
     request=SerializerVazio,
     responses={
@@ -200,7 +200,7 @@ class FinalizarExecucaoRotaView(PodeConferirTransporteMixin, BasicPostAPIView):
     mensagem_sucesso = 'Execução finalizada com sucesso.'
 
     def do_action_post(self, serializer_data, request, *args, **kwargs):
-        execucao = ExecucaoRota().business.obter_para_conferencia(kwargs['pk'], usuario=request.user)
+        execucao = ExecucaoRota().business.obter_para_conferencia(kwargs['pk'])
         execucao = execucao.business.finalizar_conferencia()
         return {'dados': ExecucaoRotaSerializer(execucao).data}
 
@@ -208,7 +208,10 @@ class FinalizarExecucaoRotaView(PodeConferirTransporteMixin, BasicPostAPIView):
 @extend_schema(
     tags=['Transporte · Execuções de rotas'],
     summary='Cancelar execução',
-    description=f'Cancela uma execução ainda não finalizada.\n\n{PERMISSAO_ADMIN}',
+    description=(
+        'Cancela uma execução ainda não iniciada em embarque e ainda não finalizada.\n\n'
+        f'{PERMISSAO_ADMIN}'
+    ),
     request=SerializerVazio,
     responses={
         status.HTTP_200_OK: ExecucaoRotaSerializer,
@@ -302,7 +305,6 @@ class ListarReservasConferenciaView(PodeConferirTransporteMixin, BasicGetAPIView
         execucao = ExecucaoRota().business.obter_para_conferencia(
             self.kwargs['pk'],
             exigir_embarque=True,
-            usuario=self.request.user,
         )
         return Ticket().business.listar_reservas_conferencia(
             execucao,
@@ -333,7 +335,6 @@ class FinalizarChamadaConferenciaView(PodeConferirTransporteMixin, BasicPostAPIV
         execucao = ExecucaoRota().business.obter_para_conferencia(
             kwargs['pk'],
             exigir_embarque=True,
-            usuario=request.user,
         )
         execucao = execucao.business.finalizar_chamada(serializer_data.get('ausentes') or [])
         return {'dados': ExecucaoRotaSerializer(execucao).data}
@@ -343,7 +344,9 @@ class FinalizarChamadaConferenciaView(PodeConferirTransporteMixin, BasicPostAPIV
     tags=['Transporte · Conferência'],
     summary='Listar fila de espera visível',
     description=(
-        'Lista os primeiros N tickets em espera, limitado às vagas restantes.\n\n'
+        'Lista somente quem caberia agora (PcD + FIFO, limitado às vagas restantes). '
+        'Quem está além desse limite não aparece; a remoção nesta tela vale só para '
+        'os tickets listados. A promoção de toda a espera ocorre ao finalizar.\n\n'
         f'{PERMISSAO_CONFERIR}'
     ),
     parameters=[
@@ -370,7 +373,6 @@ class ListarFilaConferenciaView(PodeConferirTransporteMixin, BasicGetAPIView):
         execucao = ExecucaoRota().business.obter_para_conferencia(
             self.kwargs['pk'],
             exigir_embarque=True,
-            usuario=self.request.user,
         )
         return Ticket().business.listar_fila_visivel_conferencia(execucao)
 
@@ -399,7 +401,6 @@ class RemoverFilaConferenciaView(PodeConferirTransporteMixin, BasicPostAPIView):
         execucao = ExecucaoRota().business.obter_para_conferencia(
             kwargs['pk'],
             exigir_embarque=True,
-            usuario=request.user,
         )
         ticket = Ticket().business.obter_por_codigo(kwargs['codigo'])
         ticket = ticket.business.remover_espera_conferencia(execucao)
