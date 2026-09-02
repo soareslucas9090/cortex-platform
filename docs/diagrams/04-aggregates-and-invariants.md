@@ -337,8 +337,12 @@ Representa o curso e sua relação com os vínculos acadêmicos dos alunos.
     solicita no instante igual a T-30.
 13. Ao finalizar a execução, a espera que não couber fica `NAO_CONTEMPLADO`.
 14. Entrada sem ticket exige fila vazia e não promove quem está `EM_ESPERA`.
-    Aluno que cancelou o ticket pode entrar por CPF nessas condições.
+    Aluno que cancelou o ticket ou está `AUSENTE` nesta execução pode entrar por
+    CPF nessas condições; a ausência e o strike permanecem. Três strikes ativos
+    bloqueiam a entrada.
 15. Depois de `EM_EMBARQUE` a execução não pode ser cancelada; só finaliza.
+16. Remover da espera na conferência só atinge tickets da fila visível
+    (N = vagas restantes após a chamada).
 
 ### Fronteira transacional
 

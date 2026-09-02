@@ -18,6 +18,11 @@ PERMISSAO_CONFERIR = (
     'após iniciar o monitoramento, as filas de ticket e de espera dessa execução. '
     'Não amplia cadastro nem recursos globais do módulo.'
 )
+REGRA_AUSENTE_CPF = (
+    'Quem está AUSENTE nesta execução pode entrar se a espera estiver vazia, '
+    'houver vaga e o aluno tiver menos de 3 strikes ativos; o ticket permanece '
+    'AUSENTE e o strike não é desfeito.'
+)
 
 
 @extend_schema(
@@ -25,7 +30,8 @@ PERMISSAO_CONFERIR = (
     summary='Validar CPF para entrada sem ticket',
     description=(
         'Consulta as regras de elegibilidade sem persistir. '
-        'O POST em entradas-sem-ticket/ revalida tudo e grava.\n\n'
+        'O POST em entradas-sem-ticket/ revalida tudo e grava. '
+        f'{REGRA_AUSENTE_CPF}\n\n'
         f'{PERMISSAO_CONFERIR}'
     ),
     request=ValidarEntradaSemTicketSerializer,
@@ -58,7 +64,8 @@ class ValidarEntradaSemTicketView(PodeConferirTransporteMixin, BasicPostAPIView)
     tags=['Transporte · Conferência'],
     summary='Registrar entrada sem ticket',
     description=(
-        'Inclui aluno por CPF em vaga remanescente quando a fila de espera está vazia.\n\n'
+        'Inclui aluno por CPF em vaga remanescente quando a fila de espera está vazia. '
+        f'{REGRA_AUSENTE_CPF}\n\n'
         f'{PERMISSAO_CONFERIR}'
     ),
     request=RegistrarEntradaSemTicketSerializer,

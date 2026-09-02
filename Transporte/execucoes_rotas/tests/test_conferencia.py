@@ -186,6 +186,43 @@ class ConferenciaTransporteTestCase(APITestCase):
         self.assertEqual(espera.status, StatusTicket.CANCELADO)
         self.assertFalse(Strike.objects.filter(ticket=espera).exists())
 
+    def test_nao_remove_espera_antes_da_chamada(self):
+        with self._entrar_na_janela_monitoramento():
+            self.client.post(
+                reverse('transporte:conferencia-iniciar', kwargs={'pk': self.execucao.pk}),
+            )
+        espera = Ticket.objects.get(aluno=self.aluno_espera, execucao_rota=self.execucao)
+        resposta = self.client.post(
+            reverse(
+                'transporte:conferencia-fila-remover',
+                kwargs={'pk': self.execucao.pk, 'codigo': espera.codigo},
+            ),
+        )
+        self.assertEqual(resposta.status_code, status.HTTP_400_BAD_REQUEST)
+        espera.refresh_from_db()
+        self.assertEqual(espera.status, StatusTicket.EM_ESPERA)
+
+    def test_nao_remove_espera_fora_da_fila_visivel(self):
+        with self._entrar_na_janela_monitoramento():
+            self.client.post(
+                reverse('transporte:conferencia-iniciar', kwargs={'pk': self.execucao.pk}),
+            )
+        self.client.post(
+            reverse('transporte:conferencia-finalizar-chamada', kwargs={'pk': self.execucao.pk}),
+            {'ausentes': []},
+            format='json',
+        )
+        extra = Ticket.objects.get(aluno=self.aluno_extra, execucao_rota=self.execucao)
+        resposta = self.client.post(
+            reverse(
+                'transporte:conferencia-fila-remover',
+                kwargs={'pk': self.execucao.pk, 'codigo': extra.codigo},
+            ),
+        )
+        self.assertEqual(resposta.status_code, status.HTTP_400_BAD_REQUEST)
+        extra.refresh_from_db()
+        self.assertEqual(extra.status, StatusTicket.EM_ESPERA)
+
     def test_entrada_sem_ticket_exige_fila_vazia(self):
         with self._entrar_na_janela_monitoramento():
             self.client.post(
@@ -218,6 +255,75 @@ class ConferenciaTransporteTestCase(APITestCase):
             format='json',
         )
         self.assertEqual(resposta.status_code, status.HTTP_201_CREATED)
+
+    def _iniciar_chamada_e_esvaziar_espera(self, ausentes):
+        with self._entrar_na_janela_monitoramento():
+            self.client.post(
+                reverse('transporte:conferencia-iniciar', kwargs={'pk': self.execucao.pk}),
+            )
+        self.client.post(
+            reverse('transporte:conferencia-finalizar-chamada', kwargs={'pk': self.execucao.pk}),
+            {'ausentes': ausentes},
+            format='json',
+        )
+        for aluno in (self.aluno_espera, self.aluno_extra):
+            ticket_espera = Ticket.objects.get(aluno=aluno, execucao_rota=self.execucao)
+            self.client.post(
+                reverse(
+                    'transporte:conferencia-fila-remover',
+                    kwargs={'pk': self.execucao.pk, 'codigo': ticket_espera.codigo},
+                ),
+            )
+
+    def test_ausente_entra_por_cpf_mantendo_strike(self):
+        from Transporte.entradas_sem_ticket.models import EntradaSemTicket
+
+        ticket = Ticket.objects.get(aluno=self.aluno_reserva, execucao_rota=self.execucao)
+        self._iniciar_chamada_e_esvaziar_espera([str(ticket.codigo)])
+        resposta = self.client.post(
+            reverse('transporte:conferencia-entrada-sem-ticket', kwargs={'pk': self.execucao.pk}),
+            {'cpf': self.aluno_reserva.usuario.cpf},
+            format='json',
+        )
+        self.assertEqual(resposta.status_code, status.HTTP_201_CREATED)
+        ticket.refresh_from_db()
+        self.assertEqual(ticket.status, StatusTicket.AUSENTE)
+        self.assertTrue(Strike.objects.filter(ticket=ticket).exists())
+        self.assertTrue(
+            EntradaSemTicket.objects.filter(
+                aluno=self.aluno_reserva,
+                execucao_rota=self.execucao,
+            ).exists()
+        )
+
+    def test_ausente_com_tres_strikes_nao_entra_por_cpf(self):
+        from Transporte.entradas_sem_ticket.models import EntradaSemTicket
+
+        ticket = Ticket.objects.get(aluno=self.aluno_reserva, execucao_rota=self.execucao)
+        self._iniciar_chamada_e_esvaziar_espera([str(ticket.codigo)])
+        for indice in range(2):
+            _, outra_execucao = criar_rota_e_execucao(vagas=1, dias_ate_execucao=8 + indice)
+            outro_ticket = Ticket.objects.create(
+                execucao_rota=outra_execucao,
+                aluno=self.aluno_reserva,
+                status=StatusTicket.AUSENTE,
+                ausente_em=timezone.now(),
+            )
+            Strike.objects.create(ticket=outro_ticket)
+        resposta = self.client.post(
+            reverse('transporte:conferencia-entrada-sem-ticket', kwargs={'pk': self.execucao.pk}),
+            {'cpf': self.aluno_reserva.usuario.cpf},
+            format='json',
+        )
+        self.assertEqual(resposta.status_code, status.HTTP_400_BAD_REQUEST)
+        ticket.refresh_from_db()
+        self.assertEqual(ticket.status, StatusTicket.AUSENTE)
+        self.assertFalse(
+            EntradaSemTicket.objects.filter(
+                aluno=self.aluno_reserva,
+                execucao_rota=self.execucao,
+            ).exists()
+        )
 
     def test_cpf_inexistente_retorna_404(self):
         with self._entrar_na_janela_monitoramento():

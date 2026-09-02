@@ -72,6 +72,7 @@ Transporte/
 - Conferente inicia o monitoramento (`EM_EMBARQUE`) somente depois de 30 minutos
   antes da saída (`now > data_hora_saida − 30 min`). No instante exato do T-30
   o aluno ainda pode solicitar ticket; o conferente ainda não inicia.
+  Depois do horário de saída, no mesmo dia, o conferente ainda pode iniciar.
 - A listagem da conferência no dia inclui `ABERTA`, `FECHADA`, `EM_EMBARQUE` e
   `FINALIZADA`. Execuções `CANCELADA` não aparecem. `EM_EMBARQUE` serve para
   continuar o monitoramento. L3 obedece a mesma data (hoje) e o mesmo T-30.
@@ -96,16 +97,23 @@ Transporte/
 - Cancelar uma reserva promove o primeiro ticket da fila na mesma transação.
 - A capacidade e a promoção usam bloqueio pessimista na execução para proteger a
   última vaga em requisições concorrentes.
-- Na conferência, o POST de finalizar promove a espera que cabe nas vagas;
-  o restante da espera fica `NAO_CONTEMPLADO` (não é o `CANCELADO` voluntário do aluno).
-  Remover alguém da espera durante o embarque continua `CANCELADO` sem strike.
+- Na conferência, quem não entra em `ausentes` na chamada fica `EMBARCADO` sem QR
+  (presença por omissão). O conferente não valida QR. O POST de finalizar promove
+  a espera que cabe nas vagas (fila inteira, não só os N da tela); o restante
+  fica `NAO_CONTEMPLADO` (não é o `CANCELADO` voluntário do aluno).
+  Remover da espera durante o embarque, após a chamada, só vale para os N tickets
+  da fila visível (N = vagas restantes) e continua `CANCELADO` sem strike.
   O replay da chamada compara o conjunto gravado nela, não ausências marcadas
-  depois pelo L3.
+  depois pelo L3. O monitoramento pode iniciar depois do horário de saída no
+  mesmo dia, desde que `now > T-30`.
 - Entrada por CPF revalida aluno ativo, matriculado, strikes, vaga, chamada
   concluída e execução em embarque. A consulta é `POST` em
   `entradas-sem-ticket/validar/` com `{ "cpf": "..." }` e não persiste; o
   `POST` em `entradas-sem-ticket/` revalida e grava. Quem cancelou o próprio
-  ticket pode usar este fluxo se a fila estiver vazia e houver vaga.
+  ticket pode usar este fluxo se a fila estiver vazia e houver vaga. Quem está
+  `AUSENTE` nesta execução também pode, nas mesmas condições: o ticket permanece
+  `AUSENTE` e o strike não é desfeito. Três strikes ativos continuam impedindo
+  a entrada (incluindo o strike desta ausência).
 
 ### 5. Posição dos tickets e prioridade PcD
 
@@ -203,6 +211,7 @@ Base execuções: `/cortex/transporte/execucoes-rotas/`
 - `GET` `execucoes-rotas/<pk>/conferencia/fila/` — só os N primeiros da espera
   (N = vagas restantes); quem não cabe agora não entra nesta lista
 - `POST` `execucoes-rotas/<pk>/conferencia/fila/<uuid>/remover/`
+  (somente UUID que o GET da fila devolveria agora)
 - `POST` `execucoes-rotas/<pk>/conferencia/entradas-sem-ticket/validar/`
   (`cpf` no body; sem persistência)
 - `POST` `execucoes-rotas/<pk>/conferencia/entradas-sem-ticket/`

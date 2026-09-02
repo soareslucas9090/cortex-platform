@@ -35,7 +35,7 @@ class EntradaSemTicketRules(ModelInstanceRules):
         return True
 
     def validar_aluno_sem_ticket_ativo(self, ticket) -> bool:
-        if ticket is None:
+        if ticket is None or ticket.status == StatusTicket.AUSENTE:
             return True
         if ticket.status == StatusTicket.EM_ESPERA:
             self.return_exception(

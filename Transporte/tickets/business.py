@@ -256,7 +256,8 @@ class TicketBusiness(ModelInstanceBusiness):
 
     def remover_espera_conferencia(self, execucao):
         try:
-            execucao.helper.obter_por_id(execucao.pk, bloquear=True)
+            execucao = execucao.helper.obter_por_id(execucao.pk, bloquear=True)
+            execucao.rules.validar_chamada_para_finalizar(execucao)
             ticket = self.object_instance.helper.obter_bloqueado_por_id(
                 self.object_instance.pk,
             )
@@ -264,8 +265,14 @@ class TicketBusiness(ModelInstanceBusiness):
                 StatusTicket.EM_ESPERA,
                 'Somente um ticket em espera pode ser removido da fila da conferência.',
             )
-            if ticket.execucao_rota_id != execucao.pk:
-                raise BusinessRuleException('O ticket não pertence a esta execução.')
+            ticket.rules.validar_pertence_a_execucao(execucao)
+            visiveis = set(
+                self.object_instance.helper.listar_fila_visivel_conferencia(execucao).values_list(
+                    'pk',
+                    flat=True,
+                )
+            )
+            ticket.rules.validar_remocao_na_fila_visivel(visiveis)
             ticket.cancelado_em = timezone.now()
             ticket.state.atualizar_status(StatusTicket.CANCELADO)
             return ticket

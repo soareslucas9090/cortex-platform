@@ -91,6 +91,18 @@ class TicketRules(ModelInstanceRules):
             self.return_exception(mensagem)
         return True
 
+    def validar_pertence_a_execucao(self, execucao) -> bool:
+        if self.object_instance.execucao_rota_id != execucao.pk:
+            self.return_exception('O ticket não pertence a esta execução.')
+        return True
+
+    def validar_remocao_na_fila_visivel(self, visiveis_pks) -> bool:
+        if self.object_instance.pk not in visiveis_pks:
+            self.return_exception(
+                'Só é possível remover da espera quem aparece na fila visível da conferência.'
+            )
+        return True
+
     def pode_marcar_ausente(self) -> bool:
         self.validar_status(
             StatusTicket.RESERVADO,

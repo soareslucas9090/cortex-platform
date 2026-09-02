@@ -381,13 +381,18 @@ class ListarFilaConferenciaView(PodeConferirTransporteMixin, BasicGetAPIView):
     tags=['Transporte · Conferência'],
     summary='Remover aluno da fila de espera',
     description=(
-        'Cancela o ticket em espera sem gerar strike.\n\n'
+        'Cancela o ticket em espera sem gerar strike. Só aceita os N tickets da '
+        'fila visível (vagas restantes), os mesmos do GET da fila.\n\n'
         f'{PERMISSAO_CONFERIR}'
     ),
     request=SerializerVazio,
     responses={
         status.HTTP_200_OK: TicketConferenciaSerializer,
-        status.HTTP_400_BAD_REQUEST: {'description': 'Ticket não está em espera.'},
+        status.HTTP_400_BAD_REQUEST: {
+            'description': (
+                'Chamada pendente, ticket fora da fila visível, ou ticket que não está em espera.'
+            ),
+        },
         status.HTTP_401_UNAUTHORIZED: {'description': 'Não autenticado.'},
         status.HTTP_403_FORBIDDEN: {'description': 'Sem capacidade conferir.'},
         status.HTTP_404_NOT_FOUND: {'description': 'Ticket ou execução não encontrado.'},
