@@ -47,6 +47,7 @@ Os agregados iniciais identificados no Cortex são:
 4. `TerceirizadoAggregate`
 5. `AlunoAggregate`
 6. `CursoAggregate`
+7. `RotaAggregate`
 
 ---
 
@@ -300,6 +301,56 @@ Representa o curso e sua relação com os vínculos acadêmicos dos alunos.
 
 - regras do curso: `Academico/cursos/rules.py`
 - operações de manutenção do curso: `Academico/cursos/business.py`
+
+---
+
+# 7. RotaAggregate
+
+## Aggregate Root
+
+`Rota`
+
+## Entidades relacionadas
+
+- `Rota`
+- `Percurso`
+
+## Dependências conceituais externas
+
+- `Motorista`
+- `Usuario`
+
+## Responsabilidade
+
+Representa a programação recorrente de um ônibus em determinado percurso, dia da
+semana e horário. Na primeira entrega do motorista, também fornece a visão somente
+de leitura das rotas programadas para o dia atual.
+
+## Invariantes
+
+1. Toda `Rota` deve estar associada a exatamente um `Percurso`.
+2. A visão do motorista só contém rotas e percursos ativos.
+3. A rota deve estar programada para o dia da semana correspondente à data local.
+4. Todos os motoristas ativos visualizam o mesmo conjunto completo de rotas do dia.
+5. Usuário ou perfil Motorista inativo não pode acessar a visão.
+6. A consulta não cria nem altera registros.
+7. A ordenação é por horário de saída e, em caso de empate, pelo apelido do percurso.
+8. Cada usuário possui no máximo um perfil Motorista, pois o vínculo é `OneToOne`.
+9. Um usuário vinculado a Motorista não pode ser excluído fisicamente (`PROTECT`).
+
+## Fora do escopo atual
+
+- início ou finalização de rota;
+- reservas e status operacional;
+- tickets solicitados;
+- máquina de estados da execução diária.
+
+## Onde as regras devem morar
+
+- autorização do perfil Motorista e definição da data: `Transporte/rotas/business.py`;
+- consultas e ordenação: `Transporte/rotas/helpers.py`;
+- identificação do perfil ativo: `Transporte/motoristas/helpers.py`;
+- contrato de resposta: `Transporte/rotas/serializers.py`.
 
 ---
 

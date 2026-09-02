@@ -50,7 +50,7 @@ Query params **apenas estreitam** resultados após o escopo de permissão.
 Novos produtos adicionam `permissoes_<modulo>()` em `UsuarioPermissions` e apps Django dentro de um módulo de domínio na raiz (`Infraestrutura/`, `Transporte/`), nunca em pasta genérica `APPs/`. Subdomínios = apps internos do módulo (`Infraestrutura/recursos/`, `Transporte/percursos/`, etc.).
 
 - **Infraestrutura:** capacidades booleanas (`operar`, `cadastrar`, `autorizar`, `retirada_irrestrita`), independentes de L1–L3.
-- **Transporte:** capacidade `gerenciar` alinhada a L3 (`is_staff`, `is_admin` ou superusuário); toda a API de percursos e rotas usa `IsAdminMixin`.
+- **Transporte:** capacidade `gerenciar` alinhada a L3 (`is_staff`, `is_admin` ou superusuário) para o CRUD de percursos e rotas; capacidade `motorista` para usuários com perfil Motorista ativo acessarem a visão somente de leitura das rotas do dia. L3 não recebe esse acesso automaticamente.
 
 ### Documentação viva da API
 

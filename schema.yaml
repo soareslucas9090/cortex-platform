@@ -852,12 +852,12 @@ paths:
       description: "\n    Retorna a documentação narrativa e estruturada das permissões
         de cada módulo registrado.\n\n    Inclui **cortex** (níveis L1–L3), **infraestrutura**
         (capacidades booleanas, secoes\n    estruturadas, acesso total de admin/superuser,
-        elegibilidade do solicitante) e\n    **transporte** (capacidade `gerenciar`,
-        restrita a L3 / perfil TI). Novos módulos\n    entram automaticamente ao implementar
-        `documentacao_<modulo>()`.\n\n    **Permissões:** Qualquer usuário autenticado.\n\n
-        \   **Manutenção:** toda alteração de regra de permissão deve atualizar o
-        método\n    `documentacao_<modulo>()` correspondente em `Identidade.usuarios.documentacao`.\n
-        \   "
+        elegibilidade do solicitante) e\n    **transporte** (capacidades `gerenciar`
+        para L3/TI e `motorista` para a visão\n    somente de leitura das rotas do
+        dia). Novos módulos\n    entram automaticamente ao implementar `documentacao_<modulo>()`.\n\n
+        \   **Permissões:** Qualquer usuário autenticado.\n\n    **Manutenção:** toda
+        alteração de regra de permissão deve atualizar o método\n    `documentacao_<modulo>()`
+        correspondente em `Identidade.usuarios.documentacao`.\n    "
       summary: Documentação de permissões por módulo
       tags:
       - Identidade
@@ -5507,6 +5507,39 @@ paths:
               schema:
                 $ref: '#/components/schemas/Terceirizado'
           description: ''
+  /cortex/transporte/motorista/rotas-do-dia/:
+    get:
+      operationId: transporte_motorista_rotas_do_dia_list
+      description: "\n    Lista todas as rotas e percursos ativos programados para
+        o dia atual, em ordem de horário.\n    Este endpoint é exclusivamente de leitura
+        e não cria nem altera dados operacionais.\n\n    **Permissões:** Motorista
+        ativo. Todos os motoristas visualizam todas as rotas do dia.\n    "
+      summary: Listar rotas do dia
+      tags:
+      - Transporte · Motorista
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/RotaDoDia'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                description: Não autenticado.
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                description: Usuário não é motorista ativo.
+          description: ''
   /cortex/transporte/percursos/:
     get:
       operationId: transporte_percursos_list
@@ -8340,6 +8373,45 @@ components:
       - id
       - percurso
       - quantidade_vagas
+    RotaDoDia:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        data:
+          type: string
+          format: date
+          readOnly: true
+        horario:
+          type: string
+          format: time
+          readOnly: true
+        dia_semana:
+          allOf:
+          - $ref: '#/components/schemas/DiaSemanaEnum'
+          title: Dia da semana
+        dia_semana_display:
+          type: string
+          readOnly: true
+        capacidade:
+          type: integer
+          readOnly: true
+        percurso:
+          type: string
+          readOnly: true
+        percurso_apelido:
+          type: string
+          readOnly: true
+      required:
+      - capacidade
+      - data
+      - dia_semana
+      - dia_semana_display
+      - horario
+      - id
+      - percurso
+      - percurso_apelido
     Sala:
       type: object
       properties:

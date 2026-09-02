@@ -54,7 +54,7 @@ class PermissaoDocumentacao:
                 'atualização de perfil.\n\n'
                 'O payload `user.permissoes` no login/me retorna `{"cortex": "<nível>"}` e '
                 'chaves adicionais por módulo: `infraestrutura` (flags booleanas) e '
-                '`transporte` (`{"gerenciar": true|false}`).'
+                '`transporte` (`{"gerenciar": true|false, "motorista": true|false}`).'
             ),
             'niveis': [
                 {
@@ -513,14 +513,14 @@ class PermissaoDocumentacao:
             'chave': 'transporte',
             'titulo': 'Transporte',
             'resumo': (
-                'Gestão de percursos e rotas do transporte universitário, restrita ao perfil TI (L3).'
+                'Gestão administrativa pelo perfil TI e consulta das rotas do dia por motoristas ativos.'
             ),
             'texto': (
                 'O módulo transporte controla o cadastro de percursos (apelido, descrição e '
                 'status ativo/inativo) e de rotas (percurso, horário de saída, dia da semana e '
-                'quantidade de vagas). Toda a API exige L3 (EDITAR_TUDO): is_staff, is_admin '
-                'ou superusuário. O payload user.permissoes.transporte.gerenciar indica se o '
-                'frontend deve exibir o menu Transporte.'
+                'quantidade de vagas), além da visão somente de leitura do motorista. A capacidade '
+                'gerenciar é exclusiva de L3/TI. A capacidade motorista é concedida somente a '
+                'usuários com perfil Motorista ativo.'
             ),
             'secoes': [
                 {
@@ -534,13 +534,22 @@ class PermissaoDocumentacao:
                             ),
                         },
                         {
+                            'destaque': 'motorista',
+                            'texto': (
+                                'true somente quando o usuário possui perfil Motorista ativo e '
+                                'a própria conta de usuário está ativa.'
+                            ),
+                        },
+                        {
                             'destaque': 'Payload típico',
-                            'texto': '{"transporte": {"gerenciar": false}}',
+                            'texto': (
+                                '{"transporte": {"gerenciar": false, "motorista": true}}'
+                            ),
                         },
                     ],
                 },
                 {
-                    'titulo': 'API de percursos e rotas',
+                    'titulo': 'API administrativa de percursos e rotas',
                     'paragrafos': [
                         (
                             'Todas as operações (GET listagem/detalhe, POST criar, PATCH, '
@@ -549,6 +558,20 @@ class PermissaoDocumentacao:
                         (
                             'Bases: /cortex/transporte/percursos/ e /cortex/transporte/rotas/.'
                         ),
+                    ],
+                },
+                {
+                    'titulo': 'API de consulta do motorista (RF013)',
+                    'paragrafos': [
+                        (
+                            'Todos os motoristas ativos visualizam todas as rotas e percursos ativos '
+                            'programados para o dia, em ordem de horário.'
+                        ),
+                        (
+                            'A consulta não altera dados. Início/finalização de rota, reservas, '
+                            'status operacional e tickets não fazem parte desta entrega.'
+                        ),
+                        'Base: /cortex/transporte/motorista/rotas-do-dia/.',
                     ],
                 },
             ],
@@ -566,11 +589,23 @@ class PermissaoDocumentacao:
                         'do MeuIF-Transporte (RF016 e RF017).'
                     ),
                 },
+                {
+                    'codigo': 'motorista',
+                    'nome': 'Motorista',
+                    'quem_usa': 'Motoristas ativos',
+                    'pode': (
+                        'Ver todas as rotas ativas programadas para o dia.'
+                    ),
+                    'nao_sem_capacidade': 'Acessar a visão operacional de rotas do dia.',
+                    'descricao': (
+                        'Acesso à primeira tela da visão do motorista do MeuIF-Transporte (RF013).'
+                    ),
+                },
             ],
             'exemplos': [
                 {
                     'perfil': 'Aluno ou servidor (L1/L2)',
-                    'capacidades': {'gerenciar': False},
+                    'capacidades': {'gerenciar': False, 'motorista': False},
                     'pode': [],
                     'nao_pode': [
                         'listar ou cadastrar percursos e rotas',
@@ -579,12 +614,23 @@ class PermissaoDocumentacao:
                 },
                 {
                     'perfil': 'TI (staff, admin ou superusuário)',
-                    'capacidades': {'gerenciar': True},
+                    'capacidades': {'gerenciar': True, 'motorista': False},
                     'pode': [
                         'cadastrar, editar, desativar e reativar percursos e rotas',
                         'ver o menu Transporte no frontend',
                     ],
                     'nao_pode': [],
+                },
+                {
+                    'perfil': 'Motorista ativo',
+                    'capacidades': {'gerenciar': False, 'motorista': True},
+                    'pode': [
+                        'ver todas as rotas do dia',
+                    ],
+                    'nao_pode': [
+                        'cadastrar ou editar percursos e rotas',
+                        'iniciar ou finalizar rotas por esta entrega',
+                    ],
                 },
             ],
         }

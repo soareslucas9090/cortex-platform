@@ -1,4 +1,8 @@
+from django.db.models import DateField, Q, Value
+
 from AppCore.core.helpers.helpers import ModelInstanceHelpers
+
+from .choices import DiaSemana, anotacao_ordem_dia_semana, dia_semana_da_data
 
 
 class RotaHelpers(ModelInstanceHelpers):
@@ -12,3 +16,56 @@ class RotaHelpers(ModelInstanceHelpers):
         """Retorna todas as rotas inativas."""
         from .models import Rota
         return Rota.objects.filter(ativo=False)
+
+    def listar_para_gestao(
+        self,
+        ativo=None,
+        percurso_id=None,
+        dia_semana=None,
+        busca=None,
+    ):
+        """Retorna rotas para a gestão, aplicando apenas filtros válidos."""
+        from .models import Rota
+
+        queryset = (
+            Rota.objects.select_related('percurso')
+            .annotate(_ordem_dia=anotacao_ordem_dia_semana())
+            .order_by('_ordem_dia', 'horario_saida', 'percurso__apelido')
+        )
+
+        if ativo is not None and str(ativo).lower() in ('true', 'false'):
+            queryset = queryset.filter(ativo=str(ativo).lower() == 'true')
+
+        if percurso_id is not None and str(percurso_id).isdigit():
+            queryset = queryset.filter(percurso_id=percurso_id)
+
+        if dia_semana in DiaSemana.values:
+            queryset = queryset.filter(dia_semana=dia_semana)
+
+        if busca:
+            queryset = queryset.filter(Q(percurso__apelido__unaccent__icontains=busca))
+
+        return queryset
+
+    def obter_com_percurso(self, rota_id):
+        """Obtém uma rota com o percurso carregado para serialização."""
+        from .models import Rota
+
+        return Rota.objects.select_related('percurso').get(pk=rota_id)
+
+    def listar_do_dia(self, data):
+        """Retorna as rotas e percursos ativos programados para a data."""
+        from .models import Rota
+
+        return (
+            Rota.objects.select_related('percurso')
+            .filter(
+                ativo=True,
+                percurso__ativo=True,
+                dia_semana=dia_semana_da_data(data),
+            )
+            .annotate(
+                data_operacao=Value(data, output_field=DateField()),
+            )
+            .order_by('horario_saida', 'percurso__apelido')
+        )

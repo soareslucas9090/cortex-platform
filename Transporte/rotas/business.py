@@ -1,9 +1,10 @@
 import logging
 
 from django.db import IntegrityError
+from django.utils import timezone
 
 from AppCore.core.business.business import ModelInstanceBusiness
-from AppCore.core.exceptions.exceptions import BusinessRuleException
+from AppCore.core.exceptions.exceptions import AuthorizationException, BusinessRuleException
 
 from .rules import MENSAGEM_ROTA_DUPLICADA
 
@@ -11,6 +12,37 @@ logger = logging.getLogger(__name__)
 
 
 class RotaBusiness(ModelInstanceBusiness):
+
+    def listar_rotas(
+        self,
+        ativo=None,
+        percurso_id=None,
+        dia_semana=None,
+        busca=None,
+    ):
+        """Lista as rotas administrativas com filtros opcionais."""
+        try:
+            return self.object_instance.helper.listar_para_gestao(
+                ativo=ativo,
+                percurso_id=percurso_id,
+                dia_semana=dia_semana,
+                busca=busca,
+            )
+        except Exception as e:
+            self.relancar_ou_erro_sistema(e, 'Não foi possível listar as rotas.', logger)
+
+    def listar_rotas_do_dia(self, usuario, data=None):
+        """Lista as rotas do dia para um motorista ativo, sem alterar dados."""
+        try:
+            from Transporte.motoristas.models import Motorista
+
+            data = data or timezone.localdate()
+            motorista = Motorista().helper.obter_ativo_do_usuario(usuario)
+            if motorista is None:
+                raise AuthorizationException('Acesso permitido somente a motoristas ativos.')
+            return self.object_instance.helper.listar_do_dia(data)
+        except Exception as e:
+            self.relancar_ou_erro_sistema(e, 'Não foi possível listar as rotas do dia.', logger)
 
     def criar_rota(
         self,
@@ -28,13 +60,14 @@ class RotaBusiness(ModelInstanceBusiness):
             rules.validar_dia_semana(dia_semana)
             rules.validar_quantidade_vagas(quantidade_vagas)
             rules.validar_rota_unica(percurso_id, dia_semana, horario_saida)
-            return Rota.objects.create(
+            rota = Rota.objects.create(
                 percurso_id=percurso_id,
                 horario_saida=horario_saida,
                 dia_semana=dia_semana,
                 quantidade_vagas=quantidade_vagas,
                 **kwargs,
             )
+            return self.object_instance.helper.obter_com_percurso(rota.pk)
         except IntegrityError:
             raise BusinessRuleException(MENSAGEM_ROTA_DUPLICADA)
         except Exception as e:

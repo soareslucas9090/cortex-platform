@@ -36,6 +36,31 @@ class RotaSerializer(serializers.ModelSerializer):
         read_only_fields = ['id', 'created_at']
 
 
+class RotaDoDiaSerializer(serializers.ModelSerializer):
+    data = serializers.DateField(source='data_operacao', read_only=True)
+    horario = serializers.TimeField(source='horario_saida', format='%H:%M', read_only=True)
+    capacidade = serializers.IntegerField(source='quantidade_vagas', read_only=True)
+    percurso = serializers.CharField(source='percurso.descricao', read_only=True)
+    percurso_apelido = serializers.CharField(source='percurso.apelido', read_only=True)
+    dia_semana_display = serializers.CharField(
+        source='get_dia_semana_display',
+        read_only=True,
+    )
+
+    class Meta:
+        model = Rota
+        fields = [
+            'id',
+            'data',
+            'horario',
+            'dia_semana',
+            'dia_semana_display',
+            'capacidade',
+            'percurso',
+            'percurso_apelido',
+        ]
+
+
 class CriarRotaSerializer(serializers.Serializer):
     percurso_id = serializers.IntegerField()
     horario_saida = serializers.TimeField(

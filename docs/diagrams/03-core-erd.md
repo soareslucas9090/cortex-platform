@@ -554,6 +554,26 @@ Agendamento de um ônibus em um percurso, em um dia e horário.
 - Não desativar percurso com rotas ativas
 - Unicidade de `percurso` + `dia_semana` + `horario_saida`
 
+## 9.3 Motorista
+
+Perfil operacional associado 1:1 a `Usuario`.
+
+### Atributos principais
+
+- `usuario` (`OneToOne`, PK, `on_delete=PROTECT`)
+- `ativo`
+
+### Relacionamentos
+
+- `Usuario` 1 : 0..1 `Motorista`
+- Cada `Motorista` pertence a exatamente um `Usuario`
+
+### Restrições
+
+- Um `Usuario` pode possuir no máximo um perfil `Motorista`
+- A exclusão física do `Usuario` é protegida enquanto existir um `Motorista`
+- O acesso operacional exige simultaneamente `Usuario.ativo` e `Motorista.ativo`
+
 ---
 
 # 10. Pontos que podem evoluir depois
@@ -566,7 +586,7 @@ Os itens abaixo podem ser refinados em artefatos posteriores ou na modelagem det
 - detalhamento da categoria do servidor
 - detalhamento da situação da matrícula
 - regras adicionais para aluno monitor
-- detalhamento de passageiros e ocupação das rotas
+- integração futura com reservas, status operacional e tickets
 
 ---
 
@@ -577,7 +597,7 @@ O núcleo do Cortex parte de `Usuario` como centro da identidade, e organiza o r
 - estrutura organizacional (`Setor`, `Funcao`, `SetorVinculo`)
 - perfis institucionais (`Servidor`, `Terceirizado`, `Cargo`, `EmpresaInstituicao`)
 - perfis acadêmicos (`Aluno`, `Curso`, `AlunoCurso`)
-- transporte universitário (`Percurso`, `Rota`)
+- transporte universitário (`Percurso`, `Rota`, `Motorista`)
 
 As decisões mais importantes consolidadas neste ERD textual são:
 
