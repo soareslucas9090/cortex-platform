@@ -82,13 +82,24 @@ class UsuarioPermissions(UserModelPermission):
 
     def permissoes_transporte(self) -> dict:
         """
-        Capacidades do módulo Transporte para administração e solicitação de tickets.
+        Capacidades do módulo Transporte para administração, conferência e tickets.
         """
+        from Transporte.permissoes.access import (
+            usuario_e_administrador_transporte,
+            usuario_tem_perfil_colaborador_ativo,
+        )
+        from Transporte.permissoes.choices import capacidades_transporte_vazias
+        from Transporte.permissoes.models import PermissaoFuncaoTransporte
+
         user = self.object_instance
         if not user:
-            return {'transporte': {'gerenciar': False, 'reservar': False}}
+            return {'transporte': capacidades_transporte_vazias()}
 
-        gerenciar = bool(user.is_staff or user.is_admin or user.is_superuser)
+        gerenciar = usuario_e_administrador_transporte(user)
+        conferir = gerenciar
+        if not conferir and usuario_tem_perfil_colaborador_ativo(user):
+            conferir = PermissaoFuncaoTransporte().helper.funcao_confere(user)
+
         reservar = False
         aluno = getattr(user, 'aluno', None)
         if aluno is not None and user.ativo and aluno.ativo:
@@ -100,4 +111,10 @@ class UsuarioPermissions(UserModelPermission):
             ).count()
             reservar = aluno.situacao == SituacaoAluno.MATRICULADO and strikes_ativos < 3
 
-        return {'transporte': {'gerenciar': gerenciar, 'reservar': reservar}}
+        return {
+            'transporte': {
+                'gerenciar': gerenciar,
+                'reservar': reservar,
+                'conferir': conferir,
+            },
+        }

@@ -20,6 +20,7 @@ class TicketEmEsperaState(TicketState):
     transicoes_permitidas = frozenset({
         StatusTicket.RESERVADO,
         StatusTicket.CANCELADO,
+        StatusTicket.EMBARCADO,
     })
 
 

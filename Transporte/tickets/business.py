@@ -232,3 +232,67 @@ class TicketBusiness(ModelInstanceBusiness):
             return ticket, False
         except Exception as e:
             self.relancar_ou_erro_sistema(e, 'Não foi possível validar o QR Code.', logger)
+
+    def listar_reservas_conferencia(self, execucao, cpf=None):
+        try:
+            return self.object_instance.helper.listar_reservas_conferencia(execucao, cpf)
+        except Exception as e:
+            self.relancar_ou_erro_sistema(
+                e,
+                'Não foi possível listar os tickets da conferência.',
+                logger,
+            )
+
+    def listar_fila_visivel_conferencia(self, execucao):
+        try:
+            execucao.rules.validar_chamada_para_finalizar(execucao)
+            return self.object_instance.helper.listar_fila_visivel_conferencia(execucao)
+        except Exception as e:
+            self.relancar_ou_erro_sistema(
+                e,
+                'Não foi possível listar a fila de espera da conferência.',
+                logger,
+            )
+
+    def remover_espera_conferencia(self, execucao):
+        try:
+            from .models import Ticket
+
+            ticket = Ticket.objects.select_for_update().select_related(
+                'aluno__usuario',
+                'execucao_rota',
+            ).get(pk=self.object_instance.pk)
+            ticket.rules.validar_status(
+                StatusTicket.EM_ESPERA,
+                'Somente um ticket em espera pode ser removido da fila da conferência.',
+            )
+            if ticket.execucao_rota_id != execucao.pk:
+                raise BusinessRuleException('O ticket não pertence a esta execução.')
+            ticket.cancelado_em = timezone.now()
+            ticket.state.atualizar_status(StatusTicket.CANCELADO)
+            return ticket
+        except Exception as e:
+            self.relancar_ou_erro_sistema(
+                e,
+                'Não foi possível remover o aluno da fila de espera.',
+                logger,
+            )
+
+    def encerrar_fila_na_finalizacao(self, execucao):
+        try:
+            vagas = execucao.business.obter_resumo_vagas()['vagas_disponiveis']
+            fila = list(self.object_instance.helper._ordenar_fila(
+                execucao.tickets.select_for_update(),
+            ))
+            for ticket in fila[:vagas]:
+                ticket.embarcado_em = timezone.now()
+                ticket.state.atualizar_status(StatusTicket.EMBARCADO)
+            for ticket in fila[vagas:]:
+                ticket.cancelado_em = timezone.now()
+                ticket.state.atualizar_status(StatusTicket.CANCELADO)
+        except Exception as e:
+            self.relancar_ou_erro_sistema(
+                e,
+                'Não foi possível encerrar a fila de espera.',
+                logger,
+            )

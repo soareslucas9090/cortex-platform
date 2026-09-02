@@ -1,6 +1,12 @@
+from datetime import timedelta
+
+from django.utils.timezone import now
+
 from Transporte.rotas.choices import DiaSemana
 
 from AppCore.core.rules.rules import ModelInstanceRules
+
+from .choices import StatusExecucaoRota
 
 DIAS_SEMANA_PYTHON = {
     0: DiaSemana.SEGUNDA,
@@ -32,4 +38,25 @@ class ExecucaoRotaRules(ModelInstanceRules):
     def validar_execucao_unica(self, existe_execucao) -> bool:
         if existe_execucao:
             self.return_exception(MENSAGEM_EXECUCAO_DUPLICADA)
+        return True
+
+    def validar_janela_monitoramento(self, execucao) -> bool:
+        if execucao.status not in (StatusExecucaoRota.ABERTA, StatusExecucaoRota.FECHADA):
+            self.return_exception('Somente execuções abertas ou fechadas podem iniciar o embarque.')
+        if now() < execucao.data_hora_saida - timedelta(minutes=30):
+            self.return_exception(
+                'O monitoramento só fica disponível 30 minutos antes da saída.'
+            )
+        return True
+
+    def validar_chamada_para_finalizar(self, execucao) -> bool:
+        if not execucao.chamada_tickets_concluida:
+            self.return_exception(
+                'Conclua a chamada dos tickets antes de finalizar a execução.'
+            )
+        return True
+
+    def validar_execucao_em_embarque(self, execucao) -> bool:
+        if execucao.status != StatusExecucaoRota.EM_EMBARQUE:
+            self.return_exception('A conferência só opera execuções em embarque.')
         return True

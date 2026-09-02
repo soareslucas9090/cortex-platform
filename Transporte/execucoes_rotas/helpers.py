@@ -65,7 +65,12 @@ class ExecucaoRotaHelpers(ModelInstanceHelpers):
     def contar_vagas_ocupadas(self):
         from Transporte.tickets.choices import StatusTicket
 
-        return self.object_instance.tickets.filter(
+        execucao = self.object_instance
+        if execucao.chamada_tickets_concluida:
+            ocupadas = execucao.tickets.filter(status=StatusTicket.EMBARCADO).count()
+            ocupadas += execucao.entradas_sem_ticket.count()
+            return ocupadas
+        return execucao.tickets.filter(
             status__in=(StatusTicket.RESERVADO, StatusTicket.EMBARCADO),
         ).count()
 
@@ -74,3 +79,38 @@ class ExecucaoRotaHelpers(ModelInstanceHelpers):
             self.object_instance.quantidade_vagas - self.contar_vagas_ocupadas(),
             0,
         )
+
+    def pode_monitorar(self) -> bool:
+        execucao = self.object_instance
+        if execucao.status not in (StatusExecucaoRota.ABERTA, StatusExecucaoRota.FECHADA):
+            return False
+        return now() >= execucao.data_hora_saida - timedelta(minutes=30)
+
+    def listar_para_conferencia(self, data_param=None):
+        from .models import ExecucaoRota
+
+        data_hoje = localdate()
+        queryset = ExecucaoRota.objects.select_related('rota', 'rota__percurso').filter(
+            data_execucao=data_hoje,
+        )
+        if data_param:
+            try:
+                data_valida = date.fromisoformat(data_param)
+            except ValueError:
+                data_valida = None
+            if data_valida and data_valida != data_hoje:
+                return queryset.none()
+        return queryset
+
+    def obter_para_conferencia(self, execucao_id, exigir_embarque=False, usuario=None):
+        from AppCore.core.exceptions.exceptions import BusinessRuleException, NotFoundException
+
+        execucao = self.obter_por_id(execucao_id)
+        acesso_l3 = getattr(usuario, 'tem_acesso_elevado', lambda: False)()
+        if not acesso_l3 and execucao.data_execucao != localdate():
+            raise NotFoundException('Execução não encontrada no escopo da conferência.')
+        if exigir_embarque and execucao.status != StatusExecucaoRota.EM_EMBARQUE:
+            raise BusinessRuleException(
+                'As filas da conferência só estão disponíveis após iniciar o monitoramento.',
+            )
+        return execucao

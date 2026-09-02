@@ -8,12 +8,22 @@ from .views import (
     CriarExecucaoRotaView,
     DetalharExecucaoRotaView,
     FecharReservasExecucaoRotaView,
+    FinalizarChamadaConferenciaView,
     FinalizarExecucaoRotaView,
     IniciarEmbarqueExecucaoRotaView,
+    ListarExecucoesConferenciaView,
     ListarExecucoesRotasView,
+    ListarFilaConferenciaView,
+    ListarReservasConferenciaView,
+    RemoverFilaConferenciaView,
 )
 
 urlpatterns = [
+    path(
+        'conferencia/execucoes/',
+        roteador_por_metodo(GET=ListarExecucoesConferenciaView),
+        name='conferencia-execucao-list',
+    ),
     path(
         'execucoes-rotas/',
         roteador_por_metodo(GET=ListarExecucoesRotasView, POST=CriarExecucaoRotaView),
@@ -48,5 +58,25 @@ urlpatterns = [
         'execucoes-rotas/<int:pk>/cancelar/',
         roteador_por_metodo(POST=CancelarExecucaoRotaView),
         name='execucao-rota-cancelar',
+    ),
+    path(
+        'execucoes-rotas/<int:pk>/conferencia/reservas/',
+        roteador_por_metodo(GET=ListarReservasConferenciaView),
+        name='conferencia-reservas',
+    ),
+    path(
+        'execucoes-rotas/<int:pk>/conferencia/finalizar-chamada/',
+        roteador_por_metodo(POST=FinalizarChamadaConferenciaView),
+        name='conferencia-finalizar-chamada',
+    ),
+    path(
+        'execucoes-rotas/<int:pk>/conferencia/fila/',
+        roteador_por_metodo(GET=ListarFilaConferenciaView),
+        name='conferencia-fila',
+    ),
+    path(
+        'execucoes-rotas/<int:pk>/conferencia/fila/<uuid:codigo>/remover/',
+        roteador_por_metodo(POST=RemoverFilaConferenciaView),
+        name='conferencia-fila-remover',
     ),
 ]

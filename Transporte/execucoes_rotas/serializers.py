@@ -12,6 +12,7 @@ class ExecucaoRotaSerializer(serializers.ModelSerializer):
     status_display = serializers.CharField(source='get_status_display', read_only=True)
     vagas_ocupadas = serializers.SerializerMethodField()
     vagas_disponiveis = serializers.SerializerMethodField()
+    pode_monitorar = serializers.SerializerMethodField()
 
     class Meta:
         model = ExecucaoRota
@@ -23,6 +24,8 @@ class ExecucaoRotaSerializer(serializers.ModelSerializer):
             'quantidade_vagas',
             'vagas_ocupadas',
             'vagas_disponiveis',
+            'pode_monitorar',
+            'chamada_tickets_concluida',
             'status',
             'status_display',
             'created_at',
@@ -36,6 +39,10 @@ class ExecucaoRotaSerializer(serializers.ModelSerializer):
     def get_vagas_disponiveis(self, obj):
         return self._obter_resumo_vagas(obj)['vagas_disponiveis']
 
+    @extend_schema_field(OpenApiTypes.BOOL)
+    def get_pode_monitorar(self, obj):
+        return obj.helper.pode_monitorar()
+
     def _obter_resumo_vagas(self, obj):
         if not hasattr(self, '_resumo_vagas_por_execucao'):
             self._resumo_vagas_por_execucao = {}
@@ -47,6 +54,14 @@ class ExecucaoRotaSerializer(serializers.ModelSerializer):
 class CriarExecucaoRotaSerializer(serializers.Serializer):
     rota_id = serializers.IntegerField()
     data_execucao = serializers.DateField()
+
+
+class FinalizarChamadaSerializer(serializers.Serializer):
+    ausentes = serializers.ListField(
+        child=serializers.UUIDField(),
+        required=False,
+        default=list,
+    )
 
 
 class SerializerVazio(serializers.Serializer):

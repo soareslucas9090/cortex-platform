@@ -9,10 +9,18 @@ from AppCore.basics.views.basic_views import (
     BasicPostAPIView,
     BasicRetrieveAPIView,
 )
+from Transporte.permissoes.access import PodeConferirTransporteMixin
+from Transporte.tickets.models import Ticket
+from Transporte.tickets.serializers import TicketConferenciaSerializer
 
 from .choices import StatusExecucaoRota
 from .models import ExecucaoRota
-from .serializers import CriarExecucaoRotaSerializer, ExecucaoRotaSerializer, SerializerVazio
+from .serializers import (
+    CriarExecucaoRotaSerializer,
+    ExecucaoRotaSerializer,
+    FinalizarChamadaSerializer,
+    SerializerVazio,
+)
 
 PERMISSAO_LISTAGEM = (
     '**Permissões:** Autenticado. L3 (EDITAR_TUDO) vê todas as execuções; '
@@ -20,6 +28,11 @@ PERMISSAO_LISTAGEM = (
     'do dia da viagem até exatamente 30 minutos antes da saída.'
 )
 PERMISSAO_ADMIN = '**Permissões:** L3 (EDITAR_TUDO) — perfil TI / administradores.'
+PERMISSAO_CONFERIR = (
+    '**Permissões:** capacidade transporte.conferir. Lê e opera execuções do dia e, '
+    'após iniciar o monitoramento, as filas de ticket e de espera dessa execução. '
+    'Não amplia cadastro nem recursos globais do módulo.'
+)
 
 
 @extend_schema(
@@ -141,39 +154,55 @@ class FecharReservasExecucaoRotaView(AlterarStatusExecucaoRotaView):
 
 
 @extend_schema(
-    tags=['Transporte · Execuções de rotas'],
+    tags=['Transporte · Conferência'],
     summary='Iniciar embarque',
-    description=f'Inicia o embarque e habilita a leitura dos QR Codes.\n\n{PERMISSAO_ADMIN}',
+    description=(
+        'Inicia o monitoramento da execução do dia a partir de 30 minutos antes da saída.\n\n'
+        f'{PERMISSAO_CONFERIR}'
+    ),
     request=SerializerVazio,
     responses={
         status.HTTP_200_OK: ExecucaoRotaSerializer,
-        status.HTTP_400_BAD_REQUEST: {'description': 'Transição de status inválida.'},
+        status.HTTP_400_BAD_REQUEST: {'description': 'Fora da janela T-30 ou transição inválida.'},
         status.HTTP_401_UNAUTHORIZED: {'description': 'Não autenticado.'},
-        status.HTTP_403_FORBIDDEN: {'description': 'Acesso administrativo obrigatório.'},
+        status.HTTP_403_FORBIDDEN: {'description': 'Sem capacidade conferir.'},
         status.HTTP_404_NOT_FOUND: {'description': 'Execução não encontrada.'},
     },
 )
-class IniciarEmbarqueExecucaoRotaView(AlterarStatusExecucaoRotaView):
-    novo_status = StatusExecucaoRota.EM_EMBARQUE
+class IniciarEmbarqueExecucaoRotaView(PodeConferirTransporteMixin, BasicPostAPIView):
+    serializer_class = SerializerVazio
     mensagem_sucesso = 'Embarque iniciado com sucesso.'
+
+    def do_action_post(self, serializer_data, request, *args, **kwargs):
+        execucao = ExecucaoRota().business.obter_para_conferencia(kwargs['pk'], usuario=request.user)
+        execucao = execucao.business.iniciar_embarque()
+        return {'dados': ExecucaoRotaSerializer(execucao).data}
 
 
 @extend_schema(
-    tags=['Transporte · Execuções de rotas'],
+    tags=['Transporte · Conferência'],
     summary='Finalizar execução',
-    description=f'Finaliza uma execução em embarque.\n\n{PERMISSAO_ADMIN}',
+    description=(
+        'Embarca a fila que cabe nas vagas restantes, cancela o restante da espera sem strike '
+        f'e finaliza a execução.\n\n{PERMISSAO_CONFERIR}'
+    ),
     request=SerializerVazio,
     responses={
         status.HTTP_200_OK: ExecucaoRotaSerializer,
-        status.HTTP_400_BAD_REQUEST: {'description': 'Transição de status inválida.'},
+        status.HTTP_400_BAD_REQUEST: {'description': 'Chamada pendente ou transição inválida.'},
         status.HTTP_401_UNAUTHORIZED: {'description': 'Não autenticado.'},
-        status.HTTP_403_FORBIDDEN: {'description': 'Acesso administrativo obrigatório.'},
+        status.HTTP_403_FORBIDDEN: {'description': 'Sem capacidade conferir.'},
         status.HTTP_404_NOT_FOUND: {'description': 'Execução não encontrada.'},
     },
 )
-class FinalizarExecucaoRotaView(AlterarStatusExecucaoRotaView):
-    novo_status = StatusExecucaoRota.FINALIZADA
+class FinalizarExecucaoRotaView(PodeConferirTransporteMixin, BasicPostAPIView):
+    serializer_class = SerializerVazio
     mensagem_sucesso = 'Execução finalizada com sucesso.'
+
+    def do_action_post(self, serializer_data, request, *args, **kwargs):
+        execucao = ExecucaoRota().business.obter_para_conferencia(kwargs['pk'], usuario=request.user)
+        execucao = execucao.business.finalizar_conferencia()
+        return {'dados': ExecucaoRotaSerializer(execucao).data}
 
 
 @extend_schema(
@@ -192,3 +221,186 @@ class FinalizarExecucaoRotaView(AlterarStatusExecucaoRotaView):
 class CancelarExecucaoRotaView(AlterarStatusExecucaoRotaView):
     novo_status = StatusExecucaoRota.CANCELADA
     mensagem_sucesso = 'Execução cancelada com sucesso.'
+
+
+@extend_schema(
+    tags=['Transporte · Conferência'],
+    summary='Listar execuções do dia para conferência',
+    description=(
+        'Lista somente as execuções do dia. Query params apenas reduzem o conjunto.\n\n'
+        f'{PERMISSAO_CONFERIR}'
+    ),
+    parameters=[
+        OpenApiParameter(
+            'data',
+            OpenApiTypes.DATE,
+            OpenApiParameter.QUERY,
+            required=False,
+            description='Se diferente de hoje, retorna vazio. Não amplia o acesso.',
+        ),
+        OpenApiParameter(
+            'paginacao',
+            OpenApiTypes.INT,
+            OpenApiParameter.QUERY,
+            required=False,
+            description='Tamanho da página (1–100, padrão 10).',
+        ),
+    ],
+    responses={
+        status.HTTP_200_OK: ExecucaoRotaSerializer(many=True),
+        status.HTTP_401_UNAUTHORIZED: {'description': 'Não autenticado.'},
+        status.HTTP_403_FORBIDDEN: {'description': 'Sem capacidade conferir.'},
+    },
+)
+class ListarExecucoesConferenciaView(PodeConferirTransporteMixin, BasicGetAPIView):
+    serializer_class = ExecucaoRotaSerializer
+    pagination_class = PaginacaoCustomizada
+    mensagem_sucesso = 'Execuções do dia listadas com sucesso.'
+
+    def get_queryset(self):
+        return ExecucaoRota().business.listar_para_conferencia(
+            self.request.query_params.get('data'),
+        )
+
+
+@extend_schema(
+    tags=['Transporte · Conferência'],
+    summary='Listar tickets da chamada',
+    description=(
+        'Lista os tickets da execução monitorada. O filtro cpf apenas reduz o conjunto.\n\n'
+        f'{PERMISSAO_CONFERIR}'
+    ),
+    parameters=[
+        OpenApiParameter(
+            'cpf',
+            OpenApiTypes.STR,
+            OpenApiParameter.QUERY,
+            required=False,
+            description='Filtra por CPF. Apenas reduz o conjunto já autorizado.',
+        ),
+        OpenApiParameter(
+            'paginacao',
+            OpenApiTypes.INT,
+            OpenApiParameter.QUERY,
+            required=False,
+            description='Tamanho da página (1–100, padrão 10).',
+        ),
+    ],
+    responses={
+        status.HTTP_200_OK: TicketConferenciaSerializer(many=True),
+        status.HTTP_401_UNAUTHORIZED: {'description': 'Não autenticado.'},
+        status.HTTP_403_FORBIDDEN: {'description': 'Sem capacidade conferir.'},
+        status.HTTP_404_NOT_FOUND: {'description': 'Execução não encontrada no escopo.'},
+    },
+)
+class ListarReservasConferenciaView(PodeConferirTransporteMixin, BasicGetAPIView):
+    serializer_class = TicketConferenciaSerializer
+    pagination_class = PaginacaoCustomizada
+    mensagem_sucesso = 'Tickets da conferência listados com sucesso.'
+
+    def get_queryset(self):
+        execucao = ExecucaoRota().business.obter_para_conferencia(
+            self.kwargs['pk'],
+            exigir_embarque=True,
+            usuario=self.request.user,
+        )
+        return Ticket().business.listar_reservas_conferencia(
+            execucao,
+            self.request.query_params.get('cpf'),
+        )
+
+
+@extend_schema(
+    tags=['Transporte · Conferência'],
+    summary='Finalizar chamada de tickets',
+    description=(
+        'Grava ausências (com strike) e embarca os demais tickets reservados.\n\n'
+        f'{PERMISSAO_CONFERIR}'
+    ),
+    request=FinalizarChamadaSerializer,
+    responses={
+        status.HTTP_200_OK: ExecucaoRotaSerializer,
+        status.HTTP_400_BAD_REQUEST: {'description': 'Chamada inválida.'},
+        status.HTTP_401_UNAUTHORIZED: {'description': 'Não autenticado.'},
+        status.HTTP_403_FORBIDDEN: {'description': 'Sem capacidade conferir.'},
+    },
+)
+class FinalizarChamadaConferenciaView(PodeConferirTransporteMixin, BasicPostAPIView):
+    serializer_class = FinalizarChamadaSerializer
+    mensagem_sucesso = 'Chamada de tickets concluída com sucesso.'
+
+    def do_action_post(self, serializer_data, request, *args, **kwargs):
+        execucao = ExecucaoRota().business.obter_para_conferencia(
+            kwargs['pk'],
+            exigir_embarque=True,
+            usuario=request.user,
+        )
+        execucao = execucao.business.finalizar_chamada(serializer_data.get('ausentes') or [])
+        return {'dados': ExecucaoRotaSerializer(execucao).data}
+
+
+@extend_schema(
+    tags=['Transporte · Conferência'],
+    summary='Listar fila de espera visível',
+    description=(
+        'Lista os primeiros N tickets em espera, limitado às vagas restantes.\n\n'
+        f'{PERMISSAO_CONFERIR}'
+    ),
+    parameters=[
+        OpenApiParameter(
+            'paginacao',
+            OpenApiTypes.INT,
+            OpenApiParameter.QUERY,
+            required=False,
+            description='Tamanho da página (1–100, padrão 10).',
+        ),
+    ],
+    responses={
+        status.HTTP_200_OK: TicketConferenciaSerializer(many=True),
+        status.HTTP_401_UNAUTHORIZED: {'description': 'Não autenticado.'},
+        status.HTTP_403_FORBIDDEN: {'description': 'Sem capacidade conferir.'},
+    },
+)
+class ListarFilaConferenciaView(PodeConferirTransporteMixin, BasicGetAPIView):
+    serializer_class = TicketConferenciaSerializer
+    pagination_class = PaginacaoCustomizada
+    mensagem_sucesso = 'Fila de espera listada com sucesso.'
+
+    def get_queryset(self):
+        execucao = ExecucaoRota().business.obter_para_conferencia(
+            self.kwargs['pk'],
+            exigir_embarque=True,
+            usuario=self.request.user,
+        )
+        return Ticket().business.listar_fila_visivel_conferencia(execucao)
+
+
+@extend_schema(
+    tags=['Transporte · Conferência'],
+    summary='Remover aluno da fila de espera',
+    description=(
+        'Cancela o ticket em espera sem gerar strike.\n\n'
+        f'{PERMISSAO_CONFERIR}'
+    ),
+    request=SerializerVazio,
+    responses={
+        status.HTTP_200_OK: TicketConferenciaSerializer,
+        status.HTTP_400_BAD_REQUEST: {'description': 'Ticket não está em espera.'},
+        status.HTTP_401_UNAUTHORIZED: {'description': 'Não autenticado.'},
+        status.HTTP_403_FORBIDDEN: {'description': 'Sem capacidade conferir.'},
+        status.HTTP_404_NOT_FOUND: {'description': 'Ticket ou execução não encontrado.'},
+    },
+)
+class RemoverFilaConferenciaView(PodeConferirTransporteMixin, BasicPostAPIView):
+    serializer_class = SerializerVazio
+    mensagem_sucesso = 'Aluno removido da fila de espera sem strike.'
+
+    def do_action_post(self, serializer_data, request, *args, **kwargs):
+        execucao = ExecucaoRota().business.obter_para_conferencia(
+            kwargs['pk'],
+            exigir_embarque=True,
+            usuario=request.user,
+        )
+        ticket = Ticket().business.obter_por_codigo(kwargs['codigo'])
+        ticket = ticket.business.remover_espera_conferencia(execucao)
+        return {'dados': TicketConferenciaSerializer(ticket).data}

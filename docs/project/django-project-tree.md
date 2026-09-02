@@ -389,7 +389,7 @@ Infraestrutura/
 ### `Transporte/`
 
 Domínio responsável pelo transporte universitário: cadastros, execuções datadas,
-tickets, fila de espera, embarque e tratamento de ausências.
+tickets, fila de espera, conferência de embarque, entrada sem ticket e ausências.
 
 #### Estrutura atual
 
@@ -401,6 +401,8 @@ Transporte/
 ├── rotas/
 ├── execucoes_rotas/
 ├── tickets/
+├── entradas_sem_ticket/
+├── permissoes/
 ├── strikes/
 └── justificativas/
 ```
@@ -411,6 +413,8 @@ Transporte/
 - `rotas/` → model principal `Rota`
 - `execucoes_rotas/` → model principal `ExecucaoRota`
 - `tickets/` → model principal `Ticket`; tickets em espera formam a fila
+- `entradas_sem_ticket/` → model principal `EntradaSemTicket`
+- `permissoes/` → model `PermissaoFuncaoTransporte` (capacidade `conferir`; sem rotas HTTP)
 - `strikes/` → model principal `Strike`
 - `justificativas/` → model principal `Justificativa`
 

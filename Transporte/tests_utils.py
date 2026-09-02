@@ -5,8 +5,16 @@ from rest_framework_simplejwt.tokens import RefreshToken
 
 from Academico.alunos.models import Aluno
 from Identidade.usuarios.models import TipoDeficiencia, Usuario
+from Organizacional.funcoes.models import Funcao
+from Organizacional.setores.models import Setor
+from Organizacional.vinculos.models import SetorVinculo
+from PessoasInstitucionais.cargos.models import Cargo
+from PessoasInstitucionais.empresas_instituicoes.models import EmpresaInstituicao
+from PessoasInstitucionais.servidores.models import Servidor
+from PessoasInstitucionais.terceirizados.models import Terceirizado
 from Transporte.execucoes_rotas.models import ExecucaoRota
 from Transporte.percursos.models import Percurso
+from Transporte.permissoes.models import PermissaoFuncaoTransporte
 from Transporte.rotas.choices import DiaSemana
 from Transporte.rotas.models import Rota
 
@@ -61,4 +69,34 @@ def criar_rota_e_execucao(vagas=1, dias_ate_execucao=7, horario_saida=time(12, 0
     )
     execucao = ExecucaoRota().business.criar_execucao(rota.pk, data_execucao)
     return rota, execucao
+
+
+def criar_conferente(cpf='30000000001', nome='Conferente', terceirizado=False):
+    usuario = criar_usuario(cpf, nome=nome)
+    funcao = Funcao.objects.create(
+        papel_funcao=f'Conferente {cpf}',
+        descricao='Conferente de transporte',
+    )
+    PermissaoFuncaoTransporte().business.criar_permissao(funcao.pk, conferir=True)
+    setor = Setor.objects.create(nome=f'Transporte {cpf}', sigla=cpf[-5:])
+    SetorVinculo.objects.create(usuario=usuario, setor=setor, funcao=funcao)
+    if terceirizado:
+        empresa = EmpresaInstituicao.objects.create(nome=f'Empresa {cpf}')
+        Terceirizado.objects.create(
+            usuario=usuario,
+            empresa_instituicao=empresa,
+            ativo=True,
+        )
+    else:
+        cargo = Cargo.objects.create(nome=f'Cargo {cpf}')
+        Servidor.objects.create(usuario=usuario, cargo=cargo, categoria=1, ativo=True)
+    return usuario
+
+
+def criar_execucao_hoje(vagas=2, horario_saida=time(18, 0)):
+    return criar_rota_e_execucao(
+        vagas=vagas,
+        dias_ate_execucao=0,
+        horario_saida=horario_saida,
+    )
 

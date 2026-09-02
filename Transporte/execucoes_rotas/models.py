@@ -40,6 +40,10 @@ class ExecucaoRota(
         choices=StatusExecucaoRota.choices,
         default=StatusExecucaoRota.ABERTA,
     )
+    chamada_tickets_concluida = models.BooleanField(
+        'Chamada de tickets concluída',
+        default=False,
+    )
 
     class Meta:
         verbose_name = 'Execução de rota'

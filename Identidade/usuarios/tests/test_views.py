@@ -42,13 +42,16 @@ def criar_usuario(cpf, nome='Usuário Teste', password='Senha@123', is_admin=Fal
     return usuario
 
 
-def permissoes_esperadas(cortex_nivel, reservar=False):
+def permissoes_esperadas(cortex_nivel, reservar=False, conferir=None):
+    if conferir is None:
+        conferir = cortex_nivel == PERMISSAO_CORTEX_EDITAR_TUDO
     return {
         'cortex': cortex_nivel,
         'infraestrutura': capacidades_infraestrutura_vazias(),
         'transporte': {
             'gerenciar': cortex_nivel == PERMISSAO_CORTEX_EDITAR_TUDO,
             'reservar': reservar,
+            'conferir': conferir,
         },
     }
 
@@ -1162,9 +1165,10 @@ class DocumentarPermissoesViewTest(APITestCase):
         self.assertIn('retirada_irrestrita', infraestrutura['capacidades'][3]['codigo'])
 
         transporte = next(modulo for modulo in modulos if modulo['chave'] == 'transporte')
-        self.assertEqual(len(transporte['capacidades']), 2)
+        self.assertEqual(len(transporte['capacidades']), 3)
         self.assertEqual(transporte['capacidades'][0]['codigo'], 'gerenciar')
         self.assertEqual(transporte['capacidades'][1]['codigo'], 'reservar')
+        self.assertEqual(transporte['capacidades'][2]['codigo'], 'conferir')
         self.assertGreaterEqual(len(transporte['exemplos']), 1)
         self.assertIn('secoes', transporte)
         self.assertGreaterEqual(len(transporte['secoes']), 2)

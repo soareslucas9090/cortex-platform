@@ -116,6 +116,29 @@ class TicketHelpers(ModelInstanceHelpers):
             return None
         return posicao['atual']
 
+    def listar_reservas_conferencia(self, execucao, cpf=None):
+        queryset = self._ordenar_reservas(execucao.tickets.all())
+        if cpf:
+            queryset = queryset.filter(aluno__usuario__cpf__icontains=cpf.strip())
+        return queryset.select_related(
+            'execucao_rota',
+            'execucao_rota__rota',
+            'execucao_rota__rota__percurso',
+            'aluno',
+            'aluno__usuario',
+        )
+
+    def listar_fila_visivel_conferencia(self, execucao):
+        limite = execucao.helper.quantidade_vagas_disponiveis()
+        queryset = self._ordenar_fila(execucao.tickets.all()).select_related(
+            'aluno',
+            'aluno__usuario',
+            'execucao_rota',
+        )
+        if limite < 1:
+            return queryset.none()
+        return queryset[:limite]
+
     def proximo_da_fila(self, execucao):
         return self._ordenar_fila(
             execucao.tickets.select_for_update(),

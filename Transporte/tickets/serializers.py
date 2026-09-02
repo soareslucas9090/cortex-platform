@@ -14,6 +14,10 @@ class AlunoTicketSerializer(serializers.Serializer):
     foto = serializers.URLField(source='usuario.foto', read_only=True, allow_null=True)
 
 
+class AlunoConferenciaSerializer(AlunoTicketSerializer):
+    cpf = serializers.CharField(source='usuario.cpf', read_only=True)
+
+
 class PosicaoTicketSerializer(serializers.Serializer):
     tipo = serializers.ChoiceField(choices=['RESERVA', 'ESPERA'], read_only=True)
     atual = serializers.IntegerField(min_value=1, read_only=True)
@@ -70,6 +74,36 @@ class TicketSerializer(serializers.ModelSerializer):
         if obj.status not in (StatusTicket.RESERVADO, StatusTicket.EMBARCADO):
             return None
         return obj.business.gerar_codigo_qr()
+
+
+class TicketConferenciaSerializer(serializers.ModelSerializer):
+    aluno = AlunoConferenciaSerializer(read_only=True)
+    status_display = serializers.CharField(source='get_status_display', read_only=True)
+    posicao = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Ticket
+        fields = [
+            'codigo',
+            'aluno',
+            'status',
+            'status_display',
+            'posicao',
+            'reservado_em',
+            'entrou_em_espera_em',
+            'embarcado_em',
+            'ausente_em',
+        ]
+
+    @extend_schema_field(PosicaoTicketSerializer)
+    def get_posicao(self, obj):
+        if not hasattr(self, '_posicoes_por_execucao'):
+            self._posicoes_por_execucao = {}
+        if obj.execucao_rota_id not in self._posicoes_por_execucao:
+            self._posicoes_por_execucao[obj.execucao_rota_id] = (
+                obj.business.obter_posicoes_da_execucao(obj.execucao_rota)
+            )
+        return self._posicoes_por_execucao[obj.execucao_rota_id].get(obj.pk)
 
 
 class SerializerVazio(serializers.Serializer):

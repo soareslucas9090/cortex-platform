@@ -54,7 +54,7 @@ class PermissaoDocumentacao:
                 'atualização de perfil.\n\n'
                 'O payload `user.permissoes` no login/me retorna `{"cortex": "<nível>"}` e '
                 'chaves adicionais por módulo: `infraestrutura` (flags booleanas) e '
-                '`transporte` (`{"gerenciar": true|false, "reservar": true|false}`).'
+                '`transporte` (`{"gerenciar": true|false, "reservar": true|false, "conferir": true|false}`).'
             ),
             'niveis': [
                 {
@@ -513,14 +513,15 @@ class PermissaoDocumentacao:
             'chave': 'transporte',
             'titulo': 'Transporte',
             'resumo': (
-                'Gestão de rotas, execuções, tickets, fila de espera, strikes e justificativas.'
+                'Gestão de rotas, execuções, tickets, conferência de embarque, fila de espera, '
+                'strikes e justificativas.'
             ),
             'texto': (
-                'O módulo transporte controla o cadastro de percursos (apelido, descrição e '
-                'status ativo/inativo) e de rotas (percurso, horário de saída, dia da semana e '
-                'quantidade de vagas). L3 administra esses cadastros e as execuções. Alunos '
-                'ativos e matriculados, com menos de três strikes ativos, podem solicitar '
-                'tickets e entrar em filas de espera. O payload expõe gerenciar e reservar.'
+                'O módulo transporte controla o cadastro de percursos e rotas, as execuções '
+                'datadas, os tickets e a conferência de embarque. L3 administra cadastros. '
+                'Alunos elegíveis reservam tickets. Conferentes (L3 ou colaborador servidor/'
+                'terceirizado com função conferir) operam as execuções do dia. O payload expõe '
+                'gerenciar, reservar e conferir.'
             ),
             'secoes': [
                 {
@@ -529,8 +530,8 @@ class PermissaoDocumentacao:
                         {
                             'destaque': 'gerenciar',
                             'texto': (
-                                'true apenas se is_staff, is_admin ou is_superuser (mesmo critério '
-                                'de L3 / tem_acesso_elevado). Sem usuário: gerenciar=false.'
+                                'true apenas se is_staff, is_admin ou is_superuser (L3). Sem '
+                                'usuário: gerenciar=false.'
                             ),
                         },
                         {
@@ -541,8 +542,19 @@ class PermissaoDocumentacao:
                             ),
                         },
                         {
-                            'destaque': 'Payload típico',
-                            'texto': '{"transporte": {"gerenciar": false, "reservar": true}}',
+                            'destaque': 'conferir',
+                            'texto': (
+                                'true para L3 ou para servidor/terceirizado ativo com vínculo '
+                                'cuja função tem PermissaoFuncaoTransporte.conferir. L2 sozinho '
+                                'não abre o módulo de conferência.'
+                            ),
+                        },
+                        {
+                            'destaque': 'Payload típico conferente',
+                            'texto': (
+                                '{"transporte": {"gerenciar": false, "reservar": false, '
+                                '"conferir": true}}'
+                            ),
                         },
                     ],
                 },
@@ -559,17 +571,17 @@ class PermissaoDocumentacao:
                     ],
                 },
                 {
-                    'titulo': 'Execuções, tickets e fila de espera',
+                    'titulo': 'Execuções, tickets e conferência',
                     'paragrafos': [
                         (
-                            'L3 cria e controla execuções de rotas, inicia o embarque, valida '
-                            'QR Codes e registra ausências. Alunos consultam execuções abertas '
-                            'e seus próprios tickets.'
+                            'L3 cria execuções, abre/fecha reservas e cancela. Conferentes '
+                            'listam execuções do dia e, após iniciar o monitoramento '
+                            '(EM_EMBARQUE), operam as filas de ticket e de espera dessa execução.'
                         ),
                         (
-                            'Reserva, entrada e saída da fila e cancelamento funcionam somente '
-                            'de segunda a sexta, da meia-noite do dia da execução até exatamente '
-                            '30 minutos antes da saída.'
+                            'Reserva, entrada e saída da fila e cancelamento pelo aluno funcionam '
+                            'somente de segunda a sexta, da meia-noite do dia da execução até '
+                            'exatamente 30 minutos antes da saída.'
                         ),
                         (
                             'Reservas confirmadas e fila priorizam alunos com '
@@ -612,11 +624,30 @@ class PermissaoDocumentacao:
                         'Fica indisponível quando o aluno possui três ou mais strikes ativos.'
                     ),
                 },
+                {
+                    'codigo': 'conferir',
+                    'nome': 'Conferir embarque',
+                    'quem_usa': (
+                        'L3 ou colaborador (servidor ou terceirizado) com função conferir'
+                    ),
+                    'pode': (
+                        'Listar execuções do dia e, após iniciar o monitoramento, operar as '
+                        'filas de ticket e de espera dessa execução.'
+                    ),
+                    'nao_sem_capacidade': (
+                        'Acessar a conferência, iniciar embarque ou finalizar a rota pelo fluxo '
+                        'do conferente.'
+                    ),
+                    'descricao': (
+                        'Não amplia cadastro nem listagens globais de tickets, strikes ou '
+                        'justificativas. O dashboard futuro (RF012) reutiliza esta capacidade.'
+                    ),
+                },
             ],
             'exemplos': [
                 {
                     'perfil': 'Aluno ativo e matriculado com menos de três strikes ativos',
-                    'capacidades': {'gerenciar': False, 'reservar': True},
+                    'capacidades': {'gerenciar': False, 'reservar': True, 'conferir': False},
                     'pode': [
                         'consultar execuções abertas',
                         'reservar ticket e entrar na fila de espera',
@@ -624,15 +655,29 @@ class PermissaoDocumentacao:
                     ],
                     'nao_pode': [
                         'listar ou cadastrar percursos e rotas',
-                        'administrar execuções ou validar QR Codes',
+                        'conferir embarque',
+                    ],
+                },
+                {
+                    'perfil': 'Conferente (servidor ou terceirizado com função)',
+                    'capacidades': {'gerenciar': False, 'reservar': False, 'conferir': True},
+                    'pode': [
+                        'listar execuções do dia',
+                        'iniciar embarque após T-30',
+                        'operar filas de ticket e espera da execução monitorada',
+                    ],
+                    'nao_pode': [
+                        'cadastrar percursos e rotas',
+                        'listar tickets de outras execuções ou datas',
                     ],
                 },
                 {
                     'perfil': 'TI (staff, admin ou superusuário)',
-                    'capacidades': {'gerenciar': True, 'reservar': False},
+                    'capacidades': {'gerenciar': True, 'reservar': False, 'conferir': True},
                     'pode': [
                         'cadastrar, editar, desativar e reativar percursos e rotas',
-                        'ver o menu Transporte no frontend',
+                        'criar execuções, abrir/fechar reservas e cancelar',
+                        'conferir embarque',
                     ],
                     'nao_pode': [],
                 },

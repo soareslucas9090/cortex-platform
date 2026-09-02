@@ -5,17 +5,19 @@ Este arquivo contém as regras, modelos e convenções específicas para o domí
 ## Visão Geral do Domínio
 
 O domínio `Transporte` gerencia o transporte universitário. A entrega atual cobre
-percursos, rotas, execuções datadas, reserva de tickets, fila de espera, embarque
-por QR Code, ausências, strikes e justificativas.
+percursos, rotas, execuções datadas, reserva de tickets, fila de espera, conferência
+de embarque, entrada sem ticket, ausências, strikes e justificativas.
 
 ### Modelos e Relacionamentos
 
 - **Percurso**: trajeto nomeado do ônibus (`apelido` + `descricao`). Campo `ativo` no lugar de exclusão física.
 - **Rota**: agendamento do ônibus em um percurso (`horario_saida`, `dia_semana`, `quantidade_vagas`). N:1 com `Percurso` (um percurso pode ter várias rotas em dias/horários diferentes). Cada rota exige exatamente um percurso, como no diagrama de classes.
 - **ExecucaoRota**: ocorrência datada de uma rota. Congela `data_hora_saida` e
-  `quantidade_vagas` para não ser alterada por edições futuras na rota.
+  `quantidade_vagas`. Campo `chamada_tickets_concluida` marca o fim da chamada de tickets.
 - **Ticket**: solicitação de um aluno em uma execução; representa reserva, posição
   em fila, cancelamento, embarque ou ausência.
+- **EntradaSemTicket**: embarque manual por CPF em vaga remanescente, após a chamada
+  e com a fila de espera vazia.
 - **Strike**: falta vinculada unicamente a um ticket marcado como ausente.
 - **Justificativa**: solicitação única de revisão de um strike.
 
@@ -27,12 +29,14 @@ Não é possível desativar um percurso que ainda tenha rotas ativas. Não é po
 Transporte/
 ├── __init__.py
 ├── urls.py
-├── percursos/       # App Django do model Percurso
-├── rotas/           # App Django do model Rota
-├── execucoes_rotas/ # App Django do model ExecucaoRota
-├── tickets/         # App Django do model Ticket e fila de espera
-├── strikes/         # App Django do model Strike
-└── justificativas/  # App Django do model Justificativa
+├── percursos/
+├── rotas/
+├── execucoes_rotas/
+├── tickets/
+├── entradas_sem_ticket/
+├── permissoes/
+├── strikes/
+└── justificativas/
 ```
 
 ## Regras Específicas do Domínio
@@ -63,7 +67,7 @@ Transporte/
 - Reservas e entradas na fila exigem estado `ABERTA`.
 - Para alunos, execuções disponíveis são exibidas somente de segunda a sexta,
   da meia-noite do próprio dia até exatamente 30 minutos antes da saída.
-- QR Code só é validado em `EM_EMBARQUE`.
+- Conferente inicia o monitoramento (`EM_EMBARQUE`) a partir de 30 minutos antes da saída.
 
 ### 4. Tickets, capacidade e cancelamento
 
@@ -107,7 +111,8 @@ O payload `posicao` informa `tipo` (`RESERVA` ou `ESPERA`), `atual` e `total`.
 ### 6. Ausências, strikes e justificativas
 
 - L3 marca um ticket `RESERVADO` como `AUSENTE` durante o embarque ou após a
-  finalização; a ação cria exatamente um strike.
+  finalização; a ação cria exatamente um strike. O conferente faz o mesmo em lote
+  ao finalizar a chamada (`ausentes`). Remover da fila de espera **não** gera strike.
 - Strike `ATIVO` conta para o bloqueio; `JUSTIFICADO` deixa de contar.
 - O aluno pode enviar imediatamente uma justificativa para qualquer strike ativo
   próprio, mesmo antes de atingir o bloqueio por três strikes.
@@ -128,17 +133,22 @@ O payload `posicao` informa `tipo` (`RESERVA` ou `ESPERA`), `atual` e `total`.
 
 ### 8. Permissões
 
-Percursos e rotas continuam restritos a **L3** (`EDITAR_TUDO`). Execuções abertas
-podem ser consultadas por qualquer autenticado; L3 vê e administra todas.
-O aluno vê e altera apenas os próprios tickets, strikes e justificativas.
+Percursos e rotas continuam restritos a **L3** (`gerenciar`). L2 (`LER_TUDO`) não
+abre o módulo de Transporte. O aluno vê e altera apenas os próprios tickets,
+strikes e justificativas.
 
-- **Views:** `IsAdminMixin` (`tem_acesso_elevado()`), o mesmo critério de L3: `is_staff`, `is_admin` ou superusuário.
-- **Payload (login/me):** `gerenciar` é `true` só para L3; `reservar` exige aluno
-  ativo, matriculado e com menos de três strikes ativos.
+- **Payload:** `gerenciar` (L3), `reservar` (aluno elegível), `conferir` (L3 **ou**
+  servidor/terceirizado ativo com `SetorVinculo` cuja função tem
+  `PermissaoFuncaoTransporte.conferir`).
+- **Conferente:** lista só execuções do **dia**; após `iniciar-embarque`, opera as
+  filas de ticket e de espera **dessa** execução. Não acessa GET global de tickets.
+- **Views de conferência:** `PodeConferirTransporteMixin`.
 - **Compilação:** `UsuarioPermissions.permissoes_transporte()`.
-- **Documentação viva da API:** `GET /cortex/identidade/permissoes/documentacao/` (`documentacao_transporte()`). Toda mudança de regra deve atualizar esse método no mesmo PR.
+- **Documentação viva:** `documentacao_transporte()`. O dashboard futuro (RF012)
+  reutiliza `conferir`; não há capacidade `ver_dashboard`.
 
-Swagger de cada endpoint de percursos e rotas declara `**Permissões:** L3 (EDITAR_TUDO) — perfil TI / administradores.`
+Swagger das views de conferência declara capacidade `transporte.conferir` e o
+escopo do dia + filas da execução monitorada.
 
 ### 9. Endpoints
 
@@ -162,6 +172,12 @@ Base execuções: `/cortex/transporte/execucoes-rotas/`
 - `GET` em `<pk>/`
 - `POST` em `abrir-reservas/`, `fechar-reservas/`, `iniciar-embarque/`,
   `finalizar/` e `cancelar/`
+- Conferência: `GET conferencia/execucoes/`
+- `GET` `execucoes-rotas/<pk>/conferencia/reservas/`
+- `POST` `execucoes-rotas/<pk>/conferencia/finalizar-chamada/`
+- `GET` `execucoes-rotas/<pk>/conferencia/fila/`
+- `POST` `execucoes-rotas/<pk>/conferencia/fila/<uuid>/remover/`
+- `POST` `execucoes-rotas/<pk>/conferencia/entradas-sem-ticket/`
 - `POST` em `<pk>/reservar/` e `<pk>/fila-espera/entrar/`
 
 Base tickets: `/cortex/transporte/tickets/`
