@@ -40,6 +40,16 @@ class Aluno(ModelHelperMixin, ModelBusinessMixin, ModelRulesMixin, BasicModel):
         default=FormaIngresso.VESTIBULAR,
     )
     ativo = models.BooleanField('Ativo', default=True)
+    faltas = models.PositiveSmallIntegerField(
+        'Faltas de transporte',
+        default=0,
+        help_text='Quantidade de strikes ativos no transporte universitário.',
+    )
+    is_bloqueado = models.BooleanField(
+        'Bloqueado no transporte',
+        default=False,
+        help_text='Indica bloqueio por três ou mais faltas ativas no transporte.',
+    )
 
     class Meta:
         verbose_name = 'Aluno'
