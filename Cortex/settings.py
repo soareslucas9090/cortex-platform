@@ -144,6 +144,7 @@ PROJECT_APPS = [
     'Infraestrutura.importacoes',
     'Transporte.percursos',
     'Transporte.rotas',
+    'Transporte.motoristas',
     'Transporte.execucoes_rotas',
     'Transporte.tickets',
     'Transporte.strikes',

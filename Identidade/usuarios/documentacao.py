@@ -54,7 +54,8 @@ class PermissaoDocumentacao:
                 'atualização de perfil.\n\n'
                 'O payload `user.permissoes` no login/me retorna `{"cortex": "<nível>"}` e '
                 'chaves adicionais por módulo: `infraestrutura` (flags booleanas) e '
-                '`transporte` (`{"gerenciar": true|false, "reservar": true|false}`).'
+                '`transporte` (`{"gerenciar": true|false, "motorista": true|false, '
+                '"reservar": true|false}`).'
             ),
             'niveis': [
                 {
@@ -513,14 +514,16 @@ class PermissaoDocumentacao:
             'chave': 'transporte',
             'titulo': 'Transporte',
             'resumo': (
-                'Gestão de rotas, execuções, tickets, fila de espera, strikes e justificativas.'
+                'Gestão de rotas e execuções, visão do motorista, tickets, fila de espera, '
+                'strikes e justificativas.'
             ),
             'texto': (
                 'O módulo transporte controla o cadastro de percursos (apelido, descrição e '
                 'status ativo/inativo) e de rotas (percurso, horário de saída, dia da semana e '
-                'quantidade de vagas). L3 administra esses cadastros e as execuções. Alunos '
-                'ativos e matriculados, com menos de três strikes ativos, podem solicitar '
-                'tickets e entrar em filas de espera. O payload expõe gerenciar e reservar.'
+                'quantidade de vagas). L3 administra esses cadastros e as execuções; motoristas '
+                'ativos consultam as rotas do dia; e alunos ativos e matriculados, com menos de '
+                'três strikes ativos, podem solicitar tickets e entrar em filas de espera. O '
+                'payload expõe gerenciar, motorista e reservar.'
             ),
             'secoes': [
                 {
@@ -534,6 +537,13 @@ class PermissaoDocumentacao:
                             ),
                         },
                         {
+                            'destaque': 'motorista',
+                            'texto': (
+                                'true somente quando o usuário possui perfil Motorista ativo e '
+                                'a própria conta de usuário está ativa.'
+                            ),
+                        },
+                        {
                             'destaque': 'reservar',
                             'texto': (
                                 'true para usuário e aluno ativos, com situação matriculado e '
@@ -542,12 +552,15 @@ class PermissaoDocumentacao:
                         },
                         {
                             'destaque': 'Payload típico',
-                            'texto': '{"transporte": {"gerenciar": false, "reservar": true}}',
+                            'texto': (
+                                '{"transporte": {"gerenciar": false, "motorista": true, '
+                                '"reservar": false}}'
+                            ),
                         },
                     ],
                 },
                 {
-                    'titulo': 'API de percursos e rotas',
+                    'titulo': 'API administrativa de percursos e rotas',
                     'paragrafos': [
                         (
                             'Todas as operações (GET listagem/detalhe, POST criar, PATCH, '
@@ -587,6 +600,20 @@ class PermissaoDocumentacao:
                         ),
                     ],
                 },
+                {
+                    'titulo': 'API de consulta do motorista (RF013)',
+                    'paragrafos': [
+                        (
+                            'Todos os motoristas ativos visualizam todas as rotas e percursos ativos '
+                            'programados para o dia, em ordem de horário.'
+                        ),
+                        (
+                            'A consulta não altera dados e expõe a execução do dia, o estado das '
+                            'reservas e a quantidade real de vagas ocupadas por tickets.'
+                        ),
+                        'Base: /cortex/transporte/motorista/rotas-do-dia/.',
+                    ],
+                },
             ],
             'capacidades': [
                 {
@@ -603,6 +630,18 @@ class PermissaoDocumentacao:
                     ),
                 },
                 {
+                    'codigo': 'motorista',
+                    'nome': 'Motorista',
+                    'quem_usa': 'Motoristas ativos',
+                    'pode': (
+                        'Ver todas as rotas ativas programadas para o dia.'
+                    ),
+                    'nao_sem_capacidade': 'Acessar a visão operacional de rotas do dia.',
+                    'descricao': (
+                        'Acesso à primeira tela da visão do motorista do MeuIF-Transporte (RF013).'
+                    ),
+                },
+                {
                     'codigo': 'reservar',
                     'nome': 'Reservar ticket',
                     'quem_usa': 'Alunos ativos e matriculados',
@@ -616,7 +655,11 @@ class PermissaoDocumentacao:
             'exemplos': [
                 {
                     'perfil': 'Aluno ativo e matriculado com menos de três strikes ativos',
-                    'capacidades': {'gerenciar': False, 'reservar': True},
+                    'capacidades': {
+                        'gerenciar': False,
+                        'motorista': False,
+                        'reservar': True,
+                    },
                     'pode': [
                         'consultar execuções abertas',
                         'reservar ticket e entrar na fila de espera',
@@ -629,12 +672,31 @@ class PermissaoDocumentacao:
                 },
                 {
                     'perfil': 'TI (staff, admin ou superusuário)',
-                    'capacidades': {'gerenciar': True, 'reservar': False},
+                    'capacidades': {
+                        'gerenciar': True,
+                        'motorista': False,
+                        'reservar': False,
+                    },
                     'pode': [
                         'cadastrar, editar, desativar e reativar percursos e rotas',
                         'ver o menu Transporte no frontend',
                     ],
                     'nao_pode': [],
+                },
+                {
+                    'perfil': 'Motorista ativo',
+                    'capacidades': {
+                        'gerenciar': False,
+                        'motorista': True,
+                        'reservar': False,
+                    },
+                    'pode': [
+                        'ver todas as rotas do dia',
+                    ],
+                    'nao_pode': [
+                        'cadastrar ou editar percursos e rotas',
+                        'iniciar ou finalizar rotas por esta entrega',
+                    ],
                 },
             ],
         }

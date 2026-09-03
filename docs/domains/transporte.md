@@ -5,13 +5,17 @@ Este arquivo contém as regras, modelos e convenções específicas para o domí
 ## Visão Geral do Domínio
 
 O domínio `Transporte` gerencia o transporte universitário. A entrega atual cobre
-percursos, rotas, execuções datadas, reserva de tickets, fila de espera, embarque
-por QR Code, ausências, strikes e justificativas.
+percursos, rotas, o perfil e a visão operacional do motorista (RF013), execuções
+datadas, reserva de tickets, fila de espera, embarque por QR Code, ausências,
+strikes e justificativas.
 
 ### Modelos e Relacionamentos
 
 - **Percurso**: trajeto nomeado do ônibus (`apelido` + `descricao`). Campo `ativo` no lugar de exclusão física.
 - **Rota**: agendamento do ônibus em um percurso (`horario_saida`, `dia_semana`, `quantidade_vagas`). N:1 com `Percurso` (um percurso pode ter várias rotas em dias/horários diferentes). Cada rota exige exatamente um percurso, como no diagrama de classes.
+- **Motorista**: perfil associado 1:1 a `Usuario`. O campo `usuario` também é a
+  chave primária do perfil e usa `PROTECT`, impedindo a exclusão física do usuário
+  enquanto o vínculo existir. O campo `ativo` controla a disponibilidade do perfil.
 - **ExecucaoRota**: ocorrência datada de uma rota. Congela `data_hora_saida` e
   `quantidade_vagas` para não ser alterada por edições futuras na rota.
 - **Ticket**: solicitação de um aluno em uma execução; representa reserva, posição
@@ -29,6 +33,7 @@ Transporte/
 ├── urls.py
 ├── percursos/       # App Django do model Percurso
 ├── rotas/           # App Django do model Rota
+├── motoristas/      # App Django do perfil Motorista
 ├── execucoes_rotas/ # App Django do model ExecucaoRota
 ├── tickets/         # App Django do model Ticket e fila de espera
 ├── strikes/         # App Django do model Strike
@@ -53,7 +58,43 @@ Transporte/
 - `ativo`: desativar/reativar no lugar de DELETE HTTP.
 - Listagem ordena por dia da semana (segunda → domingo), depois horário e apelido do percurso.
 
-### 3. Execuções de rotas
+### 3. Perfil e visão das rotas do dia pelo motorista (RF013)
+
+- Todos os motoristas ativos visualizam todas as rotas ativas programadas para o dia atual.
+- A data atual usa o timezone `America/Fortaleza` configurado no projeto.
+- Rotas são ordenadas pelo horário de saída e, em caso de empate, pelo apelido do percurso.
+- A consulta é somente de leitura e não cria nem altera registros.
+- A resposta combina os dados de rota e percurso com a execução da data, quando ela existe:
+  `execucao_id`, `status_execucao`, `status_execucao_display`, capacidade congelada
+  da execução e `tickets_solicitados`.
+- `tickets_solicitados` conta tickets que ocupam vaga (`RESERVADO` e `EMBARCADO`),
+  usando a mesma regra de ocupação da execução.
+- Quando ainda não existe execução para a rota na data, os campos da execução são
+  nulos, `tickets_solicitados` é zero e a capacidade exibida vem da rota.
+
+#### Estados do perfil Motorista
+
+- **Ativo**: com a conta de usuário também ativa, recebe a capacidade
+  `transporte.motorista` e pode consultar as rotas do dia.
+- **Inativo**: não recebe a capacidade e não pode acessar a consulta, mesmo que a
+  conta de usuário esteja ativa.
+- Conta de usuário inativa sempre bloqueia o acesso, independentemente do estado do
+  perfil Motorista.
+
+#### Apresentação no frontend
+
+A tela do motorista usa os dados reais da execução e dos tickets retornados pela
+API. O status visual é derivado assim:
+
+- sem execução: `RESERVAS NÃO INICIADAS`;
+- execução `ABERTA`: `RESERVAS EM ABERTO`;
+- demais estados da execução: `RESERVAS FINALIZADAS`.
+
+O indicador `Tickets solicitados` exibe `tickets_solicitados / quantidade_vagas`.
+A tela não oferece ação de iniciar ou finalizar rota, responsabilidade da operação
+administrativa/conferência.
+
+### 4. Execuções de rotas
 
 - Criadas manualmente por L3 para uma rota e uma data.
 - A data deve corresponder ao dia da semana da rota.
@@ -65,7 +106,7 @@ Transporte/
   da meia-noite do próprio dia até exatamente 30 minutos antes da saída.
 - QR Code só é validado em `EM_EMBARQUE`.
 
-### 4. Tickets, capacidade e cancelamento
+### 5. Tickets, capacidade e cancelamento
 
 - Somente usuário e aluno ativos, com situação `MATRICULADO`, podem solicitar ticket.
 - Três ou mais strikes ativos bloqueiam novas reservas e novas entradas em fila.
@@ -81,7 +122,7 @@ Transporte/
 - A capacidade e a promoção usam bloqueio pessimista na execução para proteger a
   última vaga em requisições concorrentes.
 
-### 5. Posição dos tickets e prioridade PcD
+### 6. Posição dos tickets e prioridade PcD
 
 A posição é calculada dinamicamente e não é armazenada no ticket. Existem dois
 grupos independentes: reservas confirmadas e fila de espera. A fila não é uma
@@ -104,7 +145,7 @@ O tipo de deficiência não é exposto nas respostas dos tickets.
 O payload `posicao` informa `tipo` (`RESERVA` ou `ESPERA`), `atual` e `total`.
 `posicao_fila` permanece como campo compatível e só contém valor para `EM_ESPERA`.
 
-### 6. Ausências, strikes e justificativas
+### 7. Ausências, strikes e justificativas
 
 - L3 marca um ticket `RESERVADO` como `AUSENTE` durante o embarque ou após a
   finalização; a ação cria exatamente um strike.
@@ -115,7 +156,7 @@ O payload `posicao` informa `tipo` (`RESERVA` ou `ESPERA`), `atual` e `total`.
 - Aprovar altera o strike para `JUSTIFICADO`; o aluno só é desbloqueado quando
   restarem menos de três strikes ativos.
 
-### 7. QR Code
+### 8. QR Code
 
 - O backend emite em `codigo_qr` um conteúdo opaco assinado, com UUID público do
   ticket e execução. CPF, deficiência e IDs internos não são embutidos.
@@ -126,21 +167,29 @@ O payload `posicao` informa `tipo` (`RESERVA` ou `ESPERA`), `atual` e `total`.
 - A primeira leitura muda o ticket para `EMBARCADO`; leituras posteriores são
   idempotentes e retornam `ja_validado=true`.
 
-### 8. Permissões
+### 9. Permissões
 
 Percursos e rotas continuam restritos a **L3** (`EDITAR_TUDO`). Execuções abertas
 podem ser consultadas por qualquer autenticado; L3 vê e administra todas.
 O aluno vê e altera apenas os próprios tickets, strikes e justificativas.
 
 - **Views:** `IsAdminMixin` (`tem_acesso_elevado()`), o mesmo critério de L3: `is_staff`, `is_admin` ou superusuário.
-- **Payload (login/me):** `gerenciar` é `true` só para L3; `reservar` exige aluno
-  ativo, matriculado e com menos de três strikes ativos.
+- **Payload (login/me):** `gerenciar` é `true` só para L3; `motorista` exige conta
+  de usuário e perfil Motorista ativos; `reservar` exige aluno ativo, matriculado
+  e com menos de três strikes ativos.
 - **Compilação:** `UsuarioPermissions.permissoes_transporte()`.
 - **Documentação viva da API:** `GET /cortex/identidade/permissoes/documentacao/` (`documentacao_transporte()`). Toda mudança de regra deve atualizar esse método no mesmo PR.
 
 Swagger de cada endpoint de percursos e rotas declara `**Permissões:** L3 (EDITAR_TUDO) — perfil TI / administradores.`
 
-### 9. Endpoints
+#### Visualização (motorista)
+
+- `user.permissoes.transporte.motorista` é `true` somente para usuário e perfil Motorista ativos.
+- L3/TI não recebe a capacidade operacional automaticamente.
+- O endpoint de leitura usa o `IsAuthenticatedMixin` padrão do `AppCore`; a camada
+  `Business` valida que o usuário possui perfil Motorista ativo.
+
+### 10. Endpoints
 
 Base percursos: `/cortex/transporte/percursos/`
 
@@ -155,6 +204,10 @@ Base rotas: `/cortex/transporte/rotas/`
 - `GET` / `PATCH` em `<pk>/`
 - `POST` `<pk>/desativar/` e `<pk>/reativar/`
 - Listagem: `?ativo=`, `?percurso_id=`, `?dia_semana=`, `?busca=` (apelido do percurso), `?paginacao=`
+
+Base motorista: `/cortex/transporte/motorista/`
+
+- `GET rotas-do-dia/` — lista completa, sem paginação, restrita a motoristas ativos
 
 Base execuções: `/cortex/transporte/execucoes-rotas/`
 

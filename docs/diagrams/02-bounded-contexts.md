@@ -161,12 +161,20 @@ Responsável pelos perfis acadêmicos e pelos vínculos do aluno com os cursos.
 ### Apps Django Internos e Entidades:
 - `percursos` -> Model principal: `Percurso` (apelido, descrição do trajeto, ativo)
 - `rotas` -> Model principal: `Rota` (percurso, horário de saída, dia da semana, quantidade de vagas, ativo)
+- `motoristas` -> Model principal: `Motorista` (perfil associado a usuário para acesso à visão das rotas do dia)
+- `execucoes_rotas` -> Model principal: `ExecucaoRota` (ocorrência datada e estado operacional)
+- `tickets` -> Model principal: `Ticket` (reserva, fila, embarque e ausência)
+- `strikes` -> Model principal: `Strike` (falta associada a ticket ausente)
+- `justificativas` -> Model principal: `Justificativa` (revisão de strike)
 
 ### Responsabilidade
-Cadastro de percursos e rotas de ônibus (MeuIF-Transporte, RF016 e RF017). Acesso restrito a L3 (perfil TI).
+Cadastro de percursos e rotas de ônibus (RF016 e RF017), visão das rotas do dia
+por motoristas ativos (RF013), execuções datadas, tickets, fila de espera,
+embarque, ausências, strikes e justificativas.
 
 ### Dependências
-- Não depende de outros domínios de negócio nesta v1.
+- Depende de `Identidade` para os usuários associados aos perfis Motorista.
+- Depende de `Academico` para os alunos titulares dos tickets.
 
 ---
 
@@ -307,7 +315,7 @@ A organização inicial do Cortex será baseada em quatro domínios (Bounded Con
 - `PessoasInstitucionais` (com sub-apps `servidores`, `cargos`, `terceirizados`, `empresas_instituicoes`)
 - `Academico` (com sub-apps `alunos`, `cursos`, `aluno_cursos`)
 - `Infraestrutura` (com sub-apps `blocos`, `salas`, `recursos`, `permissoes`, `autorizacoes`, `emprestimos`)
-- `Transporte` (com sub-apps `percursos`, `rotas`)
+- `Transporte` (com sub-apps `percursos`, `rotas`, `motoristas`, `execucoes_rotas`, `tickets`, `strikes`, `justificativas`)
 
 Essa divisão busca:
 - refletir o negócio com mais fidelidade;
