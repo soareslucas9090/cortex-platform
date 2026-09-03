@@ -597,10 +597,12 @@ Vínculo entre `Aluno` e `ExecucaoRota`, identificado externamente por UUID.
 
 ## 9.5 Strike, bloqueio e justificativa
 
-- `Aluno` possui `faltas` (strikes ativos) e `is_bloqueado` (três ou mais faltas);
+- `Aluno` possui `faltas` (strikes ativos no ciclo), `is_bloqueado` (três ou mais
+  faltas ativas) e `quantidade_bloqueios` (histórico de vezes em bloqueio);
 - `Strike` possui relação 1:1 com o ticket ausente;
 - `Justificativa` pertence ao aluno e cobre N strikes ativos via M2M `strikes_cobertos`;
-- justificativa aprovada marca os strikes cobertos como `JUSTIFICADO` e ressincroniza o bloqueio.
+- justificativa aprovada marca os strikes cobertos como `JUSTIFICADO` e ressincroniza
+  `faltas` e `is_bloqueado`; `quantidade_bloqueios` não é zerada.
 
 ---
 

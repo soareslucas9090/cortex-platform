@@ -117,7 +117,8 @@ cortex-plataform/
 │   ├── execucoes_rotas/
 │   ├── tickets/
 │   ├── strikes/
-│   └── justificativas/
+│   ├── justificativas/
+│   └── bloqueios/
 │
 ├── docs/                       # Documentação do projeto
 │   ├── decisions/              # ADRs (Architecture Decision Records)
@@ -395,17 +396,18 @@ Cadastro de espaço físico, recursos, autorizações e empréstimos.
 - `Emprestimo` — retirada e devolução multi-item
 - `PermissaoFuncaoInfraestrutura` — capacidades por função (app interno sem rotas HTTP)
 
-### Transporte _(implementado — rotas, tickets e embarque)_
+### Transporte _(implementado — rotas, tickets, embarque e bloqueios)_
 
 Cadastro administrativo de percursos, rotas e execuções; alunos elegíveis podem
-reservar tickets, acompanhar a fila PcD/FIFO e apresentar justificativas.
+reservar tickets, acompanhar a fila PcD/FIFO e, quando bloqueados, enviar
+justificativa de ausências para análise do TI.
 
 - `Percurso` — apelido, descrição do trajeto e status ativo/inativo
 - `Rota` — percurso, horário de saída, dia da semana, quantidade de vagas e status ativo/inativo
 - `ExecucaoRota` — ocorrência datada com horário e capacidade congelados
 - `Ticket` — reserva, fila, cancelamento, embarque por QR Code ou ausência
-- `Strike` e `Justificativa` — bloqueio após três faltas ativas, gestão por L3 e revisão pelo aluno bloqueado
-- `Aluno.faltas` / `Aluno.is_bloqueado` — estado sincronizado de elegibilidade no transporte
+- `Strike` e `Justificativa` — ausência registrada, bloqueio após três faltas ativas e revisão pelo TI
+- `Aluno.faltas` / `Aluno.is_bloqueado` / `Aluno.quantidade_bloqueios` — ausências ativas, bloqueio atual e histórico de bloqueios
 
 ## Decisões Técnicas
 

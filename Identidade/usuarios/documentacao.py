@@ -549,7 +549,10 @@ class PermissaoDocumentacao:
                         },
                         {
                             'destaque': 'faltas',
-                            'texto': 'quantidade de strikes ativos sincronizada no aluno.',
+                            'texto': (
+                                'quantidade de strikes ativos no ciclo atual '
+                                '(ausências não justificadas).'
+                            ),
                         },
                         {
                             'destaque': 'bloqueios',
@@ -605,6 +608,26 @@ class PermissaoDocumentacao:
                         (
                             'O aluno bloqueado pode enviar justificativa cobrindo todos os '
                             'strikes ativos via POST /cortex/transporte/bloqueios/justificativas/.'
+                        ),
+                    ],
+                },
+                {
+                    'titulo': 'Bloqueios e justificativas (TI)',
+                    'paragrafos': [
+                        (
+                            'L3 lista alunos bloqueados em GET /cortex/transporte/bloqueios/ '
+                            'com filtros busca, curso_id, tem_justificativa e paginacao.'
+                        ),
+                        (
+                            'O detalhe GET /cortex/transporte/bloqueios/<aluno_pk>/ expõe '
+                            'ausencias, bloqueios (historico), deficiencia, ultimo_login e '
+                            'justificativa_pendente com itens_ausencia (envio, data_ausencia, '
+                            'horario e texto por ausencia).'
+                        ),
+                        (
+                            'A analise usa POST /cortex/transporte/justificativas/<pk>/aprovar/ '
+                            'ou /rejeitar/. Aprovar justifica todos os strikes cobertos e '
+                            'desbloqueia o aluno quando nao restarem faltas ativas.'
                         ),
                     ],
                 },
@@ -665,6 +688,7 @@ class PermissaoDocumentacao:
                     },
                     'pode': [
                         'cadastrar, editar, desativar e reativar percursos e rotas',
+                        'listar bloqueios, analisar justificativas e aprovar ou rejeitar ausencias',
                         'ver o menu Transporte no frontend',
                     ],
                     'nao_pode': [],
