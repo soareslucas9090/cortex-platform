@@ -148,6 +148,7 @@ PROJECT_APPS = [
     'Transporte.tickets',
     'Transporte.strikes',
     'Transporte.justificativas',
+    'Transporte.relatorios',
 ]
 
 _DEBUG_APPS = ['debug_toolbar'] if DEBUG else []
