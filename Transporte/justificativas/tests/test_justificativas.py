@@ -141,6 +141,24 @@ class JustificativaTestCase(APITestCase):
         self.assertEqual(resposta.status_code, status.HTTP_200_OK)
         self.assertEqual(resposta.data['dados']['id'], justificativa.pk)
 
+    def test_detalhe_inclui_itens_ausencia(self):
+        justificativa = Justificativa().business.criar_justificativa(
+            self.aluno.usuario,
+            'Estava em atendimento médico emergencial.',
+        )
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {obter_token(self.aluno.usuario)}')
+        resposta = self.client.get(
+            reverse('transporte:justificativa-detalhe', kwargs={'pk': justificativa.pk}),
+        )
+        self.assertEqual(resposta.status_code, status.HTTP_200_OK)
+        itens = resposta.data['dados']['itens_ausencia']
+        self.assertEqual(len(itens), 3)
+        self.assertEqual(itens[0]['justificativa'], justificativa.texto)
+        self.assertIn('horario', itens[0])
+        self.assertIn('data_ausencia', itens[0])
+        self.assertIn('strike_id', itens[0])
+        self.assertIn('envio', itens[0])
+
     def test_justificativa_cobre_todos_strikes_ativos(self):
         justificativa = Justificativa().business.criar_justificativa(
             self.aluno.usuario,

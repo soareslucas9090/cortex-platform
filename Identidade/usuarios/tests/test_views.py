@@ -42,7 +42,7 @@ def criar_usuario(cpf, nome='Usuário Teste', password='Senha@123', is_admin=Fal
     return usuario
 
 
-def permissoes_esperadas(cortex_nivel, reservar=False, bloqueado=False, faltas=0):
+def permissoes_esperadas(cortex_nivel, reservar=False, bloqueado=False, faltas=0, bloqueios=0):
     return {
         'cortex': cortex_nivel,
         'infraestrutura': capacidades_infraestrutura_vazias(),
@@ -51,6 +51,7 @@ def permissoes_esperadas(cortex_nivel, reservar=False, bloqueado=False, faltas=0
             'reservar': reservar,
             'bloqueado': bloqueado,
             'faltas': faltas,
+            'bloqueios': bloqueios,
         },
     }
 
@@ -1171,6 +1172,12 @@ class DocumentarPermissoesViewTest(APITestCase):
         self.assertIn('secoes', transporte)
         self.assertGreaterEqual(len(transporte['secoes']), 2)
         self.assertEqual(transporte['capacidades'][0]['quem_usa'], 'TI / administradores')
+        compilacao = next(
+            secao for secao in transporte['secoes'] if secao['titulo'] == 'Compilação (permissoes_transporte)'
+        )
+        destaques = {item['destaque'] for item in compilacao['itens']}
+        self.assertIn('bloqueios', destaques)
+        self.assertIn('bloqueios', transporte['exemplos'][0]['capacidades'])
 
     def test_nao_autenticado_retorna_401(self):
         resposta = self.client.get(self.url)
