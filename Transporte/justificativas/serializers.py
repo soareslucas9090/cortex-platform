@@ -1,13 +1,15 @@
 from rest_framework import serializers
 from drf_spectacular.utils import extend_schema_field
 
+from Academico.alunos.serializers import AlunoSerializer
 from Transporte.strikes.serializers import StrikeSerializer
 
 from .models import Justificativa
 
 
 class JustificativaSerializer(serializers.ModelSerializer):
-    strike = serializers.SerializerMethodField()
+    aluno = AlunoSerializer(read_only=True)
+    strikes_cobertos = StrikeSerializer(many=True, read_only=True)
     status_display = serializers.CharField(source='get_status_display', read_only=True)
     analisada_por_nome = serializers.CharField(source='analisada_por.nome', read_only=True)
 
@@ -15,7 +17,8 @@ class JustificativaSerializer(serializers.ModelSerializer):
         model = Justificativa
         fields = [
             'id',
-            'strike',
+            'aluno',
+            'strikes_cobertos',
             'texto',
             'status',
             'status_display',
@@ -24,13 +27,6 @@ class JustificativaSerializer(serializers.ModelSerializer):
             'analisada_em',
             'created_at',
         ]
-
-    @extend_schema_field(StrikeSerializer)
-    def get_strike(self, obj):
-        strike = obj.strike
-        if hasattr(obj, 'quantidade_strikes_ativos'):
-            strike.quantidade_strikes_ativos = obj.quantidade_strikes_ativos
-        return StrikeSerializer(strike, context=self.context).data
 
 
 class CriarJustificativaSerializer(serializers.Serializer):

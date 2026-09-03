@@ -4,7 +4,6 @@ from AppCore.basics.views.basic_views import roteador_por_metodo
 
 from .views import (
     AprovarJustificativaView,
-    CriarJustificativaView,
     DetalharJustificativaView,
     ListarJustificativasView,
     RejeitarJustificativaView,
@@ -20,11 +19,6 @@ urlpatterns = [
         'justificativas/<int:pk>/',
         roteador_por_metodo(GET=DetalharJustificativaView),
         name='justificativa-detalhe',
-    ),
-    path(
-        'strikes/<int:pk>/justificativas/',
-        roteador_por_metodo(POST=CriarJustificativaView),
-        name='justificativa-criar',
     ),
     path(
         'justificativas/<int:pk>/aprovar/',
