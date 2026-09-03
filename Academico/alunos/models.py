@@ -50,6 +50,11 @@ class Aluno(ModelHelperMixin, ModelBusinessMixin, ModelRulesMixin, BasicModel):
         default=False,
         help_text='Indica bloqueio por três ou mais faltas ativas no transporte.',
     )
+    quantidade_bloqueios = models.PositiveSmallIntegerField(
+        'Quantidade de bloqueios',
+        default=0,
+        help_text='Número de vezes que o aluno entrou em bloqueio no transporte.',
+    )
 
     class Meta:
         verbose_name = 'Aluno'
