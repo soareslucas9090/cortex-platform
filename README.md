@@ -404,7 +404,8 @@ reservar tickets, acompanhar a fila PcD/FIFO e apresentar justificativas.
 - `Rota` — percurso, horário de saída, dia da semana, quantidade de vagas e status ativo/inativo
 - `ExecucaoRota` — ocorrência datada com horário e capacidade congelados
 - `Ticket` — reserva, fila, cancelamento, embarque por QR Code ou ausência
-- `Strike` e `Justificativa` — bloqueio após três faltas ativas e revisão por L3
+- `Strike` e `Justificativa` — bloqueio após três faltas ativas, gestão por L3 e revisão pelo aluno bloqueado
+- `Aluno.faltas` / `Aluno.is_bloqueado` — estado sincronizado de elegibilidade no transporte
 
 ## Decisões Técnicas
 

@@ -519,8 +519,9 @@ class PermissaoDocumentacao:
                 'O módulo transporte controla o cadastro de percursos (apelido, descrição e '
                 'status ativo/inativo) e de rotas (percurso, horário de saída, dia da semana e '
                 'quantidade de vagas). L3 administra esses cadastros e as execuções. Alunos '
-                'ativos e matriculados, com menos de três strikes ativos, podem solicitar '
-                'tickets e entrar em filas de espera. O payload expõe gerenciar e reservar.'
+                'ativos e matriculados, não bloqueados, podem solicitar '
+                'tickets e entrar em filas de espera. O payload expõe gerenciar, '
+                'reservar, bloqueado e faltas.'
             ),
             'secoes': [
                 {
@@ -537,12 +538,25 @@ class PermissaoDocumentacao:
                             'destaque': 'reservar',
                             'texto': (
                                 'true para usuário e aluno ativos, com situação matriculado e '
-                                'menos de três strikes ativos.'
+                                'sem bloqueio no transporte (is_bloqueado=false).'
                             ),
                         },
                         {
+                            'destaque': 'bloqueado',
+                            'texto': (
+                                'true quando o aluno possui três ou mais faltas ativas no transporte.'
+                            ),
+                        },
+                        {
+                            'destaque': 'faltas',
+                            'texto': 'quantidade de strikes ativos sincronizada no aluno.',
+                        },
+                        {
                             'destaque': 'Payload típico',
-                            'texto': '{"transporte": {"gerenciar": false, "reservar": true}}',
+                            'texto': (
+                                '{"transporte": {"gerenciar": false, "reservar": true, '
+                                '"bloqueado": false, "faltas": 0}}'
+                            ),
                         },
                     ],
                 },
@@ -582,8 +596,8 @@ class PermissaoDocumentacao:
                             'O campo posicao_fila permanece disponível apenas para a espera.'
                         ),
                         (
-                            'O aluno pode enviar justificativa para qualquer strike ativo próprio, '
-                            'mesmo antes de atingir o bloqueio por três strikes.'
+                            'O aluno bloqueado pode enviar justificativa cobrindo todos os '
+                            'strikes ativos via POST /cortex/transporte/bloqueios/justificativas/.'
                         ),
                     ],
                 },
@@ -609,14 +623,19 @@ class PermissaoDocumentacao:
                     'pode': 'Reservar ticket, entrar na fila e consultar recursos próprios.',
                     'nao_sem_capacidade': 'Criar novos tickets ou entrar em novas filas.',
                     'descricao': (
-                        'Fica indisponível quando o aluno possui três ou mais strikes ativos.'
+                        'Fica indisponível quando o aluno está bloqueado no transporte.'
                     ),
                 },
             ],
             'exemplos': [
                 {
-                    'perfil': 'Aluno ativo e matriculado com menos de três strikes ativos',
-                    'capacidades': {'gerenciar': False, 'reservar': True},
+                    'perfil': 'Aluno ativo e matriculado sem bloqueio no transporte',
+                    'capacidades': {
+                        'gerenciar': False,
+                        'reservar': True,
+                        'bloqueado': False,
+                        'faltas': 0,
+                    },
                     'pode': [
                         'consultar execuções abertas',
                         'reservar ticket e entrar na fila de espera',
@@ -629,7 +648,12 @@ class PermissaoDocumentacao:
                 },
                 {
                     'perfil': 'TI (staff, admin ou superusuário)',
-                    'capacidades': {'gerenciar': True, 'reservar': False},
+                    'capacidades': {
+                        'gerenciar': True,
+                        'reservar': False,
+                        'bloqueado': False,
+                        'faltas': 0,
+                    },
                     'pode': [
                         'cadastrar, editar, desativar e reativar percursos e rotas',
                         'ver o menu Transporte no frontend',

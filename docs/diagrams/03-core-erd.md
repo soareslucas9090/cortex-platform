@@ -432,7 +432,8 @@ Esse model permite preservar o histórico de vínculos acadêmicos sem sobrecarr
 - `ExecucaoRota` 1:N `Ticket`
 - `Aluno` 1:N `Ticket`
 - `Ticket` 0..1:1 `Strike`
-- `Strike` 0..1:1 `Justificativa`
+- `Aluno` 1:N `Justificativa`
+- `Justificativa` N:M `Strike` (`strikes_cobertos`)
 
 ---
 
@@ -594,11 +595,12 @@ Vínculo entre `Aluno` e `ExecucaoRota`, identificado externamente por UUID.
 - no máximo um ticket não cancelado por aluno e execução;
 - tickets em espera formam a fila, sem entidades `Fila` ou `FilaEspera` separadas.
 
-## 9.5 Strike e Justificativa
+## 9.5 Strike, bloqueio e justificativa
 
+- `Aluno` possui `faltas` (strikes ativos) e `is_bloqueado` (três ou mais faltas);
 - `Strike` possui relação 1:1 com o ticket ausente;
-- `Justificativa` possui relação 1:1 com o strike;
-- justificativa aprovada faz o strike deixar de contar para o bloqueio.
+- `Justificativa` pertence ao aluno e cobre N strikes ativos via M2M `strikes_cobertos`;
+- justificativa aprovada marca os strikes cobertos como `JUSTIFICADO` e ressincroniza o bloqueio.
 
 ---
 
