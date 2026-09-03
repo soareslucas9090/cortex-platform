@@ -12,6 +12,7 @@ from AppCore.basics.views.basic_views import (
 from .models import Justificativa
 from .serializers import (
     AnalisarJustificativaSerializer,
+    JustificativaDetalheSerializer,
     JustificativaSerializer,
 )
 
@@ -45,13 +46,13 @@ class ListarJustificativasView(IsAuthenticatedMixin, BasicGetAPIView):
         '**Permissões:** Autenticado. L1 vê somente justificativa própria; L3 vê qualquer uma.'
     ),
     responses={
-        status.HTTP_200_OK: JustificativaSerializer,
+        status.HTTP_200_OK: JustificativaDetalheSerializer,
         status.HTTP_401_UNAUTHORIZED: {'description': 'Não autenticado.'},
         status.HTTP_404_NOT_FOUND: {'description': 'Justificativa não encontrada no escopo.'},
     },
 )
 class DetalharJustificativaView(IsAuthenticatedMixin, BasicRetrieveAPIView):
-    serializer_class = JustificativaSerializer
+    serializer_class = JustificativaDetalheSerializer
     mensagem_sucesso = 'Justificativa obtida com sucesso.'
 
     def get_queryset(self):

@@ -92,6 +92,7 @@ class UsuarioPermissions(UserModelPermission):
                     'reservar': False,
                     'bloqueado': False,
                     'faltas': 0,
+                    'bloqueios': 0,
                 },
             }
 
@@ -99,12 +100,14 @@ class UsuarioPermissions(UserModelPermission):
         reservar = False
         bloqueado = False
         faltas = 0
+        bloqueios = 0
         aluno = getattr(user, 'aluno', None)
         if aluno is not None and user.ativo and aluno.ativo:
             from Academico.alunos.choices import SituacaoAluno
 
             faltas = aluno.faltas
             bloqueado = aluno.is_bloqueado
+            bloqueios = aluno.quantidade_bloqueios
             reservar = aluno.situacao == SituacaoAluno.MATRICULADO and not bloqueado
 
         return {
@@ -113,5 +116,6 @@ class UsuarioPermissions(UserModelPermission):
                 'reservar': reservar,
                 'bloqueado': bloqueado,
                 'faltas': faltas,
+                'bloqueios': bloqueios,
             },
         }

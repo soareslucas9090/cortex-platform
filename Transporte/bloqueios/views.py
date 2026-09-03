@@ -1,4 +1,5 @@
-from drf_spectacular.utils import extend_schema
+from drf_spectacular.types import OpenApiTypes
+from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework import status
 
 from Academico.alunos.models import Aluno
@@ -19,14 +20,49 @@ from Transporte.justificativas.serializers import (
 from .business import BloqueioBusiness
 from .serializers import BloqueioDetalheSerializer, BloqueioSerializer
 
+PERMISSAO_TI = (
+    '**Permissões:** L3 (EDITAR_TUDO) — perfil TI / administradores.'
+)
+
 
 @extend_schema(
     tags=['Transporte · Bloqueios'],
     summary='Listar alunos bloqueados',
     description=(
-        'Lista alunos bloqueados no transporte universitário.\n\n'
-        '**Permissões:** L3 (EDITAR_TUDO) — perfil TI / administradores.'
+        'Lista alunos bloqueados no transporte universitário, com busca, filtros e paginação.\n\n'
+        f'{PERMISSAO_TI}\n\n'
+        '**Paginação:** query param `paginacao` (padrão 10, máximo 100).'
     ),
+    parameters=[
+        OpenApiParameter(
+            'busca',
+            OpenApiTypes.STR,
+            OpenApiParameter.QUERY,
+            required=False,
+            description='Filtra por parte do nome ou CPF do aluno (ignora acentos no nome).',
+        ),
+        OpenApiParameter(
+            'curso_id',
+            OpenApiTypes.INT,
+            OpenApiParameter.QUERY,
+            required=False,
+            description='Filtra alunos com vínculo ativo ao curso informado.',
+        ),
+        OpenApiParameter(
+            'tem_justificativa',
+            OpenApiTypes.BOOL,
+            OpenApiParameter.QUERY,
+            required=False,
+            description='Filtra por justificativa pendente: true = com pendente, false = sem pendente.',
+        ),
+        OpenApiParameter(
+            'paginacao',
+            OpenApiTypes.INT,
+            OpenApiParameter.QUERY,
+            required=False,
+            description='Tamanho da página (1–100, padrão 10).',
+        ),
+    ],
     responses={
         status.HTTP_200_OK: BloqueioSerializer(many=True),
         status.HTTP_401_UNAUTHORIZED: {'description': 'Não autenticado.'},
@@ -39,15 +75,21 @@ class ListarBloqueiosView(IsAdminMixin, BasicGetAPIView):
     mensagem_sucesso = 'Bloqueios listados com sucesso.'
 
     def get_queryset(self):
-        return BloqueioBusiness(Aluno()).listar_bloqueados(self.request.user)
+        return BloqueioBusiness(Aluno()).listar_bloqueados(
+            self.request.user,
+            busca=self.request.query_params.get('busca'),
+            curso_id=self.request.query_params.get('curso_id'),
+            tem_justificativa=self.request.query_params.get('tem_justificativa'),
+        )
 
 
 @extend_schema(
     tags=['Transporte · Bloqueios'],
     summary='Detalhar bloqueio',
     description=(
-        'Retorna os dados de um aluno bloqueado, incluindo strikes e justificativa pendente.\n\n'
-        '**Permissões:** L3 (EDITAR_TUDO) — perfil TI / administradores.'
+        'Retorna os dados de um aluno bloqueado, incluindo ausências, bloqueios '
+        'acumulados e justificativa pendente com itens de ausência.\n\n'
+        f'{PERMISSAO_TI}'
     ),
     responses={
         status.HTTP_200_OK: BloqueioDetalheSerializer,
