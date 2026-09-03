@@ -118,6 +118,12 @@ class TicketBusinessTestCase(APITestCase):
         with self.assertRaises(BusinessRuleException):
             Ticket().business.solicitar_reserva(self.execucao.pk, self.aluno.usuario)
 
+    def test_apenas_aluno_ativo_e_matriculado_entra_fila(self):
+        Ticket().business.solicitar_reserva(self.execucao.pk, self.aluno.usuario)
+        outro = criar_aluno('20000000019', situacao=SituacaoAluno.TRANCADO)
+        with self.assertRaises(BusinessRuleException):
+            Ticket().business.entrar_fila(self.execucao.pk, outro.usuario)
+
     def test_fila_prioriza_pcd_sem_deslocar_reserva(self):
         reservado = Ticket().business.solicitar_reserva(self.execucao.pk, self.aluno.usuario)
         comum = criar_aluno('20000000003')
@@ -295,6 +301,33 @@ class TicketBusinessTestCase(APITestCase):
         _, nova_execucao = criar_rota_e_execucao(vagas=1, dias_ate_execucao=21)
         with self.assertRaises(BusinessRuleException):
             Ticket().business.solicitar_reserva(nova_execucao.pk, self.aluno.usuario)
+        ticket_existente.refresh_from_db()
+        self.assertEqual(ticket_existente.status, StatusTicket.RESERVADO)
+
+    def test_tres_strikes_bloqueiam_entrada_na_fila_sem_cancelar_existente(self):
+        ticket_existente = Ticket().business.solicitar_reserva(self.execucao.pk, self.aluno.usuario)
+        for indice in range(3):
+            _, outra_execucao = criar_rota_e_execucao(vagas=1, dias_ate_execucao=22 + indice)
+            ticket = Ticket.objects.create(
+                execucao_rota=outra_execucao,
+                aluno=self.aluno,
+                status=StatusTicket.AUSENTE,
+                ausente_em=timezone.now(),
+            )
+            Strike.objects.create(ticket=ticket)
+
+        _, nova_execucao = criar_rota_e_execucao(vagas=1, dias_ate_execucao=25)
+        ocupante = criar_aluno('20000000020')
+        instante = timezone.localtime(nova_execucao.data_hora_saida).replace(
+            hour=1,
+            minute=0,
+            second=0,
+            microsecond=0,
+        )
+        with patch('Transporte.tickets.rules.now', return_value=instante):
+            Ticket().business.solicitar_reserva(nova_execucao.pk, ocupante.usuario)
+            with self.assertRaises(BusinessRuleException):
+                Ticket().business.entrar_fila(nova_execucao.pk, self.aluno.usuario)
         ticket_existente.refresh_from_db()
         self.assertEqual(ticket_existente.status, StatusTicket.RESERVADO)
 

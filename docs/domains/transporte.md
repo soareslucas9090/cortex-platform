@@ -93,8 +93,10 @@ Transporte/
 
 ### 4. Tickets, capacidade e cancelamento
 
-- Somente usuário e aluno ativos, com situação `MATRICULADO`, podem solicitar ticket.
-- Três ou mais strikes ativos bloqueiam novas reservas e novas entradas em fila.
+- Somente usuário e aluno ativos, com situação `MATRICULADO`, podem solicitar
+  ticket (reserva ou fila) ou entrar por CPF.
+- Três ou mais strikes ativos bloqueiam novas reservas, novas entradas em fila
+  e entrada sem ticket.
 - O terceiro strike não cancela tickets nem posições já existentes.
 - Há no máximo um ticket não cancelado por aluno e execução (`NAO_CONTEMPLADO`
   também ocupa essa unicidade; só `CANCELADO` libera o par aluno+execução).

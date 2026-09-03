@@ -595,7 +595,10 @@ class PermissaoDocumentacao:
                             '(vagas disponíveis maior que EM_ESPERA); '
                             'POST em entradas-sem-ticket/validar/ consulta sem gravar; o POST em '
                             'entradas-sem-ticket/ persiste. Quem está EM_ESPERA não usa CPF; '
-                            'quem cancelou o ticket pode usar se houver vaga além da espera.'
+                            'quem cancelou o ticket pode usar se houver vaga além da espera. '
+                            'Quem está AUSENTE nesta execução pode entrar nas mesmas condições; '
+                            'o ticket permanece AUSENTE e o strike não é desfeito. '
+                            'Três strikes ativos bloqueiam a entrada por CPF.'
                         ),
                         (
                             'Reserva, entrada e saída da fila e cancelamento pelo aluno funcionam '

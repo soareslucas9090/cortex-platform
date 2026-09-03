@@ -37,8 +37,7 @@ class EntradaSemTicketBusiness(ModelInstanceBusiness):
             rules.validar_execucao_em_embarque(execucao)
             rules.validar_chamada_concluida(execucao)
 
-            strikes = Ticket().helper.contar_strikes_ativos(aluno)
-            Ticket().rules.validar_aluno_elegivel(aluno.usuario, strikes)
+            Ticket().business.validar_elegibilidade_aluno(aluno.usuario)
 
             ticket = self.object_instance.helper.obter_ticket_ativo(execucao, aluno)
             rules.validar_aluno_sem_ticket_ativo(ticket)

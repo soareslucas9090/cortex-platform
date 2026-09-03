@@ -19,6 +19,26 @@ class TicketBusiness(ModelInstanceBusiness):
         except Exception as e:
             self.relancar_ou_erro_sistema(e, 'Não foi possível listar os tickets.', logger)
 
+    def validar_elegibilidade_aluno(self, usuario):
+        try:
+            aluno = getattr(usuario, 'aluno', None)
+            quantidade_strikes_ativos = (
+                self.object_instance.helper.contar_strikes_ativos(aluno)
+                if aluno is not None
+                else 0
+            )
+            self.object_instance.rules.validar_aluno_elegivel(
+                usuario,
+                quantidade_strikes_ativos,
+            )
+            return True
+        except Exception as e:
+            self.relancar_ou_erro_sistema(
+                e,
+                'Não foi possível validar a elegibilidade do aluno para o transporte.',
+                logger,
+            )
+
     def solicitar_reserva(self, execucao_id, usuario):
         try:
             from Transporte.execucoes_rotas.models import ExecucaoRota
@@ -29,14 +49,9 @@ class TicketBusiness(ModelInstanceBusiness):
                 'rota',
                 'rota__percurso',
             ).get(pk=execucao_id)
+            self.validar_elegibilidade_aluno(usuario)
             rules = self.object_instance.rules
             aluno = getattr(usuario, 'aluno', None)
-            quantidade_strikes_ativos = (
-                self.object_instance.helper.contar_strikes_ativos(aluno)
-                if aluno is not None
-                else 0
-            )
-            rules.validar_aluno_elegivel(usuario, quantidade_strikes_ativos)
             rules.validar_janela_solicitacao(execucao)
             rules.validar_ticket_inexistente(
                 self.object_instance.helper.existe_ticket_ativo(execucao, aluno),
@@ -65,14 +80,9 @@ class TicketBusiness(ModelInstanceBusiness):
                 'rota',
                 'rota__percurso',
             ).get(pk=execucao_id)
+            self.validar_elegibilidade_aluno(usuario)
             rules = self.object_instance.rules
             aluno = getattr(usuario, 'aluno', None)
-            quantidade_strikes_ativos = (
-                self.object_instance.helper.contar_strikes_ativos(aluno)
-                if aluno is not None
-                else 0
-            )
-            rules.validar_aluno_elegivel(usuario, quantidade_strikes_ativos)
             rules.validar_janela_solicitacao(execucao)
             rules.validar_ticket_inexistente(
                 self.object_instance.helper.existe_ticket_ativo(execucao, aluno),
