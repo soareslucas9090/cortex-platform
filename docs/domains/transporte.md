@@ -18,8 +18,9 @@ de embarque, entrada sem ticket, ausências, strikes e justificativas.
   o andamento operacional da conferência.
 - **Ticket**: solicitação de um aluno em uma execução; representa reserva, posição
   em fila, cancelamento, embarque, ausência ou não contemplado na espera (`NAO_CONTEMPLADO`).
-- **EntradaSemTicket**: embarque manual por CPF em vaga remanescente, após a chamada
-  e com a fila de espera vazia. Quem está `EM_ESPERA` não usa este fluxo.
+- **EntradaSemTicket**: embarque manual por CPF em vaga **além** da espera
+  (`vagas_disponiveis > quantidade em EM_ESPERA`), após a chamada.
+  Quem está `EM_ESPERA` não usa este fluxo.
 - **Strike**: falta vinculada unicamente a um ticket marcado como ausente.
 - **Justificativa**: solicitação única de revisão de um strike.
 
@@ -119,10 +120,11 @@ Transporte/
   concluída e execução em embarque. A consulta é `POST` em
   `entradas-sem-ticket/validar/` com `{ "cpf": "..." }` e não persiste; o
   `POST` em `entradas-sem-ticket/` revalida e grava. Quem cancelou o próprio
-  ticket pode usar este fluxo se a fila estiver vazia e houver vaga. Quem está
+  ticket pode usar este fluxo se houver vaga além da espera. Quem está
   `AUSENTE` nesta execução também pode, nas mesmas condições: o ticket permanece
   `AUSENTE` e o strike não é desfeito. Três strikes ativos continuam impedindo
   a entrada (incluindo o strike desta ausência).
+  CPF não fura a fila: só entra quando `vagas_disponiveis > quantidade em EM_ESPERA`.
 
 ### 5. Posição dos tickets e prioridade PcD
 

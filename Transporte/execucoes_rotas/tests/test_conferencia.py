@@ -6,6 +6,7 @@ from django.utils import timezone
 from rest_framework import status
 from rest_framework.test import APITestCase
 
+from Transporte.entradas_sem_ticket.rules import MENSAGEM_VAGA_RESERVADA_ESPERA
 from Transporte.execucoes_rotas.choices import StatusExecucaoRota
 from Transporte.execucoes_rotas.rules import MENSAGEM_MONITORAMENTO_APOS_FINALIZAR
 from Transporte.strikes.models import Strike
@@ -245,7 +246,7 @@ class ConferenciaTransporteTestCase(APITestCase):
         extra.refresh_from_db()
         self.assertEqual(extra.status, StatusTicket.EM_ESPERA)
 
-    def test_entrada_sem_ticket_exige_fila_vazia(self):
+    def test_entrada_sem_ticket_bloqueia_quando_espera_cobre_vagas(self):
         with self._entrar_na_janela_monitoramento():
             self.client.post(
                 reverse('transporte:conferencia-iniciar', kwargs={'pk': self.execucao.pk}),
@@ -262,6 +263,7 @@ class ConferenciaTransporteTestCase(APITestCase):
             format='json',
         )
         self.assertEqual(resposta.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn(MENSAGEM_VAGA_RESERVADA_ESPERA, str(resposta.data))
 
         for aluno in (self.aluno_espera, self.aluno_extra):
             ticket_espera = Ticket.objects.get(aluno=aluno, execucao_rota=self.execucao)
@@ -277,6 +279,56 @@ class ConferenciaTransporteTestCase(APITestCase):
             format='json',
         )
         self.assertEqual(resposta.status_code, status.HTTP_201_CREATED)
+
+    def test_entrada_sem_ticket_na_vaga_alem_da_espera(self):
+        from Transporte.entradas_sem_ticket.models import EntradaSemTicket
+
+        self.execucao.quantidade_vagas = 4
+        self.execucao.save(update_fields=['quantidade_vagas'])
+        with self._entrar_na_janela_monitoramento():
+            self.client.post(
+                reverse('transporte:conferencia-iniciar', kwargs={'pk': self.execucao.pk}),
+            )
+        self.client.post(
+            reverse('transporte:conferencia-finalizar-chamada', kwargs={'pk': self.execucao.pk}),
+            {'ausentes': []},
+            format='json',
+        )
+        primeiro = criar_aluno('21000000050')
+        segunda_pessoa = criar_aluno('21000000051')
+        primeira = self.client.post(
+            reverse('transporte:conferencia-entrada-sem-ticket', kwargs={'pk': self.execucao.pk}),
+            {'cpf': primeiro.usuario.cpf},
+            format='json',
+        )
+        self.assertEqual(primeira.status_code, status.HTTP_201_CREATED)
+        segunda = self.client.post(
+            reverse('transporte:conferencia-entrada-sem-ticket', kwargs={'pk': self.execucao.pk}),
+            {'cpf': segunda_pessoa.usuario.cpf},
+            format='json',
+        )
+        self.assertEqual(segunda.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn(MENSAGEM_VAGA_RESERVADA_ESPERA, str(segunda.data))
+        self.assertTrue(
+            EntradaSemTicket.objects.filter(
+                aluno=primeiro,
+                execucao_rota=self.execucao,
+            ).exists()
+        )
+        self.assertFalse(
+            EntradaSemTicket.objects.filter(
+                aluno=segunda_pessoa,
+                execucao_rota=self.execucao,
+            ).exists()
+        )
+        self.assertEqual(
+            Ticket.objects.get(aluno=self.aluno_espera, execucao_rota=self.execucao).status,
+            StatusTicket.EM_ESPERA,
+        )
+        self.assertEqual(
+            Ticket.objects.get(aluno=self.aluno_extra, execucao_rota=self.execucao).status,
+            StatusTicket.EM_ESPERA,
+        )
 
     def _iniciar_chamada_e_esvaziar_espera(self, ausentes):
         with self._entrar_na_janela_monitoramento():
@@ -300,8 +352,18 @@ class ConferenciaTransporteTestCase(APITestCase):
     def test_ausente_entra_por_cpf_mantendo_strike(self):
         from Transporte.entradas_sem_ticket.models import EntradaSemTicket
 
+        self.execucao.quantidade_vagas = 3
+        self.execucao.save(update_fields=['quantidade_vagas'])
         ticket = Ticket.objects.get(aluno=self.aluno_reserva, execucao_rota=self.execucao)
-        self._iniciar_chamada_e_esvaziar_espera([str(ticket.codigo)])
+        with self._entrar_na_janela_monitoramento():
+            self.client.post(
+                reverse('transporte:conferencia-iniciar', kwargs={'pk': self.execucao.pk}),
+            )
+        self.client.post(
+            reverse('transporte:conferencia-finalizar-chamada', kwargs={'pk': self.execucao.pk}),
+            {'ausentes': [str(ticket.codigo)]},
+            format='json',
+        )
         resposta = self.client.post(
             reverse('transporte:conferencia-entrada-sem-ticket', kwargs={'pk': self.execucao.pk}),
             {'cpf': self.aluno_reserva.usuario.cpf},
@@ -316,6 +378,10 @@ class ConferenciaTransporteTestCase(APITestCase):
                 aluno=self.aluno_reserva,
                 execucao_rota=self.execucao,
             ).exists()
+        )
+        self.assertEqual(
+            Ticket.objects.get(aluno=self.aluno_espera, execucao_rota=self.execucao).status,
+            StatusTicket.EM_ESPERA,
         )
 
     def test_ausente_com_tres_strikes_nao_entra_por_cpf(self):

@@ -5739,7 +5739,7 @@ paths:
     post:
       operationId: transporte_execucoes_rotas_conferencia_entradas_sem_ticket_create
       description: |-
-        Inclui aluno por CPF em vaga remanescente quando a fila de espera está vazia. Quem está AUSENTE nesta execução pode entrar se a espera estiver vazia, houver vaga e o aluno tiver menos de 3 strikes ativos; o ticket permanece AUSENTE e o strike não é desfeito.
+        Inclui aluno por CPF em vaga além da fila de espera (vagas disponíveis maior que a quantidade em EM_ESPERA). Quem está EM_ESPERA não usa este fluxo. Quem está AUSENTE nesta execução pode entrar se houver vaga além da espera e o aluno tiver menos de 3 strikes ativos; o ticket permanece AUSENTE e o strike não é desfeito.
 
         **Permissões:** capacidade transporte.conferir. Lê e opera execuções do dia e, após iniciar o monitoramento, as filas de ticket e de espera dessa execução. Não amplia cadastro nem recursos globais do módulo.
       summary: Registrar entrada sem ticket
@@ -5800,7 +5800,7 @@ paths:
     post:
       operationId: transporte_execucoes_rotas_conferencia_entradas_sem_ticket_validar_create
       description: |-
-        Consulta as regras de elegibilidade sem persistir. O POST em entradas-sem-ticket/ revalida tudo e grava. Quem está AUSENTE nesta execução pode entrar se a espera estiver vazia, houver vaga e o aluno tiver menos de 3 strikes ativos; o ticket permanece AUSENTE e o strike não é desfeito.
+        Consulta as regras de elegibilidade sem persistir. O POST em entradas-sem-ticket/ revalida tudo e grava. Inclui aluno por CPF em vaga além da fila de espera (vagas disponíveis maior que a quantidade em EM_ESPERA). Quem está EM_ESPERA não usa este fluxo. Quem está AUSENTE nesta execução pode entrar se houver vaga além da espera e o aluno tiver menos de 3 strikes ativos; o ticket permanece AUSENTE e o strike não é desfeito.
 
         **Permissões:** capacidade transporte.conferir. Lê e opera execuções do dia e, após iniciar o monitoramento, as filas de ticket e de espera dessa execução. Não amplia cadastro nem recursos globais do módulo.
       summary: Validar CPF para entrada sem ticket

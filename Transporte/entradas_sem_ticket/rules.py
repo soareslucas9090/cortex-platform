@@ -2,6 +2,8 @@ from AppCore.core.rules.rules import ModelInstanceRules
 from Transporte.execucoes_rotas.choices import StatusExecucaoRota
 from Transporte.tickets.choices import StatusTicket
 
+MENSAGEM_VAGA_RESERVADA_ESPERA = 'As vagas restantes estão reservadas à fila de espera.'
+
 
 class EntradaSemTicketRules(ModelInstanceRules):
 
@@ -22,11 +24,9 @@ class EntradaSemTicketRules(ModelInstanceRules):
             )
         return True
 
-    def validar_fila_de_espera_vazia(self, quantidade_espera) -> bool:
-        if quantidade_espera > 0:
-            self.return_exception(
-                'Ainda há alunos na fila de espera. Não é possível incluir por CPF.'
-            )
+    def validar_vaga_alem_da_espera(self, vagas_disponiveis, quantidade_espera) -> bool:
+        if vagas_disponiveis <= quantidade_espera:
+            self.return_exception(MENSAGEM_VAGA_RESERVADA_ESPERA)
         return True
 
     def validar_vaga_disponivel(self, vagas_disponiveis) -> bool:

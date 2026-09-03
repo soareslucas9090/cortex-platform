@@ -337,7 +337,8 @@ Representa o curso e sua relação com os vínculos acadêmicos dos alunos.
     solicita no instante igual a T-30. Depois de `FINALIZADA` o monitoramento
     não reinicia (replay de iniciar só em `EM_EMBARQUE`).
 13. Ao finalizar a execução, a espera que não couber fica `NAO_CONTEMPLADO`.
-14. Entrada sem ticket exige fila vazia e não promove quem está `EM_ESPERA`.
+14. Entrada sem ticket exige vaga além da espera
+    (`vagas_disponiveis > quantidade em EM_ESPERA`) e não promove quem está `EM_ESPERA`.
     Aluno que cancelou o ticket ou está `AUSENTE` nesta execução pode entrar por
     CPF nessas condições; a ausência e o strike permanecem. Três strikes ativos
     bloqueiam a entrada.

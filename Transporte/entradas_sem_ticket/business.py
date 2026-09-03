@@ -45,9 +45,12 @@ class EntradaSemTicketBusiness(ModelInstanceBusiness):
             rules.validar_entrada_inexistente(
                 self.object_instance.helper.existe_para_aluno(execucao, aluno),
             )
-            rules.validar_fila_de_espera_vazia(Ticket().helper.contar_espera(execucao))
             resumo = execucao.business.obter_resumo_vagas()
             rules.validar_vaga_disponivel(resumo['vagas_disponiveis'])
+            rules.validar_vaga_alem_da_espera(
+                resumo['vagas_disponiveis'],
+                Ticket().helper.contar_espera(execucao),
+            )
             return aluno
         except Exception as e:
             self.relancar_ou_erro_sistema(

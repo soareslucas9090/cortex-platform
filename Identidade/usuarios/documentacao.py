@@ -591,10 +591,11 @@ class PermissaoDocumentacao:
                             'Remover da espera cancela sem strike. Finalizar promove quem cabe '
                             'e o restante fica NAO_CONTEMPLADO. A GET da fila mostra só quem '
                             'caberia agora (vagas restantes); o restante da espera não aparece '
-                            'nessa lista. Entrada por CPF exige fila vazia; '
+                            'nessa lista. Entrada por CPF só usa vaga além da espera '
+                            '(vagas disponíveis maior que EM_ESPERA); '
                             'POST em entradas-sem-ticket/validar/ consulta sem gravar; o POST em '
                             'entradas-sem-ticket/ persiste. Quem está EM_ESPERA não usa CPF; '
-                            'quem cancelou o ticket pode usar se a fila estiver vazia e houver vaga.'
+                            'quem cancelou o ticket pode usar se houver vaga além da espera.'
                         ),
                         (
                             'Reserva, entrada e saída da fila e cancelamento pelo aluno funcionam '
