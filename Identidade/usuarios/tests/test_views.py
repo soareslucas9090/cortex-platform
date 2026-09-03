@@ -42,13 +42,15 @@ def criar_usuario(cpf, nome='Usuário Teste', password='Senha@123', is_admin=Fal
     return usuario
 
 
-def permissoes_esperadas(cortex_nivel, reservar=False):
+def permissoes_esperadas(cortex_nivel, reservar=False, bloqueado=False, faltas=0):
     return {
         'cortex': cortex_nivel,
         'infraestrutura': capacidades_infraestrutura_vazias(),
         'transporte': {
             'gerenciar': cortex_nivel == PERMISSAO_CORTEX_EDITAR_TUDO,
             'reservar': reservar,
+            'bloqueado': bloqueado,
+            'faltas': faltas,
         },
     }
 
