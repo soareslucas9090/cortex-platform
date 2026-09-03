@@ -15,9 +15,11 @@ class StrikeBusiness(ModelInstanceBusiness):
 
     def criar_para_ticket(self, ticket):
         try:
+            from .helpers import sincronizar_faltas_transporte
             from .models import Strike
 
             strike, _ = Strike.objects.get_or_create(ticket=ticket)
+            sincronizar_faltas_transporte(ticket.aluno)
             return strike
         except Exception as e:
             self.relancar_ou_erro_sistema(e, 'Não foi possível criar o strike.', logger)

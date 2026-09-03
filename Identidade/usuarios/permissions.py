@@ -86,18 +86,32 @@ class UsuarioPermissions(UserModelPermission):
         """
         user = self.object_instance
         if not user:
-            return {'transporte': {'gerenciar': False, 'reservar': False}}
+            return {
+                'transporte': {
+                    'gerenciar': False,
+                    'reservar': False,
+                    'bloqueado': False,
+                    'faltas': 0,
+                },
+            }
 
         gerenciar = bool(user.is_staff or user.is_admin or user.is_superuser)
         reservar = False
+        bloqueado = False
+        faltas = 0
         aluno = getattr(user, 'aluno', None)
         if aluno is not None and user.ativo and aluno.ativo:
             from Academico.alunos.choices import SituacaoAluno
-            from Transporte.strikes.choices import StatusStrike
 
-            strikes_ativos = aluno.tickets_transporte.filter(
-                strike__status=StatusStrike.ATIVO,
-            ).count()
-            reservar = aluno.situacao == SituacaoAluno.MATRICULADO and strikes_ativos < 3
+            faltas = aluno.faltas
+            bloqueado = aluno.is_bloqueado
+            reservar = aluno.situacao == SituacaoAluno.MATRICULADO and not bloqueado
 
-        return {'transporte': {'gerenciar': gerenciar, 'reservar': reservar}}
+        return {
+            'transporte': {
+                'gerenciar': gerenciar,
+                'reservar': reservar,
+                'bloqueado': bloqueado,
+                'faltas': faltas,
+            },
+        }

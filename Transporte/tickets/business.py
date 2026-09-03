@@ -31,12 +31,7 @@ class TicketBusiness(ModelInstanceBusiness):
             ).get(pk=execucao_id)
             rules = self.object_instance.rules
             aluno = getattr(usuario, 'aluno', None)
-            quantidade_strikes_ativos = (
-                self.object_instance.helper.contar_strikes_ativos(aluno)
-                if aluno is not None
-                else 0
-            )
-            rules.validar_aluno_elegivel(usuario, quantidade_strikes_ativos)
+            rules.validar_aluno_elegivel(usuario)
             rules.validar_janela_solicitacao(execucao)
             rules.validar_ticket_inexistente(
                 self.object_instance.helper.existe_ticket_ativo(execucao, aluno),
@@ -67,12 +62,7 @@ class TicketBusiness(ModelInstanceBusiness):
             ).get(pk=execucao_id)
             rules = self.object_instance.rules
             aluno = getattr(usuario, 'aluno', None)
-            quantidade_strikes_ativos = (
-                self.object_instance.helper.contar_strikes_ativos(aluno)
-                if aluno is not None
-                else 0
-            )
-            rules.validar_aluno_elegivel(usuario, quantidade_strikes_ativos)
+            rules.validar_aluno_elegivel(usuario)
             rules.validar_janela_solicitacao(execucao)
             rules.validar_ticket_inexistente(
                 self.object_instance.helper.existe_ticket_ativo(execucao, aluno),
