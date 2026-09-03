@@ -521,7 +521,7 @@ class PermissaoDocumentacao:
                 'quantidade de vagas). L3 administra esses cadastros e as execuções. Alunos '
                 'ativos e matriculados, não bloqueados, podem solicitar '
                 'tickets e entrar em filas de espera. O payload expõe gerenciar, '
-                'reservar, bloqueado e faltas.'
+                'reservar, bloqueado, faltas e bloqueios.'
             ),
             'secoes': [
                 {
@@ -552,10 +552,17 @@ class PermissaoDocumentacao:
                             'texto': 'quantidade de strikes ativos sincronizada no aluno.',
                         },
                         {
+                            'destaque': 'bloqueios',
+                            'texto': (
+                                'quantidade de vezes que o aluno entrou em bloqueio no transporte '
+                                '(aluno.quantidade_bloqueios).'
+                            ),
+                        },
+                        {
                             'destaque': 'Payload típico',
                             'texto': (
                                 '{"transporte": {"gerenciar": false, "reservar": true, '
-                                '"bloqueado": false, "faltas": 0}}'
+                                '"bloqueado": false, "faltas": 0, "bloqueios": 0}}'
                             ),
                         },
                     ],
@@ -635,6 +642,7 @@ class PermissaoDocumentacao:
                         'reservar': True,
                         'bloqueado': False,
                         'faltas': 0,
+                        'bloqueios': 0,
                     },
                     'pode': [
                         'consultar execuções abertas',
@@ -653,6 +661,7 @@ class PermissaoDocumentacao:
                         'reservar': False,
                         'bloqueado': False,
                         'faltas': 0,
+                        'bloqueios': 0,
                     },
                     'pode': [
                         'cadastrar, editar, desativar e reativar percursos e rotas',

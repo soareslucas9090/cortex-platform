@@ -112,6 +112,9 @@ O payload `posicao` informa `tipo` (`RESERVA` ou `ESPERA`), `atual` e `total`.
   finalização; a ação cria exatamente um strike e sincroniza `faltas` e
   `is_bloqueado` no aluno.
 - Strike `ATIVO` conta para o bloqueio; `JUSTIFICADO` deixa de contar.
+- `quantidade_bloqueios` no aluno incrementa na transição para bloqueado (de não
+  bloqueado para `is_bloqueado=true`); permanece após aprovação de justificativa
+  e conta novos ciclos de bloqueio.
 - O aluno bloqueado (`is_bloqueado=true`, três ou mais faltas ativas) pode enviar
   uma justificativa cobrindo todos os strikes ativos.
 - L3 aprova ou rejeita justificativas pendentes.
@@ -137,8 +140,8 @@ O aluno vê e altera apenas os próprios tickets, strikes e justificativas.
 
 - **Views:** `IsAdminMixin` (`tem_acesso_elevado()`), o mesmo critério de L3: `is_staff`, `is_admin` ou superusuário.
 - **Payload (login/me):** `gerenciar` é `true` só para L3; `reservar` exige aluno
-  ativo, matriculado e não bloqueado; `bloqueado` e `faltas` refletem o estado
-  sincronizado do aluno.
+  ativo, matriculado e não bloqueado; `bloqueado`, `faltas` e `bloqueios` refletem
+  o estado sincronizado do aluno (`bloqueios` = `quantidade_bloqueios`).
 - **Compilação:** `UsuarioPermissions.permissoes_transporte()`.
 - **Documentação viva da API:** `GET /cortex/identidade/permissoes/documentacao/` (`documentacao_transporte()`). Toda mudança de regra deve atualizar esse método no mesmo PR.
 
@@ -178,10 +181,16 @@ Base tickets: `/cortex/transporte/tickets/`
 Bases auxiliares:
 
 - `GET /cortex/transporte/strikes/`
-- `GET /cortex/transporte/bloqueios/` e
-  `GET /cortex/transporte/bloqueios/<aluno_pk>/`
+- `GET /cortex/transporte/bloqueios/` — listagem paginada de alunos bloqueados
+  - Query params: `busca` (nome ou CPF), `curso_id` (vínculo ativo), `tem_justificativa` (`true`|`false`), `paginacao`
+  - Campos por item: `aluno_pk`, `nome`, `cpf`, `faltas` (compat.), `ausencias`,
+    `bloqueios`, `is_bloqueado`, `tem_justificativa_pendente`, `curso_nome`,
+    `data_bloqueio`
+- `GET /cortex/transporte/bloqueios/<aluno_pk>/` — detalhe com `deficiencia`,
+  `ultimo_login`, `ausencias`, `bloqueios` e `justificativa_pendente` (com
+  `itens_ausencia`: strike, envio, data/horário da ausência e texto)
 - `POST /cortex/transporte/bloqueios/justificativas/`
 - `GET /cortex/transporte/justificativas/` e
-  `GET /cortex/transporte/justificativas/<pk>/`
+  `GET /cortex/transporte/justificativas/<pk>/` (detalhe inclui `itens_ausencia`)
 - `POST /cortex/transporte/justificativas/<pk>/aprovar/`
 - `POST /cortex/transporte/justificativas/<pk>/rejeitar/`
