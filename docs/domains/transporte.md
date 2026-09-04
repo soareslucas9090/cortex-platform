@@ -6,8 +6,8 @@ Este arquivo contém as regras, modelos e convenções específicas para o domí
 
 O domínio `Transporte` gerencia o transporte universitário. A entrega atual cobre
 percursos, rotas, o perfil e a visão operacional do motorista (RF013), execuções
-datadas, reserva de tickets, fila de espera, embarque por QR Code, ausências,
-strikes e justificativas.
+datadas, reserva de tickets, fila de espera, conferência de embarque, entrada sem
+ticket, ausências, strikes e justificativas.
 
 ### Modelos e Relacionamentos
 
@@ -17,9 +17,14 @@ strikes e justificativas.
   chave primária do perfil e usa `PROTECT`, impedindo a exclusão física do usuário
   enquanto o vínculo existir. O campo `ativo` controla a disponibilidade do perfil.
 - **ExecucaoRota**: ocorrência datada de uma rota. Congela `data_hora_saida` e
-  `quantidade_vagas` para não ser alterada por edições futuras na rota.
+  `quantidade_vagas`. `chamada_tickets_concluida` e os timestamps
+  `monitoramento_iniciado_em`, `chamada_concluida_em` e `finalizada_em` registram
+  o andamento operacional da conferência.
 - **Ticket**: solicitação de um aluno em uma execução; representa reserva, posição
-  em fila, cancelamento, embarque ou ausência.
+  em fila, cancelamento, embarque, ausência ou não contemplado na espera (`NAO_CONTEMPLADO`).
+- **EntradaSemTicket**: embarque manual por CPF em vaga **além** da espera
+  (`vagas_disponiveis > quantidade em EM_ESPERA`), após a chamada.
+  Quem está `EM_ESPERA` não usa este fluxo.
 - **Strike**: falta vinculada unicamente a um ticket marcado como ausente.
 - **Justificativa**: solicitação de revisão de bloqueio, cobrindo todos os strikes ativos do aluno.
 - **Bloqueio**: estado do aluno (`is_bloqueado`, `faltas`, `quantidade_bloqueios`)
@@ -40,6 +45,8 @@ Transporte/
 ├── motoristas/      # App Django do perfil Motorista
 ├── execucoes_rotas/ # App Django do model ExecucaoRota
 ├── tickets/         # App Django do model Ticket e fila de espera
+├── entradas_sem_ticket/
+├── permissoes/
 ├── strikes/         # App Django do model Strike
 ├── justificativas/  # App Django do model Justificativa
 └── bloqueios/       # Consulta de alunos bloqueados e envio de justificativa
@@ -109,14 +116,36 @@ administrativa/conferência.
 - Reservas e entradas na fila exigem estado `ABERTA`.
 - Para alunos, execuções disponíveis são exibidas somente de segunda a sexta,
   da meia-noite do próprio dia até exatamente 30 minutos antes da saída.
-- QR Code só é validado em `EM_EMBARQUE`.
+- Conferente e L3 iniciam o monitoramento (`EM_EMBARQUE`) somente depois de
+  30 minutos antes da saída (`now > data_hora_saida − 30 min`), em execução
+  `ABERTA` ou `FECHADA`. No instante exato do T-30 o aluno ainda pode solicitar
+  ticket; o monitoramento ainda não inicia. Depois do horário de saída, no
+  mesmo dia, ainda é possível iniciar. Replay de iniciar só enquanto
+  `EM_EMBARQUE`. Depois de `FINALIZADA` (chamada de tickets e espera encerradas)
+  não se inicia de novo; o campo `pode_monitorar` no payload indica se o botão
+  de iniciar deve aparecer.
+- A listagem da conferência no dia inclui `ABERTA`, `FECHADA`, `EM_EMBARQUE`
+  e `FINALIZADA` (consulta; `pode_monitorar` falso). `CANCELADA` não aparece.
+  `EM_EMBARQUE` serve para continuar o monitoramento. L3 obedece a mesma data
+  (hoje) e o mesmo T-30. Se existir execução no sábado ou domingo, ela entra
+  nessa lista; o aluno continua sem reservar no fim de semana.
+- Abrir conferência por ID no mesmo dia: `CANCELADA` responde como não
+  encontrada (404). `FINALIZADA` permanece no escopo para consulta da execução
+  e replay de finalizar. Iniciar monitoramento nessa execução retorna 400.
+  Chamada e espera (GET/POST de filas) só existem em `EM_EMBARQUE`; em
+  `FINALIZADA` a lista basta. Outro dia continua 404.
+- Depois de `EM_EMBARQUE`, L3 **não** cancela a execução: só finaliza a
+  conferência ou deixa o monitoramento seguir.
 
 ### 5. Tickets, capacidade e cancelamento
 
-- Somente usuário e aluno ativos, com situação `MATRICULADO`, podem solicitar ticket.
-- Três ou mais strikes ativos bloqueiam novas reservas e novas entradas em fila.
+- Somente usuário e aluno ativos, com situação `MATRICULADO`, podem solicitar
+  ticket (reserva ou fila) ou entrar por CPF.
+- Três ou mais strikes ativos bloqueiam novas reservas, novas entradas em fila
+  e entrada sem ticket.
 - O terceiro strike não cancela tickets nem posições já existentes.
-- Há no máximo um ticket não cancelado por aluno e execução.
+- Há no máximo um ticket não cancelado por aluno e execução (`NAO_CONTEMPLADO`
+  também ocupa essa unicidade; só `CANCELADO` libera o par aluno+execução).
 - Com vaga, a solicitação cria `RESERVADO`; sem vaga, a reserva falha e o aluno
   precisa entrar explicitamente na fila.
 - Reserva, entrada na fila, cancelamento e saída da fila funcionam somente de
@@ -126,6 +155,24 @@ administrativa/conferência.
 - Cancelar uma reserva promove o primeiro ticket da fila na mesma transação.
 - A capacidade e a promoção usam bloqueio pessimista na execução para proteger a
   última vaga em requisições concorrentes.
+- Na conferência, quem não entra em `ausentes` na chamada fica `EMBARCADO` sem QR
+  (presença por omissão). O conferente não valida QR. O POST de finalizar promove
+  a espera que cabe nas vagas (fila inteira, não só os N da tela); o restante
+  fica `NAO_CONTEMPLADO` (não é o `CANCELADO` voluntário do aluno).
+  Remover da espera durante o embarque, após a chamada, só vale para os N tickets
+  da fila visível (N = vagas restantes) e continua `CANCELADO` sem strike.
+  O replay da chamada compara o conjunto gravado nela, não ausências marcadas
+  depois pelo L3. O monitoramento pode iniciar depois do horário de saída no
+  mesmo dia, desde que `now > T-30`.
+- Entrada por CPF revalida aluno ativo, matriculado, strikes, vaga, chamada
+  concluída e execução em embarque. A consulta é `POST` em
+  `entradas-sem-ticket/validar/` com `{ "cpf": "..." }` e não persiste; o
+  `POST` em `entradas-sem-ticket/` revalida e grava. Quem cancelou o próprio
+  ticket pode usar este fluxo se houver vaga além da espera. Quem está
+  `AUSENTE` nesta execução também pode, nas mesmas condições: o ticket permanece
+  `AUSENTE` e o strike não é desfeito. Três strikes ativos continuam impedindo
+  a entrada (incluindo o strike desta ausência).
+  CPF não fura a fila: só entra quando `vagas_disponiveis > quantidade em EM_ESPERA`.
 
 ### 6. Posição dos tickets e prioridade PcD
 
@@ -145,7 +192,9 @@ a capacidade congelada da execução. Para `EM_ESPERA`, o total é a quantidade 
 de alunos aguardando. Alterar `Usuario.deficiencia` reposiciona dinamicamente os
 tickets existentes nos dois grupos. A prioridade altera apenas a ordem exibida e
 de atendimento: nunca remove uma reserva confirmada nem promove alguém sem vaga.
-O tipo de deficiência não é exposto nas respostas dos tickets.
+O tipo de deficiência não é exposto nas respostas dos tickets. Na listagem da
+conferência (`GET .../conferencia/reservas/` e a fila visível), `aluno.tem_deficiencia`
+indica só se o cadastro tem deficiência preenchida, para o selo no monitoramento.
 
 O payload `posicao` informa `tipo` (`RESERVA` ou `ESPERA`), `atual` e `total`.
 `posicao_fila` permanece como campo compatível e só contém valor para `EM_ESPERA`.
@@ -162,7 +211,9 @@ O payload `posicao` informa `tipo` (`RESERVA` ou `ESPERA`), `atual` e `total`.
   `quantidade_bloqueios` permanece.
 - L3 marca um ticket `RESERVADO` como `AUSENTE` durante o embarque ou após a
   finalização; a ação cria exatamente um strike e sincroniza `faltas`,
-  `is_bloqueado` e, quando aplicável, `quantidade_bloqueios` no aluno.
+  `is_bloqueado` e, quando aplicável, `quantidade_bloqueios` no aluno. O conferente
+  faz o mesmo em lote ao finalizar a chamada (`ausentes`). Remover da fila de espera
+  **não** gera strike.
 - Strike `ATIVO` conta para o bloqueio; `JUSTIFICADO` deixa de contar.
 - O aluno bloqueado pode enviar **uma** justificativa cobrindo todos os strikes
   ativos (`POST /bloqueios/justificativas/`).
@@ -192,6 +243,7 @@ e o horário da execução em que a ausência ocorreu.
   ticket e execução. CPF, deficiência e IDs internos não são embutidos.
 - O frontend transforma esse conteúdo em imagem e pode incluí-lo no PDF.
 - L3 envia o conteúdo lido a `POST /cortex/transporte/tickets/validar-qr/`.
+  O conferente **não** valida QR.
 - Assinatura, execução e status são validados no banco; ticket cancelado, em fila,
   ausente ou adulterado é rejeitado.
 - A primeira leitura muda o ticket para `EMBARCADO`; leituras posteriores são
@@ -199,19 +251,26 @@ e o horário da execução em que a ausência ocorreu.
 
 ### 9. Permissões
 
-Percursos e rotas continuam restritos a **L3** (`EDITAR_TUDO`). Execuções abertas
-podem ser consultadas por qualquer autenticado; L3 vê e administra todas.
-O aluno vê e altera apenas os próprios tickets, strikes e justificativas.
+Percursos e rotas continuam restritos a **L3** (`gerenciar`). L2 (`LER_TUDO`) não
+abre o módulo de Transporte. O aluno vê e altera apenas os próprios tickets,
+strikes e justificativas.
 
-- **Views:** `IsAdminMixin` (`tem_acesso_elevado()`), o mesmo critério de L3: `is_staff`, `is_admin` ou superusuário.
 - **Payload (login/me):** `gerenciar` é `true` só para L3; `motorista` exige conta
   de usuário e perfil Motorista ativos; `reservar` exige aluno ativo, matriculado
-  e não bloqueado; `bloqueado`, `faltas` e `bloqueios` refletem o estado
-  sincronizado do aluno (`bloqueios` = `quantidade_bloqueios`).
+  e não bloqueado; `conferir` é `true` para L3 **ou** servidor/terceirizado ativo
+  **e** (`PermissaoFuncaoTransporte.conferir` na função do vínculo ativo **ou**
+  `PermissaoUsuarioTransporte.conferir`); `bloqueado`, `faltas` e `bloqueios`
+  refletem o estado sincronizado do aluno (`bloqueios` = `quantidade_bloqueios`).
+- **Conferente:** lista só execuções do **dia**; após iniciar a conferência, opera as
+  filas de ticket e de espera **dessa** execução. Não acessa GET global de tickets.
+- **Views de conferência:** `PodeConferirTransporteMixin`.
+- **Views administrativas:** `IsAdminMixin` (`tem_acesso_elevado()`), o mesmo critério de L3.
 - **Compilação:** `UsuarioPermissions.permissoes_transporte()`.
-- **Documentação viva da API:** `GET /cortex/identidade/permissoes/documentacao/` (`documentacao_transporte()`). Toda mudança de regra deve atualizar esse método no mesmo PR.
+- **Documentação viva:** `documentacao_transporte()`. O dashboard futuro (RF012)
+  reutiliza `conferir`; não há capacidade `ver_dashboard`.
 
-Swagger de cada endpoint de percursos e rotas declara `**Permissões:** L3 (EDITAR_TUDO) — perfil TI / administradores.`
+Swagger das views de conferência declara capacidade `transporte.conferir` e o
+escopo do dia + filas da execução monitorada.
 
 #### Visualização (motorista)
 
@@ -244,8 +303,23 @@ Base execuções: `/cortex/transporte/execucoes-rotas/`
 
 - `GET` / `POST` na raiz
 - `GET` em `<pk>/`
-- `POST` em `abrir-reservas/`, `fechar-reservas/`, `iniciar-embarque/`,
-  `finalizar/` e `cancelar/`
+- `POST` em `abrir-reservas/`, `fechar-reservas/` e `cancelar/` (L3;
+  cancelar só antes de `EM_EMBARQUE`)
+- `GET` `execucoes-rotas/conferencia/`
+- `POST` `execucoes-rotas/<pk>/conferencia/iniciar/` e `.../conferencia/finalizar/`
+  (capacidade `conferir`)
+- `GET` `execucoes-rotas/<pk>/conferencia/reservas/`
+  (`aluno.tem_deficiencia`: selo PcD sem o tipo clínico)
+- `POST` `execucoes-rotas/<pk>/conferencia/finalizar-chamada/`
+- `GET` `execucoes-rotas/<pk>/conferencia/fila/` — só os N primeiros da espera
+  (N = vagas restantes); quem não cabe agora não entra nesta lista;
+  `aluno.tem_deficiencia` igual ao da listagem da chamada
+- `POST` `execucoes-rotas/<pk>/conferencia/fila/<uuid>/remover/`
+  (somente UUID que o GET da fila devolveria agora)
+- `POST` `execucoes-rotas/<pk>/conferencia/entradas-sem-ticket/validar/`
+  (`cpf` no body; sem persistência)
+- `POST` `execucoes-rotas/<pk>/conferencia/entradas-sem-ticket/`
+  (`cpf` e `observacao` opcional; persiste)
 - `POST` em `<pk>/reservar/` e `<pk>/fila-espera/entrar/`
 
 Base tickets: `/cortex/transporte/tickets/`

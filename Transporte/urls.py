@@ -9,5 +9,6 @@ urlpatterns = [
     path('', include('Transporte.tickets.urls')),
     path('', include('Transporte.strikes.urls')),
     path('', include('Transporte.justificativas.urls')),
+    path('', include('Transporte.entradas_sem_ticket.urls')),
     path('', include('Transporte.bloqueios.urls')),
 ]

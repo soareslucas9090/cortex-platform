@@ -55,7 +55,8 @@ class PermissaoDocumentacao:
                 'O payload `user.permissoes` no login/me retorna `{"cortex": "<nível>"}` e '
                 'chaves adicionais por módulo: `infraestrutura` (flags booleanas) e '
                 '`transporte` (`{"gerenciar": true|false, "motorista": true|false, '
-                '"reservar": true|false}`).'
+                '"reservar": true|false, "conferir": true|false, "bloqueado": true|false, '
+                '"faltas": <n>, "bloqueios": <n>}`).'
             ),
             'niveis': [
                 {
@@ -514,16 +515,16 @@ class PermissaoDocumentacao:
             'chave': 'transporte',
             'titulo': 'Transporte',
             'resumo': (
-                'Gestão de rotas e execuções, visão do motorista, tickets, fila de espera, '
-                'strikes e justificativas.'
+                'Gestão de rotas, execuções, visão do motorista, tickets, conferência de embarque, '
+                'fila de espera, strikes e justificativas.'
             ),
             'texto': (
-                'O módulo transporte controla o cadastro de percursos (apelido, descrição e '
-                'status ativo/inativo) e de rotas (percurso, horário de saída, dia da semana e '
-                'quantidade de vagas). L3 administra esses cadastros e as execuções; motoristas '
-                'ativos consultam as rotas do dia; e alunos ativos e matriculados, não '
-                'bloqueados, podem solicitar tickets e entrar em filas de espera. O payload '
-                'expõe gerenciar, motorista, reservar, bloqueado, faltas e bloqueios.'
+                'O módulo transporte controla o cadastro de percursos e rotas, as execuções '
+                'datadas, os tickets e a conferência de embarque. L3 administra cadastros e '
+                'execuções. Motoristas ativos consultam as rotas do dia. Alunos elegíveis '
+                'reservam tickets. Conferentes (L3 ou colaborador servidor/terceirizado com '
+                'conferir por função ou por usuário) operam as execuções do dia. O payload expõe '
+                'gerenciar, motorista, reservar, conferir, bloqueado, faltas e bloqueios.'
             ),
             'secoes': [
                 {
@@ -532,8 +533,8 @@ class PermissaoDocumentacao:
                         {
                             'destaque': 'gerenciar',
                             'texto': (
-                                'true apenas se is_staff, is_admin ou is_superuser (mesmo critério '
-                                'de L3 / tem_acesso_elevado). Sem usuário: gerenciar=false.'
+                                'true apenas se is_staff, is_admin ou is_superuser (L3). Sem '
+                                'usuário: gerenciar=false.'
                             ),
                         },
                         {
@@ -571,11 +572,28 @@ class PermissaoDocumentacao:
                             ),
                         },
                         {
-                            'destaque': 'Payload típico',
+                            'destaque': 'conferir',
+                            'texto': (
+                                'true para L3 ou para servidor/terceirizado ativo com '
+                                'PermissaoFuncaoTransporte.conferir na função do vínculo ativo '
+                                'ou PermissaoUsuarioTransporte.conferir (OR). L2 sozinho não '
+                                'abre o módulo de conferência.'
+                            ),
+                        },
+                        {
+                            'destaque': 'Payload típico aluno',
                             'texto': (
                                 '{"transporte": {"gerenciar": false, "motorista": false, '
-                                '"reservar": true, "bloqueado": false, "faltas": 0, '
-                                '"bloqueios": 0}}'
+                                '"reservar": true, "conferir": false, "bloqueado": false, '
+                                '"faltas": 0, "bloqueios": 0}}'
+                            ),
+                        },
+                        {
+                            'destaque': 'Payload típico conferente',
+                            'texto': (
+                                '{"transporte": {"gerenciar": false, "motorista": false, '
+                                '"reservar": false, "conferir": true, "bloqueado": false, '
+                                '"faltas": 0, "bloqueios": 0}}'
                             ),
                         },
                     ],
@@ -593,22 +611,46 @@ class PermissaoDocumentacao:
                     ],
                 },
                 {
-                    'titulo': 'Execuções, tickets e fila de espera',
+                    'titulo': 'Execuções, tickets e conferência',
                     'paragrafos': [
                         (
-                            'L3 cria e controla execuções de rotas, inicia o embarque, valida '
-                            'QR Codes e registra ausências. Alunos consultam execuções abertas '
-                            'e seus próprios tickets.'
+                            'L3 cria execuções, abre/fecha reservas e cancela somente antes do '
+                            'embarque. Conferentes listam execuções do dia (ABERTA, FECHADA, '
+                            'EM_EMBARQUE e FINALIZADA; sem CANCELADA), inclusive fim de semana '
+                            'se houver execução. Por ID, CANCELADA é 404; FINALIZADA segue para '
+                            'consulta da execução e replay de finalizar (iniciar de novo retorna 400). '
+                            'O monitoramento inicia só depois de T-30 '
+                            '(now > data_hora_saida − 30 min); L3 obedece a mesma data e janela. '
+                            'O campo pode_monitorar indica se o botão de iniciar deve aparecer. '
+                            'Após EM_EMBARQUE, operam as filas de ticket e de espera dessa execução. '
+                            'QR Code permanece L3.'
                         ),
                         (
-                            'Reserva, entrada e saída da fila e cancelamento funcionam somente '
-                            'de segunda a sexta, da meia-noite do dia da execução até exatamente '
-                            '30 minutos antes da saída.'
+                            'A chamada envia só ausentes (omitir = presença, com strike). '
+                            'Remover da espera cancela sem strike. Finalizar promove quem cabe '
+                            'e o restante fica NAO_CONTEMPLADO. A GET da fila mostra só quem '
+                            'caberia agora (vagas restantes); o restante da espera não aparece '
+                            'nessa lista. Entrada por CPF só usa vaga além da espera '
+                            '(vagas disponíveis maior que EM_ESPERA); '
+                            'POST em entradas-sem-ticket/validar/ consulta sem gravar; o POST em '
+                            'entradas-sem-ticket/ persiste. Quem está EM_ESPERA não usa CPF; '
+                            'quem cancelou o ticket pode usar se houver vaga além da espera. '
+                            'Quem está AUSENTE nesta execução pode entrar nas mesmas condições; '
+                            'o ticket permanece AUSENTE e o strike não é desfeito. '
+                            'Três strikes ativos bloqueiam a entrada por CPF.'
+                        ),
+                        (
+                            'Reserva, entrada e saída da fila e cancelamento pelo aluno funcionam '
+                            'somente de segunda a sexta, da meia-noite do dia da execução até '
+                            'exatamente 30 minutos antes da saída.'
                         ),
                         (
                             'Reservas confirmadas e fila priorizam alunos com '
                             'Usuario.deficiencia preenchido e preservam a ordem de solicitação '
-                            'dentro dos grupos PcD e não PcD, sem retirar vagas confirmadas.'
+                            'dentro dos grupos PcD e não PcD, sem retirar vagas confirmadas. '
+                            'Nas listagens da conferência (reservas e fila visível), '
+                            'aluno.tem_deficiencia indica só se o cadastro tem deficiência; '
+                            'o tipo clínico não é enviado.'
                         ),
                         (
                             'O payload posicao contém tipo, atual e total. Em RESERVA, o total '
@@ -692,6 +734,26 @@ class PermissaoDocumentacao:
                         'Fica indisponível quando o aluno está bloqueado no transporte.'
                     ),
                 },
+                {
+                    'codigo': 'conferir',
+                    'nome': 'Conferir embarque',
+                    'quem_usa': (
+                        'L3 ou colaborador (servidor ou terceirizado) com conferir por função '
+                        'ou por usuário'
+                    ),
+                    'pode': (
+                        'Listar execuções do dia e, após iniciar o monitoramento, operar as '
+                        'filas de ticket e de espera dessa execução.'
+                    ),
+                    'nao_sem_capacidade': (
+                        'Acessar a conferência, iniciar embarque ou finalizar a rota pelo fluxo '
+                        'do conferente.'
+                    ),
+                    'descricao': (
+                        'Não amplia cadastro nem listagens globais de tickets, strikes ou '
+                        'justificativas. O dashboard futuro (RF012) reutiliza esta capacidade.'
+                    ),
+                },
             ],
             'exemplos': [
                 {
@@ -700,6 +762,7 @@ class PermissaoDocumentacao:
                         'gerenciar': False,
                         'motorista': False,
                         'reservar': True,
+                        'conferir': False,
                         'bloqueado': False,
                         'faltas': 0,
                         'bloqueios': 0,
@@ -711,7 +774,28 @@ class PermissaoDocumentacao:
                     ],
                     'nao_pode': [
                         'listar ou cadastrar percursos e rotas',
-                        'administrar execuções ou validar QR Codes',
+                        'conferir embarque',
+                    ],
+                },
+                {
+                    'perfil': 'Conferente (servidor ou terceirizado com função ou permissão no usuário)',
+                    'capacidades': {
+                        'gerenciar': False,
+                        'motorista': False,
+                        'reservar': False,
+                        'conferir': True,
+                        'bloqueado': False,
+                        'faltas': 0,
+                        'bloqueios': 0,
+                    },
+                    'pode': [
+                        'listar execuções do dia',
+                        'iniciar embarque somente depois de T-30',
+                        'operar filas de ticket e espera da execução monitorada',
+                    ],
+                    'nao_pode': [
+                        'cadastrar percursos e rotas',
+                        'listar tickets de outras execuções ou datas',
                     ],
                 },
                 {
@@ -720,12 +804,15 @@ class PermissaoDocumentacao:
                         'gerenciar': True,
                         'motorista': False,
                         'reservar': False,
+                        'conferir': True,
                         'bloqueado': False,
                         'faltas': 0,
                         'bloqueios': 0,
                     },
                     'pode': [
                         'cadastrar, editar, desativar e reativar percursos e rotas',
+                        'criar execuções, abrir/fechar reservas e cancelar',
+                        'conferir embarque',
                         'listar bloqueios, analisar justificativas e aprovar ou rejeitar ausencias',
                         'ver o menu Transporte no frontend',
                     ],
@@ -737,6 +824,10 @@ class PermissaoDocumentacao:
                         'gerenciar': False,
                         'motorista': True,
                         'reservar': False,
+                        'conferir': False,
+                        'bloqueado': False,
+                        'faltas': 0,
+                        'bloqueios': 0,
                     },
                     'pode': [
                         'ver todas as rotas do dia',

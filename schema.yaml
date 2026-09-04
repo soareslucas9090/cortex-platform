@@ -853,12 +853,12 @@ paths:
         de cada módulo registrado.\n\n    Inclui **cortex** (níveis L1–L3), **infraestrutura**
         (capacidades booleanas, secoes\n    estruturadas, acesso total de admin/superuser,
         elegibilidade do solicitante) e\n    **transporte** (capacidades `gerenciar`
-        para L3/TI, `motorista` para a visão\n    das rotas do dia e `reservar` para
-        aluno elegível). Novos módulos\n    entram automaticamente ao implementar
-        `documentacao_<modulo>()`.\n\n    **Permissões:** Qualquer usuário autenticado.\n\n
-        \   **Manutenção:** toda alteração de regra de permissão deve atualizar o
-        método\n    `documentacao_<modulo>()` correspondente em `Identidade.usuarios.documentacao`.\n
-        \   "
+        para L3, `motorista` para a visão das rotas\n    do dia, `reservar` para aluno
+        elegível e `conferir` para L3 ou colaborador com\n    função). Novos módulos\n
+        \   entram automaticamente ao implementar `documentacao_<modulo>()`.\n\n    **Permissões:**
+        Qualquer usuário autenticado.\n\n    **Manutenção:** toda alteração de regra
+        de permissão deve atualizar o método\n    `documentacao_<modulo>()` correspondente
+        em `Identidade.usuarios.documentacao`.\n    "
       summary: Documentação de permissões por módulo
       tags:
       - Identidade
@@ -5508,6 +5508,153 @@ paths:
               schema:
                 $ref: '#/components/schemas/Terceirizado'
           description: ''
+  /cortex/transporte/bloqueios/:
+    get:
+      operationId: transporte_bloqueios_list
+      description: |-
+        Lista alunos bloqueados no transporte universitário, com busca, filtros e paginação.
+
+        **Permissões:** L3 (EDITAR_TUDO) — perfil TI / administradores.
+
+        **Paginação:** query param `paginacao` (padrão 10, máximo 100).
+      summary: Listar alunos bloqueados
+      parameters:
+      - in: query
+        name: busca
+        schema:
+          type: string
+        description: Filtra por parte do nome ou CPF do aluno (ignora acentos no nome).
+      - in: query
+        name: curso_id
+        schema:
+          type: integer
+        description: Filtra alunos com vínculo ativo ao curso informado.
+      - name: page
+        required: false
+        in: query
+        description: Um número de página dentro do conjunto de resultados paginado.
+        schema:
+          type: integer
+      - in: query
+        name: paginacao
+        schema:
+          type: integer
+        description: Tamanho da página (1–100, padrão 10).
+      - in: query
+        name: tem_justificativa
+        schema:
+          type: boolean
+        description: 'Filtra por justificativa pendente: true = com pendente, false
+          = sem pendente.'
+      tags:
+      - Transporte · Bloqueios
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedBloqueioList'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                description: Não autenticado.
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                description: Acesso administrativo obrigatório.
+          description: ''
+  /cortex/transporte/bloqueios/{aluno_pk}/:
+    get:
+      operationId: transporte_bloqueios_retrieve
+      description: |-
+        Retorna os dados de um aluno bloqueado, incluindo ausências, bloqueios acumulados e justificativa pendente com itens de ausência.
+
+        **Permissões:** L3 (EDITAR_TUDO) — perfil TI / administradores.
+      summary: Detalhar bloqueio
+      parameters:
+      - in: path
+        name: aluno_pk
+        schema:
+          type: integer
+        required: true
+      tags:
+      - Transporte · Bloqueios
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BloqueioDetalhe'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                description: Não autenticado.
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                description: Acesso administrativo obrigatório.
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                description: Bloqueio não encontrado.
+          description: ''
+  /cortex/transporte/bloqueios/justificativas/:
+    post:
+      operationId: transporte_bloqueios_justificativas_create
+      description: |-
+        Envia uma justificativa cobrindo todos os strikes ativos do aluno bloqueado.
+
+        **Permissões:** L1 (EDITAR_EU) — somente o próprio aluno bloqueado.
+      summary: Enviar justificativa de bloqueio
+      tags:
+      - Transporte · Bloqueios
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CriarJustificativa'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/CriarJustificativa'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/CriarJustificativa'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Justificativa'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                description: Aluno não bloqueado ou texto inválido.
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                description: Não autenticado.
+          description: ''
   /cortex/transporte/execucoes-rotas/:
     get:
       operationId: transporte_execucoes_rotas_list
@@ -5691,7 +5838,7 @@ paths:
     post:
       operationId: transporte_execucoes_rotas_cancelar_create
       description: |-
-        Cancela uma execução ainda não finalizada.
+        Cancela uma execução ainda não iniciada em embarque e ainda não finalizada.
 
         **Permissões:** L3 (EDITAR_TUDO) — perfil TI / administradores.
       summary: Cancelar execução
@@ -5735,6 +5882,462 @@ paths:
             application/json:
               schema:
                 description: Execução não encontrada.
+          description: ''
+  /cortex/transporte/execucoes-rotas/{id}/conferencia/entradas-sem-ticket/:
+    post:
+      operationId: transporte_execucoes_rotas_conferencia_entradas_sem_ticket_create
+      description: |-
+        Inclui aluno por CPF em vaga além da fila de espera (vagas disponíveis maior que a quantidade em EM_ESPERA). Quem está EM_ESPERA não usa este fluxo. Quem está AUSENTE nesta execução pode entrar se houver vaga além da espera e o aluno tiver menos de 3 strikes ativos; o ticket permanece AUSENTE e o strike não é desfeito.
+
+        **Permissões:** capacidade transporte.conferir. Lê e opera execuções do dia e, após iniciar o monitoramento, as filas de ticket e de espera dessa execução. Não amplia cadastro nem recursos globais do módulo.
+      summary: Registrar entrada sem ticket
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - Transporte · Conferência
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegistrarEntradaSemTicket'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/RegistrarEntradaSemTicket'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/RegistrarEntradaSemTicket'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EntradaSemTicket'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                description: Regra de entrada não atendida.
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                description: Não autenticado.
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                description: Sem capacidade conferir.
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                description: Aluno ou execução não encontrada.
+          description: ''
+  /cortex/transporte/execucoes-rotas/{id}/conferencia/entradas-sem-ticket/validar/:
+    post:
+      operationId: transporte_execucoes_rotas_conferencia_entradas_sem_ticket_validar_create
+      description: |-
+        Consulta as regras de elegibilidade sem persistir. O POST em entradas-sem-ticket/ revalida tudo e grava. Inclui aluno por CPF em vaga além da fila de espera (vagas disponíveis maior que a quantidade em EM_ESPERA). Quem está EM_ESPERA não usa este fluxo. Quem está AUSENTE nesta execução pode entrar se houver vaga além da espera e o aluno tiver menos de 3 strikes ativos; o ticket permanece AUSENTE e o strike não é desfeito.
+
+        **Permissões:** capacidade transporte.conferir. Lê e opera execuções do dia e, após iniciar o monitoramento, as filas de ticket e de espera dessa execução. Não amplia cadastro nem recursos globais do módulo.
+      summary: Validar CPF para entrada sem ticket
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - Transporte · Conferência
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ValidarEntradaSemTicket'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ValidarEntradaSemTicket'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ValidarEntradaSemTicket'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ElegibilidadeEntrada'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                description: Regra de entrada não atendida.
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                description: Não autenticado.
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                description: Sem capacidade conferir.
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                description: Aluno ou execução não encontrada.
+          description: ''
+  /cortex/transporte/execucoes-rotas/{id}/conferencia/fila/:
+    get:
+      operationId: transporte_execucoes_rotas_conferencia_fila_list
+      description: |-
+        Lista somente quem caberia agora (PcD + FIFO, limitado às vagas restantes). Quem está além desse limite não aparece; a remoção nesta tela vale só para os tickets listados. A promoção de toda a espera ocorre ao finalizar. Em `aluno.tem_deficiencia` o front recebe se há deficiência cadastrada (sem o tipo clínico).
+
+        **Permissões:** capacidade transporte.conferir. Lê e opera execuções do dia e, após iniciar o monitoramento, as filas de ticket e de espera dessa execução. Não amplia cadastro nem recursos globais do módulo.
+      summary: Listar fila de espera visível
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      - name: page
+        required: false
+        in: query
+        description: Um número de página dentro do conjunto de resultados paginado.
+        schema:
+          type: integer
+      - in: query
+        name: paginacao
+        schema:
+          type: integer
+        description: Tamanho da página (1–100, padrão 10).
+      tags:
+      - Transporte · Conferência
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedTicketConferenciaList'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                description: Não autenticado.
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                description: Sem capacidade conferir.
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                description: Execução de outro dia ou cancelada (fora do escopo da
+                  conferência).
+          description: ''
+  /cortex/transporte/execucoes-rotas/{id}/conferencia/fila/{codigo}/remover/:
+    post:
+      operationId: transporte_execucoes_rotas_conferencia_fila_remover_create
+      description: |-
+        Cancela o ticket em espera sem gerar strike. Só aceita os N tickets da fila visível (vagas restantes), os mesmos do GET da fila.
+
+        **Permissões:** capacidade transporte.conferir. Lê e opera execuções do dia e, após iniciar o monitoramento, as filas de ticket e de espera dessa execução. Não amplia cadastro nem recursos globais do módulo.
+      summary: Remover aluno da fila de espera
+      parameters:
+      - in: path
+        name: codigo
+        schema:
+          type: string
+          format: uuid
+        required: true
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - Transporte · Conferência
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TicketConferencia'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                description: Chamada pendente, ticket fora da fila visível, ou ticket
+                  que não está em espera.
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                description: Não autenticado.
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                description: Sem capacidade conferir.
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                description: Ticket inexistente, execução de outro dia ou cancelada
+                  (fora do escopo da conferência).
+          description: ''
+  /cortex/transporte/execucoes-rotas/{id}/conferencia/finalizar/:
+    post:
+      operationId: transporte_execucoes_rotas_conferencia_finalizar_create
+      description: |-
+        Embarca a fila que cabe nas vagas restantes, marca o restante da espera como não contemplado (sem strike) e finaliza a execução.
+
+        **Permissões:** capacidade transporte.conferir. Lê e opera execuções do dia e, após iniciar o monitoramento, as filas de ticket e de espera dessa execução. Não amplia cadastro nem recursos globais do módulo.
+      summary: Finalizar execução
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - Transporte · Conferência
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExecucaoRota'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                description: Chamada pendente ou transição inválida.
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                description: Não autenticado.
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                description: Sem capacidade conferir.
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                description: Execução de outro dia ou cancelada (fora do escopo da
+                  conferência).
+          description: ''
+  /cortex/transporte/execucoes-rotas/{id}/conferencia/finalizar-chamada/:
+    post:
+      operationId: transporte_execucoes_rotas_conferencia_finalizar_chamada_create
+      description: |-
+        Grava ausências (com strike) e embarca os demais tickets reservados.
+
+        **Permissões:** capacidade transporte.conferir. Lê e opera execuções do dia e, após iniciar o monitoramento, as filas de ticket e de espera dessa execução. Não amplia cadastro nem recursos globais do módulo.
+      summary: Finalizar chamada de tickets
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - Transporte · Conferência
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FinalizarChamada'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/FinalizarChamada'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/FinalizarChamada'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExecucaoRota'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                description: Chamada inválida.
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                description: Não autenticado.
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                description: Sem capacidade conferir.
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                description: Execução de outro dia ou cancelada (fora do escopo da
+                  conferência).
+          description: ''
+  /cortex/transporte/execucoes-rotas/{id}/conferencia/iniciar/:
+    post:
+      operationId: transporte_execucoes_rotas_conferencia_iniciar_create
+      description: |-
+        Inicia o monitoramento da execução do dia somente depois de 30 minutos antes da saída. O campo pode_monitorar do payload indica se o botão de iniciar deve aparecer. Não reinicia após FINALIZADA.
+
+        **Permissões:** capacidade transporte.conferir. Lê e opera execuções do dia e, após iniciar o monitoramento, as filas de ticket e de espera dessa execução. Não amplia cadastro nem recursos globais do módulo.
+      summary: Iniciar embarque
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - Transporte · Conferência
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExecucaoRota'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                description: Fora da janela T-30, execução já finalizada, ou transição
+                  inválida.
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                description: Não autenticado.
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                description: Sem capacidade conferir.
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                description: Execução de outro dia ou cancelada (fora do escopo da
+                  conferência).
+          description: ''
+  /cortex/transporte/execucoes-rotas/{id}/conferencia/reservas/:
+    get:
+      operationId: transporte_execucoes_rotas_conferencia_reservas_list
+      description: |-
+        Lista os tickets da execução monitorada. O filtro cpf apenas reduz o conjunto. Em `aluno.tem_deficiencia` o front recebe se há deficiência cadastrada (sem o tipo clínico).
+
+        **Permissões:** capacidade transporte.conferir. Lê e opera execuções do dia e, após iniciar o monitoramento, as filas de ticket e de espera dessa execução. Não amplia cadastro nem recursos globais do módulo.
+      summary: Listar tickets da chamada
+      parameters:
+      - in: query
+        name: cpf
+        schema:
+          type: string
+        description: Filtra por CPF. Apenas reduz o conjunto já autorizado.
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      - name: page
+        required: false
+        in: query
+        description: Um número de página dentro do conjunto de resultados paginado.
+        schema:
+          type: integer
+      - in: query
+        name: paginacao
+        schema:
+          type: integer
+        description: Tamanho da página (1–100, padrão 10).
+      tags:
+      - Transporte · Conferência
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedTicketConferenciaList'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                description: Não autenticado.
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                description: Sem capacidade conferir.
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                description: Execução de outro dia ou cancelada (fora do escopo da
+                  conferência).
           description: ''
   /cortex/transporte/execucoes-rotas/{id}/fechar-reservas/:
     post:
@@ -5822,104 +6425,6 @@ paths:
               schema:
                 description: Não autenticado.
           description: ''
-  /cortex/transporte/execucoes-rotas/{id}/finalizar/:
-    post:
-      operationId: transporte_execucoes_rotas_finalizar_create
-      description: |-
-        Finaliza uma execução em embarque.
-
-        **Permissões:** L3 (EDITAR_TUDO) — perfil TI / administradores.
-      summary: Finalizar execução
-      parameters:
-      - in: path
-        name: id
-        schema:
-          type: integer
-        required: true
-      tags:
-      - Transporte · Execuções de rotas
-      security:
-      - jwtAuth: []
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ExecucaoRota'
-          description: ''
-        '400':
-          content:
-            application/json:
-              schema:
-                description: Transição de status inválida.
-          description: ''
-        '401':
-          content:
-            application/json:
-              schema:
-                description: Não autenticado.
-          description: ''
-        '403':
-          content:
-            application/json:
-              schema:
-                description: Acesso administrativo obrigatório.
-          description: ''
-        '404':
-          content:
-            application/json:
-              schema:
-                description: Execução não encontrada.
-          description: ''
-  /cortex/transporte/execucoes-rotas/{id}/iniciar-embarque/:
-    post:
-      operationId: transporte_execucoes_rotas_iniciar_embarque_create
-      description: |-
-        Inicia o embarque e habilita a leitura dos QR Codes.
-
-        **Permissões:** L3 (EDITAR_TUDO) — perfil TI / administradores.
-      summary: Iniciar embarque
-      parameters:
-      - in: path
-        name: id
-        schema:
-          type: integer
-        required: true
-      tags:
-      - Transporte · Execuções de rotas
-      security:
-      - jwtAuth: []
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ExecucaoRota'
-          description: ''
-        '400':
-          content:
-            application/json:
-              schema:
-                description: Transição de status inválida.
-          description: ''
-        '401':
-          content:
-            application/json:
-              schema:
-                description: Não autenticado.
-          description: ''
-        '403':
-          content:
-            application/json:
-              schema:
-                description: Acesso administrativo obrigatório.
-          description: ''
-        '404':
-          content:
-            application/json:
-              schema:
-                description: Execução não encontrada.
-          description: ''
   /cortex/transporte/execucoes-rotas/{id}/reservar/:
     post:
       operationId: transporte_execucoes_rotas_reservar_create
@@ -5956,6 +6461,55 @@ paths:
             application/json:
               schema:
                 description: Não autenticado.
+          description: ''
+  /cortex/transporte/execucoes-rotas/conferencia/:
+    get:
+      operationId: transporte_execucoes_rotas_conferencia_list
+      description: |-
+        Lista as execuções do dia em ABERTA, FECHADA, EM_EMBARQUE e FINALIZADA. Não inclui CANCELADA. Query params apenas reduzem o conjunto.
+
+        **Permissões:** capacidade transporte.conferir. Lê e opera execuções do dia e, após iniciar o monitoramento, as filas de ticket e de espera dessa execução. Não amplia cadastro nem recursos globais do módulo.
+      summary: Listar execuções do dia para conferência
+      parameters:
+      - in: query
+        name: data
+        schema:
+          type: string
+          format: date
+        description: Se diferente de hoje, retorna vazio. Não amplia o acesso.
+      - name: page
+        required: false
+        in: query
+        description: Um número de página dentro do conjunto de resultados paginado.
+        schema:
+          type: integer
+      - in: query
+        name: paginacao
+        schema:
+          type: integer
+        description: Tamanho da página (1–100, padrão 10).
+      tags:
+      - Transporte · Conferência
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedExecucaoRotaList'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                description: Não autenticado.
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                description: Sem capacidade conferir.
           description: ''
   /cortex/transporte/justificativas/:
     get:
@@ -6018,7 +6572,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Justificativa'
+                $ref: '#/components/schemas/JustificativaDetalhe'
           description: ''
         '401':
           content:
@@ -6828,61 +7382,6 @@ paths:
               schema:
                 description: Não autenticado.
           description: ''
-  /cortex/transporte/strikes/{id}/justificativas/:
-    post:
-      operationId: transporte_strikes_justificativas_create
-      description: |-
-        Envia uma justificativa para qualquer strike ativo do próprio aluno.
-
-        **Permissões:** L1 (EDITAR_EU) — somente o aluno dono do strike.
-      summary: Enviar justificativa
-      parameters:
-      - in: path
-        name: id
-        schema:
-          type: integer
-        required: true
-      tags:
-      - Transporte · Justificativas
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/CriarJustificativa'
-          application/x-www-form-urlencoded:
-            schema:
-              $ref: '#/components/schemas/CriarJustificativa'
-          multipart/form-data:
-            schema:
-              $ref: '#/components/schemas/CriarJustificativa'
-        required: true
-      security:
-      - jwtAuth: []
-      responses:
-        '201':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Justificativa'
-          description: ''
-        '400':
-          content:
-            application/json:
-              schema:
-                description: Strike inelegível ou texto inválido.
-          description: ''
-        '401':
-          content:
-            application/json:
-              schema:
-                description: Não autenticado.
-          description: ''
-        '404':
-          content:
-            application/json:
-              schema:
-                description: Strike não encontrado.
-          description: ''
   /cortex/transporte/tickets/:
     get:
       operationId: transporte_tickets_list
@@ -7226,6 +7725,32 @@ components:
       - usuario_cpf
       - usuario_id
       - usuario_nome
+    AlunoConferencia:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        nome:
+          type: string
+          readOnly: true
+        foto:
+          type: string
+          format: uri
+          readOnly: true
+          nullable: true
+        cpf:
+          type: string
+          readOnly: true
+        tem_deficiencia:
+          type: boolean
+          readOnly: true
+      required:
+      - cpf
+      - foto
+      - id
+      - nome
+      - tem_deficiencia
     AlunoCurso:
       type: object
       properties:
@@ -7277,6 +7802,28 @@ components:
       - curso_nome
       - id
       - updated_at
+    AlunoEntrada:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        nome:
+          type: string
+          readOnly: true
+        cpf:
+          type: string
+          readOnly: true
+        foto:
+          type: string
+          format: uri
+          readOnly: true
+          nullable: true
+      required:
+      - cpf
+      - foto
+      - id
+      - nome
     AlunoTicket:
       type: object
       properties:
@@ -7429,6 +7976,97 @@ components:
       required:
       - id
       - nome
+    Bloqueio:
+      type: object
+      properties:
+        aluno_pk:
+          type: integer
+        nome:
+          type: string
+        cpf:
+          type: string
+        faltas:
+          type: integer
+        ausencias:
+          type: integer
+        bloqueios:
+          type: integer
+        is_bloqueado:
+          type: boolean
+        tem_justificativa_pendente:
+          type: boolean
+          readOnly: true
+        curso_nome:
+          type: string
+          readOnly: true
+        data_bloqueio:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - aluno_pk
+      - ausencias
+      - bloqueios
+      - cpf
+      - curso_nome
+      - data_bloqueio
+      - faltas
+      - is_bloqueado
+      - nome
+      - tem_justificativa_pendente
+    BloqueioDetalhe:
+      type: object
+      properties:
+        aluno_pk:
+          type: integer
+        nome:
+          type: string
+        cpf:
+          type: string
+        faltas:
+          type: integer
+        ausencias:
+          type: integer
+        bloqueios:
+          type: integer
+        is_bloqueado:
+          type: boolean
+        tem_justificativa_pendente:
+          type: boolean
+          readOnly: true
+        curso_nome:
+          type: string
+          readOnly: true
+        data_bloqueio:
+          type: string
+          format: date-time
+          readOnly: true
+        deficiencia:
+          type: string
+          nullable: true
+        ultimo_login:
+          type: string
+          format: date-time
+          nullable: true
+        justificativa_pendente:
+          allOf:
+          - $ref: '#/components/schemas/JustificativaPendenteDetalhe'
+          nullable: true
+          readOnly: true
+      required:
+      - aluno_pk
+      - ausencias
+      - bloqueios
+      - cpf
+      - curso_nome
+      - data_bloqueio
+      - deficiencia
+      - faltas
+      - is_bloqueado
+      - justificativa_pendente
+      - nome
+      - tem_justificativa_pendente
+      - ultimo_login
     Cargo:
       type: object
       properties:
@@ -7911,6 +8549,16 @@ components:
         * `sexta` - Sexta-feira
         * `sabado` - Sábado
         * `domingo` - Domingo
+    ElegibilidadeEntrada:
+      type: object
+      properties:
+        aluno:
+          $ref: '#/components/schemas/AlunoEntrada'
+        elegivel:
+          type: boolean
+      required:
+      - aluno
+      - elegivel
     EmpresaInstituicao:
       type: object
       properties:
@@ -8088,6 +8736,40 @@ components:
       - estado
       - logradouro
       - numero
+    EntradaSemTicket:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        execucao_rota:
+          type: integer
+          title: Execução da rota
+        aluno:
+          allOf:
+          - $ref: '#/components/schemas/AlunoEntrada'
+          readOnly: true
+        cpf:
+          type: string
+          maxLength: 14
+        observacao:
+          type: string
+          title: Observação
+        data_hora_entrada:
+          type: string
+          format: date-time
+          title: Data e hora da entrada
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - aluno
+      - cpf
+      - created_at
+      - data_hora_entrada
+      - execucao_rota
+      - id
     ExecucaoRota:
       type: object
       properties:
@@ -8117,6 +8799,25 @@ components:
         vagas_disponiveis:
           type: integer
           readOnly: true
+        pode_monitorar:
+          type: boolean
+          readOnly: true
+        chamada_tickets_concluida:
+          type: boolean
+          title: Chamada de tickets concluída
+        monitoramento_iniciado_em:
+          type: string
+          format: date-time
+          nullable: true
+        chamada_concluida_em:
+          type: string
+          format: date-time
+          nullable: true
+          title: Chamada concluída em
+        finalizada_em:
+          type: string
+          format: date-time
+          nullable: true
         status:
           allOf:
           - $ref: '#/components/schemas/StatusExecucaoRotaEnum'
@@ -8134,11 +8835,20 @@ components:
       - data_execucao
       - data_hora_saida
       - id
+      - pode_monitorar
       - quantidade_vagas
       - rota
       - status_display
       - vagas_disponiveis
       - vagas_ocupadas
+    FinalizarChamada:
+      type: object
+      properties:
+        ausentes:
+          type: array
+          items:
+            type: string
+            format: uuid
     FormaIngressoEnum:
       enum:
       - 1
@@ -8271,6 +8981,27 @@ components:
       - mensagem
       - resumo
       - sucesso
+    ItemAusenciaJustificativa:
+      type: object
+      properties:
+        strike_id:
+          type: integer
+        envio:
+          type: string
+          format: date-time
+        data_ausencia:
+          type: string
+          format: date
+        horario:
+          type: string
+        justificativa:
+          type: string
+      required:
+      - data_ausencia
+      - envio
+      - horario
+      - justificativa
+      - strike_id
     ItemEmprestimo:
       type: object
       properties:
@@ -8298,9 +9029,14 @@ components:
         id:
           type: integer
           readOnly: true
-        strike:
+        aluno:
           allOf:
-          - $ref: '#/components/schemas/Strike'
+          - $ref: '#/components/schemas/Aluno'
+          readOnly: true
+        strikes_cobertos:
+          type: array
+          items:
+            $ref: '#/components/schemas/Strike'
           readOnly: true
         texto:
           type: string
@@ -8328,11 +9064,99 @@ components:
           format: date-time
           readOnly: true
       required:
+      - aluno
       - analisada_por_nome
       - created_at
       - id
       - status_display
-      - strike
+      - strikes_cobertos
+      - texto
+    JustificativaDetalhe:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        aluno:
+          allOf:
+          - $ref: '#/components/schemas/Aluno'
+          readOnly: true
+        strikes_cobertos:
+          type: array
+          items:
+            $ref: '#/components/schemas/Strike'
+          readOnly: true
+        texto:
+          type: string
+          title: Justificativa
+        status:
+          allOf:
+          - $ref: '#/components/schemas/StatusJustificativaEnum'
+          minimum: -2147483648
+          maximum: 2147483647
+        status_display:
+          type: string
+          readOnly: true
+        observacao_analise:
+          type: string
+          title: Observação da análise
+        analisada_por_nome:
+          type: string
+          readOnly: true
+        analisada_em:
+          type: string
+          format: date-time
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        itens_ausencia:
+          type: array
+          items:
+            $ref: '#/components/schemas/ItemAusenciaJustificativa'
+          readOnly: true
+      required:
+      - aluno
+      - analisada_por_nome
+      - created_at
+      - id
+      - itens_ausencia
+      - status_display
+      - strikes_cobertos
+      - texto
+    JustificativaPendenteDetalhe:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        status:
+          allOf:
+          - $ref: '#/components/schemas/StatusJustificativaEnum'
+          minimum: -2147483648
+          maximum: 2147483647
+        status_display:
+          type: string
+          readOnly: true
+        texto:
+          type: string
+          title: Justificativa
+        strikes_cobertos:
+          type: array
+          items:
+            $ref: '#/components/schemas/Strike'
+          readOnly: true
+        itens_ausencia:
+          type: array
+          items:
+            $ref: '#/components/schemas/ItemAusenciaJustificativa'
+          readOnly: true
+      required:
+      - id
+      - itens_ausencia
+      - status_display
+      - strikes_cobertos
       - texto
     LoginInput:
       type: object
@@ -8499,6 +9323,29 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Bloco'
+    PaginatedBloqueioList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Bloqueio'
     PaginatedCargoList:
       type: object
       required:
@@ -9005,6 +9852,29 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Terceirizado'
+    PaginatedTicketConferenciaList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/TicketConferencia'
     PaginatedTicketList:
       type: object
       required:
@@ -9510,6 +10380,17 @@ components:
       required:
       - id
       - nome
+    RegistrarEntradaSemTicket:
+      type: object
+      properties:
+        cpf:
+          type: string
+          maxLength: 14
+        observacao:
+          type: string
+          default: ''
+      required:
+      - cpf
     ResultadoAusenciaTicket:
       type: object
       properties:
@@ -10037,6 +10918,7 @@ components:
       - 3
       - 4
       - 5
+      - 6
       type: integer
       description: |-
         * `1` - Reservado
@@ -10044,6 +10926,7 @@ components:
         * `3` - Cancelado
         * `4` - Embarcado
         * `5` - Ausente
+        * `6` - Não contemplado
     Strike:
       type: object
       properties:
@@ -10215,6 +11098,52 @@ components:
       - execucao_rota
       - posicao
       - posicao_fila
+      - status
+      - status_display
+    TicketConferencia:
+      type: object
+      properties:
+        codigo:
+          type: string
+          format: uuid
+          readOnly: true
+          title: Código público
+        aluno:
+          allOf:
+          - $ref: '#/components/schemas/AlunoConferencia'
+          readOnly: true
+        status:
+          allOf:
+          - $ref: '#/components/schemas/StatusTicketEnum'
+          minimum: -2147483648
+          maximum: 2147483647
+        status_display:
+          type: string
+          readOnly: true
+        posicao:
+          allOf:
+          - $ref: '#/components/schemas/PosicaoTicket'
+          readOnly: true
+        reservado_em:
+          type: string
+          format: date-time
+          nullable: true
+        entrou_em_espera_em:
+          type: string
+          format: date-time
+          nullable: true
+        embarcado_em:
+          type: string
+          format: date-time
+          nullable: true
+        ausente_em:
+          type: string
+          format: date-time
+          nullable: true
+      required:
+      - aluno
+      - codigo
+      - posicao
       - status
       - status_display
     TipoRecursoEnum:
@@ -10508,6 +11437,14 @@ components:
       - setor
       - setor_nome
       - setor_sigla
+    ValidarEntradaSemTicket:
+      type: object
+      properties:
+        cpf:
+          type: string
+          maxLength: 14
+      required:
+      - cpf
     ValidarQr:
       type: object
       properties:
