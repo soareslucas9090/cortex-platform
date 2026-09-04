@@ -1,9 +1,8 @@
-from django.db.models import Q
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework import status
 
-from AppCore.basics.mixins.mixins import IsAdminMixin
+from AppCore.basics.mixins.mixins import IsAdminMixin, IsAuthenticatedMixin
 from AppCore.basics.pagination.pagination import PaginacaoCustomizada
 from AppCore.basics.views.basic_views import (
     BasicGetAPIView,
@@ -12,11 +11,11 @@ from AppCore.basics.views.basic_views import (
     BasicRetrieveAPIView,
 )
 
-from .choices import DiaSemana, anotacao_ordem_dia_semana
 from .models import Rota
 from .serializers import (
     AtualizarRotaSerializer,
     CriarRotaSerializer,
+    RotaDoDiaSerializer,
     RotaSerializer,
     SerializerVazio,
 )
@@ -24,6 +23,39 @@ from .serializers import (
 PERMISSAO_TI = (
     '**Permissões:** L3 (EDITAR_TUDO) — perfil TI / administradores.'
 )
+
+PERMISSAO_MOTORISTA = (
+    '**Permissões:** Motorista ativo. Todos os motoristas visualizam todas as rotas do dia.'
+)
+
+
+@extend_schema(
+    tags=['Transporte · Motorista'],
+    summary='Listar rotas do dia',
+    description=f'''
+    Lista todas as rotas e percursos ativos programados para o dia atual, em ordem de horário.
+    Quando existe uma execução para a rota, inclui o status operacional, a capacidade
+    congelada da execução e a quantidade real de vagas ocupadas por tickets.
+    Rotas ainda sem execução retornam status nulo e zero tickets solicitados.
+    Este endpoint é exclusivamente de leitura e não cria nem altera dados operacionais.
+
+    {PERMISSAO_MOTORISTA}
+    ''',
+    responses={
+        status.HTTP_200_OK: RotaDoDiaSerializer(many=True),
+        status.HTTP_401_UNAUTHORIZED: {'description': 'Não autenticado.'},
+        status.HTTP_403_FORBIDDEN: {'description': 'Usuário não é motorista ativo.'},
+    },
+)
+class ListarRotasDoDiaView(IsAuthenticatedMixin, BasicGetAPIView):
+    pagination_class = None
+    serializer_class = RotaDoDiaSerializer
+    mensagem_sucesso = 'Rotas do dia listadas com sucesso.'
+
+    def get_queryset(self):
+        if getattr(self, 'swagger_fake_view', False):
+            return Rota.objects.none()
+        return Rota().business.listar_rotas_do_dia(self.request.user)
 
 
 @extend_schema(
@@ -58,29 +90,12 @@ class ListarRotasView(IsAdminMixin, BasicGetAPIView):
     mensagem_sucesso = 'Rotas listadas com sucesso.'
 
     def get_queryset(self):
-        qs = (
-            Rota.objects.select_related('percurso')
-            .annotate(_ordem_dia=anotacao_ordem_dia_semana())
-            .order_by('_ordem_dia', 'horario_saida', 'percurso__apelido')
+        return Rota().business.listar_rotas(
+            ativo=self.request.query_params.get('ativo'),
+            percurso_id=self.request.query_params.get('percurso_id'),
+            dia_semana=self.request.query_params.get('dia_semana'),
+            busca=self.request.query_params.get('busca'),
         )
-
-        ativo = self.request.query_params.get('ativo')
-        if ativo is not None and ativo.lower() in ('true', 'false'):
-            qs = qs.filter(ativo=ativo.lower() == 'true')
-
-        percurso_id = self.request.query_params.get('percurso_id')
-        if percurso_id and percurso_id.isdigit():
-            qs = qs.filter(percurso_id=percurso_id)
-
-        dia_semana = self.request.query_params.get('dia_semana')
-        if dia_semana in DiaSemana.values:
-            qs = qs.filter(dia_semana=dia_semana)
-
-        busca = self.request.query_params.get('busca')
-        if busca:
-            qs = qs.filter(Q(percurso__apelido__unaccent__icontains=busca))
-
-        return qs
 
 
 @extend_schema(
@@ -107,7 +122,6 @@ class CriarRotaView(IsAdminMixin, BasicPostAPIView):
 
     def do_action_post(self, serializer_data, request, *args, **kwargs):
         rota = Rota().business.criar_rota(**serializer_data)
-        rota = Rota.objects.select_related('percurso').get(pk=rota.pk)
         return {
             'mensagem': self.mensagem_sucesso,
             'dados': RotaSerializer(rota).data,
