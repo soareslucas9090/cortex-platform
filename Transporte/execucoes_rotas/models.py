@@ -54,6 +54,11 @@ class ExecucaoRota(
         null=True,
         blank=True,
     )
+    embarcado_em = models.DateTimeField(
+        'Embarcado em',
+        null=True,
+        blank=True,
+    )
     finalizada_em = models.DateTimeField(
         'Finalizada em',
         null=True,

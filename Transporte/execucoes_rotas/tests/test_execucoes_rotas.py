@@ -8,6 +8,7 @@ from rest_framework.test import APITestCase
 
 from AppCore.core.exceptions.exceptions import BusinessRuleException
 from Transporte.execucoes_rotas.choices import StatusExecucaoRota
+from Transporte.execucoes_rotas.rules import MENSAGEM_EMBARQUE_SOMENTE_INICIAR
 from Transporte.execucoes_rotas.models import ExecucaoRota
 from Transporte.execucoes_rotas.state import ExecucaoFechadaState
 from Transporte.percursos.models import Percurso
@@ -70,7 +71,16 @@ class ExecucaoRotaTestCase(APITestCase):
     def test_fluxo_de_status(self):
         execucao = ExecucaoRota().business.criar_execucao(self.rota.pk, self.data)
         execucao.business.alterar_status(StatusExecucaoRota.FECHADA)
-        execucao.business.alterar_status(StatusExecucaoRota.EM_EMBARQUE)
+        with self.assertRaises(BusinessRuleException) as contexto:
+            execucao.business.alterar_status(StatusExecucaoRota.EM_EMBARQUE)
+        self.assertEqual(str(contexto.exception), MENSAGEM_EMBARQUE_SOMENTE_INICIAR)
+        depois_do_t30 = execucao.data_hora_saida - timedelta(minutes=30) + timedelta(seconds=1)
+        with patch('Transporte.execucoes_rotas.rules.now', return_value=depois_do_t30):
+            execucao.business.iniciar_embarque()
+        with self.assertRaises(BusinessRuleException):
+            execucao.business.alterar_status(StatusExecucaoRota.FINALIZADA)
+        execucao.business.alterar_status(StatusExecucaoRota.EMBARCADO)
+        execucao.business.alterar_status(StatusExecucaoRota.INICIADA)
         execucao.business.alterar_status(StatusExecucaoRota.FINALIZADA)
         execucao.refresh_from_db()
         self.assertEqual(execucao.status, StatusExecucaoRota.FINALIZADA)
@@ -177,3 +187,11 @@ class ExecucaoRotaTestCase(APITestCase):
         )
         self.assertEqual(resposta.status_code, status.HTTP_200_OK)
         self.assertEqual(len(resposta.data['dados']), 1)
+
+    def test_api_admin_pk_inexistente_retorna_404(self):
+        admin = criar_usuario('10000000006', admin=True)
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {obter_token(admin)}')
+        resposta = self.client.post(
+            reverse('transporte:execucao-rota-cancelar', kwargs={'pk': 999999}),
+        )
+        self.assertEqual(resposta.status_code, status.HTTP_404_NOT_FOUND)

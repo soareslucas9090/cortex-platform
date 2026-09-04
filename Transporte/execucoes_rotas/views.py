@@ -163,14 +163,14 @@ class FecharReservasExecucaoRotaView(AlterarStatusExecucaoRotaView):
     description=(
         'Inicia o monitoramento da execução do dia somente depois de 30 minutos antes da saída. '
         'O campo pode_monitorar do payload indica se o botão de iniciar deve aparecer. '
-        'Não reinicia após FINALIZADA.\n\n'
+        'Não reinicia após EMBARCADO.\n\n'
         f'{PERMISSAO_CONFERIR}'
     ),
     request=SerializerVazio,
     responses={
         status.HTTP_200_OK: ExecucaoRotaSerializer,
         status.HTTP_400_BAD_REQUEST: {
-            'description': 'Fora da janela T-30, execução já finalizada, ou transição inválida.',
+            'description': 'Fora da janela T-30, conferência já encerrada, ou transição inválida.',
         },
         status.HTTP_401_UNAUTHORIZED: {'description': 'Não autenticado.'},
         status.HTTP_403_FORBIDDEN: {'description': 'Sem capacidade conferir.'},
@@ -191,10 +191,11 @@ class IniciarEmbarqueExecucaoRotaView(PodeConferirTransporteMixin, BasicPostAPIV
 
 @extend_schema(
     tags=['Transporte · Conferência'],
-    summary='Finalizar execução',
+    summary='Finalizar conferência',
     description=(
-        'Finaliza a execução e marca como NAO_CONTEMPLADO quem ainda está EM_ESPERA. '
-        'Quem embarcou por CPF permanece EMBARCADO. Ausentes não mudam.\n\n'
+        'Encerra a conferência em EMBARCADO e marca como NAO_CONTEMPLADO quem ainda está EM_ESPERA. '
+        'Quem embarcou por CPF permanece EMBARCADO. Ausentes não mudam. '
+        'Não grava finalizada_em (fim da viagem do motorista).\n\n'
         f'{PERMISSAO_CONFERIR}'
     ),
     request=SerializerVazio,
@@ -210,7 +211,7 @@ class IniciarEmbarqueExecucaoRotaView(PodeConferirTransporteMixin, BasicPostAPIV
 )
 class FinalizarExecucaoRotaView(PodeConferirTransporteMixin, BasicPostAPIView):
     serializer_class = SerializerVazio
-    mensagem_sucesso = 'Execução finalizada com sucesso.'
+    mensagem_sucesso = 'Conferência finalizada com sucesso.'
 
     def do_action_post(self, serializer_data, request, *args, **kwargs):
         execucao = ExecucaoRota().business.obter_para_conferencia(kwargs['pk'])
@@ -222,7 +223,7 @@ class FinalizarExecucaoRotaView(PodeConferirTransporteMixin, BasicPostAPIView):
     tags=['Transporte · Execuções de rotas'],
     summary='Cancelar execução',
     description=(
-        'Cancela uma execução ainda não iniciada em embarque e ainda não finalizada.\n\n'
+        'Cancela uma execução ainda não iniciada em embarque e ainda não embarcada.\n\n'
         f'{PERMISSAO_ADMIN}'
     ),
     request=SerializerVazio,
@@ -243,7 +244,7 @@ class CancelarExecucaoRotaView(AlterarStatusExecucaoRotaView):
     tags=['Transporte · Conferência'],
     summary='Listar execuções do dia para conferência',
     description=(
-        'Lista as execuções do dia em ABERTA, FECHADA, EM_EMBARQUE e FINALIZADA. '
+        'Lista as execuções do dia em ABERTA, FECHADA, EM_EMBARQUE, EMBARCADO, INICIADA e FINALIZADA. '
         'Não inclui CANCELADA. Query params apenas reduzem o conjunto.\n\n'
         f'{PERMISSAO_CONFERIR}'
     ),
@@ -321,7 +322,7 @@ class ListarReservasConferenciaView(PodeConferirTransporteMixin, BasicGetAPIView
     def get_queryset(self):
         execucao = ExecucaoRota().business.obter_para_conferencia(
             self.kwargs['pk'],
-            exigir_embarque=True,
+            consultar_tickets=True,
         )
         return Ticket().business.listar_reservas_conferencia(
             execucao,

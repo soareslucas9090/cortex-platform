@@ -616,8 +616,10 @@ class PermissaoDocumentacao:
                         (
                             'L3 cria execuções, abre/fecha reservas e cancela somente antes do '
                             'embarque. Conferentes listam execuções do dia (ABERTA, FECHADA, '
-                            'EM_EMBARQUE e FINALIZADA; sem CANCELADA), inclusive fim de semana '
-                            'se houver execução. Por ID, CANCELADA é 404; FINALIZADA segue para '
+                            'EM_EMBARQUE, EMBARCADO, INICIADA e FINALIZADA; sem CANCELADA), '
+                            'inclusive fim de semana '
+                            'se houver execução. Por ID, CANCELADA é 404; EMBARCADO (e estados '
+                            'posteriores da viagem) segue para '
                             'consulta da execução e replay de finalizar (iniciar de novo retorna 400). '
                             'O monitoramento inicia só depois de T-30 '
                             '(now > data_hora_saida − 30 min); L3 obedece a mesma data e janela. '

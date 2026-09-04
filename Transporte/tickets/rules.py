@@ -104,10 +104,10 @@ class TicketRules(ModelInstanceRules):
         status_execucao = self.object_instance.execucao_rota.status
         if status_execucao not in (
             StatusExecucaoRota.EM_EMBARQUE,
-            StatusExecucaoRota.FINALIZADA,
+            StatusExecucaoRota.EMBARCADO,
         ):
             self.return_exception(
-                'A ausência só pode ser registrada durante o embarque ou após a finalização.'
+                'A ausência só pode ser registrada durante o embarque ou após a conferência.'
             )
         return True
 

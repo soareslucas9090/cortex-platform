@@ -385,10 +385,16 @@ para a data local, enriquecida com a execução correspondente.
    sem ticket; não cancelam tickets nem posições já existentes.
 10. QR Code só embarca ticket reservado em execução no estado de embarque.
 11. A aprovação da justificativa e a retirada do strike da contagem são atômicas.
-12. O conferente inicia o monitoramento somente se `now > T-30`; o aluno ainda
-    solicita no instante igual a T-30. Depois de `FINALIZADA` o monitoramento
-    não reinicia (replay de iniciar só em `EM_EMBARQUE`).
-13. Ao finalizar a execução, a espera que não embarcou por CPF vira `NAO_CONTEMPLADO`.
+12. O conferente inicia o monitoramento somente se `now > T-30` e somente pelo
+    `iniciar` da conferência (abrir/fechar/cancelar não vai para `EM_EMBARQUE`);
+    o aluno ainda solicita no instante igual a T-30. Depois de `EMBARCADO` o
+    monitoramento não reinicia (replay de iniciar só em `EM_EMBARQUE`).
+    Na chamada, a primeira conclusão grava o conjunto de ausentes; o segundo
+    envio só vale se repetir o mesmo conjunto. Presença por omissão é
+    responsabilidade do conferente (sem QR nesta tela).
+13. Ao finalizar a conferência (`EMBARCADO`), a espera que não embarcou por CPF
+    vira `NAO_CONTEMPLADO`. Grava-se `embarcado_em`; `finalizada_em` fica para
+    o fim da viagem (`INICIADA` → `FINALIZADA`).
     O lote de CPF é opcional: finalizar sem enviá-lo marca toda a espera restante.
 14. Entrada sem ticket usa as vagas restantes após a chamada (`EM_ESPERA` não reserva
     vaga). O lote `{ "cpfs": [...] }` promove `EM_ESPERA` para `EMBARCADO` ou cria
@@ -397,11 +403,11 @@ para a data local, enriquecida com a execução correspondente.
     do lote concluído, `validar` também é 400 (não mostra card que não dá para gravar).
     Aluno `AUSENTE` pode entrar por CPF; a ausência e o strike permanecem. Três
     strikes ativos bloqueiam a entrada.
-15. Depois de `EM_EMBARQUE` a execução não pode ser cancelada; só finaliza.
+15. Depois de `EM_EMBARQUE` a execução não pode ser cancelada; só finaliza a conferência (`EMBARCADO`).
 16. Conferência por ID no dia: `CANCELADA` não existe nesse escopo;
-    `FINALIZADA` permanece para consulta da execução e replay de finalizar,
-    não de iniciar. Chamada de tickets e CPF só em `EM_EMBARQUE`.
-    A lista do dia mostra `FINALIZADA` e omite `CANCELADA`.
+    `EMBARCADO`, `INICIADA` e `FINALIZADA` permanecem para consulta da execução
+    e replay de finalizar, não de iniciar. Chamada de tickets e CPF só em `EM_EMBARQUE`.
+    A lista do dia mostra esses estados e omite `CANCELADA`.
 
 ### Fronteira transacional
 
@@ -413,6 +419,8 @@ strikes e justificativas são bloqueados nas respectivas mudanças de estado.
 O status, a capacidade congelada e a ocupação desta execução alimentam a visão
 diária do motorista. `tickets_solicitados` permanece `RESERVADO` + `EMBARCADO`;
 depois da chamada, `vagas_ocupadas` soma `EMBARCADO` e `EntradaSemTicket`.
+A consulta do motorista não inicia nem finaliza a viagem; isso fica para API
+futura. O conferente encerra só a conferência (`EMBARCADO` / `embarcado_em`).
 
 ---
 

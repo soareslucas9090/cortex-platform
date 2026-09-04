@@ -348,7 +348,9 @@ class ConferenciaTransporteTestCase(APITestCase):
         )
         self.assertEqual(resposta.status_code, status.HTTP_200_OK)
         self.execucao.refresh_from_db()
-        self.assertEqual(self.execucao.status, StatusExecucaoRota.FINALIZADA)
+        self.assertEqual(self.execucao.status, StatusExecucaoRota.EMBARCADO)
+        self.assertIsNotNone(self.execucao.embarcado_em)
+        self.assertIsNone(self.execucao.finalizada_em)
         self.assertEqual(
             Ticket.objects.get(aluno=self.aluno_espera, execucao_rota=self.execucao).status,
             StatusTicket.NAO_CONTEMPLADO,
@@ -478,7 +480,13 @@ class ConferenciaTransporteTestCase(APITestCase):
         self.assertEqual(primeira.status_code, status.HTTP_200_OK)
         self.assertEqual(segunda.status_code, status.HTTP_200_OK)
         self.execucao.refresh_from_db()
-        self.assertEqual(self.execucao.status, StatusExecucaoRota.FINALIZADA)
+        self.assertEqual(self.execucao.status, StatusExecucaoRota.EMBARCADO)
+        self.assertIsNotNone(self.execucao.embarcado_em)
+        self.assertIsNone(self.execucao.finalizada_em)
+        self.assertEqual(
+            primeira.data['dados']['embarcado_em'],
+            segunda.data['dados']['embarcado_em'],
+        )
         self.assertEqual(
             Ticket.objects.get(aluno=self.aluno_espera, execucao_rota=self.execucao).status,
             StatusTicket.NAO_CONTEMPLADO,
@@ -505,7 +513,9 @@ class ConferenciaTransporteTestCase(APITestCase):
         )
         self.assertEqual(finalizar.status_code, status.HTTP_200_OK)
         self.execucao.refresh_from_db()
-        self.assertEqual(self.execucao.status, StatusExecucaoRota.FINALIZADA)
+        self.assertEqual(self.execucao.status, StatusExecucaoRota.EMBARCADO)
+        self.assertIsNotNone(self.execucao.embarcado_em)
+        self.assertIsNone(self.execucao.finalizada_em)
 
     def test_nao_inicia_apos_finalizar_conferencia(self):
         self._finalizar_conferencia_na_janela()
@@ -559,6 +569,12 @@ class ConferenciaTransporteTestCase(APITestCase):
         _, em_embarque = criar_execucao_hoje(vagas=1)
         em_embarque.status = StatusExecucaoRota.EM_EMBARQUE
         em_embarque.save(update_fields=['status'])
+        _, embarcada = criar_execucao_hoje(vagas=1)
+        embarcada.status = StatusExecucaoRota.EMBARCADO
+        embarcada.save(update_fields=['status'])
+        _, iniciada = criar_execucao_hoje(vagas=1)
+        iniciada.status = StatusExecucaoRota.INICIADA
+        iniciada.save(update_fields=['status'])
         _, finalizada = criar_execucao_hoje(vagas=1)
         finalizada.status = StatusExecucaoRota.FINALIZADA
         finalizada.save(update_fields=['status'])
@@ -571,8 +587,12 @@ class ConferenciaTransporteTestCase(APITestCase):
         self.assertIn(self.execucao.pk, por_id)
         self.assertIn(fechada.pk, por_id)
         self.assertIn(em_embarque.pk, por_id)
+        self.assertIn(embarcada.pk, por_id)
+        self.assertIn(iniciada.pk, por_id)
         self.assertIn(finalizada.pk, por_id)
         self.assertNotIn(cancelada.pk, por_id)
+        self.assertFalse(por_id[embarcada.pk]['pode_monitorar'])
+        self.assertFalse(por_id[iniciada.pk]['pode_monitorar'])
         self.assertFalse(por_id[finalizada.pk]['pode_monitorar'])
 
     def test_replay_iniciar_embarque_e_idempotente(self):
@@ -912,6 +932,85 @@ class ConferenciaTransporteTestCase(APITestCase):
         self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {obter_token(admin)}')
         resposta = self.client.post(
             reverse('transporte:execucao-rota-cancelar', kwargs={'pk': self.execucao.pk}),
+        )
+        self.assertEqual(resposta.status_code, status.HTTP_400_BAD_REQUEST)
+        self.execucao.refresh_from_db()
+        self.assertEqual(self.execucao.status, StatusExecucaoRota.EM_EMBARQUE)
+
+    def test_l3_nao_cancela_execucao_embarcada(self):
+        self._finalizar_conferencia_na_janela()
+        admin = criar_usuario('30000000098', nome='Admin embarcado', admin=True)
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {obter_token(admin)}')
+        resposta = self.client.post(
+            reverse('transporte:execucao-rota-cancelar', kwargs={'pk': self.execucao.pk}),
+        )
+        self.assertEqual(resposta.status_code, status.HTTP_400_BAD_REQUEST)
+        self.execucao.refresh_from_db()
+        self.assertEqual(self.execucao.status, StatusExecucaoRota.EMBARCADO)
+
+    def test_chamada_e_cpf_bloqueados_apos_embarcado(self):
+        self._finalizar_conferencia_na_janela()
+        chamada = self.client.post(
+            reverse('transporte:conferencia-finalizar-chamada', kwargs={'pk': self.execucao.pk}),
+            {'ausentes': []},
+            format='json',
+        )
+        cpf = self.client.post(
+            reverse('transporte:conferencia-entrada-sem-ticket', kwargs={'pk': self.execucao.pk}),
+            {'cpfs': [criar_aluno('21000000077').usuario.cpf]},
+            format='json',
+        )
+        self.assertEqual(chamada.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(cpf.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_consulta_conferencia_apos_embarcado_no_mesmo_dia(self):
+        self._finalizar_conferencia_na_janela()
+        reservas = self.client.get(
+            reverse('transporte:conferencia-reservas', kwargs={'pk': self.execucao.pk}),
+        )
+        lista = self.client.get(reverse('transporte:conferencia-execucao-list'))
+        self.assertEqual(reservas.status_code, status.HTTP_200_OK)
+        self.assertEqual(lista.status_code, status.HTTP_200_OK)
+        item = next(dado for dado in lista.data['dados'] if dado['id'] == self.execucao.pk)
+        self.assertEqual(item['status'], StatusExecucaoRota.EMBARCADO)
+        self.assertIsNotNone(item['embarcado_em'])
+        self.assertIsNone(item['finalizada_em'])
+
+    def test_consulta_reservas_antes_de_iniciar_embarque_retorna_400(self):
+        resposta = self.client.get(
+            reverse('transporte:conferencia-reservas', kwargs={'pk': self.execucao.pk}),
+        )
+        self.assertEqual(resposta.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_nao_finaliza_conferencia_sem_chamada(self):
+        with self._entrar_na_janela_monitoramento():
+            iniciar = self.client.post(
+                reverse('transporte:conferencia-iniciar', kwargs={'pk': self.execucao.pk}),
+            )
+        self.assertEqual(iniciar.status_code, status.HTTP_200_OK)
+        resposta = self.client.post(
+            reverse('transporte:conferencia-finalizar', kwargs={'pk': self.execucao.pk}),
+        )
+        self.assertEqual(resposta.status_code, status.HTTP_400_BAD_REQUEST)
+        self.execucao.refresh_from_db()
+        self.assertEqual(self.execucao.status, StatusExecucaoRota.EM_EMBARQUE)
+        self.assertIsNone(self.execucao.embarcado_em)
+
+    def test_pk_inexistente_na_conferencia_retorna_404(self):
+        resposta = self.client.post(
+            reverse('transporte:conferencia-iniciar', kwargs={'pk': 999999}),
+        )
+        self.assertEqual(resposta.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_fechar_reservas_em_embarque_retorna_400(self):
+        with self._entrar_na_janela_monitoramento():
+            self.client.post(
+                reverse('transporte:conferencia-iniciar', kwargs={'pk': self.execucao.pk}),
+            )
+        admin = criar_usuario('30000000097', nome='Admin fechar embarque', admin=True)
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {obter_token(admin)}')
+        resposta = self.client.post(
+            reverse('transporte:execucao-rota-fechar-reservas', kwargs={'pk': self.execucao.pk}),
         )
         self.assertEqual(resposta.status_code, status.HTTP_400_BAD_REQUEST)
         self.execucao.refresh_from_db()

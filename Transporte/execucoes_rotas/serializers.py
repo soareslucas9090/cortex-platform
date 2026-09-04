@@ -29,6 +29,7 @@ class ExecucaoRotaSerializer(serializers.ModelSerializer):
             'entradas_cpf_concluidas',
             'monitoramento_iniciado_em',
             'chamada_concluida_em',
+            'embarcado_em',
             'finalizada_em',
             'status',
             'status_display',

@@ -5838,7 +5838,7 @@ paths:
     post:
       operationId: transporte_execucoes_rotas_cancelar_create
       description: |-
-        Cancela uma execução ainda não iniciada em embarque e ainda não finalizada.
+        Cancela uma execução ainda não iniciada em embarque e ainda não embarcada.
 
         **Permissões:** L3 (EDITAR_TUDO) — perfil TI / administradores.
       summary: Cancelar execução
@@ -6026,10 +6026,10 @@ paths:
     post:
       operationId: transporte_execucoes_rotas_conferencia_finalizar_create
       description: |-
-        Finaliza a execução e marca como NAO_CONTEMPLADO quem ainda está EM_ESPERA. Quem embarcou por CPF permanece EMBARCADO. Ausentes não mudam.
+        Encerra a conferência em EMBARCADO e marca como NAO_CONTEMPLADO quem ainda está EM_ESPERA. Quem embarcou por CPF permanece EMBARCADO. Ausentes não mudam. Não grava finalizada_em (fim da viagem do motorista).
 
         **Permissões:** capacidade transporte.conferir. Lê e opera execuções do dia e, após iniciar o monitoramento, a chamada de tickets e a entrada por CPF dessa execução. Não amplia cadastro nem recursos globais do módulo.
-      summary: Finalizar execução
+      summary: Finalizar conferência
       parameters:
       - in: path
         name: id
@@ -6137,7 +6137,7 @@ paths:
     post:
       operationId: transporte_execucoes_rotas_conferencia_iniciar_create
       description: |-
-        Inicia o monitoramento da execução do dia somente depois de 30 minutos antes da saída. O campo pode_monitorar do payload indica se o botão de iniciar deve aparecer. Não reinicia após FINALIZADA.
+        Inicia o monitoramento da execução do dia somente depois de 30 minutos antes da saída. O campo pode_monitorar do payload indica se o botão de iniciar deve aparecer. Não reinicia após EMBARCADO.
 
         **Permissões:** capacidade transporte.conferir. Lê e opera execuções do dia e, após iniciar o monitoramento, a chamada de tickets e a entrada por CPF dessa execução. Não amplia cadastro nem recursos globais do módulo.
       summary: Iniciar embarque
@@ -6162,7 +6162,7 @@ paths:
           content:
             application/json:
               schema:
-                description: Fora da janela T-30, execução já finalizada, ou transição
+                description: Fora da janela T-30, conferência já encerrada, ou transição
                   inválida.
           description: ''
         '401':
@@ -6371,7 +6371,7 @@ paths:
     get:
       operationId: transporte_execucoes_rotas_conferencia_list
       description: |-
-        Lista as execuções do dia em ABERTA, FECHADA, EM_EMBARQUE e FINALIZADA. Não inclui CANCELADA. Query params apenas reduzem o conjunto.
+        Lista as execuções do dia em ABERTA, FECHADA, EM_EMBARQUE, EMBARCADO, INICIADA e FINALIZADA. Não inclui CANCELADA. Query params apenas reduzem o conjunto.
 
         **Permissões:** capacidade transporte.conferir. Lê e opera execuções do dia e, após iniciar o monitoramento, a chamada de tickets e a entrada por CPF dessa execução. Não amplia cadastro nem recursos globais do módulo.
       summary: Listar execuções do dia para conferência
@@ -8728,6 +8728,10 @@ components:
           format: date-time
           nullable: true
           title: Chamada concluída em
+        embarcado_em:
+          type: string
+          format: date-time
+          nullable: true
         finalizada_em:
           type: string
           format: date-time
@@ -10742,6 +10746,8 @@ components:
       - 3
       - 4
       - 5
+      - 6
+      - 7
       type: integer
       description: |-
         * `1` - Reservas abertas
@@ -10749,6 +10755,8 @@ components:
         * `3` - Em embarque
         * `4` - Finalizada
         * `5` - Cancelada
+        * `6` - Embarcado
+        * `7` - Iniciada
     StatusImportacaoEnum:
       enum:
       - EM_ANDAMENTO

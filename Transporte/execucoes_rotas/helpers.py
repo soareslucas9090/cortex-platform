@@ -5,12 +5,13 @@ from django.utils.timezone import localdate, now
 from AppCore.core.helpers.helpers import ModelInstanceHelpers
 
 from .choices import StatusExecucaoRota
-from .rules import execucao_elegivel_para_iniciar_monitoramento
 
 STATUSES_LISTAGEM_CONFERENCIA = (
     StatusExecucaoRota.ABERTA,
     StatusExecucaoRota.FECHADA,
     StatusExecucaoRota.EM_EMBARQUE,
+    StatusExecucaoRota.EMBARCADO,
+    StatusExecucaoRota.INICIADA,
     StatusExecucaoRota.FINALIZADA,
 )
 
@@ -98,9 +99,6 @@ class ExecucaoRotaHelpers(ModelInstanceHelpers):
             self.object_instance.quantidade_vagas - self.contar_vagas_ocupadas(),
             0,
         )
-
-    def pode_monitorar(self) -> bool:
-        return execucao_elegivel_para_iniciar_monitoramento(self.object_instance)
 
     def listar_para_conferencia(self, data_param=None):
         from .models import ExecucaoRota

@@ -81,8 +81,8 @@ class EntradaSemTicketBusiness(ModelInstanceBusiness):
             execucao = ExecucaoRota().business.obter_para_conferencia(
                 execucao_id,
                 exigir_embarque=True,
+                bloquear=True,
             )
-            execucao = ExecucaoRota().helper.obter_por_id(execucao.pk, bloquear=True)
             rules = self.object_instance.rules
             rules.validar_execucao_em_embarque(execucao)
             rules.validar_chamada_concluida(execucao)

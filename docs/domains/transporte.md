@@ -18,8 +18,9 @@ ticket, ausências, strikes e justificativas.
   enquanto o vínculo existir. O campo `ativo` controla a disponibilidade do perfil.
 - **ExecucaoRota**: ocorrência datada de uma rota. Congela `data_hora_saida` e
   `quantidade_vagas`. `chamada_tickets_concluida` e os timestamps
-  `monitoramento_iniciado_em`, `chamada_concluida_em` e `finalizada_em` registram
-  o andamento operacional da conferência.
+  `monitoramento_iniciado_em`, `chamada_concluida_em` e `embarcado_em` registram
+  o andamento da conferência. `finalizada_em` fica para o fim da viagem
+  (`EMBARCADO` → `INICIADA` → `FINALIZADA`).
 - **Ticket**: solicitação de um aluno em uma execução; representa reserva, posição
   em fila, cancelamento, embarque, ausência ou não contemplado na espera (`NAO_CONTEMPLADO`).
 - **EntradaSemTicket**: embarque manual por CPF nas vagas restantes após a chamada.
@@ -110,8 +111,10 @@ API. O status visual é derivado assim:
 O indicador `Tickets solicitados` exibe `tickets_solicitados / quantidade_vagas`.
 A ocupação física do ônibus, após a conferência, deve usar `vagas_ocupadas` /
 `quantidade_vagas`.
-A tela não oferece ação de iniciar ou finalizar rota, responsabilidade da operação
-administrativa/conferência.
+Nesta entrega a tela do motorista é só leitura: não inicia nem finaliza a
+**viagem** (`EMBARCADO` → `INICIADA` → `FINALIZADA`; `finalizada_em`). Essa
+API ainda não existe. O conferente opera só a **conferência** (monitoramento
+`EM_EMBARQUE` e encerramento em `EMBARCADO` com `embarcado_em`), não a viagem.
 
 ### 4. Execuções de rotas
 
@@ -119,30 +122,39 @@ administrativa/conferência.
 - A data deve corresponder ao dia da semana da rota.
 - Unicidade por `rota` + `data_execucao`: rotas distintas do mesmo percurso e dia,
   em horários diferentes, podem ter execuções normalmente.
-- Estados: `ABERTA`, `FECHADA`, `EM_EMBARQUE`, `FINALIZADA`, `CANCELADA`.
+- Estados: `ABERTA`, `FECHADA`, `EM_EMBARQUE`, `EMBARCADO`, `INICIADA`,
+  `FINALIZADA`, `CANCELADA`. Inteiros: `FINALIZADA = 4`, `CANCELADA = 5`,
+  `EMBARCADO = 6`, `INICIADA = 7` (sem remapeamento de valores antigos).
 - Reservas e entradas na fila exigem estado `ABERTA`.
 - Para alunos, execuções disponíveis são exibidas somente de segunda a sexta,
   da meia-noite do próprio dia até exatamente 30 minutos antes da saída.
-- Conferente e L3 iniciam o monitoramento (`EM_EMBARQUE`) somente depois de
-  30 minutos antes da saída (`now > data_hora_saida − 30 min`), em execução
-  `ABERTA` ou `FECHADA`. No instante exato do T-30 o aluno ainda pode solicitar
-  ticket; o monitoramento ainda não inicia. Depois do horário de saída, no
-  mesmo dia, ainda é possível iniciar. Replay de iniciar só enquanto
-  `EM_EMBARQUE`. Depois de `FINALIZADA` (chamada de tickets encerrada)
-  não se inicia de novo; o campo `pode_monitorar` no payload indica se o botão
-  de iniciar deve aparecer.
-- A listagem da conferência no dia inclui `ABERTA`, `FECHADA`, `EM_EMBARQUE`
-  e `FINALIZADA` (consulta; `pode_monitorar` falso). `CANCELADA` não aparece.
-  `EM_EMBARQUE` serve para continuar o monitoramento. L3 obedece a mesma data
-  (hoje) e o mesmo T-30. Se existir execução no sábado ou domingo, ela entra
-  nessa lista; o aluno continua sem reservar no fim de semana.
+- Conferente e L3 iniciam o monitoramento (`EM_EMBARQUE`) somente pelo
+  `iniciar` da conferência, depois de 30 minutos antes da saída
+  (`now > data_hora_saida − 30 min`), em execução `ABERTA` ou `FECHADA`.
+  Abrir/fechar/cancelar reservas **não** transita para `EM_EMBARQUE`.
+  No instante exato do T-30 o aluno ainda pode solicitar ticket; o
+  monitoramento ainda não inicia. Depois do horário de saída, no mesmo dia,
+  ainda é possível iniciar. Replay de iniciar só enquanto `EM_EMBARQUE`.
+  Depois de `EMBARCADO` (conferência encerrada) não se inicia de novo; o
+  campo `pode_monitorar` no payload indica se o botão de iniciar deve
+  aparecer. O mesmo vale para `INICIADA` e `FINALIZADA`.
+- A listagem da conferência no dia inclui `ABERTA`, `FECHADA`, `EM_EMBARQUE`,
+  `EMBARCADO`, `INICIADA` e `FINALIZADA` (consulta; `pode_monitorar` falso
+  após o início do monitoramento ou depois da conferência). `CANCELADA` não
+  aparece. `EM_EMBARQUE` serve para continuar o monitoramento. L3 obedece a
+  mesma data (hoje) e o mesmo T-30. Se existir execução no sábado ou domingo,
+  ela entra nessa lista; o aluno continua sem reservar no fim de semana.
 - Abrir conferência por ID no mesmo dia: `CANCELADA` responde como não
-  encontrada (404). `FINALIZADA` permanece no escopo para consulta da execução
-  e replay de finalizar. Iniciar monitoramento nessa execução retorna 400.
-  Chamada de tickets e entrada por CPF só existem em `EM_EMBARQUE`; em
-  `FINALIZADA` a lista basta. Outro dia continua 404.
+  encontrada (404). `EMBARCADO`, `INICIADA` e `FINALIZADA` permanecem no
+  escopo para consulta da execução e replay de finalizar (sem alterar
+  timestamps). Iniciar monitoramento nessas execuções retorna 400.
+  Chamada de tickets e entrada por CPF só existem em `EM_EMBARQUE`; depois
+  de `EMBARCADO` a lista basta. Outro dia continua 404.
 - Depois de `EM_EMBARQUE`, L3 **não** cancela a execução: só finaliza a
-  conferência ou deixa o monitoramento seguir.
+  conferência (vai para `EMBARCADO`) ou deixa o monitoramento seguir.
+- O conferente grava `embarcado_em` ao encerrar a conferência e **não**
+  preenche `finalizada_em` (reservado ao fim da viagem do motorista:
+  `EMBARCADO` → `INICIADA` → `FINALIZADA`, fora desta entrega de API).
 
 ### 5. Tickets, capacidade e cancelamento
 
@@ -163,12 +175,13 @@ administrativa/conferência.
 - A capacidade e a promoção usam bloqueio pessimista na execução para proteger a
   última vaga em requisições concorrentes.
 - Na conferência, quem não entra em `ausentes` na chamada fica `EMBARCADO` sem QR
-  (presença por omissão). O conferente não valida QR. Finalizar a execução marca
-  a espera que não embarcou por CPF como `NAO_CONTEMPLADO`. Quem entra no lote
-  de CPF permanece `EMBARCADO`.
-  O replay da chamada compara o conjunto gravado nela, não ausências marcadas
-  depois pelo L3. O monitoramento pode iniciar depois do horário de saída no
-  mesmo dia, desde que `now > T-30`.
+  (presença por omissão). O conferente é responsável pela lista; o conferente não
+  valida QR. A primeira chamada que conclui grava o conjunto; um segundo envio só
+  é aceito se repetir o mesmo conjunto. Finalizar a execução marca a espera que
+  não embarcou por CPF como `NAO_CONTEMPLADO`. Quem entra no lote de CPF permanece
+  `EMBARCADO`. O replay da chamada compara o conjunto gravado nela, não ausências
+  marcadas depois pelo L3. O monitoramento pode iniciar depois do horário de
+  saída no mesmo dia, desde que `now > T-30`.
 - Entrada por CPF revalida aluno ativo, matriculado, strikes, vaga, chamada
   concluída e execução em embarque. A consulta é `POST` em
   `entradas-sem-ticket/validar/` com `{ "cpf": "..." }` e não persiste (devolve

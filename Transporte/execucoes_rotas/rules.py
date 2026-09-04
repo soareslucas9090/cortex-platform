@@ -6,7 +6,7 @@ from AppCore.core.exceptions.exceptions import NotFoundException
 from AppCore.core.rules.rules import ModelInstanceRules
 from Transporte.rotas.choices import DiaSemana
 
-from .choices import StatusExecucaoRota
+from .choices import STATUS_POS_CONFERENCIA, StatusExecucaoRota
 
 DIAS_SEMANA_PYTHON = {
     0: DiaSemana.SEGUNDA,
@@ -27,6 +27,9 @@ MENSAGEM_MONITORAMENTO_STATUS = (
 )
 MENSAGEM_MONITORAMENTO_T30 = (
     'O monitoramento só fica disponível após 30 minutos antes da saída.'
+)
+MENSAGEM_EMBARQUE_SOMENTE_INICIAR = (
+    'O embarque só pode ser iniciado pelo monitoramento da conferência.'
 )
 
 
@@ -57,13 +60,16 @@ class ExecucaoRotaRules(ModelInstanceRules):
         return True
 
     def validar_janela_monitoramento(self, execucao) -> bool:
-        if execucao.status == StatusExecucaoRota.FINALIZADA:
+        if execucao.status in STATUS_POS_CONFERENCIA:
             self.return_exception(MENSAGEM_MONITORAMENTO_APOS_FINALIZAR)
         if execucao_elegivel_para_iniciar_monitoramento(execucao):
             return True
         if execucao.status not in (StatusExecucaoRota.ABERTA, StatusExecucaoRota.FECHADA):
             self.return_exception(MENSAGEM_MONITORAMENTO_STATUS)
         self.return_exception(MENSAGEM_MONITORAMENTO_T30)
+
+    def pode_iniciar_monitoramento(self) -> bool:
+        return execucao_elegivel_para_iniciar_monitoramento(self.object_instance)
 
     def validar_chamada_para_finalizar(self, execucao) -> bool:
         if not execucao.chamada_tickets_concluida:
@@ -76,6 +82,14 @@ class ExecucaoRotaRules(ModelInstanceRules):
         if execucao.status != StatusExecucaoRota.EM_EMBARQUE:
             self.return_exception('A conferência só opera execuções em embarque.')
         return True
+
+    def validar_consulta_tickets_conferencia(self, execucao) -> bool:
+        if (
+            execucao.status == StatusExecucaoRota.EM_EMBARQUE
+            or execucao.status in STATUS_POS_CONFERENCIA
+        ):
+            return True
+        self.return_exception('A conferência só opera execuções em embarque.')
 
     def validar_execucao_do_dia(self, execucao) -> bool:
         if (
@@ -100,11 +114,16 @@ class ExecucaoRotaRules(ModelInstanceRules):
             )
         return True
 
+    def validar_embarque_somente_via_iniciar(self, novo_status) -> bool:
+        if novo_status == StatusExecucaoRota.EM_EMBARQUE:
+            self.return_exception(MENSAGEM_EMBARQUE_SOMENTE_INICIAR)
+        return True
+
     def validar_cancelamento_antes_do_embarque(self, execucao) -> bool:
         if execucao.status == StatusExecucaoRota.EM_EMBARQUE:
             self.return_exception(
                 'Não é possível cancelar uma execução em embarque. Finalize a conferência.',
             )
-        if execucao.status == StatusExecucaoRota.FINALIZADA:
+        if execucao.status in STATUS_POS_CONFERENCIA:
             self.return_exception('Não é possível cancelar uma execução já finalizada.')
         return True
