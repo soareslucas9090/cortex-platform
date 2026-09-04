@@ -18,11 +18,16 @@ class Justificativa(ModelHelperMixin, ModelBusinessMixin, ModelRulesMixin, Basic
     helper_class = JustificativaHelpers
     rules_class = JustificativaRules
 
-    strike = models.OneToOneField(
-        'strikes.Strike',
+    aluno = models.ForeignKey(
+        'alunos.Aluno',
         on_delete=models.PROTECT,
-        related_name='justificativa',
-        verbose_name='Strike',
+        related_name='justificativas_transporte',
+        verbose_name='Aluno',
+    )
+    strikes_cobertos = models.ManyToManyField(
+        'strikes.Strike',
+        related_name='justificativas',
+        verbose_name='Strikes cobertos',
     )
     texto = models.TextField('Justificativa')
     status = models.IntegerField(
@@ -47,5 +52,5 @@ class Justificativa(ModelHelperMixin, ModelBusinessMixin, ModelRulesMixin, Basic
         ordering = ['-created_at']
 
     def __str__(self):
-        return f'Justificativa do {self.strike} — {self.get_status_display()}'
+        return f'Justificativa de {self.aluno} — {self.get_status_display()}'
 

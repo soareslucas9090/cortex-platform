@@ -91,28 +91,35 @@ class UsuarioPermissions(UserModelPermission):
                     'gerenciar': False,
                     'motorista': False,
                     'reservar': False,
+                    'bloqueado': False,
+                    'faltas': 0,
+                    'bloqueios': 0,
                 },
             }
-
         from Transporte.motoristas.models import Motorista
 
         gerenciar = bool(user.is_staff or user.is_admin or user.is_superuser)
         motorista = Motorista().helper.usuario_e_motorista_ativo(user)
         reservar = False
+        bloqueado = False
+        faltas = 0
+        bloqueios = 0
         aluno = getattr(user, 'aluno', None)
         if aluno is not None and user.ativo and aluno.ativo:
             from Academico.alunos.choices import SituacaoAluno
-            from Transporte.strikes.choices import StatusStrike
 
-            strikes_ativos = aluno.tickets_transporte.filter(
-                strike__status=StatusStrike.ATIVO,
-            ).count()
-            reservar = aluno.situacao == SituacaoAluno.MATRICULADO and strikes_ativos < 3
+            faltas = aluno.faltas
+            bloqueado = aluno.is_bloqueado
+            bloqueios = aluno.quantidade_bloqueios
+            reservar = aluno.situacao == SituacaoAluno.MATRICULADO and not bloqueado
 
         return {
             'transporte': {
                 'gerenciar': gerenciar,
-                'motorista': motorista,
                 'reservar': reservar,
+                'bloqueado': bloqueado,
+                'faltas': faltas,
+                'bloqueios': bloqueios,
+                'motorista': motorista,
             },
         }

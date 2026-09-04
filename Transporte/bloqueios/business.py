@@ -1,0 +1,35 @@
+import logging
+
+from AppCore.core.business.business import ModelInstanceBusiness
+
+logger = logging.getLogger(__name__)
+
+
+class BloqueioBusiness(ModelInstanceBusiness):
+
+    def _exigir_acesso_admin(self, usuario):
+        if not getattr(usuario, 'tem_acesso_elevado', lambda: False)():
+            from AppCore.core.exceptions.exceptions import AuthorizationException
+            raise AuthorizationException('Acesso administrativo obrigatório.')
+
+    def listar_bloqueados(self, usuario, busca=None, curso_id=None, tem_justificativa=None):
+        try:
+            from .helpers import BloqueioHelpers
+
+            self._exigir_acesso_admin(usuario)
+            return BloqueioHelpers().listar_bloqueados(
+                busca=busca,
+                curso_id=curso_id,
+                tem_justificativa=tem_justificativa,
+            )
+        except Exception as e:
+            self.relancar_ou_erro_sistema(e, 'Não foi possível listar os bloqueios.', logger)
+
+    def obter_detalhe(self, aluno_pk, usuario):
+        try:
+            from .helpers import BloqueioHelpers
+
+            self._exigir_acesso_admin(usuario)
+            return BloqueioHelpers().obter_detalhe(aluno_pk)
+        except Exception as e:
+            self.relancar_ou_erro_sistema(e, 'Não foi possível obter o bloqueio.', logger)

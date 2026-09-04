@@ -12,7 +12,7 @@ from AppCore.basics.views.basic_views import (
 from .models import Justificativa
 from .serializers import (
     AnalisarJustificativaSerializer,
-    CriarJustificativaSerializer,
+    JustificativaDetalheSerializer,
     JustificativaSerializer,
 )
 
@@ -46,48 +46,17 @@ class ListarJustificativasView(IsAuthenticatedMixin, BasicGetAPIView):
         '**Permissões:** Autenticado. L1 vê somente justificativa própria; L3 vê qualquer uma.'
     ),
     responses={
-        status.HTTP_200_OK: JustificativaSerializer,
+        status.HTTP_200_OK: JustificativaDetalheSerializer,
         status.HTTP_401_UNAUTHORIZED: {'description': 'Não autenticado.'},
         status.HTTP_404_NOT_FOUND: {'description': 'Justificativa não encontrada no escopo.'},
     },
 )
 class DetalharJustificativaView(IsAuthenticatedMixin, BasicRetrieveAPIView):
-    serializer_class = JustificativaSerializer
+    serializer_class = JustificativaDetalheSerializer
     mensagem_sucesso = 'Justificativa obtida com sucesso.'
 
     def get_queryset(self):
         return Justificativa().business.listar_para_usuario(self.request.user)
-
-
-@extend_schema(
-    tags=['Transporte · Justificativas'],
-    summary='Enviar justificativa',
-    description=(
-        'Envia uma justificativa para qualquer strike ativo do próprio aluno.\n\n'
-        '**Permissões:** L1 (EDITAR_EU) — somente o aluno dono do strike.'
-    ),
-    request=CriarJustificativaSerializer,
-    responses={
-        status.HTTP_201_CREATED: JustificativaSerializer,
-        status.HTTP_400_BAD_REQUEST: {'description': 'Strike inelegível ou texto inválido.'},
-        status.HTTP_401_UNAUTHORIZED: {'description': 'Não autenticado.'},
-        status.HTTP_404_NOT_FOUND: {'description': 'Strike não encontrado.'},
-    },
-)
-class CriarJustificativaView(IsAuthenticatedMixin, BasicPostAPIView):
-    serializer_class = CriarJustificativaSerializer
-    mensagem_sucesso = 'Justificativa enviada com sucesso.'
-
-    def do_action_post(self, serializer_data, request, *args, **kwargs):
-        justificativa = Justificativa().business.criar_justificativa(
-            strike_id=kwargs['pk'],
-            texto=serializer_data['texto'],
-            usuario=request.user,
-        )
-        return {
-            'dados': JustificativaSerializer(justificativa).data,
-            'status_code': status.HTTP_201_CREATED,
-        }
 
 
 class AnalisarJustificativaView(IsAdminMixin, BasicPostAPIView):

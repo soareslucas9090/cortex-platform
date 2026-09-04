@@ -521,9 +521,9 @@ class PermissaoDocumentacao:
                 'O módulo transporte controla o cadastro de percursos (apelido, descrição e '
                 'status ativo/inativo) e de rotas (percurso, horário de saída, dia da semana e '
                 'quantidade de vagas). L3 administra esses cadastros e as execuções; motoristas '
-                'ativos consultam as rotas do dia; e alunos ativos e matriculados, com menos de '
-                'três strikes ativos, podem solicitar tickets e entrar em filas de espera. O '
-                'payload expõe gerenciar, motorista e reservar.'
+                'ativos consultam as rotas do dia; e alunos ativos e matriculados, não '
+                'bloqueados, podem solicitar tickets e entrar em filas de espera. O payload '
+                'expõe gerenciar, motorista, reservar, bloqueado, faltas e bloqueios.'
             ),
             'secoes': [
                 {
@@ -547,14 +547,35 @@ class PermissaoDocumentacao:
                             'destaque': 'reservar',
                             'texto': (
                                 'true para usuário e aluno ativos, com situação matriculado e '
-                                'menos de três strikes ativos.'
+                                'sem bloqueio no transporte (is_bloqueado=false).'
+                            ),
+                        },
+                        {
+                            'destaque': 'bloqueado',
+                            'texto': (
+                                'true quando o aluno possui três ou mais faltas ativas no transporte.'
+                            ),
+                        },
+                        {
+                            'destaque': 'faltas',
+                            'texto': (
+                                'quantidade de strikes ativos no ciclo atual '
+                                '(ausências não justificadas).'
+                            ),
+                        },
+                        {
+                            'destaque': 'bloqueios',
+                            'texto': (
+                                'quantidade de vezes que o aluno entrou em bloqueio no transporte '
+                                '(aluno.quantidade_bloqueios).'
                             ),
                         },
                         {
                             'destaque': 'Payload típico',
                             'texto': (
-                                '{"transporte": {"gerenciar": false, "motorista": true, '
-                                '"reservar": false}}'
+                                '{"transporte": {"gerenciar": false, "motorista": false, '
+                                '"reservar": true, "bloqueado": false, "faltas": 0, '
+                                '"bloqueios": 0}}'
                             ),
                         },
                     ],
@@ -595,8 +616,28 @@ class PermissaoDocumentacao:
                             'O campo posicao_fila permanece disponível apenas para a espera.'
                         ),
                         (
-                            'O aluno pode enviar justificativa para qualquer strike ativo próprio, '
-                            'mesmo antes de atingir o bloqueio por três strikes.'
+                            'O aluno bloqueado pode enviar justificativa cobrindo todos os '
+                            'strikes ativos via POST /cortex/transporte/bloqueios/justificativas/.'
+                        ),
+                    ],
+                },
+                {
+                    'titulo': 'Bloqueios e justificativas (TI)',
+                    'paragrafos': [
+                        (
+                            'L3 lista alunos bloqueados em GET /cortex/transporte/bloqueios/ '
+                            'com filtros busca, curso_id, tem_justificativa e paginacao.'
+                        ),
+                        (
+                            'O detalhe GET /cortex/transporte/bloqueios/<aluno_pk>/ expõe '
+                            'ausencias, bloqueios (historico), deficiencia, ultimo_login e '
+                            'justificativa_pendente com itens_ausencia (envio, data_ausencia, '
+                            'horario e texto por ausencia).'
+                        ),
+                        (
+                            'A analise usa POST /cortex/transporte/justificativas/<pk>/aprovar/ '
+                            'ou /rejeitar/. Aprovar justifica todos os strikes cobertos e '
+                            'desbloqueia o aluno quando nao restarem faltas ativas.'
                         ),
                     ],
                 },
@@ -648,17 +689,20 @@ class PermissaoDocumentacao:
                     'pode': 'Reservar ticket, entrar na fila e consultar recursos próprios.',
                     'nao_sem_capacidade': 'Criar novos tickets ou entrar em novas filas.',
                     'descricao': (
-                        'Fica indisponível quando o aluno possui três ou mais strikes ativos.'
+                        'Fica indisponível quando o aluno está bloqueado no transporte.'
                     ),
                 },
             ],
             'exemplos': [
                 {
-                    'perfil': 'Aluno ativo e matriculado com menos de três strikes ativos',
+                    'perfil': 'Aluno ativo e matriculado sem bloqueio no transporte',
                     'capacidades': {
                         'gerenciar': False,
                         'motorista': False,
                         'reservar': True,
+                        'bloqueado': False,
+                        'faltas': 0,
+                        'bloqueios': 0,
                     },
                     'pode': [
                         'consultar execuções abertas',
@@ -676,9 +720,13 @@ class PermissaoDocumentacao:
                         'gerenciar': True,
                         'motorista': False,
                         'reservar': False,
+                        'bloqueado': False,
+                        'faltas': 0,
+                        'bloqueios': 0,
                     },
                     'pode': [
                         'cadastrar, editar, desativar e reativar percursos e rotas',
+                        'listar bloqueios, analisar justificativas e aprovar ou rejeitar ausencias',
                         'ver o menu Transporte no frontend',
                     ],
                     'nao_pode': [],

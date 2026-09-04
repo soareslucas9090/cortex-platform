@@ -21,7 +21,11 @@ strikes e justificativas.
 - **Ticket**: solicitação de um aluno em uma execução; representa reserva, posição
   em fila, cancelamento, embarque ou ausência.
 - **Strike**: falta vinculada unicamente a um ticket marcado como ausente.
-- **Justificativa**: solicitação única de revisão de um strike.
+- **Justificativa**: solicitação de revisão de bloqueio, cobrindo todos os strikes ativos do aluno.
+- **Bloqueio**: estado do aluno (`is_bloqueado`, `faltas`, `quantidade_bloqueios`)
+  sincronizado a partir dos strikes ativos; `faltas` são as ausências ativas no
+  ciclo corrente e `quantidade_bloqueios` é o histórico de vezes em que o aluno
+  entrou em bloqueio.
 
 Não é possível desativar um percurso que ainda tenha rotas ativas. Não é possível vincular ou reativar rota em percurso inativo.
 
@@ -37,7 +41,8 @@ Transporte/
 ├── execucoes_rotas/ # App Django do model ExecucaoRota
 ├── tickets/         # App Django do model Ticket e fila de espera
 ├── strikes/         # App Django do model Strike
-└── justificativas/  # App Django do model Justificativa
+├── justificativas/  # App Django do model Justificativa
+└── bloqueios/       # Consulta de alunos bloqueados e envio de justificativa
 ```
 
 ## Regras Específicas do Domínio
@@ -145,16 +150,41 @@ O tipo de deficiência não é exposto nas respostas dos tickets.
 O payload `posicao` informa `tipo` (`RESERVA` ou `ESPERA`), `atual` e `total`.
 `posicao_fila` permanece como campo compatível e só contém valor para `EM_ESPERA`.
 
-### 7. Ausências, strikes e justificativas
+### 7. Ausências, strikes, bloqueios e justificativas
 
+- Cada ausência registrada (ticket `AUSENTE`) gera exatamente um strike e incrementa
+  `faltas` (strikes ativos no ciclo atual).
+- Com 1 ou 2 faltas ativas o aluno **não** está bloqueado; na 3ª falta ativa
+  (`is_bloqueado=true`) o aluno deixa de reservar tickets e entrar em fila.
+- `quantidade_bloqueios` incrementa **somente** na transição para bloqueado
+  (de `is_bloqueado=false` para `true`); novas faltas no mesmo ciclo (4ª, 5ª…)
+  não incrementam o histórico. Após aprovação da justificativa, `faltas` zera e
+  `quantidade_bloqueios` permanece.
 - L3 marca um ticket `RESERVADO` como `AUSENTE` durante o embarque ou após a
-  finalização; a ação cria exatamente um strike.
+  finalização; a ação cria exatamente um strike e sincroniza `faltas`,
+  `is_bloqueado` e, quando aplicável, `quantidade_bloqueios` no aluno.
 - Strike `ATIVO` conta para o bloqueio; `JUSTIFICADO` deixa de contar.
-- O aluno pode enviar imediatamente uma justificativa para qualquer strike ativo
-  próprio, mesmo antes de atingir o bloqueio por três strikes.
-- L3 aprova ou rejeita justificativas pendentes.
-- Aprovar altera o strike para `JUSTIFICADO`; o aluno só é desbloqueado quando
-  restarem menos de três strikes ativos.
+- O aluno bloqueado pode enviar **uma** justificativa cobrindo todos os strikes
+  ativos (`POST /bloqueios/justificativas/`).
+- L3 lista bloqueios, consulta o detalhe e aprova ou rejeita justificativas
+  pendentes (`POST /justificativas/<pk>/aprovar/` ou `/rejeitar/`).
+- Aprovar marca todos os strikes cobertos como `JUSTIFICADO` e ressincroniza o
+  bloqueio do aluno.
+
+#### Payload do detalhe (modal TI)
+
+`GET /bloqueios/<aluno_pk>/` e `GET /justificativas/<pk>/` expõem, entre outros:
+
+| Campo | Significado |
+|-------|-------------|
+| `ausencias` / `faltas` | Strikes ativos no ciclo atual |
+| `bloqueios` | `quantidade_bloqueios` (histórico de bloqueios) |
+| `deficiencia`, `ultimo_login` | Dados do `Usuario` vinculado |
+| `justificativa_pendente.itens_ausencia[]` | Lista por ausência: `envio`, `data_ausencia`, `horario`, `justificativa` |
+| `justificativa_pendente.strikes_cobertos` | Mantido para compatibilidade com clientes legados |
+
+Cada item de `itens_ausencia` repete o texto único da justificativa e traz a data
+e o horário da execução em que a ausência ocorreu.
 
 ### 8. QR Code
 
@@ -176,7 +206,8 @@ O aluno vê e altera apenas os próprios tickets, strikes e justificativas.
 - **Views:** `IsAdminMixin` (`tem_acesso_elevado()`), o mesmo critério de L3: `is_staff`, `is_admin` ou superusuário.
 - **Payload (login/me):** `gerenciar` é `true` só para L3; `motorista` exige conta
   de usuário e perfil Motorista ativos; `reservar` exige aluno ativo, matriculado
-  e com menos de três strikes ativos.
+  e não bloqueado; `bloqueado`, `faltas` e `bloqueios` refletem o estado
+  sincronizado do aluno (`bloqueios` = `quantidade_bloqueios`).
 - **Compilação:** `UsuarioPermissions.permissoes_transporte()`.
 - **Documentação viva da API:** `GET /cortex/identidade/permissoes/documentacao/` (`documentacao_transporte()`). Toda mudança de regra deve atualizar esse método no mesmo PR.
 
@@ -227,8 +258,16 @@ Base tickets: `/cortex/transporte/tickets/`
 Bases auxiliares:
 
 - `GET /cortex/transporte/strikes/`
+- `GET /cortex/transporte/bloqueios/` — listagem paginada de alunos bloqueados
+  - Query params: `busca` (nome ou CPF), `curso_id` (vínculo ativo), `tem_justificativa` (`true`|`false`), `paginacao`
+  - Campos por item: `aluno_pk`, `nome`, `cpf`, `faltas` (compat.), `ausencias`,
+    `bloqueios`, `is_bloqueado`, `tem_justificativa_pendente`, `curso_nome`,
+    `data_bloqueio`
+- `GET /cortex/transporte/bloqueios/<aluno_pk>/` — detalhe com `deficiencia`,
+  `ultimo_login`, `ausencias`, `bloqueios` e `justificativa_pendente` (com
+  `itens_ausencia` e `strikes_cobertos` para compatibilidade)
+- `POST /cortex/transporte/bloqueios/justificativas/`
 - `GET /cortex/transporte/justificativas/` e
-  `GET /cortex/transporte/justificativas/<pk>/`
-- `POST /cortex/transporte/strikes/<pk>/justificativas/`
+  `GET /cortex/transporte/justificativas/<pk>/` (detalhe inclui `itens_ausencia`)
 - `POST /cortex/transporte/justificativas/<pk>/aprovar/`
 - `POST /cortex/transporte/justificativas/<pk>/rejeitar/`

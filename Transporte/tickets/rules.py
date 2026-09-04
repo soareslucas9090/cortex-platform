@@ -11,15 +11,15 @@ from .choices import StatusTicket
 
 class TicketRules(ModelInstanceRules):
 
-    def validar_aluno_elegivel(self, usuario, quantidade_strikes_ativos) -> bool:
+    def validar_aluno_elegivel(self, usuario) -> bool:
         aluno = getattr(usuario, 'aluno', None)
         if not usuario.ativo or aluno is None or not aluno.ativo:
             self.return_exception('Somente um aluno ativo pode solicitar um ticket.')
         if aluno.situacao != SituacaoAluno.MATRICULADO:
             self.return_exception('Somente um aluno matriculado pode solicitar um ticket.')
-        if quantidade_strikes_ativos >= 3:
+        if aluno.is_bloqueado:
             self.return_exception(
-                'O aluno possui três ou mais strikes ativos e não pode solicitar novos tickets.'
+                'O aluno está bloqueado no transporte e não pode solicitar novos tickets.'
             )
         return True
 
