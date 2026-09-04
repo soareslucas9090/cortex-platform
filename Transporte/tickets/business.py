@@ -188,6 +188,21 @@ class TicketBusiness(ModelInstanceBusiness):
         except Exception as e:
             self.relancar_ou_erro_sistema(e, 'Não foi possível marcar a ausência.', logger)
 
+    def marcar_nao_contemplado(self):
+        try:
+            ticket = self.object_instance.helper.obter_bloqueado_por_id(
+                self.object_instance.pk,
+            )
+            ticket.rules.validar_pode_marcar_nao_contemplado()
+            ticket.state.atualizar_status(StatusTicket.NAO_CONTEMPLADO)
+            return ticket
+        except Exception as e:
+            self.relancar_ou_erro_sistema(
+                e,
+                'Não foi possível marcar o ticket como não contemplado.',
+                logger,
+            )
+
     def gerar_codigo_qr(self):
         try:
             if not self.object_instance.pk:
@@ -252,61 +267,5 @@ class TicketBusiness(ModelInstanceBusiness):
             self.relancar_ou_erro_sistema(
                 e,
                 'Não foi possível listar os tickets da conferência.',
-                logger,
-            )
-
-    def listar_fila_visivel_conferencia(self, execucao):
-        try:
-            execucao.rules.validar_chamada_para_finalizar(execucao)
-            return self.object_instance.helper.listar_fila_visivel_conferencia(execucao)
-        except Exception as e:
-            self.relancar_ou_erro_sistema(
-                e,
-                'Não foi possível listar a fila de espera da conferência.',
-                logger,
-            )
-
-    def remover_espera_conferencia(self, execucao):
-        try:
-            execucao = execucao.helper.obter_por_id(execucao.pk, bloquear=True)
-            execucao.rules.validar_chamada_para_finalizar(execucao)
-            ticket = self.object_instance.helper.obter_bloqueado_por_id(
-                self.object_instance.pk,
-            )
-            ticket.rules.validar_status(
-                StatusTicket.EM_ESPERA,
-                'Somente um ticket em espera pode ser removido da fila da conferência.',
-            )
-            ticket.rules.validar_pertence_a_execucao(execucao)
-            visiveis = set(
-                self.object_instance.helper.listar_fila_visivel_conferencia(execucao).values_list(
-                    'pk',
-                    flat=True,
-                )
-            )
-            ticket.rules.validar_remocao_na_fila_visivel(visiveis)
-            ticket.cancelado_em = timezone.now()
-            ticket.state.atualizar_status(StatusTicket.CANCELADO)
-            return ticket
-        except Exception as e:
-            self.relancar_ou_erro_sistema(
-                e,
-                'Não foi possível remover o aluno da fila de espera.',
-                logger,
-            )
-
-    def encerrar_fila_na_finalizacao(self, execucao):
-        try:
-            vagas = execucao.business.obter_resumo_vagas()['vagas_disponiveis']
-            fila = list(self.object_instance.helper.listar_espera_bloqueada(execucao))
-            for ticket in fila[:vagas]:
-                ticket.embarcado_em = timezone.now()
-                ticket.state.atualizar_status(StatusTicket.EMBARCADO)
-            for ticket in fila[vagas:]:
-                ticket.state.atualizar_status(StatusTicket.NAO_CONTEMPLADO)
-        except Exception as e:
-            self.relancar_ou_erro_sistema(
-                e,
-                'Não foi possível encerrar a fila de espera.',
                 logger,
             )

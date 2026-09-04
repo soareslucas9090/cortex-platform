@@ -88,13 +88,6 @@ class ExecucaoRotaRules(ModelInstanceRules):
             )
         return True
 
-    def validar_filas_apos_monitoramento(self, execucao) -> bool:
-        if execucao.status != StatusExecucaoRota.EM_EMBARQUE:
-            self.return_exception(
-                'As filas da conferência só estão disponíveis após iniciar o monitoramento.',
-            )
-        return True
-
     def validar_ausentes_sem_duplicata(self, ausentes) -> bool:
         if len(ausentes) != len(set(ausentes)):
             self.return_exception('Há tickets duplicados na lista de ausentes.')

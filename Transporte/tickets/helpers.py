@@ -136,17 +136,6 @@ class TicketHelpers(ModelInstanceHelpers):
             'aluno__usuario',
         )
 
-    def listar_fila_visivel_conferencia(self, execucao):
-        limite = execucao.helper.quantidade_vagas_disponiveis()
-        queryset = self._ordenar_fila(execucao.tickets.all()).select_related(
-            'aluno',
-            'aluno__usuario',
-            'execucao_rota',
-        )
-        if limite < 1:
-            return queryset.none()
-        return queryset[:limite]
-
     def proximo_da_fila(self, execucao):
         return self._ordenar_fila(
             execucao.tickets.select_for_update(),

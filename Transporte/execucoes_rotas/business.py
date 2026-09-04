@@ -106,7 +106,7 @@ class ExecucaoRotaBusiness(ModelInstanceBusiness):
             execucao = self.object_instance.helper.obter_por_id(execucao_id)
             execucao.rules.validar_execucao_do_dia(execucao)
             if exigir_embarque:
-                execucao.rules.validar_filas_apos_monitoramento(execucao)
+                execucao.rules.validar_execucao_em_embarque(execucao)
             return execucao
         except Exception as e:
             self.relancar_ou_erro_sistema(
@@ -200,7 +200,8 @@ class ExecucaoRotaBusiness(ModelInstanceBusiness):
                 return execucao
             execucao.rules.validar_execucao_em_embarque(execucao)
             execucao.rules.validar_chamada_para_finalizar(execucao)
-            Ticket().business.encerrar_fila_na_finalizacao(execucao)
+            for ticket in Ticket().helper.listar_espera_bloqueada(execucao):
+                ticket.business.marcar_nao_contemplado()
             execucao = execucao.state.atualizar_status(StatusExecucaoRota.FINALIZADA)
             execucao.finalizada_em = timezone.now()
             execucao.save(update_fields=['finalizada_em'])

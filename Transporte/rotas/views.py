@@ -35,8 +35,10 @@ PERMISSAO_MOTORISTA = (
     description=f'''
     Lista todas as rotas e percursos ativos programados para o dia atual, em ordem de horário.
     Quando existe uma execução para a rota, inclui o status operacional, a capacidade
-    congelada da execução e a quantidade real de vagas ocupadas por tickets.
-    Rotas ainda sem execução retornam status nulo e zero tickets solicitados.
+    congelada da execução, `tickets_solicitados` (RESERVADO + EMBARCADO) e
+    `vagas_ocupadas` / `vagas_disponiveis` com a mesma regra da conferência
+    (após a chamada: EMBARCADO + entradas sem ticket).
+    Rotas ainda sem execução retornam status nulo, zero tickets e zero vagas ocupadas.
     Este endpoint é exclusivamente de leitura e não cria nem altera dados operacionais.
 
     {PERMISSAO_MOTORISTA}

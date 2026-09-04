@@ -6,6 +6,7 @@ from rest_framework import status
 from rest_framework.test import APITestCase
 
 from Identidade.usuarios.models import Usuario
+from Transporte.entradas_sem_ticket.models import EntradaSemTicket
 from Transporte.execucoes_rotas.choices import StatusExecucaoRota
 from Transporte.execucoes_rotas.models import ExecucaoRota
 from Transporte.motoristas.models import Motorista
@@ -90,6 +91,8 @@ class RotasDoDiaAPITestCase(APITestCase):
                 'status_execucao',
                 'status_execucao_display',
                 'tickets_solicitados',
+                'vagas_ocupadas',
+                'vagas_disponiveis',
             },
         )
         self.assertEqual(item['id'], self.rota.pk)
@@ -103,6 +106,8 @@ class RotasDoDiaAPITestCase(APITestCase):
         self.assertIsNone(item['status_execucao'])
         self.assertIsNone(item['status_execucao_display'])
         self.assertEqual(item['tickets_solicitados'], 0)
+        self.assertEqual(item['vagas_ocupadas'], 0)
+        self.assertEqual(item['vagas_disponiveis'], 84)
 
     def test_motorista_ve_status_capacidade_e_tickets_reais_da_execucao(self):
         execucao = ExecucaoRota().business.criar_execucao(
@@ -148,6 +153,83 @@ class RotasDoDiaAPITestCase(APITestCase):
         self.assertEqual(item['status_execucao_display'], 'Reservas fechadas')
         self.assertEqual(item['capacidade'], 80)
         self.assertEqual(item['tickets_solicitados'], 2)
+        self.assertEqual(item['vagas_ocupadas'], 2)
+        self.assertEqual(item['vagas_disponiveis'], 78)
+
+    def test_apos_chamada_ocupacao_inclui_entrada_sem_ticket(self):
+        execucao = ExecucaoRota().business.criar_execucao(
+            self.rota.pk,
+            timezone.localdate(),
+        )
+        execucao.quantidade_vagas = 80
+        execucao.status = StatusExecucaoRota.EM_EMBARQUE
+        execucao.chamada_tickets_concluida = True
+        execucao.save(
+            update_fields=['quantidade_vagas', 'status', 'chamada_tickets_concluida'],
+        )
+
+        embarcado = criar_aluno('71000000015', nome='Aluno Embarcado')
+        em_espera = criar_aluno('71000000016', nome='Aluno em Espera')
+        walk_in = criar_aluno('71000000017', nome='Walk-in')
+        Ticket.objects.create(
+            execucao_rota=execucao,
+            aluno=embarcado,
+            status=StatusTicket.EMBARCADO,
+        )
+        Ticket.objects.create(
+            execucao_rota=execucao,
+            aluno=em_espera,
+            status=StatusTicket.EM_ESPERA,
+        )
+        EntradaSemTicket.objects.create(
+            execucao_rota=execucao,
+            aluno=walk_in,
+            cpf=walk_in.usuario.cpf,
+            data_hora_entrada=timezone.now(),
+        )
+        self.autenticar(self.usuario_motorista)
+
+        resposta = self.client.get(self.url_lista)
+
+        self.assertEqual(resposta.status_code, status.HTTP_200_OK)
+        item = resposta.data['dados'][0]
+        self.assertEqual(item['tickets_solicitados'], 1)
+        self.assertEqual(item['vagas_ocupadas'], 2)
+        self.assertEqual(item['vagas_disponiveis'], 78)
+
+    def test_apos_chamada_ausente_com_entrada_ocupa_uma_vaga(self):
+        execucao = ExecucaoRota().business.criar_execucao(
+            self.rota.pk,
+            timezone.localdate(),
+        )
+        execucao.quantidade_vagas = 80
+        execucao.status = StatusExecucaoRota.EM_EMBARQUE
+        execucao.chamada_tickets_concluida = True
+        execucao.save(
+            update_fields=['quantidade_vagas', 'status', 'chamada_tickets_concluida'],
+        )
+
+        ausente = criar_aluno('71000000018', nome='Aluno Ausente')
+        Ticket.objects.create(
+            execucao_rota=execucao,
+            aluno=ausente,
+            status=StatusTicket.AUSENTE,
+        )
+        EntradaSemTicket.objects.create(
+            execucao_rota=execucao,
+            aluno=ausente,
+            cpf=ausente.usuario.cpf,
+            data_hora_entrada=timezone.now(),
+        )
+        self.autenticar(self.usuario_motorista)
+
+        resposta = self.client.get(self.url_lista)
+
+        self.assertEqual(resposta.status_code, status.HTTP_200_OK)
+        item = resposta.data['dados'][0]
+        self.assertEqual(item['tickets_solicitados'], 0)
+        self.assertEqual(item['vagas_ocupadas'], 1)
+        self.assertEqual(item['vagas_disponiveis'], 79)
 
     def test_todos_os_motoristas_veem_todas_as_rotas(self):
         outra_rota = criar_rota(time(18, 0))
@@ -254,11 +336,11 @@ class RotasDoDiaAPITestCase(APITestCase):
         self.assertEqual(resposta.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
 
     def test_motorista_recebe_capacidade_no_payload(self):
-        self.assertEqual(
-            self.usuario_motorista.permissoes['transporte'],
-            {'gerenciar': False, 'motorista': True, 'reservar': False},
-        )
-        self.assertEqual(
-            self.usuario_ti.permissoes['transporte'],
-            {'gerenciar': True, 'motorista': False, 'reservar': False},
-        )
+        motorista = self.usuario_motorista.permissoes['transporte']
+        ti = self.usuario_ti.permissoes['transporte']
+        self.assertTrue(motorista['motorista'])
+        self.assertFalse(motorista['gerenciar'])
+        self.assertFalse(motorista['reservar'])
+        self.assertTrue(ti['gerenciar'])
+        self.assertFalse(ti['motorista'])
+        self.assertFalse(ti['reservar'])

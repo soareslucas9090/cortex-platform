@@ -64,6 +64,20 @@ class ExecucaoRota(
         default=list,
         blank=True,
     )
+    entradas_cpf_concluidas = models.BooleanField(
+        'Entrada por CPF concluída',
+        default=False,
+    )
+    entradas_cpf_concluidas_em = models.DateTimeField(
+        'Entrada por CPF concluída em',
+        null=True,
+        blank=True,
+    )
+    entradas_cpf_codigos = models.JSONField(
+        'CPFs do lote da conferência',
+        default=list,
+        blank=True,
+    )
 
     class Meta:
         verbose_name = 'Execução de rota'

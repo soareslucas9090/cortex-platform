@@ -30,7 +30,7 @@ PERMISSAO_LISTAGEM = (
 PERMISSAO_ADMIN = '**Permissões:** L3 (EDITAR_TUDO) — perfil TI / administradores.'
 PERMISSAO_CONFERIR = (
     '**Permissões:** capacidade transporte.conferir. Lê e opera execuções do dia e, '
-    'após iniciar o monitoramento, as filas de ticket e de espera dessa execução. '
+    'após iniciar o monitoramento, a chamada de tickets e a entrada por CPF dessa execução. '
     'Não amplia cadastro nem recursos globais do módulo.'
 )
 INDICATIVO_DEFICIENCIA = (
@@ -193,8 +193,9 @@ class IniciarEmbarqueExecucaoRotaView(PodeConferirTransporteMixin, BasicPostAPIV
     tags=['Transporte · Conferência'],
     summary='Finalizar execução',
     description=(
-        'Embarca a fila que cabe nas vagas restantes, marca o restante da espera '
-        f'como não contemplado (sem strike) e finaliza a execução.\n\n{PERMISSAO_CONFERIR}'
+        'Finaliza a execução e marca como NAO_CONTEMPLADO quem ainda está EM_ESPERA. '
+        'Quem embarcou por CPF permanece EMBARCADO. Ausentes não mudam.\n\n'
+        f'{PERMISSAO_CONFERIR}'
     ),
     request=SerializerVazio,
     responses={
@@ -357,84 +358,3 @@ class FinalizarChamadaConferenciaView(PodeConferirTransporteMixin, BasicPostAPIV
         )
         execucao = execucao.business.finalizar_chamada(serializer_data.get('ausentes') or [])
         return {'dados': ExecucaoRotaSerializer(execucao).data}
-
-
-@extend_schema(
-    tags=['Transporte · Conferência'],
-    summary='Listar fila de espera visível',
-    description=(
-        'Lista somente quem caberia agora (PcD + FIFO, limitado às vagas restantes). '
-        'Quem está além desse limite não aparece; a remoção nesta tela vale só para '
-        'os tickets listados. A promoção de toda a espera ocorre ao finalizar. '
-        f'{INDICATIVO_DEFICIENCIA}\n\n'
-        f'{PERMISSAO_CONFERIR}'
-    ),
-    parameters=[
-        OpenApiParameter(
-            'paginacao',
-            OpenApiTypes.INT,
-            OpenApiParameter.QUERY,
-            required=False,
-            description='Tamanho da página (1–100, padrão 10).',
-        ),
-    ],
-    responses={
-        status.HTTP_200_OK: TicketConferenciaSerializer(many=True),
-        status.HTTP_401_UNAUTHORIZED: {'description': 'Não autenticado.'},
-        status.HTTP_403_FORBIDDEN: {'description': 'Sem capacidade conferir.'},
-        status.HTTP_404_NOT_FOUND: {
-            'description': 'Execução de outro dia ou cancelada (fora do escopo da conferência).',
-        },
-    },
-)
-class ListarFilaConferenciaView(PodeConferirTransporteMixin, BasicGetAPIView):
-    serializer_class = TicketConferenciaSerializer
-    pagination_class = PaginacaoCustomizada
-    mensagem_sucesso = 'Fila de espera listada com sucesso.'
-
-    def get_queryset(self):
-        execucao = ExecucaoRota().business.obter_para_conferencia(
-            self.kwargs['pk'],
-            exigir_embarque=True,
-        )
-        return Ticket().business.listar_fila_visivel_conferencia(execucao)
-
-
-@extend_schema(
-    tags=['Transporte · Conferência'],
-    summary='Remover aluno da fila de espera',
-    description=(
-        'Cancela o ticket em espera sem gerar strike. Só aceita os N tickets da '
-        'fila visível (vagas restantes), os mesmos do GET da fila.\n\n'
-        f'{PERMISSAO_CONFERIR}'
-    ),
-    request=SerializerVazio,
-    responses={
-        status.HTTP_200_OK: TicketConferenciaSerializer,
-        status.HTTP_400_BAD_REQUEST: {
-            'description': (
-                'Chamada pendente, ticket fora da fila visível, ou ticket que não está em espera.'
-            ),
-        },
-        status.HTTP_401_UNAUTHORIZED: {'description': 'Não autenticado.'},
-        status.HTTP_403_FORBIDDEN: {'description': 'Sem capacidade conferir.'},
-        status.HTTP_404_NOT_FOUND: {
-            'description': (
-                'Ticket inexistente, execução de outro dia ou cancelada '
-                '(fora do escopo da conferência).'
-            ),
-        },
-    },
-)
-class RemoverFilaConferenciaView(PodeConferirTransporteMixin, BasicPostAPIView):
-    serializer_class = SerializerVazio
-    mensagem_sucesso = 'Aluno removido da fila de espera sem strike.'
-
-    def do_action_post(self, serializer_data, request, *args, **kwargs):
-        execucao = ExecucaoRota().business.obter_para_conferencia(
-            kwargs['pk'],
-            exigir_embarque=True,
-        )
-        ticket = Ticket().business.obter_por_codigo(kwargs['codigo'])
-        ticket = ticket.business.remover_espera_conferencia(execucao)
-        return {'dados': TicketConferenciaSerializer(ticket).data}

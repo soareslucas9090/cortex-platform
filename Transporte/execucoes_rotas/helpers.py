@@ -82,6 +82,17 @@ class ExecucaoRotaHelpers(ModelInstanceHelpers):
             status__in=(StatusTicket.RESERVADO, StatusTicket.EMBARCADO),
         ).count()
 
+    def ocupacao_da_listagem(self):
+        execucao = self.object_instance
+        if not hasattr(execucao, 'tickets_solicitados'):
+            return self.contar_vagas_ocupadas()
+        if execucao.chamada_tickets_concluida:
+            return (
+                getattr(execucao, 'tickets_embarcados', 0)
+                + getattr(execucao, 'entradas_sem_ticket_count', 0)
+            )
+        return execucao.tickets_solicitados or 0
+
     def quantidade_vagas_disponiveis(self):
         return max(
             self.object_instance.quantidade_vagas - self.contar_vagas_ocupadas(),

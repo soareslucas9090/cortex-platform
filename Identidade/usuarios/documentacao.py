@@ -622,19 +622,19 @@ class PermissaoDocumentacao:
                             'O monitoramento inicia só depois de T-30 '
                             '(now > data_hora_saida − 30 min); L3 obedece a mesma data e janela. '
                             'O campo pode_monitorar indica se o botão de iniciar deve aparecer. '
-                            'Após EM_EMBARQUE, operam as filas de ticket e de espera dessa execução. '
+                            'Após EM_EMBARQUE, operam a chamada de tickets e a entrada por CPF. '
                             'QR Code permanece L3.'
                         ),
                         (
                             'A chamada envia só ausentes (omitir = presença, com strike). '
-                            'Remover da espera cancela sem strike. Finalizar promove quem cabe '
-                            'e o restante fica NAO_CONTEMPLADO. A GET da fila mostra só quem '
-                            'caberia agora (vagas restantes); o restante da espera não aparece '
-                            'nessa lista. Entrada por CPF só usa vaga além da espera '
-                            '(vagas disponíveis maior que EM_ESPERA); '
-                            'POST em entradas-sem-ticket/validar/ consulta sem gravar; o POST em '
-                            'entradas-sem-ticket/ persiste. Quem está EM_ESPERA não usa CPF; '
-                            'quem cancelou o ticket pode usar se houver vaga além da espera. '
+                            'Finalizar a execução marca a espera restante como NAO_CONTEMPLADO. '
+                            'POST em entradas-sem-ticket/validar/ consulta sem gravar e devolve o card '
+                            '(depois do lote concluído devolve 400). '
+                            'O POST em entradas-sem-ticket/ recebe cpfs em lote e persiste '
+                            '(replay do mesmo conjunto devolve 200). '
+                            'O lote de CPF é opcional. '
+                            'Quem está EM_ESPERA e entra no lote tem o ticket promovido a EMBARCADO; '
+                            'quem cancelou o ticket pode usar se houver vaga. '
                             'Quem está AUSENTE nesta execução pode entrar nas mesmas condições; '
                             'o ticket permanece AUSENTE e o strike não é desfeito. '
                             'Três strikes ativos bloqueiam a entrada por CPF.'
@@ -648,7 +648,7 @@ class PermissaoDocumentacao:
                             'Reservas confirmadas e fila priorizam alunos com '
                             'Usuario.deficiencia preenchido e preservam a ordem de solicitação '
                             'dentro dos grupos PcD e não PcD, sem retirar vagas confirmadas. '
-                            'Nas listagens da conferência (reservas e fila visível), '
+                            'Nas listagens da conferência (reservas e validar CPF), '
                             'aluno.tem_deficiencia indica só se o cadastro tem deficiência; '
                             'o tipo clínico não é enviado.'
                         ),
@@ -742,8 +742,8 @@ class PermissaoDocumentacao:
                         'ou por usuário'
                     ),
                     'pode': (
-                        'Listar execuções do dia e, após iniciar o monitoramento, operar as '
-                        'filas de ticket e de espera dessa execução.'
+                        'Listar execuções do dia e, após iniciar o monitoramento, operar a '
+                        'chamada de tickets e a entrada por CPF dessa execução.'
                     ),
                     'nao_sem_capacidade': (
                         'Acessar a conferência, iniciar embarque ou finalizar a rota pelo fluxo '
@@ -791,7 +791,7 @@ class PermissaoDocumentacao:
                     'pode': [
                         'listar execuções do dia',
                         'iniciar embarque somente depois de T-30',
-                        'operar filas de ticket e espera da execução monitorada',
+                        'operar a chamada de tickets e a entrada por CPF da execução monitorada',
                     ],
                     'nao_pode': [
                         'cadastrar percursos e rotas',

@@ -22,9 +22,10 @@ ticket, ausências, strikes e justificativas.
   o andamento operacional da conferência.
 - **Ticket**: solicitação de um aluno em uma execução; representa reserva, posição
   em fila, cancelamento, embarque, ausência ou não contemplado na espera (`NAO_CONTEMPLADO`).
-- **EntradaSemTicket**: embarque manual por CPF em vaga **além** da espera
-  (`vagas_disponiveis > quantidade em EM_ESPERA`), após a chamada.
-  Quem está `EM_ESPERA` não usa este fluxo.
+- **EntradaSemTicket**: embarque manual por CPF nas vagas restantes após a chamada.
+  Quem está `EM_ESPERA` e for informado no lote tem o ticket promovido para
+  `EMBARCADO`. Quem não for informado permanece `EM_ESPERA` até o finalizar,
+  quando vira `NAO_CONTEMPLADO`.
 - **Strike**: falta vinculada unicamente a um ticket marcado como ausente.
 - **Justificativa**: solicitação de revisão de bloqueio, cobrindo todos os strikes ativos do aluno.
 - **Bloqueio**: estado do aluno (`is_bloqueado`, `faltas`, `quantidade_bloqueios`)
@@ -78,11 +79,15 @@ Transporte/
 - A consulta é somente de leitura e não cria nem altera registros.
 - A resposta combina os dados de rota e percurso com a execução da data, quando ela existe:
   `execucao_id`, `status_execucao`, `status_execucao_display`, capacidade congelada
-  da execução e `tickets_solicitados`.
-- `tickets_solicitados` conta tickets que ocupam vaga (`RESERVADO` e `EMBARCADO`),
-  usando a mesma regra de ocupação da execução.
+  da execução, `tickets_solicitados`, `vagas_ocupadas` e `vagas_disponiveis`.
+- `tickets_solicitados` conta tickets `RESERVADO` e `EMBARCADO` e não inclui
+  `EntradaSemTicket`.
+- `vagas_ocupadas` e `vagas_disponiveis` usam a mesma regra da conferência: antes
+  da chamada de tickets, ocupação = `RESERVADO` + `EMBARCADO`; depois da chamada,
+  ocupação = `EMBARCADO` + `EntradaSemTicket`. `EM_ESPERA` não ocupa vaga.
 - Quando ainda não existe execução para a rota na data, os campos da execução são
-  nulos, `tickets_solicitados` é zero e a capacidade exibida vem da rota.
+  nulos, `tickets_solicitados` e `vagas_ocupadas` são zero e a capacidade exibida
+  vem da rota.
 
 #### Estados do perfil Motorista
 
@@ -103,6 +108,8 @@ API. O status visual é derivado assim:
 - demais estados da execução: `RESERVAS FINALIZADAS`.
 
 O indicador `Tickets solicitados` exibe `tickets_solicitados / quantidade_vagas`.
+A ocupação física do ônibus, após a conferência, deve usar `vagas_ocupadas` /
+`quantidade_vagas`.
 A tela não oferece ação de iniciar ou finalizar rota, responsabilidade da operação
 administrativa/conferência.
 
@@ -121,7 +128,7 @@ administrativa/conferência.
   `ABERTA` ou `FECHADA`. No instante exato do T-30 o aluno ainda pode solicitar
   ticket; o monitoramento ainda não inicia. Depois do horário de saída, no
   mesmo dia, ainda é possível iniciar. Replay de iniciar só enquanto
-  `EM_EMBARQUE`. Depois de `FINALIZADA` (chamada de tickets e espera encerradas)
+  `EM_EMBARQUE`. Depois de `FINALIZADA` (chamada de tickets encerrada)
   não se inicia de novo; o campo `pode_monitorar` no payload indica se o botão
   de iniciar deve aparecer.
 - A listagem da conferência no dia inclui `ABERTA`, `FECHADA`, `EM_EMBARQUE`
@@ -132,7 +139,7 @@ administrativa/conferência.
 - Abrir conferência por ID no mesmo dia: `CANCELADA` responde como não
   encontrada (404). `FINALIZADA` permanece no escopo para consulta da execução
   e replay de finalizar. Iniciar monitoramento nessa execução retorna 400.
-  Chamada e espera (GET/POST de filas) só existem em `EM_EMBARQUE`; em
+  Chamada de tickets e entrada por CPF só existem em `EM_EMBARQUE`; em
   `FINALIZADA` a lista basta. Outro dia continua 404.
 - Depois de `EM_EMBARQUE`, L3 **não** cancela a execução: só finaliza a
   conferência ou deixa o monitoramento seguir.
@@ -156,23 +163,28 @@ administrativa/conferência.
 - A capacidade e a promoção usam bloqueio pessimista na execução para proteger a
   última vaga em requisições concorrentes.
 - Na conferência, quem não entra em `ausentes` na chamada fica `EMBARCADO` sem QR
-  (presença por omissão). O conferente não valida QR. O POST de finalizar promove
-  a espera que cabe nas vagas (fila inteira, não só os N da tela); o restante
-  fica `NAO_CONTEMPLADO` (não é o `CANCELADO` voluntário do aluno).
-  Remover da espera durante o embarque, após a chamada, só vale para os N tickets
-  da fila visível (N = vagas restantes) e continua `CANCELADO` sem strike.
+  (presença por omissão). O conferente não valida QR. Finalizar a execução marca
+  a espera que não embarcou por CPF como `NAO_CONTEMPLADO`. Quem entra no lote
+  de CPF permanece `EMBARCADO`.
   O replay da chamada compara o conjunto gravado nela, não ausências marcadas
   depois pelo L3. O monitoramento pode iniciar depois do horário de saída no
   mesmo dia, desde que `now > T-30`.
 - Entrada por CPF revalida aluno ativo, matriculado, strikes, vaga, chamada
   concluída e execução em embarque. A consulta é `POST` em
-  `entradas-sem-ticket/validar/` com `{ "cpf": "..." }` e não persiste; o
-  `POST` em `entradas-sem-ticket/` revalida e grava. Quem cancelou o próprio
-  ticket pode usar este fluxo se houver vaga além da espera. Quem está
-  `AUSENTE` nesta execução também pode, nas mesmas condições: o ticket permanece
-  `AUSENTE` e o strike não é desfeito. Três strikes ativos continuam impedindo
-  a entrada (incluindo o strike desta ausência).
-  CPF não fura a fila: só entra quando `vagas_disponiveis > quantidade em EM_ESPERA`.
+  `entradas-sem-ticket/validar/` com `{ "cpf": "..." }` e não persiste (devolve
+  dados do aluno para o card, inclusive `tem_deficiencia`). Depois do primeiro
+  lote não vazio, `validar` devolve 400: o conjunto já foi concluído e a tela
+  não mostra card que não dá para gravar. O `POST` em
+  `entradas-sem-ticket/` recebe `{ "cpfs": [...] }`, revalida o lote e grava
+  numa transação. Replay do mesmo conjunto devolve 200; conjunto diferente após
+  o primeiro lote não vazio devolve 400. Lista vazia devolve 201 sem persistir e
+  não conclui o lote. O lote é opcional: finalizar a execução sem enviá-lo
+  marca a espera restante como `NAO_CONTEMPLADO`. Quem cancelou o próprio ticket
+  pode usar este fluxo se houver vaga. Quem está `AUSENTE` nesta execução também pode: o ticket
+  permanece `AUSENTE` e o strike não é desfeito. Quem está `EM_ESPERA` e entra
+  no lote tem o ticket promovido para `EMBARCADO` (sem criar `EntradaSemTicket`).
+  Três strikes ativos continuam impedindo a entrada (incluindo o strike desta
+  ausência). `EM_ESPERA` não reserva vaga após a chamada.
 
 ### 6. Posição dos tickets e prioridade PcD
 
@@ -193,8 +205,9 @@ de alunos aguardando. Alterar `Usuario.deficiencia` reposiciona dinamicamente os
 tickets existentes nos dois grupos. A prioridade altera apenas a ordem exibida e
 de atendimento: nunca remove uma reserva confirmada nem promove alguém sem vaga.
 O tipo de deficiência não é exposto nas respostas dos tickets. Na listagem da
-conferência (`GET .../conferencia/reservas/` e a fila visível), `aluno.tem_deficiencia`
-indica só se o cadastro tem deficiência preenchida, para o selo no monitoramento.
+conferência (`GET .../conferencia/reservas/`) e no `validar` de CPF,
+`aluno.tem_deficiencia` indica só se o cadastro tem deficiência preenchida, para
+o selo no monitoramento.
 
 O payload `posicao` informa `tipo` (`RESERVA` ou `ESPERA`), `atual` e `total`.
 `posicao_fila` permanece como campo compatível e só contém valor para `EM_ESPERA`.
@@ -212,8 +225,7 @@ O payload `posicao` informa `tipo` (`RESERVA` ou `ESPERA`), `atual` e `total`.
 - L3 marca um ticket `RESERVADO` como `AUSENTE` durante o embarque ou após a
   finalização; a ação cria exatamente um strike e sincroniza `faltas`,
   `is_bloqueado` e, quando aplicável, `quantidade_bloqueios` no aluno. O conferente
-  faz o mesmo em lote ao finalizar a chamada (`ausentes`). Remover da fila de espera
-  **não** gera strike.
+  faz o mesmo em lote ao finalizar a chamada (`ausentes`).
 - Strike `ATIVO` conta para o bloqueio; `JUSTIFICADO` deixa de contar.
 - O aluno bloqueado pode enviar **uma** justificativa cobrindo todos os strikes
   ativos (`POST /bloqueios/justificativas/`).
@@ -261,8 +273,9 @@ strikes e justificativas.
   **e** (`PermissaoFuncaoTransporte.conferir` na função do vínculo ativo **ou**
   `PermissaoUsuarioTransporte.conferir`); `bloqueado`, `faltas` e `bloqueios`
   refletem o estado sincronizado do aluno (`bloqueios` = `quantidade_bloqueios`).
-- **Conferente:** lista só execuções do **dia**; após iniciar a conferência, opera as
-  filas de ticket e de espera **dessa** execução. Não acessa GET global de tickets.
+- **Conferente:** lista só execuções do **dia**; após iniciar a conferência, opera
+  a chamada de tickets e a entrada por CPF **dessa** execução. Não acessa GET
+  global de tickets.
 - **Views de conferência:** `PodeConferirTransporteMixin`.
 - **Views administrativas:** `IsAdminMixin` (`tem_acesso_elevado()`), o mesmo critério de L3.
 - **Compilação:** `UsuarioPermissions.permissoes_transporte()`.
@@ -270,7 +283,7 @@ strikes e justificativas.
   reutiliza `conferir`; não há capacidade `ver_dashboard`.
 
 Swagger das views de conferência declara capacidade `transporte.conferir` e o
-escopo do dia + filas da execução monitorada.
+escopo do dia, da chamada de tickets e da entrada por CPF da execução monitorada.
 
 #### Visualização (motorista)
 
@@ -311,15 +324,10 @@ Base execuções: `/cortex/transporte/execucoes-rotas/`
 - `GET` `execucoes-rotas/<pk>/conferencia/reservas/`
   (`aluno.tem_deficiencia`: selo PcD sem o tipo clínico)
 - `POST` `execucoes-rotas/<pk>/conferencia/finalizar-chamada/`
-- `GET` `execucoes-rotas/<pk>/conferencia/fila/` — só os N primeiros da espera
-  (N = vagas restantes); quem não cabe agora não entra nesta lista;
-  `aluno.tem_deficiencia` igual ao da listagem da chamada
-- `POST` `execucoes-rotas/<pk>/conferencia/fila/<uuid>/remover/`
-  (somente UUID que o GET da fila devolveria agora)
 - `POST` `execucoes-rotas/<pk>/conferencia/entradas-sem-ticket/validar/`
-  (`cpf` no body; sem persistência)
+  (`cpf` no body; sem persistência; devolve o card; 400 se o lote já foi concluído)
 - `POST` `execucoes-rotas/<pk>/conferencia/entradas-sem-ticket/`
-  (`cpf` e `observacao` opcional; persiste)
+  (`{ "cpfs": [...] }`; persiste o lote; replay do mesmo conjunto = 200; lote opcional)
 - `POST` em `<pk>/reservar/` e `<pk>/fila-espera/entrar/`
 
 Base tickets: `/cortex/transporte/tickets/`

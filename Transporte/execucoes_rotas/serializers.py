@@ -26,6 +26,7 @@ class ExecucaoRotaSerializer(serializers.ModelSerializer):
             'vagas_disponiveis',
             'pode_monitorar',
             'chamada_tickets_concluida',
+            'entradas_cpf_concluidas',
             'monitoramento_iniciado_em',
             'chamada_concluida_em',
             'finalizada_em',
