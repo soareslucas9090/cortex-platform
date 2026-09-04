@@ -12,6 +12,21 @@ class DiaSemana(models.TextChoices):
     DOMINGO = 'domingo', 'Domingo'
 
 
+DIAS_SEMANA_POR_INDICE = (
+    DiaSemana.SEGUNDA,
+    DiaSemana.TERCA,
+    DiaSemana.QUARTA,
+    DiaSemana.QUINTA,
+    DiaSemana.SEXTA,
+    DiaSemana.SABADO,
+    DiaSemana.DOMINGO,
+)
+
+
+def dia_semana_da_data(data):
+    return DIAS_SEMANA_POR_INDICE[data.weekday()]
+
+
 def anotacao_ordem_dia_semana(campo='dia_semana'):
     """Anotação para ordenar segunda → domingo em vez da ordem alfabética."""
     whens = [

@@ -498,6 +498,7 @@ Terceirizados não possuem `Cargo`.
 
 - `Transporte.percursos` -> Model: `Percurso`
 - `Transporte.rotas` -> Model: `Rota`
+- `Transporte.motoristas` -> Model: `Motorista`
 - `Transporte.execucoes_rotas` -> Model: `ExecucaoRota`
 - `Transporte.tickets` -> Model: `Ticket`
 - `Transporte.strikes` -> Model: `Strike`
@@ -573,7 +574,27 @@ Agendamento de um ônibus em um percurso, em um dia e horário.
 - Não desativar percurso com rotas ativas
 - Unicidade de `percurso` + `dia_semana` + `horario_saida`
 
-## 9.3 ExecucaoRota
+## 9.3 Motorista
+
+Perfil operacional associado 1:1 a `Usuario`.
+
+### Atributos principais
+
+- `usuario` (`OneToOne`, PK, `on_delete=PROTECT`)
+- `ativo`
+
+### Relacionamentos
+
+- `Usuario` 1 : 0..1 `Motorista`
+- Cada `Motorista` pertence a exatamente um `Usuario`
+
+### Restrições
+
+- Um `Usuario` pode possuir no máximo um perfil `Motorista`
+- A exclusão física do `Usuario` é protegida enquanto existir um `Motorista`
+- O acesso operacional exige simultaneamente `Usuario.ativo` e `Motorista.ativo`
+
+## 9.4 ExecucaoRota
 
 Ocorrência de uma rota em uma data e horário congelados.
 
@@ -587,7 +608,7 @@ Ocorrência de uma rota em uma data e horário congelados.
 Rotas distintas do mesmo percurso podem possuir execuções no mesmo dia quando
 seus horários forem diferentes.
 
-## 9.4 Ticket
+## 9.5 Ticket
 
 Vínculo entre `Aluno` e `ExecucaoRota`, identificado externamente por UUID.
 
@@ -595,7 +616,7 @@ Vínculo entre `Aluno` e `ExecucaoRota`, identificado externamente por UUID.
 - no máximo um ticket não cancelado por aluno e execução;
 - tickets em espera formam a fila, sem entidades `Fila` ou `FilaEspera` separadas.
 
-## 9.5 Strike, bloqueio e justificativa
+## 9.6 Strike, bloqueio e justificativa
 
 - `Aluno` possui `faltas` (strikes ativos no ciclo), `is_bloqueado` (três ou mais
   faltas ativas) e `quantidade_bloqueios` (histórico de vezes em bloqueio);
@@ -616,7 +637,7 @@ Os itens abaixo podem ser refinados em artefatos posteriores ou na modelagem det
 - detalhamento da categoria do servidor
 - detalhamento da situação da matrícula
 - regras adicionais para aluno monitor
-- notificações, perfis de conferente/motorista e entrada sem ticket
+- notificações, perfil de conferente e entrada sem ticket
 
 ---
 
@@ -627,7 +648,7 @@ O núcleo do Cortex parte de `Usuario` como centro da identidade, e organiza o r
 - estrutura organizacional (`Setor`, `Funcao`, `SetorVinculo`)
 - perfis institucionais (`Servidor`, `Terceirizado`, `Cargo`, `EmpresaInstituicao`)
 - perfis acadêmicos (`Aluno`, `Curso`, `AlunoCurso`)
-- transporte universitário (`Percurso`, `Rota`, `ExecucaoRota`, `Ticket`, `Strike`, `Justificativa`)
+- transporte universitário (`Percurso`, `Rota`, `Motorista`, `ExecucaoRota`, `Ticket`, `Strike`, `Justificativa`)
 
 As decisões mais importantes consolidadas neste ERD textual são:
 

@@ -51,7 +51,8 @@ logger = logging.getLogger(__name__)
 
     Inclui **cortex** (níveis L1–L3), **infraestrutura** (capacidades booleanas, secoes
     estruturadas, acesso total de admin/superuser, elegibilidade do solicitante) e
-    **transporte** (capacidades `gerenciar` para L3 e `reservar` para aluno elegível). Novos módulos
+    **transporte** (capacidades `gerenciar` para L3/TI, `motorista` para a visão
+    das rotas do dia e `reservar` para aluno elegível). Novos módulos
     entram automaticamente ao implementar `documentacao_<modulo>()`.
 
     **Permissões:** Qualquer usuário autenticado.

@@ -82,21 +82,24 @@ class UsuarioPermissions(UserModelPermission):
 
     def permissoes_transporte(self) -> dict:
         """
-        Capacidades do módulo Transporte para administração e solicitação de tickets.
+        Capacidades do Transporte para gestão, visão do motorista e solicitação de tickets.
         """
         user = self.object_instance
         if not user:
             return {
                 'transporte': {
                     'gerenciar': False,
+                    'motorista': False,
                     'reservar': False,
                     'bloqueado': False,
                     'faltas': 0,
                     'bloqueios': 0,
                 },
             }
+        from Transporte.motoristas.models import Motorista
 
         gerenciar = bool(user.is_staff or user.is_admin or user.is_superuser)
+        motorista = Motorista().helper.usuario_e_motorista_ativo(user)
         reservar = False
         bloqueado = False
         faltas = 0
@@ -117,5 +120,6 @@ class UsuarioPermissions(UserModelPermission):
                 'bloqueado': bloqueado,
                 'faltas': faltas,
                 'bloqueios': bloqueios,
+                'motorista': motorista,
             },
         }
