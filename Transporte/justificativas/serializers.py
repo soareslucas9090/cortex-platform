@@ -1,13 +1,66 @@
+from django.utils import timezone
 from rest_framework import serializers
 from drf_spectacular.utils import extend_schema_field
 
+from Academico.alunos.serializers import AlunoSerializer
 from Transporte.strikes.serializers import StrikeSerializer
 
 from .models import Justificativa
 
 
+def montar_itens_ausencia(justificativa):
+    strikes = sorted(
+        justificativa.strikes_cobertos.all(),
+        key=lambda strike: strike.ticket.execucao_rota.data_hora_saida,
+    )
+    itens = []
+    for strike in strikes:
+        data_hora_saida = timezone.localtime(strike.ticket.execucao_rota.data_hora_saida)
+        itens.append({
+            'strike_id': strike.pk,
+            'envio': justificativa.created_at,
+            'data_ausencia': data_hora_saida.date(),
+            'horario': data_hora_saida.strftime('%H:%M'),
+            'justificativa': justificativa.texto,
+        })
+    return itens
+
+
+class ItemAusenciaJustificativaSerializer(serializers.Serializer):
+    strike_id = serializers.IntegerField()
+    envio = serializers.DateTimeField()
+    data_ausencia = serializers.DateField()
+    horario = serializers.CharField()
+    justificativa = serializers.CharField()
+
+
+class JustificativaPendenteDetalheSerializer(serializers.ModelSerializer):
+    status_display = serializers.CharField(source='get_status_display', read_only=True)
+    strikes_cobertos = StrikeSerializer(many=True, read_only=True)
+    itens_ausencia = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Justificativa
+        fields = [
+            'id',
+            'status',
+            'status_display',
+            'texto',
+            'strikes_cobertos',
+            'itens_ausencia',
+        ]
+
+    @extend_schema_field(ItemAusenciaJustificativaSerializer(many=True))
+    def get_itens_ausencia(self, obj):
+        return ItemAusenciaJustificativaSerializer(
+            montar_itens_ausencia(obj),
+            many=True,
+        ).data
+
+
 class JustificativaSerializer(serializers.ModelSerializer):
-    strike = serializers.SerializerMethodField()
+    aluno = AlunoSerializer(read_only=True)
+    strikes_cobertos = StrikeSerializer(many=True, read_only=True)
     status_display = serializers.CharField(source='get_status_display', read_only=True)
     analisada_por_nome = serializers.CharField(source='analisada_por.nome', read_only=True)
 
@@ -15,7 +68,8 @@ class JustificativaSerializer(serializers.ModelSerializer):
         model = Justificativa
         fields = [
             'id',
-            'strike',
+            'aluno',
+            'strikes_cobertos',
             'texto',
             'status',
             'status_display',
@@ -25,12 +79,19 @@ class JustificativaSerializer(serializers.ModelSerializer):
             'created_at',
         ]
 
-    @extend_schema_field(StrikeSerializer)
-    def get_strike(self, obj):
-        strike = obj.strike
-        if hasattr(obj, 'quantidade_strikes_ativos'):
-            strike.quantidade_strikes_ativos = obj.quantidade_strikes_ativos
-        return StrikeSerializer(strike, context=self.context).data
+
+class JustificativaDetalheSerializer(JustificativaSerializer):
+    itens_ausencia = serializers.SerializerMethodField()
+
+    class Meta(JustificativaSerializer.Meta):
+        fields = JustificativaSerializer.Meta.fields + ['itens_ausencia']
+
+    @extend_schema_field(ItemAusenciaJustificativaSerializer(many=True))
+    def get_itens_ausencia(self, obj):
+        return ItemAusenciaJustificativaSerializer(
+            montar_itens_ausencia(obj),
+            many=True,
+        ).data
 
 
 class CriarJustificativaSerializer(serializers.Serializer):

@@ -4,8 +4,9 @@ from django.db import IntegrityError
 from django.utils import timezone
 
 from AppCore.core.business.business import ModelInstanceBusiness
-from AppCore.core.exceptions.exceptions import BusinessRuleException
+from AppCore.core.exceptions.exceptions import AuthorizationException, BusinessRuleException
 from Transporte.strikes.choices import StatusStrike
+from Transporte.strikes.helpers import sincronizar_faltas_transporte
 
 from .choices import StatusJustificativa
 
@@ -26,23 +27,37 @@ class JustificativaBusiness(ModelInstanceBusiness):
         except Exception as e:
             self.relancar_ou_erro_sistema(e, 'Não foi possível obter a justificativa.', logger)
 
-    def criar_justificativa(self, strike_id, texto, usuario):
+    def criar_justificativa(self, usuario, texto):
         try:
             from Transporte.strikes.models import Strike
 
             from .models import Justificativa
 
-            strike = Strike.objects.select_for_update().select_related(
-                'ticket',
-                'ticket__aluno',
-                'ticket__aluno__usuario',
-            ).get(pk=strike_id)
-            strike.rules.validar_dono(usuario)
-            strike.rules.validar_ativo()
+            aluno = getattr(usuario, 'aluno', None)
+            if aluno is None:
+                raise AuthorizationException('Somente um aluno pode enviar justificativa.')
+
+            self.object_instance.rules.validar_aluno_bloqueado(aluno)
+            self.object_instance.rules.validar_sem_pendente(aluno)
             self.object_instance.rules.validar_texto(texto)
-            return Justificativa.objects.create(strike=strike, texto=texto.strip())
+
+            strikes_ativos = list(
+                Strike.objects.select_for_update().filter(
+                    ticket__aluno=aluno,
+                    status=StatusStrike.ATIVO,
+                ),
+            )
+            if not strikes_ativos:
+                raise BusinessRuleException('Não há strikes ativos para justificar.')
+
+            justificativa = Justificativa.objects.create(
+                aluno=aluno,
+                texto=texto.strip(),
+            )
+            justificativa.strikes_cobertos.set(strikes_ativos)
+            return justificativa
         except IntegrityError:
-            raise BusinessRuleException('Este strike já possui uma justificativa.')
+            raise BusinessRuleException('Já existe uma justificativa pendente de análise.')
         except Exception as e:
             self.relancar_ou_erro_sistema(e, 'Não foi possível enviar a justificativa.', logger)
 
@@ -53,11 +68,9 @@ class JustificativaBusiness(ModelInstanceBusiness):
             from .models import Justificativa
 
             justificativa = Justificativa.objects.select_for_update().select_related(
-                'strike',
-                'strike__ticket',
-                'strike__ticket__aluno',
-                'strike__ticket__aluno__usuario',
-            ).get(pk=self.object_instance.pk)
+                'aluno',
+                'aluno__usuario',
+            ).prefetch_related('strikes_cobertos').get(pk=self.object_instance.pk)
             justificativa.rules.validar_pendente()
             justificativa.status = (
                 StatusJustificativa.APROVADA
@@ -75,9 +88,13 @@ class JustificativaBusiness(ModelInstanceBusiness):
                 'updated_at',
             ])
             if aprovar:
-                strike = Strike.objects.select_for_update().get(pk=justificativa.strike_id)
-                strike.status = StatusStrike.JUSTIFICADO
-                strike.save(update_fields=['status', 'updated_at'])
+                strikes = Strike.objects.select_for_update().filter(
+                    pk__in=justificativa.strikes_cobertos.values_list('pk', flat=True),
+                )
+                for strike in strikes:
+                    strike.status = StatusStrike.JUSTIFICADO
+                    strike.save(update_fields=['status', 'updated_at'])
+                sincronizar_faltas_transporte(justificativa.aluno)
             return justificativa
         except Exception as e:
             self.relancar_ou_erro_sistema(e, 'Não foi possível analisar a justificativa.', logger)

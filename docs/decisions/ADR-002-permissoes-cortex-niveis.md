@@ -50,10 +50,14 @@ Query params **apenas estreitam** resultados após o escopo de permissão.
 Novos produtos adicionam `permissoes_<modulo>()` em `UsuarioPermissions` e apps Django dentro de um módulo de domínio na raiz (`Infraestrutura/`, `Transporte/`), nunca em pasta genérica `APPs/`. Subdomínios = apps internos do módulo (`Infraestrutura/recursos/`, `Transporte/percursos/`, etc.).
 
 - **Infraestrutura:** capacidades booleanas (`operar`, `cadastrar`, `autorizar`, `retirada_irrestrita`), independentes de L1–L3.
-- **Transporte:** capacidade `gerenciar` alinhada a L3; `reservar` para aluno
-  elegível; `conferir` para L3 ou colaborador (servidor/terceirizado) com função
-  **ou** permissão direta no usuário (OR). Percursos, rotas e análise de justificativas são L3; o conferente
-  opera apenas as execuções do dia e as filas da execução monitorada.
+- **Transporte:** capacidade `gerenciar` alinhada a L3 (`is_staff`, `is_admin` ou
+  superusuário); `motorista` para usuários com perfil Motorista ativo acessarem a
+  visão somente de leitura das rotas do dia; `reservar` para aluno ativo,
+  matriculado e não bloqueado; `conferir` para L3 ou colaborador (servidor/terceirizado)
+  com função **ou** permissão direta no usuário (OR). Percursos, rotas e análise de
+  justificativas são L3; o conferente opera apenas as execuções do dia e as filas da
+  execução monitorada. L3 não recebe a capacidade operacional de motorista
+  automaticamente.
 
 ### Documentação viva da API
 

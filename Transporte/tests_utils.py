@@ -19,6 +19,15 @@ from Transporte.rotas.choices import DiaSemana
 from Transporte.rotas.models import Rota
 
 
+def criar_strike(ticket):
+    from Transporte.strikes.helpers import sincronizar_faltas_transporte
+    from Transporte.strikes.models import Strike
+
+    strike = Strike.objects.create(ticket=ticket)
+    sincronizar_faltas_transporte(ticket.aluno)
+    return strike
+
+
 DIAS_POR_WEEKDAY = {
     0: DiaSemana.SEGUNDA,
     1: DiaSemana.TERCA,

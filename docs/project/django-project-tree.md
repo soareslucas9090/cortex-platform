@@ -388,8 +388,10 @@ Infraestrutura/
 
 ### `Transporte/`
 
-Domínio responsável pelo transporte universitário: cadastros, execuções datadas,
-tickets, fila de espera, conferência de embarque, entrada sem ticket e ausências.
+Domínio responsável pelo transporte universitário. Cobre os cadastros de percursos
+(RF017) e rotas (RF016), o perfil e a visão operacional do motorista (RF013),
+execuções datadas, tickets, fila de espera, conferência de embarque, entrada sem
+ticket e tratamento de ausências.
 
 #### Estrutura atual
 
@@ -399,18 +401,21 @@ Transporte/
 ├── urls.py
 ├── percursos/
 ├── rotas/
+├── motoristas/
 ├── execucoes_rotas/
 ├── tickets/
 ├── entradas_sem_ticket/
 ├── permissoes/
 ├── strikes/
-└── justificativas/
+├── justificativas/
+└── bloqueios/
 ```
 
 #### Responsabilidades
 
 - `percursos/` → model principal `Percurso`
 - `rotas/` → model principal `Rota`
+- `motoristas/` → model principal `Motorista`
 - `execucoes_rotas/` → model principal `ExecucaoRota`
 - `tickets/` → model principal `Ticket`; tickets em espera formam a fila
 - `entradas_sem_ticket/` → model principal `EntradaSemTicket`
@@ -418,6 +423,7 @@ Transporte/
   (capacidade `conferir` em OR; sem rotas HTTP)
 - `strikes/` → model principal `Strike`
 - `justificativas/` → model principal `Justificativa`
+- `bloqueios/` → consulta de alunos bloqueados e envio de justificativa
 
 ---
 

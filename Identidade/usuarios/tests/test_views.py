@@ -42,7 +42,15 @@ def criar_usuario(cpf, nome='Usuário Teste', password='Senha@123', is_admin=Fal
     return usuario
 
 
-def permissoes_esperadas(cortex_nivel, reservar=False, conferir=None):
+def permissoes_esperadas(
+    cortex_nivel,
+    reservar=False,
+    conferir=None,
+    bloqueado=False,
+    faltas=0,
+    bloqueios=0,
+    motorista=False,
+):
     if conferir is None:
         conferir = cortex_nivel == PERMISSAO_CORTEX_EDITAR_TUDO
     return {
@@ -50,8 +58,12 @@ def permissoes_esperadas(cortex_nivel, reservar=False, conferir=None):
         'infraestrutura': capacidades_infraestrutura_vazias(),
         'transporte': {
             'gerenciar': cortex_nivel == PERMISSAO_CORTEX_EDITAR_TUDO,
+            'motorista': motorista,
             'reservar': reservar,
             'conferir': conferir,
+            'bloqueado': bloqueado,
+            'faltas': faltas,
+            'bloqueios': bloqueios,
         },
     }
 
@@ -1030,6 +1042,51 @@ class UsuarioPermissoesTest(APITestCase):
         self.assertIn('permissoes', resposta.data)
         self.assertEqual(resposta.data['permissoes'], permissoes_esperadas('EDITAR_TUDO'))
 
+    def test_login_motorista_ativo_retorna_capacidade_motorista(self):
+        from Transporte.motoristas.models import Motorista
+
+        user = criar_usuario(
+            '66666666667',
+            nome='Motorista Login Teste',
+            password='Password123',
+        )
+        Motorista.objects.create(usuario=user, ativo=True)
+
+        url_login = reverse('auth:token-jwt:login')
+        resposta = self.client.post(
+            url_login,
+            {'login': user.cpf, 'password': 'Password123'},
+        )
+
+        self.assertEqual(resposta.status_code, status.HTTP_200_OK)
+        self.assertEqual(
+            resposta.data['permissoes'],
+            permissoes_esperadas('EDITAR_EU', motorista=True),
+        )
+
+    def test_login_staff_motorista_mantem_as_duas_capacidades(self):
+        from Transporte.motoristas.models import Motorista
+
+        user = criar_usuario(
+            '66666666668',
+            nome='Motorista Staff Teste',
+            password='Password123',
+            is_staff=True,
+        )
+        Motorista.objects.create(usuario=user, ativo=True)
+
+        url_login = reverse('auth:token-jwt:login')
+        resposta = self.client.post(
+            url_login,
+            {'login': user.cpf, 'password': 'Password123'},
+        )
+
+        self.assertEqual(resposta.status_code, status.HTTP_200_OK)
+        self.assertEqual(
+            resposta.data['permissoes'],
+            permissoes_esperadas('EDITAR_TUDO', motorista=True),
+        )
+
     def test_endpoint_me_retorna_permissoes(self):
         user = criar_usuario('77777777777', nome='Me Perms Teste', password='Password123')
         token = obter_tokens(user)
@@ -1041,6 +1098,39 @@ class UsuarioPermissoesTest(APITestCase):
         
         data = resposta.data['dados'] if 'dados' in resposta.data else resposta.data
         self.assertIn('permissoes', data)
+        self.assertEqual(data['permissoes'], permissoes_esperadas('EDITAR_EU'))
+
+    def test_endpoint_me_motorista_ativo_retorna_capacidade_motorista(self):
+        from Transporte.motoristas.models import Motorista
+
+        user = criar_usuario('77777777778', nome='Motorista Me Teste')
+        Motorista.objects.create(usuario=user, ativo=True)
+        token = obter_tokens(user)
+
+        url_me = reverse('auth:token-jwt:me')
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {token}')
+        resposta = self.client.get(url_me)
+
+        self.assertEqual(resposta.status_code, status.HTTP_200_OK)
+        data = resposta.data['dados'] if 'dados' in resposta.data else resposta.data
+        self.assertEqual(
+            data['permissoes'],
+            permissoes_esperadas('EDITAR_EU', motorista=True),
+        )
+
+    def test_endpoint_me_motorista_inativo_nao_retorna_capacidade_motorista(self):
+        from Transporte.motoristas.models import Motorista
+
+        user = criar_usuario('77777777779', nome='Motorista Inativo Me Teste')
+        Motorista.objects.create(usuario=user, ativo=False)
+        token = obter_tokens(user)
+
+        url_me = reverse('auth:token-jwt:me')
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {token}')
+        resposta = self.client.get(url_me)
+
+        self.assertEqual(resposta.status_code, status.HTTP_200_OK)
+        data = resposta.data['dados'] if 'dados' in resposta.data else resposta.data
         self.assertEqual(data['permissoes'], permissoes_esperadas('EDITAR_EU'))
 
 
@@ -1165,14 +1255,21 @@ class DocumentarPermissoesViewTest(APITestCase):
         self.assertIn('retirada_irrestrita', infraestrutura['capacidades'][3]['codigo'])
 
         transporte = next(modulo for modulo in modulos if modulo['chave'] == 'transporte')
-        self.assertEqual(len(transporte['capacidades']), 3)
+        self.assertEqual(len(transporte['capacidades']), 4)
         self.assertEqual(transporte['capacidades'][0]['codigo'], 'gerenciar')
-        self.assertEqual(transporte['capacidades'][1]['codigo'], 'reservar')
-        self.assertEqual(transporte['capacidades'][2]['codigo'], 'conferir')
+        self.assertEqual(transporte['capacidades'][1]['codigo'], 'motorista')
+        self.assertEqual(transporte['capacidades'][2]['codigo'], 'reservar')
+        self.assertEqual(transporte['capacidades'][3]['codigo'], 'conferir')
         self.assertGreaterEqual(len(transporte['exemplos']), 1)
         self.assertIn('secoes', transporte)
-        self.assertGreaterEqual(len(transporte['secoes']), 2)
+        self.assertGreaterEqual(len(transporte['secoes']), 3)
         self.assertEqual(transporte['capacidades'][0]['quem_usa'], 'TI / administradores')
+        compilacao = next(
+            secao for secao in transporte['secoes'] if secao['titulo'] == 'Compilação (permissoes_transporte)'
+        )
+        destaques = {item['destaque'] for item in compilacao['itens']}
+        self.assertIn('bloqueios', destaques)
+        self.assertIn('bloqueios', transporte['exemplos'][0]['capacidades'])
 
     def test_nao_autenticado_retorna_401(self):
         resposta = self.client.get(self.url)

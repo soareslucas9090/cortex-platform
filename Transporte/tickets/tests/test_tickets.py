@@ -12,11 +12,13 @@ from rest_framework.test import APITestCase
 from Academico.alunos.choices import SituacaoAluno
 from AppCore.core.exceptions.exceptions import BusinessRuleException
 from Transporte.execucoes_rotas.choices import StatusExecucaoRota
+from Transporte.strikes.helpers import sincronizar_faltas_transporte
 from Transporte.strikes.models import Strike
 from Transporte.tests_utils import (
     criar_aluno,
     criar_aluno_pcd,
     criar_rota_e_execucao,
+    criar_strike,
     criar_usuario,
     obter_token,
 )
@@ -297,7 +299,10 @@ class TicketBusinessTestCase(APITestCase):
                 ausente_em=timezone.now(),
             )
             Strike.objects.create(ticket=ticket)
+            sincronizar_faltas_transporte(self.aluno)
 
+        self.aluno.refresh_from_db()
+        self.assertTrue(self.aluno.is_bloqueado)
         _, nova_execucao = criar_rota_e_execucao(vagas=1, dias_ate_execucao=21)
         with self.assertRaises(BusinessRuleException):
             Ticket().business.solicitar_reserva(nova_execucao.pk, self.aluno.usuario)
@@ -339,6 +344,9 @@ class TicketBusinessTestCase(APITestCase):
         self.assertEqual(ticket.status, StatusTicket.AUSENTE)
         self.assertEqual(strike.ticket_id, ticket.pk)
         self.assertEqual(Strike.objects.filter(ticket=ticket).count(), 1)
+        self.aluno.refresh_from_db()
+        self.assertEqual(self.aluno.faltas, 1)
+        self.assertFalse(self.aluno.is_bloqueado)
         with self.assertRaises(BusinessRuleException):
             ticket.business.marcar_ausente()
 

@@ -5,13 +5,17 @@ Este arquivo contém as regras, modelos e convenções específicas para o domí
 ## Visão Geral do Domínio
 
 O domínio `Transporte` gerencia o transporte universitário. A entrega atual cobre
-percursos, rotas, execuções datadas, reserva de tickets, fila de espera, conferência
-de embarque, entrada sem ticket, ausências, strikes e justificativas.
+percursos, rotas, o perfil e a visão operacional do motorista (RF013), execuções
+datadas, reserva de tickets, fila de espera, conferência de embarque, entrada sem
+ticket, ausências, strikes e justificativas.
 
 ### Modelos e Relacionamentos
 
 - **Percurso**: trajeto nomeado do ônibus (`apelido` + `descricao`). Campo `ativo` no lugar de exclusão física.
 - **Rota**: agendamento do ônibus em um percurso (`horario_saida`, `dia_semana`, `quantidade_vagas`). N:1 com `Percurso` (um percurso pode ter várias rotas em dias/horários diferentes). Cada rota exige exatamente um percurso, como no diagrama de classes.
+- **Motorista**: perfil associado 1:1 a `Usuario`. O campo `usuario` também é a
+  chave primária do perfil e usa `PROTECT`, impedindo a exclusão física do usuário
+  enquanto o vínculo existir. O campo `ativo` controla a disponibilidade do perfil.
 - **ExecucaoRota**: ocorrência datada de uma rota. Congela `data_hora_saida` e
   `quantidade_vagas`. `chamada_tickets_concluida` e os timestamps
   `monitoramento_iniciado_em`, `chamada_concluida_em` e `finalizada_em` registram
@@ -22,7 +26,11 @@ de embarque, entrada sem ticket, ausências, strikes e justificativas.
   (`vagas_disponiveis > quantidade em EM_ESPERA`), após a chamada.
   Quem está `EM_ESPERA` não usa este fluxo.
 - **Strike**: falta vinculada unicamente a um ticket marcado como ausente.
-- **Justificativa**: solicitação única de revisão de um strike.
+- **Justificativa**: solicitação de revisão de bloqueio, cobrindo todos os strikes ativos do aluno.
+- **Bloqueio**: estado do aluno (`is_bloqueado`, `faltas`, `quantidade_bloqueios`)
+  sincronizado a partir dos strikes ativos; `faltas` são as ausências ativas no
+  ciclo corrente e `quantidade_bloqueios` é o histórico de vezes em que o aluno
+  entrou em bloqueio.
 
 Não é possível desativar um percurso que ainda tenha rotas ativas. Não é possível vincular ou reativar rota em percurso inativo.
 
@@ -32,14 +40,16 @@ Não é possível desativar um percurso que ainda tenha rotas ativas. Não é po
 Transporte/
 ├── __init__.py
 ├── urls.py
-├── percursos/
-├── rotas/
-├── execucoes_rotas/
-├── tickets/
+├── percursos/       # App Django do model Percurso
+├── rotas/           # App Django do model Rota
+├── motoristas/      # App Django do perfil Motorista
+├── execucoes_rotas/ # App Django do model ExecucaoRota
+├── tickets/         # App Django do model Ticket e fila de espera
 ├── entradas_sem_ticket/
 ├── permissoes/
-├── strikes/
-└── justificativas/
+├── strikes/         # App Django do model Strike
+├── justificativas/  # App Django do model Justificativa
+└── bloqueios/       # Consulta de alunos bloqueados e envio de justificativa
 ```
 
 ## Regras Específicas do Domínio
@@ -60,7 +70,43 @@ Transporte/
 - `ativo`: desativar/reativar no lugar de DELETE HTTP.
 - Listagem ordena por dia da semana (segunda → domingo), depois horário e apelido do percurso.
 
-### 3. Execuções de rotas
+### 3. Perfil e visão das rotas do dia pelo motorista (RF013)
+
+- Todos os motoristas ativos visualizam todas as rotas ativas programadas para o dia atual.
+- A data atual usa o timezone `America/Fortaleza` configurado no projeto.
+- Rotas são ordenadas pelo horário de saída e, em caso de empate, pelo apelido do percurso.
+- A consulta é somente de leitura e não cria nem altera registros.
+- A resposta combina os dados de rota e percurso com a execução da data, quando ela existe:
+  `execucao_id`, `status_execucao`, `status_execucao_display`, capacidade congelada
+  da execução e `tickets_solicitados`.
+- `tickets_solicitados` conta tickets que ocupam vaga (`RESERVADO` e `EMBARCADO`),
+  usando a mesma regra de ocupação da execução.
+- Quando ainda não existe execução para a rota na data, os campos da execução são
+  nulos, `tickets_solicitados` é zero e a capacidade exibida vem da rota.
+
+#### Estados do perfil Motorista
+
+- **Ativo**: com a conta de usuário também ativa, recebe a capacidade
+  `transporte.motorista` e pode consultar as rotas do dia.
+- **Inativo**: não recebe a capacidade e não pode acessar a consulta, mesmo que a
+  conta de usuário esteja ativa.
+- Conta de usuário inativa sempre bloqueia o acesso, independentemente do estado do
+  perfil Motorista.
+
+#### Apresentação no frontend
+
+A tela do motorista usa os dados reais da execução e dos tickets retornados pela
+API. O status visual é derivado assim:
+
+- sem execução: `RESERVAS NÃO INICIADAS`;
+- execução `ABERTA`: `RESERVAS EM ABERTO`;
+- demais estados da execução: `RESERVAS FINALIZADAS`.
+
+O indicador `Tickets solicitados` exibe `tickets_solicitados / quantidade_vagas`.
+A tela não oferece ação de iniciar ou finalizar rota, responsabilidade da operação
+administrativa/conferência.
+
+### 4. Execuções de rotas
 
 - Criadas manualmente por L3 para uma rota e uma data.
 - A data deve corresponder ao dia da semana da rota.
@@ -91,7 +137,7 @@ Transporte/
 - Depois de `EM_EMBARQUE`, L3 **não** cancela a execução: só finaliza a
   conferência ou deixa o monitoramento seguir.
 
-### 4. Tickets, capacidade e cancelamento
+### 5. Tickets, capacidade e cancelamento
 
 - Somente usuário e aluno ativos, com situação `MATRICULADO`, podem solicitar
   ticket (reserva ou fila) ou entrar por CPF.
@@ -128,7 +174,7 @@ Transporte/
   a entrada (incluindo o strike desta ausência).
   CPF não fura a fila: só entra quando `vagas_disponiveis > quantidade em EM_ESPERA`.
 
-### 5. Posição dos tickets e prioridade PcD
+### 6. Posição dos tickets e prioridade PcD
 
 A posição é calculada dinamicamente e não é armazenada no ticket. Existem dois
 grupos independentes: reservas confirmadas e fila de espera. A fila não é uma
@@ -153,19 +199,45 @@ indica só se o cadastro tem deficiência preenchida, para o selo no monitoramen
 O payload `posicao` informa `tipo` (`RESERVA` ou `ESPERA`), `atual` e `total`.
 `posicao_fila` permanece como campo compatível e só contém valor para `EM_ESPERA`.
 
-### 6. Ausências, strikes e justificativas
+### 7. Ausências, strikes, bloqueios e justificativas
 
+- Cada ausência registrada (ticket `AUSENTE`) gera exatamente um strike e incrementa
+  `faltas` (strikes ativos no ciclo atual).
+- Com 1 ou 2 faltas ativas o aluno **não** está bloqueado; na 3ª falta ativa
+  (`is_bloqueado=true`) o aluno deixa de reservar tickets e entrar em fila.
+- `quantidade_bloqueios` incrementa **somente** na transição para bloqueado
+  (de `is_bloqueado=false` para `true`); novas faltas no mesmo ciclo (4ª, 5ª…)
+  não incrementam o histórico. Após aprovação da justificativa, `faltas` zera e
+  `quantidade_bloqueios` permanece.
 - L3 marca um ticket `RESERVADO` como `AUSENTE` durante o embarque ou após a
-  finalização; a ação cria exatamente um strike. O conferente faz o mesmo em lote
-  ao finalizar a chamada (`ausentes`). Remover da fila de espera **não** gera strike.
+  finalização; a ação cria exatamente um strike e sincroniza `faltas`,
+  `is_bloqueado` e, quando aplicável, `quantidade_bloqueios` no aluno. O conferente
+  faz o mesmo em lote ao finalizar a chamada (`ausentes`). Remover da fila de espera
+  **não** gera strike.
 - Strike `ATIVO` conta para o bloqueio; `JUSTIFICADO` deixa de contar.
-- O aluno pode enviar imediatamente uma justificativa para qualquer strike ativo
-  próprio, mesmo antes de atingir o bloqueio por três strikes.
-- L3 aprova ou rejeita justificativas pendentes.
-- Aprovar altera o strike para `JUSTIFICADO`; o aluno só é desbloqueado quando
-  restarem menos de três strikes ativos.
+- O aluno bloqueado pode enviar **uma** justificativa cobrindo todos os strikes
+  ativos (`POST /bloqueios/justificativas/`).
+- L3 lista bloqueios, consulta o detalhe e aprova ou rejeita justificativas
+  pendentes (`POST /justificativas/<pk>/aprovar/` ou `/rejeitar/`).
+- Aprovar marca todos os strikes cobertos como `JUSTIFICADO` e ressincroniza o
+  bloqueio do aluno.
 
-### 7. QR Code
+#### Payload do detalhe (modal TI)
+
+`GET /bloqueios/<aluno_pk>/` e `GET /justificativas/<pk>/` expõem, entre outros:
+
+| Campo | Significado |
+|-------|-------------|
+| `ausencias` / `faltas` | Strikes ativos no ciclo atual |
+| `bloqueios` | `quantidade_bloqueios` (histórico de bloqueios) |
+| `deficiencia`, `ultimo_login` | Dados do `Usuario` vinculado |
+| `justificativa_pendente.itens_ausencia[]` | Lista por ausência: `envio`, `data_ausencia`, `horario`, `justificativa` |
+| `justificativa_pendente.strikes_cobertos` | Mantido para compatibilidade com clientes legados |
+
+Cada item de `itens_ausencia` repete o texto único da justificativa e traz a data
+e o horário da execução em que a ausência ocorreu.
+
+### 8. QR Code
 
 - O backend emite em `codigo_qr` um conteúdo opaco assinado, com UUID público do
   ticket e execução. CPF, deficiência e IDs internos não são embutidos.
@@ -177,18 +249,22 @@ O payload `posicao` informa `tipo` (`RESERVA` ou `ESPERA`), `atual` e `total`.
 - A primeira leitura muda o ticket para `EMBARCADO`; leituras posteriores são
   idempotentes e retornam `ja_validado=true`.
 
-### 8. Permissões
+### 9. Permissões
 
 Percursos e rotas continuam restritos a **L3** (`gerenciar`). L2 (`LER_TUDO`) não
 abre o módulo de Transporte. O aluno vê e altera apenas os próprios tickets,
 strikes e justificativas.
 
-- **Payload:** `gerenciar` (L3), `reservar` (aluno elegível), `conferir` (L3 **ou**
-  servidor/terceirizado ativo **e** (`PermissaoFuncaoTransporte.conferir` na função
-  do vínculo ativo **ou** `PermissaoUsuarioTransporte.conferir`)).
+- **Payload (login/me):** `gerenciar` é `true` só para L3; `motorista` exige conta
+  de usuário e perfil Motorista ativos; `reservar` exige aluno ativo, matriculado
+  e não bloqueado; `conferir` é `true` para L3 **ou** servidor/terceirizado ativo
+  **e** (`PermissaoFuncaoTransporte.conferir` na função do vínculo ativo **ou**
+  `PermissaoUsuarioTransporte.conferir`); `bloqueado`, `faltas` e `bloqueios`
+  refletem o estado sincronizado do aluno (`bloqueios` = `quantidade_bloqueios`).
 - **Conferente:** lista só execuções do **dia**; após iniciar a conferência, opera as
   filas de ticket e de espera **dessa** execução. Não acessa GET global de tickets.
 - **Views de conferência:** `PodeConferirTransporteMixin`.
+- **Views administrativas:** `IsAdminMixin` (`tem_acesso_elevado()`), o mesmo critério de L3.
 - **Compilação:** `UsuarioPermissions.permissoes_transporte()`.
 - **Documentação viva:** `documentacao_transporte()`. O dashboard futuro (RF012)
   reutiliza `conferir`; não há capacidade `ver_dashboard`.
@@ -196,7 +272,14 @@ strikes e justificativas.
 Swagger das views de conferência declara capacidade `transporte.conferir` e o
 escopo do dia + filas da execução monitorada.
 
-### 9. Endpoints
+#### Visualização (motorista)
+
+- `user.permissoes.transporte.motorista` é `true` somente para usuário e perfil Motorista ativos.
+- L3/TI não recebe a capacidade operacional automaticamente.
+- O endpoint de leitura usa o `IsAuthenticatedMixin` padrão do `AppCore`; a camada
+  `Business` valida que o usuário possui perfil Motorista ativo.
+
+### 10. Endpoints
 
 Base percursos: `/cortex/transporte/percursos/`
 
@@ -211,6 +294,10 @@ Base rotas: `/cortex/transporte/rotas/`
 - `GET` / `PATCH` em `<pk>/`
 - `POST` `<pk>/desativar/` e `<pk>/reativar/`
 - Listagem: `?ativo=`, `?percurso_id=`, `?dia_semana=`, `?busca=` (apelido do percurso), `?paginacao=`
+
+Base motorista: `/cortex/transporte/motorista/`
+
+- `GET rotas-do-dia/` — lista completa, sem paginação, restrita a motoristas ativos
 
 Base execuções: `/cortex/transporte/execucoes-rotas/`
 
@@ -245,8 +332,16 @@ Base tickets: `/cortex/transporte/tickets/`
 Bases auxiliares:
 
 - `GET /cortex/transporte/strikes/`
+- `GET /cortex/transporte/bloqueios/` — listagem paginada de alunos bloqueados
+  - Query params: `busca` (nome ou CPF), `curso_id` (vínculo ativo), `tem_justificativa` (`true`|`false`), `paginacao`
+  - Campos por item: `aluno_pk`, `nome`, `cpf`, `faltas` (compat.), `ausencias`,
+    `bloqueios`, `is_bloqueado`, `tem_justificativa_pendente`, `curso_nome`,
+    `data_bloqueio`
+- `GET /cortex/transporte/bloqueios/<aluno_pk>/` — detalhe com `deficiencia`,
+  `ultimo_login`, `ausencias`, `bloqueios` e `justificativa_pendente` (com
+  `itens_ausencia` e `strikes_cobertos` para compatibilidade)
+- `POST /cortex/transporte/bloqueios/justificativas/`
 - `GET /cortex/transporte/justificativas/` e
-  `GET /cortex/transporte/justificativas/<pk>/`
-- `POST /cortex/transporte/strikes/<pk>/justificativas/`
+  `GET /cortex/transporte/justificativas/<pk>/` (detalhe inclui `itens_ausencia`)
 - `POST /cortex/transporte/justificativas/<pk>/aprovar/`
 - `POST /cortex/transporte/justificativas/<pk>/rejeitar/`

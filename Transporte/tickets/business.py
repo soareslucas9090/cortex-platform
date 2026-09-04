@@ -52,6 +52,7 @@ class TicketBusiness(ModelInstanceBusiness):
             self.validar_elegibilidade_aluno(usuario)
             rules = self.object_instance.rules
             aluno = getattr(usuario, 'aluno', None)
+            rules.validar_aluno_elegivel(usuario)
             rules.validar_janela_solicitacao(execucao)
             rules.validar_ticket_inexistente(
                 self.object_instance.helper.existe_ticket_ativo(execucao, aluno),
@@ -83,6 +84,7 @@ class TicketBusiness(ModelInstanceBusiness):
             self.validar_elegibilidade_aluno(usuario)
             rules = self.object_instance.rules
             aluno = getattr(usuario, 'aluno', None)
+            rules.validar_aluno_elegivel(usuario)
             rules.validar_janela_solicitacao(execucao)
             rules.validar_ticket_inexistente(
                 self.object_instance.helper.existe_ticket_ativo(execucao, aluno),

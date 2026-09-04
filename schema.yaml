@@ -853,11 +853,12 @@ paths:
         de cada módulo registrado.\n\n    Inclui **cortex** (níveis L1–L3), **infraestrutura**
         (capacidades booleanas, secoes\n    estruturadas, acesso total de admin/superuser,
         elegibilidade do solicitante) e\n    **transporte** (capacidades `gerenciar`
-        para L3, `reservar` para aluno elegível e\n    `conferir` para L3 ou colaborador
-        com função). Novos módulos\n    entram automaticamente ao implementar `documentacao_<modulo>()`.\n\n
-        \   **Permissões:** Qualquer usuário autenticado.\n\n    **Manutenção:** toda
-        alteração de regra de permissão deve atualizar o método\n    `documentacao_<modulo>()`
-        correspondente em `Identidade.usuarios.documentacao`.\n    "
+        para L3, `motorista` para a visão das rotas\n    do dia, `reservar` para aluno
+        elegível e `conferir` para L3 ou colaborador com\n    função). Novos módulos\n
+        \   entram automaticamente ao implementar `documentacao_<modulo>()`.\n\n    **Permissões:**
+        Qualquer usuário autenticado.\n\n    **Manutenção:** toda alteração de regra
+        de permissão deve atualizar o método\n    `documentacao_<modulo>()` correspondente
+        em `Identidade.usuarios.documentacao`.\n    "
       summary: Documentação de permissões por módulo
       tags:
       - Identidade
@@ -5507,6 +5508,153 @@ paths:
               schema:
                 $ref: '#/components/schemas/Terceirizado'
           description: ''
+  /cortex/transporte/bloqueios/:
+    get:
+      operationId: transporte_bloqueios_list
+      description: |-
+        Lista alunos bloqueados no transporte universitário, com busca, filtros e paginação.
+
+        **Permissões:** L3 (EDITAR_TUDO) — perfil TI / administradores.
+
+        **Paginação:** query param `paginacao` (padrão 10, máximo 100).
+      summary: Listar alunos bloqueados
+      parameters:
+      - in: query
+        name: busca
+        schema:
+          type: string
+        description: Filtra por parte do nome ou CPF do aluno (ignora acentos no nome).
+      - in: query
+        name: curso_id
+        schema:
+          type: integer
+        description: Filtra alunos com vínculo ativo ao curso informado.
+      - name: page
+        required: false
+        in: query
+        description: Um número de página dentro do conjunto de resultados paginado.
+        schema:
+          type: integer
+      - in: query
+        name: paginacao
+        schema:
+          type: integer
+        description: Tamanho da página (1–100, padrão 10).
+      - in: query
+        name: tem_justificativa
+        schema:
+          type: boolean
+        description: 'Filtra por justificativa pendente: true = com pendente, false
+          = sem pendente.'
+      tags:
+      - Transporte · Bloqueios
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedBloqueioList'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                description: Não autenticado.
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                description: Acesso administrativo obrigatório.
+          description: ''
+  /cortex/transporte/bloqueios/{aluno_pk}/:
+    get:
+      operationId: transporte_bloqueios_retrieve
+      description: |-
+        Retorna os dados de um aluno bloqueado, incluindo ausências, bloqueios acumulados e justificativa pendente com itens de ausência.
+
+        **Permissões:** L3 (EDITAR_TUDO) — perfil TI / administradores.
+      summary: Detalhar bloqueio
+      parameters:
+      - in: path
+        name: aluno_pk
+        schema:
+          type: integer
+        required: true
+      tags:
+      - Transporte · Bloqueios
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BloqueioDetalhe'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                description: Não autenticado.
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                description: Acesso administrativo obrigatório.
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                description: Bloqueio não encontrado.
+          description: ''
+  /cortex/transporte/bloqueios/justificativas/:
+    post:
+      operationId: transporte_bloqueios_justificativas_create
+      description: |-
+        Envia uma justificativa cobrindo todos os strikes ativos do aluno bloqueado.
+
+        **Permissões:** L1 (EDITAR_EU) — somente o próprio aluno bloqueado.
+      summary: Enviar justificativa de bloqueio
+      tags:
+      - Transporte · Bloqueios
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CriarJustificativa'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/CriarJustificativa'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/CriarJustificativa'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Justificativa'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                description: Aluno não bloqueado ou texto inválido.
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                description: Não autenticado.
+          description: ''
   /cortex/transporte/execucoes-rotas/:
     get:
       operationId: transporte_execucoes_rotas_list
@@ -6424,7 +6572,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Justificativa'
+                $ref: '#/components/schemas/JustificativaDetalhe'
           description: ''
         '401':
           content:
@@ -6557,6 +6705,42 @@ paths:
             application/json:
               schema:
                 description: Justificativa não encontrada.
+          description: ''
+  /cortex/transporte/motorista/rotas-do-dia/:
+    get:
+      operationId: transporte_motorista_rotas_do_dia_list
+      description: "\n    Lista todas as rotas e percursos ativos programados para
+        o dia atual, em ordem de horário.\n    Quando existe uma execução para a rota,
+        inclui o status operacional, a capacidade\n    congelada da execução e a quantidade
+        real de vagas ocupadas por tickets.\n    Rotas ainda sem execução retornam
+        status nulo e zero tickets solicitados.\n    Este endpoint é exclusivamente
+        de leitura e não cria nem altera dados operacionais.\n\n    **Permissões:**
+        Motorista ativo. Todos os motoristas visualizam todas as rotas do dia.\n    "
+      summary: Listar rotas do dia
+      tags:
+      - Transporte · Motorista
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/RotaDoDia'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                description: Não autenticado.
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                description: Usuário não é motorista ativo.
           description: ''
   /cortex/transporte/percursos/:
     get:
@@ -7198,61 +7382,6 @@ paths:
               schema:
                 description: Não autenticado.
           description: ''
-  /cortex/transporte/strikes/{id}/justificativas/:
-    post:
-      operationId: transporte_strikes_justificativas_create
-      description: |-
-        Envia uma justificativa para qualquer strike ativo do próprio aluno.
-
-        **Permissões:** L1 (EDITAR_EU) — somente o aluno dono do strike.
-      summary: Enviar justificativa
-      parameters:
-      - in: path
-        name: id
-        schema:
-          type: integer
-        required: true
-      tags:
-      - Transporte · Justificativas
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/CriarJustificativa'
-          application/x-www-form-urlencoded:
-            schema:
-              $ref: '#/components/schemas/CriarJustificativa'
-          multipart/form-data:
-            schema:
-              $ref: '#/components/schemas/CriarJustificativa'
-        required: true
-      security:
-      - jwtAuth: []
-      responses:
-        '201':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Justificativa'
-          description: ''
-        '400':
-          content:
-            application/json:
-              schema:
-                description: Strike inelegível ou texto inválido.
-          description: ''
-        '401':
-          content:
-            application/json:
-              schema:
-                description: Não autenticado.
-          description: ''
-        '404':
-          content:
-            application/json:
-              schema:
-                description: Strike não encontrado.
-          description: ''
   /cortex/transporte/tickets/:
     get:
       operationId: transporte_tickets_list
@@ -7847,6 +7976,97 @@ components:
       required:
       - id
       - nome
+    Bloqueio:
+      type: object
+      properties:
+        aluno_pk:
+          type: integer
+        nome:
+          type: string
+        cpf:
+          type: string
+        faltas:
+          type: integer
+        ausencias:
+          type: integer
+        bloqueios:
+          type: integer
+        is_bloqueado:
+          type: boolean
+        tem_justificativa_pendente:
+          type: boolean
+          readOnly: true
+        curso_nome:
+          type: string
+          readOnly: true
+        data_bloqueio:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - aluno_pk
+      - ausencias
+      - bloqueios
+      - cpf
+      - curso_nome
+      - data_bloqueio
+      - faltas
+      - is_bloqueado
+      - nome
+      - tem_justificativa_pendente
+    BloqueioDetalhe:
+      type: object
+      properties:
+        aluno_pk:
+          type: integer
+        nome:
+          type: string
+        cpf:
+          type: string
+        faltas:
+          type: integer
+        ausencias:
+          type: integer
+        bloqueios:
+          type: integer
+        is_bloqueado:
+          type: boolean
+        tem_justificativa_pendente:
+          type: boolean
+          readOnly: true
+        curso_nome:
+          type: string
+          readOnly: true
+        data_bloqueio:
+          type: string
+          format: date-time
+          readOnly: true
+        deficiencia:
+          type: string
+          nullable: true
+        ultimo_login:
+          type: string
+          format: date-time
+          nullable: true
+        justificativa_pendente:
+          allOf:
+          - $ref: '#/components/schemas/JustificativaPendenteDetalhe'
+          nullable: true
+          readOnly: true
+      required:
+      - aluno_pk
+      - ausencias
+      - bloqueios
+      - cpf
+      - curso_nome
+      - data_bloqueio
+      - deficiencia
+      - faltas
+      - is_bloqueado
+      - justificativa_pendente
+      - nome
+      - tem_justificativa_pendente
+      - ultimo_login
     Cargo:
       type: object
       properties:
@@ -8761,6 +8981,27 @@ components:
       - mensagem
       - resumo
       - sucesso
+    ItemAusenciaJustificativa:
+      type: object
+      properties:
+        strike_id:
+          type: integer
+        envio:
+          type: string
+          format: date-time
+        data_ausencia:
+          type: string
+          format: date
+        horario:
+          type: string
+        justificativa:
+          type: string
+      required:
+      - data_ausencia
+      - envio
+      - horario
+      - justificativa
+      - strike_id
     ItemEmprestimo:
       type: object
       properties:
@@ -8788,9 +9029,14 @@ components:
         id:
           type: integer
           readOnly: true
-        strike:
+        aluno:
           allOf:
-          - $ref: '#/components/schemas/Strike'
+          - $ref: '#/components/schemas/Aluno'
+          readOnly: true
+        strikes_cobertos:
+          type: array
+          items:
+            $ref: '#/components/schemas/Strike'
           readOnly: true
         texto:
           type: string
@@ -8818,11 +9064,99 @@ components:
           format: date-time
           readOnly: true
       required:
+      - aluno
       - analisada_por_nome
       - created_at
       - id
       - status_display
-      - strike
+      - strikes_cobertos
+      - texto
+    JustificativaDetalhe:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        aluno:
+          allOf:
+          - $ref: '#/components/schemas/Aluno'
+          readOnly: true
+        strikes_cobertos:
+          type: array
+          items:
+            $ref: '#/components/schemas/Strike'
+          readOnly: true
+        texto:
+          type: string
+          title: Justificativa
+        status:
+          allOf:
+          - $ref: '#/components/schemas/StatusJustificativaEnum'
+          minimum: -2147483648
+          maximum: 2147483647
+        status_display:
+          type: string
+          readOnly: true
+        observacao_analise:
+          type: string
+          title: Observação da análise
+        analisada_por_nome:
+          type: string
+          readOnly: true
+        analisada_em:
+          type: string
+          format: date-time
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        itens_ausencia:
+          type: array
+          items:
+            $ref: '#/components/schemas/ItemAusenciaJustificativa'
+          readOnly: true
+      required:
+      - aluno
+      - analisada_por_nome
+      - created_at
+      - id
+      - itens_ausencia
+      - status_display
+      - strikes_cobertos
+      - texto
+    JustificativaPendenteDetalhe:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        status:
+          allOf:
+          - $ref: '#/components/schemas/StatusJustificativaEnum'
+          minimum: -2147483648
+          maximum: 2147483647
+        status_display:
+          type: string
+          readOnly: true
+        texto:
+          type: string
+          title: Justificativa
+        strikes_cobertos:
+          type: array
+          items:
+            $ref: '#/components/schemas/Strike'
+          readOnly: true
+        itens_ausencia:
+          type: array
+          items:
+            $ref: '#/components/schemas/ItemAusenciaJustificativa'
+          readOnly: true
+      required:
+      - id
+      - itens_ausencia
+      - status_display
+      - strikes_cobertos
       - texto
     LoginInput:
       type: object
@@ -8989,6 +9323,29 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Bloco'
+    PaginatedBloqueioList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Bloqueio'
     PaginatedCargoList:
       type: object
       required:
@@ -10189,6 +10546,64 @@ components:
       - id
       - percurso
       - quantidade_vagas
+    RotaDoDia:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        data:
+          type: string
+          format: date
+          readOnly: true
+        horario:
+          type: string
+          format: time
+          readOnly: true
+        dia_semana:
+          allOf:
+          - $ref: '#/components/schemas/DiaSemanaEnum'
+          title: Dia da semana
+        dia_semana_display:
+          type: string
+          readOnly: true
+        capacidade:
+          type: integer
+          readOnly: true
+        percurso:
+          type: string
+          readOnly: true
+        percurso_apelido:
+          type: string
+          readOnly: true
+        execucao_id:
+          type: integer
+          nullable: true
+          readOnly: true
+        status_execucao:
+          type: integer
+          nullable: true
+          readOnly: true
+        status_execucao_display:
+          type: string
+          nullable: true
+          readOnly: true
+        tickets_solicitados:
+          type: integer
+          readOnly: true
+      required:
+      - capacidade
+      - data
+      - dia_semana
+      - dia_semana_display
+      - execucao_id
+      - horario
+      - id
+      - percurso
+      - percurso_apelido
+      - status_execucao
+      - status_execucao_display
+      - tickets_solicitados
     Sala:
       type: object
       properties:
