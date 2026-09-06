@@ -6,6 +6,7 @@ from django.utils import timezone
 from AppCore.core.business.business import ModelInstanceBusiness
 from AppCore.core.exceptions.exceptions import BusinessRuleException
 from Transporte.strikes.choices import StatusStrike
+from Transporte.strikes.helpers import sincronizar_faltas_transporte
 
 from .choices import StatusJustificativa
 
@@ -78,6 +79,7 @@ class JustificativaBusiness(ModelInstanceBusiness):
                 strike = Strike.objects.select_for_update().get(pk=justificativa.strike_id)
                 strike.status = StatusStrike.JUSTIFICADO
                 strike.save(update_fields=['status', 'updated_at'])
+                sincronizar_faltas_transporte(strike.ticket.aluno)
             return justificativa
         except Exception as e:
             self.relancar_ou_erro_sistema(e, 'Não foi possível analisar a justificativa.', logger)

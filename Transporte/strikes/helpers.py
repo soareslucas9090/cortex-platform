@@ -5,6 +5,27 @@ from AppCore.core.helpers.helpers import ModelInstanceHelpers
 from .choices import StatusStrike
 
 
+def sincronizar_faltas_transporte(aluno):
+    from .models import Strike
+
+    estava_bloqueado = aluno.is_bloqueado
+    faltas = Strike.objects.filter(
+        ticket__aluno=aluno,
+        status=StatusStrike.ATIVO,
+    ).count()
+    aluno.faltas = faltas
+    aluno.is_bloqueado = faltas >= 3
+    if not estava_bloqueado and aluno.is_bloqueado:
+        aluno.quantidade_bloqueios += 1
+    aluno.save(update_fields=[
+        'faltas',
+        'is_bloqueado',
+        'quantidade_bloqueios',
+        'updated_at',
+    ])
+    return aluno
+
+
 class StrikeHelpers(ModelInstanceHelpers):
 
     def _listar_com_relacionamentos(self):

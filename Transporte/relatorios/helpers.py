@@ -151,8 +151,8 @@ class RelatorioAlunosHelpers:
             ultimo=Max('embarcado_em'),
         )
         ausencias = tickets_periodo.filter(status=StatusTicket.AUSENTE).count()
-        bloqueios = self.contar_strikes_ativos(aluno.pk)
-        bloqueado = bloqueios >= 3
+        bloqueios = aluno.quantidade_bloqueios
+        bloqueado = aluno.is_bloqueado
 
         if bloqueado:
             status_label = 'Bloqueado'

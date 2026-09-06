@@ -115,6 +115,27 @@ O payload `posicao` informa `tipo` (`RESERVA` ou `ESPERA`), `atual` e `total`.
 - Aprovar altera o strike para `JUSTIFICADO`; o aluno só é desbloqueado quando
   restarem menos de três strikes ativos.
 
+#### Campos persistidos no `Aluno` (transporte)
+
+| Campo | Significado | Reseta após TI aprovar? |
+|-------|-------------|-------------------------|
+| `faltas` | strikes ativos do ciclo atual | Sim |
+| `is_bloqueado` | bloqueio ativo (`faltas >= 3`) | Sim |
+| `quantidade_bloqueios` | vezes que o aluno entrou em bloqueio | **Não** |
+
+- `sincronizar_faltas_transporte()` atualiza `faltas` e `is_bloqueado` a partir
+  dos strikes ativos e incrementa `quantidade_bloqueios` **somente** na transição
+  `is_bloqueado: false → true` (4º strike no mesmo ciclo não incrementa de novo).
+- Aprovação de justificativa zera `faltas`, mas **mantém** `quantidade_bloqueios`
+  como histórico permanente.
+
+#### Relatório de alunos (`relatorio-alunos/detalhes`)
+
+- `ausencias`: tickets `AUSENTE` no período filtrado.
+- `bloqueios`: valor persistido de `Aluno.quantidade_bloqueios` (histórico).
+- `status`: `Bloqueado` quando `is_bloqueado=true`; demais categorias seguem o
+  contexto da aba (`Presente`, `Ausente`, etc.).
+
 ### 7. QR Code
 
 - O backend emite em `codigo_qr` um conteúdo opaco assinado, com UUID público do

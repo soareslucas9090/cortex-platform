@@ -110,6 +110,29 @@ class RelatorioAlunosApiTestCase(APITestCase):
         self.assertEqual(aluno['nome'], 'Aluno Presente')
         self.assertEqual(aluno['turma'], 'TADS Mód. V')
         self.assertEqual(aluno['matricula'], '2023114TADS')
+        self.assertFalse(aluno['pcd'])
+        self.assertIsNotNone(aluno['primeiro_uso'])
+        self.assertIsNotNone(aluno['ultimo_uso'])
+        self.assertEqual(aluno['status'], 'Presente')
+        self.assertEqual(aluno['bloqueios'], 0)
+
+    def test_detalhes_ausencias_separa_bloqueios_historicos(self):
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {obter_token(self.admin)}')
+        resposta = self.client.get(self._url_detalhes(), {
+            'data_inicio': self.data_inicio,
+            'data_fim': self.data_fim,
+            'categoria': 'ausencias',
+            'busca': 'Ausente',
+        })
+        self.assertEqual(resposta.status_code, status.HTTP_200_OK)
+        self.assertEqual(resposta.data['categoria'], 'ausencias')
+        self.assertEqual(resposta.data['count'], 1)
+        aluno = resposta.data['dados'][0]
+        self.assertEqual(aluno['nome'], 'Aluno Ausente')
+        self.assertGreaterEqual(aluno['ausencias'], 1)
+        self.assertEqual(aluno['bloqueios'], 0)
+        self.assertNotEqual(aluno['bloqueios'], aluno['ausencias'])
+        self.assertEqual(aluno['status'], 'Ausente')
 
     def test_detalhes_sem_ticket(self):
         self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {obter_token(self.admin)}')
@@ -142,3 +165,25 @@ class RelatorioAlunosApiTestCase(APITestCase):
         })
         self.assertEqual(resposta.status_code, status.HTTP_200_OK)
         self.assertEqual(len(resposta.data['dados']), 1)
+
+    def test_detalhes_exibe_bloqueios_historicos_persistidos(self):
+        self.aluno_ausente.quantidade_bloqueios = 1
+        self.aluno_ausente.faltas = 0
+        self.aluno_ausente.is_bloqueado = False
+        self.aluno_ausente.save(update_fields=[
+            'quantidade_bloqueios',
+            'faltas',
+            'is_bloqueado',
+        ])
+
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {obter_token(self.admin)}')
+        resposta = self.client.get(self._url_detalhes(), {
+            'data_inicio': self.data_inicio,
+            'data_fim': self.data_fim,
+            'categoria': 'ausencias',
+            'busca': 'Ausente',
+        })
+        self.assertEqual(resposta.status_code, status.HTTP_200_OK)
+        aluno = resposta.data['dados'][0]
+        self.assertEqual(aluno['bloqueios'], 1)
+        self.assertEqual(aluno['status'], 'Ausente')
