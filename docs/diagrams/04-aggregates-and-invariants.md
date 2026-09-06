@@ -341,7 +341,10 @@ para a data local, enriquecida com a execução correspondente.
 9. Um usuário vinculado a Motorista não pode ser excluído fisicamente (`PROTECT`).
 10. Quando existe execução na data, status, capacidade e ocupação vêm dela; sem
     execução, os campos operacionais são nulos/zero e a capacidade vem da rota.
-11. A ocupação considera apenas tickets `RESERVADO` e `EMBARCADO`.
+11. `tickets_solicitados` conta apenas tickets `RESERVADO` e `EMBARCADO`.
+    `vagas_ocupadas` segue a regra da conferência: antes da chamada,
+    `RESERVADO` + `EMBARCADO`; depois da chamada, `EMBARCADO` + `EntradaSemTicket`.
+    `EM_ESPERA` e `NAO_CONTEMPLADO` não ocupam vaga.
 
 ## Onde as regras devem morar
 
@@ -382,22 +385,29 @@ para a data local, enriquecida com a execução correspondente.
    sem ticket; não cancelam tickets nem posições já existentes.
 10. QR Code só embarca ticket reservado em execução no estado de embarque.
 11. A aprovação da justificativa e a retirada do strike da contagem são atômicas.
-12. O conferente inicia o monitoramento somente se `now > T-30`; o aluno ainda
-    solicita no instante igual a T-30. Depois de `FINALIZADA` o monitoramento
-    não reinicia (replay de iniciar só em `EM_EMBARQUE`).
-13. Ao finalizar a execução, a espera que não couber fica `NAO_CONTEMPLADO`.
-14. Entrada sem ticket exige vaga além da espera
-    (`vagas_disponiveis > quantidade em EM_ESPERA`) e não promove quem está `EM_ESPERA`.
-    Aluno que cancelou o ticket ou está `AUSENTE` nesta execução pode entrar por
-    CPF nessas condições; a ausência e o strike permanecem. Três strikes ativos
-    bloqueiam a entrada.
-15. Depois de `EM_EMBARQUE` a execução não pode ser cancelada; só finaliza.
-16. Remover da espera na conferência só atinge tickets da fila visível
-    (N = vagas restantes após a chamada).
-17. Conferência por ID no dia: `CANCELADA` não existe nesse escopo;
-    `FINALIZADA` permanece para consulta da execução e replay de finalizar,
-    não de iniciar. Filas da conferência só em `EM_EMBARQUE`.
-    A lista do dia mostra `FINALIZADA` e omite `CANCELADA`.
+12. O conferente inicia o monitoramento somente se `now > T-30` e somente pelo
+    `iniciar` da conferência (abrir/fechar/cancelar não vai para `EM_EMBARQUE`);
+    o aluno ainda solicita no instante igual a T-30. Depois de `EMBARCADO` o
+    monitoramento não reinicia (replay de iniciar só em `EM_EMBARQUE`).
+    Na chamada, a primeira conclusão grava o conjunto de ausentes; o segundo
+    envio só vale se repetir o mesmo conjunto. Presença por omissão é
+    responsabilidade do conferente (sem QR nesta tela).
+13. Ao finalizar a conferência (`EMBARCADO`), a espera que não embarcou por CPF
+    vira `NAO_CONTEMPLADO`. Grava-se `embarcado_em`; `finalizada_em` fica para
+    o fim da viagem (`INICIADA` → `FINALIZADA`).
+    O lote de CPF é opcional: finalizar sem enviá-lo marca toda a espera restante.
+14. Entrada sem ticket usa as vagas restantes após a chamada (`EM_ESPERA` não reserva
+    vaga). O lote `{ "cpfs": [...] }` promove `EM_ESPERA` para `EMBARCADO` ou cria
+    `EntradaSemTicket`. Replay do mesmo conjunto é 200; conjunto diferente após o
+    primeiro lote não vazio é 400. Lista vazia é 201 e não conclui o lote. Depois
+    do lote concluído, `validar` também é 400 (não mostra card que não dá para gravar).
+    Aluno `AUSENTE` pode entrar por CPF; a ausência e o strike permanecem. Três
+    strikes ativos bloqueiam a entrada.
+15. Depois de `EM_EMBARQUE` a execução não pode ser cancelada; só finaliza a conferência (`EMBARCADO`).
+16. Conferência por ID no dia: `CANCELADA` não existe nesse escopo;
+    `EMBARCADO`, `INICIADA` e `FINALIZADA` permanecem para consulta da execução
+    e replay de finalizar, não de iniciar. Chamada de tickets e CPF só em `EM_EMBARQUE`.
+    A lista do dia mostra esses estados e omite `CANCELADA`.
 
 ### Fronteira transacional
 
@@ -407,8 +417,10 @@ strikes e justificativas são bloqueados nas respectivas mudanças de estado.
 ### Relação com a visão do motorista
 
 O status, a capacidade congelada e a ocupação desta execução alimentam a visão
-diária do motorista, sem transferir para a consulta as regras transacionais de
-reserva e embarque.
+diária do motorista. `tickets_solicitados` permanece `RESERVADO` + `EMBARCADO`;
+depois da chamada, `vagas_ocupadas` soma `EMBARCADO` e `EntradaSemTicket`.
+A consulta do motorista não inicia nem finaliza a viagem; isso fica para API
+futura. O conferente encerra só a conferência (`EMBARCADO` / `embarcado_em`).
 
 ---
 

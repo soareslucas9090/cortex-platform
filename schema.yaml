@@ -5838,7 +5838,7 @@ paths:
     post:
       operationId: transporte_execucoes_rotas_cancelar_create
       description: |-
-        Cancela uma execução ainda não iniciada em embarque e ainda não finalizada.
+        Cancela uma execução ainda não iniciada em embarque e ainda não embarcada.
 
         **Permissões:** L3 (EDITAR_TUDO) — perfil TI / administradores.
       summary: Cancelar execução
@@ -5887,16 +5887,28 @@ paths:
     post:
       operationId: transporte_execucoes_rotas_conferencia_entradas_sem_ticket_create
       description: |-
-        Inclui aluno por CPF em vaga além da fila de espera (vagas disponíveis maior que a quantidade em EM_ESPERA). Quem está EM_ESPERA não usa este fluxo. Quem está AUSENTE nesta execução pode entrar se houver vaga além da espera e o aluno tiver menos de 3 strikes ativos; o ticket permanece AUSENTE e o strike não é desfeito.
+        Recebe `{ "cpfs": [...] }`, revalida cada CPF e grava o lote numa transação. Replay do mesmo conjunto devolve 200. Conjunto diferente após o primeiro lote não vazio devolve 400. Lista vazia não conclui o lote (201 sem persistir). Inclui aluno por CPF nas vagas restantes após a chamada de tickets. Quem está EM_ESPERA e for informado no lote tem o ticket promovido para EMBARCADO. Quem não for informado permanece EM_ESPERA até o finalizar (NAO_CONTEMPLADO). Quem está AUSENTE nesta execução pode entrar se houver vaga e o aluno tiver menos de 3 strikes ativos; o ticket permanece AUSENTE e o strike não é desfeito.
 
-        **Permissões:** capacidade transporte.conferir. Lê e opera execuções do dia e, após iniciar o monitoramento, as filas de ticket e de espera dessa execução. Não amplia cadastro nem recursos globais do módulo.
-      summary: Registrar entrada sem ticket
+        **Permissões:** capacidade transporte.conferir. Lê e opera execuções do dia e, após iniciar o monitoramento, a chamada de tickets e a entrada por CPF dessa execução. Não amplia cadastro nem recursos globais do módulo.
+      summary: Registrar entradas sem ticket em lote
       parameters:
       - in: path
         name: id
         schema:
           type: integer
         required: true
+      - name: page
+        required: false
+        in: query
+        description: Um número de página dentro do conjunto de resultados paginado.
+        schema:
+          type: integer
+      - name: paginacao
+        required: false
+        in: query
+        description: Número de resultados a serem retornados por página.
+        schema:
+          type: integer
       tags:
       - Transporte · Conferência
       requestBody:
@@ -5910,15 +5922,20 @@ paths:
           multipart/form-data:
             schema:
               $ref: '#/components/schemas/RegistrarEntradaSemTicket'
-        required: true
       security:
       - jwtAuth: []
       responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedEntradaSemTicketList'
+          description: ''
         '201':
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/EntradaSemTicket'
+                $ref: '#/components/schemas/PaginatedEntradaSemTicketList'
           description: ''
         '400':
           content:
@@ -5948,9 +5965,9 @@ paths:
     post:
       operationId: transporte_execucoes_rotas_conferencia_entradas_sem_ticket_validar_create
       description: |-
-        Consulta as regras de elegibilidade sem persistir. O POST em entradas-sem-ticket/ revalida tudo e grava. Inclui aluno por CPF em vaga além da fila de espera (vagas disponíveis maior que a quantidade em EM_ESPERA). Quem está EM_ESPERA não usa este fluxo. Quem está AUSENTE nesta execução pode entrar se houver vaga além da espera e o aluno tiver menos de 3 strikes ativos; o ticket permanece AUSENTE e o strike não é desfeito.
+        Consulta as regras de elegibilidade sem persistir e devolve os dados do aluno para o card. Depois do primeiro lote não vazio, devolve 400: o conjunto já foi concluído e a tela não deve mostrar card que não dá para gravar. O POST em entradas-sem-ticket/ revalida o lote e grava. Inclui aluno por CPF nas vagas restantes após a chamada de tickets. Quem está EM_ESPERA e for informado no lote tem o ticket promovido para EMBARCADO. Quem não for informado permanece EM_ESPERA até o finalizar (NAO_CONTEMPLADO). Quem está AUSENTE nesta execução pode entrar se houver vaga e o aluno tiver menos de 3 strikes ativos; o ticket permanece AUSENTE e o strike não é desfeito.
 
-        **Permissões:** capacidade transporte.conferir. Lê e opera execuções do dia e, após iniciar o monitoramento, as filas de ticket e de espera dessa execução. Não amplia cadastro nem recursos globais do módulo.
+        **Permissões:** capacidade transporte.conferir. Lê e opera execuções do dia e, após iniciar o monitoramento, a chamada de tickets e a entrada por CPF dessa execução. Não amplia cadastro nem recursos globais do módulo.
       summary: Validar CPF para entrada sem ticket
       parameters:
       - in: path
@@ -6005,126 +6022,14 @@ paths:
               schema:
                 description: Aluno ou execução não encontrada.
           description: ''
-  /cortex/transporte/execucoes-rotas/{id}/conferencia/fila/:
-    get:
-      operationId: transporte_execucoes_rotas_conferencia_fila_list
-      description: |-
-        Lista somente quem caberia agora (PcD + FIFO, limitado às vagas restantes). Quem está além desse limite não aparece; a remoção nesta tela vale só para os tickets listados. A promoção de toda a espera ocorre ao finalizar. Em `aluno.tem_deficiencia` o front recebe se há deficiência cadastrada (sem o tipo clínico).
-
-        **Permissões:** capacidade transporte.conferir. Lê e opera execuções do dia e, após iniciar o monitoramento, as filas de ticket e de espera dessa execução. Não amplia cadastro nem recursos globais do módulo.
-      summary: Listar fila de espera visível
-      parameters:
-      - in: path
-        name: id
-        schema:
-          type: integer
-        required: true
-      - name: page
-        required: false
-        in: query
-        description: Um número de página dentro do conjunto de resultados paginado.
-        schema:
-          type: integer
-      - in: query
-        name: paginacao
-        schema:
-          type: integer
-        description: Tamanho da página (1–100, padrão 10).
-      tags:
-      - Transporte · Conferência
-      security:
-      - jwtAuth: []
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/PaginatedTicketConferenciaList'
-          description: ''
-        '401':
-          content:
-            application/json:
-              schema:
-                description: Não autenticado.
-          description: ''
-        '403':
-          content:
-            application/json:
-              schema:
-                description: Sem capacidade conferir.
-          description: ''
-        '404':
-          content:
-            application/json:
-              schema:
-                description: Execução de outro dia ou cancelada (fora do escopo da
-                  conferência).
-          description: ''
-  /cortex/transporte/execucoes-rotas/{id}/conferencia/fila/{codigo}/remover/:
-    post:
-      operationId: transporte_execucoes_rotas_conferencia_fila_remover_create
-      description: |-
-        Cancela o ticket em espera sem gerar strike. Só aceita os N tickets da fila visível (vagas restantes), os mesmos do GET da fila.
-
-        **Permissões:** capacidade transporte.conferir. Lê e opera execuções do dia e, após iniciar o monitoramento, as filas de ticket e de espera dessa execução. Não amplia cadastro nem recursos globais do módulo.
-      summary: Remover aluno da fila de espera
-      parameters:
-      - in: path
-        name: codigo
-        schema:
-          type: string
-          format: uuid
-        required: true
-      - in: path
-        name: id
-        schema:
-          type: integer
-        required: true
-      tags:
-      - Transporte · Conferência
-      security:
-      - jwtAuth: []
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/TicketConferencia'
-          description: ''
-        '400':
-          content:
-            application/json:
-              schema:
-                description: Chamada pendente, ticket fora da fila visível, ou ticket
-                  que não está em espera.
-          description: ''
-        '401':
-          content:
-            application/json:
-              schema:
-                description: Não autenticado.
-          description: ''
-        '403':
-          content:
-            application/json:
-              schema:
-                description: Sem capacidade conferir.
-          description: ''
-        '404':
-          content:
-            application/json:
-              schema:
-                description: Ticket inexistente, execução de outro dia ou cancelada
-                  (fora do escopo da conferência).
-          description: ''
   /cortex/transporte/execucoes-rotas/{id}/conferencia/finalizar/:
     post:
       operationId: transporte_execucoes_rotas_conferencia_finalizar_create
       description: |-
-        Embarca a fila que cabe nas vagas restantes, marca o restante da espera como não contemplado (sem strike) e finaliza a execução.
+        Encerra a conferência em EMBARCADO e marca como NAO_CONTEMPLADO quem ainda está EM_ESPERA. Quem embarcou por CPF permanece EMBARCADO. Ausentes não mudam. Não grava finalizada_em (fim da viagem do motorista).
 
-        **Permissões:** capacidade transporte.conferir. Lê e opera execuções do dia e, após iniciar o monitoramento, as filas de ticket e de espera dessa execução. Não amplia cadastro nem recursos globais do módulo.
-      summary: Finalizar execução
+        **Permissões:** capacidade transporte.conferir. Lê e opera execuções do dia e, após iniciar o monitoramento, a chamada de tickets e a entrada por CPF dessa execução. Não amplia cadastro nem recursos globais do módulo.
+      summary: Finalizar conferência
       parameters:
       - in: path
         name: id
@@ -6173,7 +6078,7 @@ paths:
       description: |-
         Grava ausências (com strike) e embarca os demais tickets reservados.
 
-        **Permissões:** capacidade transporte.conferir. Lê e opera execuções do dia e, após iniciar o monitoramento, as filas de ticket e de espera dessa execução. Não amplia cadastro nem recursos globais do módulo.
+        **Permissões:** capacidade transporte.conferir. Lê e opera execuções do dia e, após iniciar o monitoramento, a chamada de tickets e a entrada por CPF dessa execução. Não amplia cadastro nem recursos globais do módulo.
       summary: Finalizar chamada de tickets
       parameters:
       - in: path
@@ -6232,9 +6137,9 @@ paths:
     post:
       operationId: transporte_execucoes_rotas_conferencia_iniciar_create
       description: |-
-        Inicia o monitoramento da execução do dia somente depois de 30 minutos antes da saída. O campo pode_monitorar do payload indica se o botão de iniciar deve aparecer. Não reinicia após FINALIZADA.
+        Inicia o monitoramento da execução do dia somente depois de 30 minutos antes da saída. O campo pode_monitorar do payload indica se o botão de iniciar deve aparecer. Não reinicia após EMBARCADO.
 
-        **Permissões:** capacidade transporte.conferir. Lê e opera execuções do dia e, após iniciar o monitoramento, as filas de ticket e de espera dessa execução. Não amplia cadastro nem recursos globais do módulo.
+        **Permissões:** capacidade transporte.conferir. Lê e opera execuções do dia e, após iniciar o monitoramento, a chamada de tickets e a entrada por CPF dessa execução. Não amplia cadastro nem recursos globais do módulo.
       summary: Iniciar embarque
       parameters:
       - in: path
@@ -6257,7 +6162,7 @@ paths:
           content:
             application/json:
               schema:
-                description: Fora da janela T-30, execução já finalizada, ou transição
+                description: Fora da janela T-30, conferência já encerrada, ou transição
                   inválida.
           description: ''
         '401':
@@ -6285,7 +6190,7 @@ paths:
       description: |-
         Lista os tickets da execução monitorada. O filtro cpf apenas reduz o conjunto. Em `aluno.tem_deficiencia` o front recebe se há deficiência cadastrada (sem o tipo clínico).
 
-        **Permissões:** capacidade transporte.conferir. Lê e opera execuções do dia e, após iniciar o monitoramento, as filas de ticket e de espera dessa execução. Não amplia cadastro nem recursos globais do módulo.
+        **Permissões:** capacidade transporte.conferir. Lê e opera execuções do dia e, após iniciar o monitoramento, a chamada de tickets e a entrada por CPF dessa execução. Não amplia cadastro nem recursos globais do módulo.
       summary: Listar tickets da chamada
       parameters:
       - in: query
@@ -6466,9 +6371,9 @@ paths:
     get:
       operationId: transporte_execucoes_rotas_conferencia_list
       description: |-
-        Lista as execuções do dia em ABERTA, FECHADA, EM_EMBARQUE e FINALIZADA. Não inclui CANCELADA. Query params apenas reduzem o conjunto.
+        Lista as execuções do dia em ABERTA, FECHADA, EM_EMBARQUE, EMBARCADO, INICIADA e FINALIZADA. Não inclui CANCELADA. Query params apenas reduzem o conjunto.
 
-        **Permissões:** capacidade transporte.conferir. Lê e opera execuções do dia e, após iniciar o monitoramento, as filas de ticket e de espera dessa execução. Não amplia cadastro nem recursos globais do módulo.
+        **Permissões:** capacidade transporte.conferir. Lê e opera execuções do dia e, após iniciar o monitoramento, a chamada de tickets e a entrada por CPF dessa execução. Não amplia cadastro nem recursos globais do módulo.
       summary: Listar execuções do dia para conferência
       parameters:
       - in: query
@@ -6711,11 +6616,13 @@ paths:
       operationId: transporte_motorista_rotas_do_dia_list
       description: "\n    Lista todas as rotas e percursos ativos programados para
         o dia atual, em ordem de horário.\n    Quando existe uma execução para a rota,
-        inclui o status operacional, a capacidade\n    congelada da execução e a quantidade
-        real de vagas ocupadas por tickets.\n    Rotas ainda sem execução retornam
-        status nulo e zero tickets solicitados.\n    Este endpoint é exclusivamente
-        de leitura e não cria nem altera dados operacionais.\n\n    **Permissões:**
-        Motorista ativo. Todos os motoristas visualizam todas as rotas do dia.\n    "
+        inclui o status operacional, a capacidade\n    congelada da execução, `tickets_solicitados`
+        (RESERVADO + EMBARCADO) e\n    `vagas_ocupadas` / `vagas_disponiveis` com
+        a mesma regra da conferência\n    (após a chamada: EMBARCADO + entradas sem
+        ticket).\n    Rotas ainda sem execução retornam status nulo, zero tickets
+        e zero vagas ocupadas.\n    Este endpoint é exclusivamente de leitura e não
+        cria nem altera dados operacionais.\n\n    **Permissões:** Motorista ativo.
+        Todos os motoristas visualizam todas as rotas do dia.\n    "
       summary: Listar rotas do dia
       tags:
       - Transporte · Motorista
@@ -7819,11 +7726,15 @@ components:
           format: uri
           readOnly: true
           nullable: true
+        tem_deficiencia:
+          type: boolean
+          readOnly: true
       required:
       - cpf
       - foto
       - id
       - nome
+      - tem_deficiencia
     AlunoTicket:
       type: object
       properties:
@@ -8805,6 +8716,9 @@ components:
         chamada_tickets_concluida:
           type: boolean
           title: Chamada de tickets concluída
+        entradas_cpf_concluidas:
+          type: boolean
+          title: Entrada por CPF concluída
         monitoramento_iniciado_em:
           type: string
           format: date-time
@@ -8814,6 +8728,10 @@ components:
           format: date-time
           nullable: true
           title: Chamada concluída em
+        embarcado_em:
+          type: string
+          format: date-time
+          nullable: true
         finalizada_em:
           type: string
           format: date-time
@@ -9484,6 +9402,29 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/EmprestimoUsuarioResumo'
+    PaginatedEntradaSemTicketList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/EntradaSemTicket'
     PaginatedExecucaoRotaList:
       type: object
       required:
@@ -10383,14 +10324,11 @@ components:
     RegistrarEntradaSemTicket:
       type: object
       properties:
-        cpf:
-          type: string
-          maxLength: 14
-        observacao:
-          type: string
-          default: ''
-      required:
-      - cpf
+        cpfs:
+          type: array
+          items:
+            type: string
+            maxLength: 14
     ResultadoAusenciaTicket:
       type: object
       properties:
@@ -10591,6 +10529,12 @@ components:
         tickets_solicitados:
           type: integer
           readOnly: true
+        vagas_ocupadas:
+          type: integer
+          readOnly: true
+        vagas_disponiveis:
+          type: integer
+          readOnly: true
       required:
       - capacidade
       - data
@@ -10604,6 +10548,8 @@ components:
       - status_execucao
       - status_execucao_display
       - tickets_solicitados
+      - vagas_disponiveis
+      - vagas_ocupadas
     Sala:
       type: object
       properties:
@@ -10800,6 +10746,8 @@ components:
       - 3
       - 4
       - 5
+      - 6
+      - 7
       type: integer
       description: |-
         * `1` - Reservas abertas
@@ -10807,6 +10755,8 @@ components:
         * `3` - Em embarque
         * `4` - Finalizada
         * `5` - Cancelada
+        * `6` - Embarcado
+        * `7` - Iniciada
     StatusImportacaoEnum:
       enum:
       - EM_ANDAMENTO

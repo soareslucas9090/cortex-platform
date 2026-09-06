@@ -7,4 +7,13 @@ class StatusExecucaoRota(models.IntegerChoices):
     EM_EMBARQUE = 3, 'Em embarque'
     FINALIZADA = 4, 'Finalizada'
     CANCELADA = 5, 'Cancelada'
+    EMBARCADO = 6, 'Embarcado'
+    INICIADA = 7, 'Iniciada'
+
+
+STATUS_POS_CONFERENCIA = frozenset({
+    StatusExecucaoRota.EMBARCADO,
+    StatusExecucaoRota.INICIADA,
+    StatusExecucaoRota.FINALIZADA,
+})
 

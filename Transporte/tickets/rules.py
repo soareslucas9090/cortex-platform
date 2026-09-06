@@ -11,13 +11,13 @@ from .choices import StatusTicket
 
 class TicketRules(ModelInstanceRules):
 
-    def validar_aluno_elegivel(self, usuario) -> bool:
+    def validar_aluno_elegivel(self, usuario, quantidade_strikes_ativos=0) -> bool:
         aluno = getattr(usuario, 'aluno', None)
         if not usuario.ativo or aluno is None or not aluno.ativo:
             self.return_exception('Somente um aluno ativo pode solicitar um ticket.')
         if aluno.situacao != SituacaoAluno.MATRICULADO:
             self.return_exception('Somente um aluno matriculado pode solicitar um ticket.')
-        if aluno.is_bloqueado:
+        if aluno.is_bloqueado or quantidade_strikes_ativos >= 3:
             self.return_exception(
                 'O aluno está bloqueado no transporte e não pode solicitar novos tickets.'
             )
@@ -96,13 +96,6 @@ class TicketRules(ModelInstanceRules):
             self.return_exception('O ticket não pertence a esta execução.')
         return True
 
-    def validar_remocao_na_fila_visivel(self, visiveis_pks) -> bool:
-        if self.object_instance.pk not in visiveis_pks:
-            self.return_exception(
-                'Só é possível remover da espera quem aparece na fila visível da conferência.'
-            )
-        return True
-
     def pode_marcar_ausente(self) -> bool:
         self.validar_status(
             StatusTicket.RESERVADO,
@@ -111,11 +104,18 @@ class TicketRules(ModelInstanceRules):
         status_execucao = self.object_instance.execucao_rota.status
         if status_execucao not in (
             StatusExecucaoRota.EM_EMBARQUE,
-            StatusExecucaoRota.FINALIZADA,
+            StatusExecucaoRota.EMBARCADO,
         ):
             self.return_exception(
-                'A ausência só pode ser registrada durante o embarque ou após a finalização.'
+                'A ausência só pode ser registrada durante o embarque ou após a conferência.'
             )
+        return True
+
+    def validar_pode_marcar_nao_contemplado(self) -> bool:
+        self.validar_status(
+            StatusTicket.EM_ESPERA,
+            'Somente um ticket em espera pode ser marcado como não contemplado.',
+        )
         return True
 
     def pode_validar_qr(self) -> bool:

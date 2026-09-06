@@ -5,9 +5,9 @@ from django.db import IntegrityError
 from django.utils import timezone
 
 from AppCore.core.business.business import ModelInstanceBusiness
-from AppCore.core.exceptions.exceptions import BusinessRuleException
+from AppCore.core.exceptions.exceptions import BusinessRuleException, NotFoundException
 
-from .choices import StatusExecucaoRota
+from .choices import STATUS_POS_CONFERENCIA, StatusExecucaoRota
 from .rules import MENSAGEM_EXECUCAO_DUPLICADA
 
 logger = logging.getLogger(__name__)
@@ -37,7 +37,7 @@ class ExecucaoRotaBusiness(ModelInstanceBusiness):
 
     def pode_monitorar(self) -> bool:
         try:
-            return self.object_instance.helper.pode_monitorar()
+            return self.object_instance.rules.pode_iniciar_monitoramento()
         except Exception as e:
             self.relancar_ou_erro_sistema(
                 e,
@@ -75,16 +75,21 @@ class ExecucaoRotaBusiness(ModelInstanceBusiness):
 
     def obter_por_id(self, execucao_id, bloquear=False):
         try:
+            from .models import ExecucaoRota
+
             return self.object_instance.helper.obter_por_id(execucao_id, bloquear)
+        except ExecucaoRota.DoesNotExist:
+            raise NotFoundException('Execução não encontrada.')
         except Exception as e:
             self.relancar_ou_erro_sistema(e, 'Não foi possível obter a execução da rota.', logger)
 
     def alterar_status(self, novo_status):
         try:
-            execucao = self.object_instance.helper.obter_por_id(
+            execucao = self.obter_por_id(
                 self.object_instance.pk,
                 bloquear=True,
             )
+            execucao.rules.validar_embarque_somente_via_iniciar(novo_status)
             if novo_status == StatusExecucaoRota.CANCELADA:
                 execucao.rules.validar_cancelamento_antes_do_embarque(execucao)
             return execucao.state.atualizar_status(novo_status)
@@ -101,12 +106,20 @@ class ExecucaoRotaBusiness(ModelInstanceBusiness):
                 logger,
             )
 
-    def obter_para_conferencia(self, execucao_id, exigir_embarque=False):
+    def obter_para_conferencia(
+        self,
+        execucao_id,
+        exigir_embarque=False,
+        consultar_tickets=False,
+        bloquear=False,
+    ):
         try:
-            execucao = self.object_instance.helper.obter_por_id(execucao_id)
+            execucao = self.obter_por_id(execucao_id, bloquear)
             execucao.rules.validar_execucao_do_dia(execucao)
             if exigir_embarque:
-                execucao.rules.validar_filas_apos_monitoramento(execucao)
+                execucao.rules.validar_execucao_em_embarque(execucao)
+            elif consultar_tickets:
+                execucao.rules.validar_consulta_tickets_conferencia(execucao)
             return execucao
         except Exception as e:
             self.relancar_ou_erro_sistema(
@@ -117,7 +130,7 @@ class ExecucaoRotaBusiness(ModelInstanceBusiness):
 
     def iniciar_embarque(self):
         try:
-            execucao = self.object_instance.helper.obter_por_id(
+            execucao = self.obter_por_id(
                 self.object_instance.pk,
                 bloquear=True,
             )
@@ -137,7 +150,7 @@ class ExecucaoRotaBusiness(ModelInstanceBusiness):
             from Transporte.tickets.choices import StatusTicket
             from Transporte.tickets.models import Ticket
 
-            execucao = self.object_instance.helper.obter_por_id(
+            execucao = self.obter_por_id(
                 self.object_instance.pk,
                 bloquear=True,
             )
@@ -192,18 +205,20 @@ class ExecucaoRotaBusiness(ModelInstanceBusiness):
         try:
             from Transporte.tickets.models import Ticket
 
-            execucao = self.object_instance.helper.obter_por_id(
+            execucao = self.obter_por_id(
                 self.object_instance.pk,
                 bloquear=True,
             )
-            if execucao.status == StatusExecucaoRota.FINALIZADA:
+            if execucao.status in STATUS_POS_CONFERENCIA:
                 return execucao
             execucao.rules.validar_execucao_em_embarque(execucao)
             execucao.rules.validar_chamada_para_finalizar(execucao)
-            Ticket().business.encerrar_fila_na_finalizacao(execucao)
-            execucao = execucao.state.atualizar_status(StatusExecucaoRota.FINALIZADA)
-            execucao.finalizada_em = timezone.now()
-            execucao.save(update_fields=['finalizada_em'])
+            for ticket in Ticket().helper.listar_espera_bloqueada(execucao):
+                ticket.business.marcar_nao_contemplado()
+            execucao = execucao.state.atualizar_status(StatusExecucaoRota.EMBARCADO)
+            if execucao.embarcado_em is None:
+                execucao.embarcado_em = timezone.now()
+                execucao.save(update_fields=['embarcado_em'])
             return execucao
         except Exception as e:
-            self.relancar_ou_erro_sistema(e, 'Não foi possível finalizar a execução.', logger)
+            self.relancar_ou_erro_sistema(e, 'Não foi possível finalizar a conferência.', logger)

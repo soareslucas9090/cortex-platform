@@ -1,0 +1,29 @@
+from django.db import migrations, models
+
+
+class Migration(migrations.Migration):
+
+    dependencies = [
+        ('execucoes_rotas', '0005_entradas_cpf'),
+    ]
+
+    operations = [
+        migrations.AddField(
+            model_name='execucaorota',
+            name='embarcado_em',
+            field=models.DateTimeField(
+                blank=True,
+                null=True,
+                verbose_name='Embarcado em',
+            ),
+        ),
+        migrations.AddField(
+            model_name='historicalexecucaorota',
+            name='embarcado_em',
+            field=models.DateTimeField(
+                blank=True,
+                null=True,
+                verbose_name='Embarcado em',
+            ),
+        ),
+    ]

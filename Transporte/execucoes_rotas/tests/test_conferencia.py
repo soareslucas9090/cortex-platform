@@ -1,12 +1,12 @@
 from datetime import timedelta
 from unittest.mock import patch
 
-from django.urls import reverse
+from django.urls import NoReverseMatch, reverse
 from django.utils import timezone
 from rest_framework import status
 from rest_framework.test import APITestCase
 
-from Transporte.entradas_sem_ticket.rules import MENSAGEM_VAGA_RESERVADA_ESPERA
+from Transporte.entradas_sem_ticket.models import EntradaSemTicket
 from Transporte.execucoes_rotas.choices import StatusExecucaoRota
 from Transporte.execucoes_rotas.rules import MENSAGEM_MONITORAMENTO_APOS_FINALIZAR
 from Transporte.strikes.models import Strike
@@ -57,6 +57,17 @@ class ConferenciaTransporteTestCase(APITestCase):
         return patch(
             'Transporte.execucoes_rotas.rules.now',
             return_value=depois_do_t30,
+        )
+
+    def _iniciar_e_finalizar_chamada(self, ausentes=None):
+        with self._entrar_na_janela_monitoramento():
+            self.client.post(
+                reverse('transporte:conferencia-iniciar', kwargs={'pk': self.execucao.pk}),
+            )
+        self.client.post(
+            reverse('transporte:conferencia-finalizar-chamada', kwargs={'pk': self.execucao.pk}),
+            {'ausentes': ausentes or []},
+            format='json',
         )
 
     def test_payload_conferente_tipico(self):
@@ -128,8 +139,8 @@ class ConferenciaTransporteTestCase(APITestCase):
             format='json',
         )
         self.assertEqual(chamada.status_code, status.HTTP_200_OK)
-        fila = self.client.get(reverse('transporte:conferencia-fila', kwargs={'pk': self.execucao.pk}))
-        self.assertEqual(fila.status_code, status.HTTP_200_OK)
+        with self.assertRaises(NoReverseMatch):
+            reverse('transporte:conferencia-fila', kwargs={'pk': self.execucao.pk})
 
     def test_lista_monitoramento_indica_deficiencia(self):
         pcd = criar_aluno_pcd('21000000012', nome='Aluno PcD')
@@ -187,137 +198,60 @@ class ConferenciaTransporteTestCase(APITestCase):
         )
         self.assertEqual(segunda.status_code, status.HTTP_200_OK)
 
-    def test_remover_espera_nao_gera_strike(self):
-        with self._entrar_na_janela_monitoramento():
-            self.client.post(
-                reverse('transporte:conferencia-iniciar', kwargs={'pk': self.execucao.pk}),
-            )
-        self.client.post(
-            reverse('transporte:conferencia-finalizar-chamada', kwargs={'pk': self.execucao.pk}),
-            {'ausentes': []},
-            format='json',
-        )
-        espera = Ticket.objects.get(aluno=self.aluno_espera, execucao_rota=self.execucao)
-        resposta = self.client.post(
+    def test_rotas_da_fila_da_conferencia_foram_removidas(self):
+        with self.assertRaises(NoReverseMatch):
+            reverse('transporte:conferencia-fila', kwargs={'pk': self.execucao.pk})
+        with self.assertRaises(NoReverseMatch):
             reverse(
                 'transporte:conferencia-fila-remover',
-                kwargs={'pk': self.execucao.pk, 'codigo': espera.codigo},
-            ),
-        )
-        self.assertEqual(resposta.status_code, status.HTTP_200_OK)
-        espera.refresh_from_db()
-        self.assertEqual(espera.status, StatusTicket.CANCELADO)
-        self.assertFalse(Strike.objects.filter(ticket=espera).exists())
-
-    def test_nao_remove_espera_antes_da_chamada(self):
-        with self._entrar_na_janela_monitoramento():
-            self.client.post(
-                reverse('transporte:conferencia-iniciar', kwargs={'pk': self.execucao.pk}),
+                kwargs={'pk': self.execucao.pk, 'codigo': '00000000-0000-0000-0000-000000000000'},
             )
-        espera = Ticket.objects.get(aluno=self.aluno_espera, execucao_rota=self.execucao)
-        resposta = self.client.post(
-            reverse(
-                'transporte:conferencia-fila-remover',
-                kwargs={'pk': self.execucao.pk, 'codigo': espera.codigo},
-            ),
-        )
-        self.assertEqual(resposta.status_code, status.HTTP_400_BAD_REQUEST)
-        espera.refresh_from_db()
-        self.assertEqual(espera.status, StatusTicket.EM_ESPERA)
 
-    def test_nao_remove_espera_fora_da_fila_visivel(self):
-        with self._entrar_na_janela_monitoramento():
-            self.client.post(
-                reverse('transporte:conferencia-iniciar', kwargs={'pk': self.execucao.pk}),
-            )
-        self.client.post(
-            reverse('transporte:conferencia-finalizar-chamada', kwargs={'pk': self.execucao.pk}),
-            {'ausentes': []},
-            format='json',
-        )
-        extra = Ticket.objects.get(aluno=self.aluno_extra, execucao_rota=self.execucao)
-        resposta = self.client.post(
-            reverse(
-                'transporte:conferencia-fila-remover',
-                kwargs={'pk': self.execucao.pk, 'codigo': extra.codigo},
-            ),
-        )
-        self.assertEqual(resposta.status_code, status.HTTP_400_BAD_REQUEST)
-        extra.refresh_from_db()
-        self.assertEqual(extra.status, StatusTicket.EM_ESPERA)
-
-    def test_entrada_sem_ticket_bloqueia_quando_espera_cobre_vagas(self):
-        with self._entrar_na_janela_monitoramento():
-            self.client.post(
-                reverse('transporte:conferencia-iniciar', kwargs={'pk': self.execucao.pk}),
-            )
-        self.client.post(
-            reverse('transporte:conferencia-finalizar-chamada', kwargs={'pk': self.execucao.pk}),
-            {'ausentes': []},
-            format='json',
-        )
+    def test_entrada_por_cpf_usa_vaga_mesmo_com_espera(self):
+        self._iniciar_e_finalizar_chamada()
         outro = criar_aluno('21000000004')
         resposta = self.client.post(
             reverse('transporte:conferencia-entrada-sem-ticket', kwargs={'pk': self.execucao.pk}),
-            {'cpf': outro.usuario.cpf},
-            format='json',
-        )
-        self.assertEqual(resposta.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertIn(MENSAGEM_VAGA_RESERVADA_ESPERA, str(resposta.data))
-
-        for aluno in (self.aluno_espera, self.aluno_extra):
-            ticket_espera = Ticket.objects.get(aluno=aluno, execucao_rota=self.execucao)
-            self.client.post(
-                reverse(
-                    'transporte:conferencia-fila-remover',
-                    kwargs={'pk': self.execucao.pk, 'codigo': ticket_espera.codigo},
-                ),
-            )
-        resposta = self.client.post(
-            reverse('transporte:conferencia-entrada-sem-ticket', kwargs={'pk': self.execucao.pk}),
-            {'cpf': outro.usuario.cpf},
+            {'cpfs': [outro.usuario.cpf]},
             format='json',
         )
         self.assertEqual(resposta.status_code, status.HTTP_201_CREATED)
-
-    def test_entrada_sem_ticket_na_vaga_alem_da_espera(self):
-        from Transporte.entradas_sem_ticket.models import EntradaSemTicket
-
-        self.execucao.quantidade_vagas = 4
-        self.execucao.save(update_fields=['quantidade_vagas'])
-        with self._entrar_na_janela_monitoramento():
-            self.client.post(
-                reverse('transporte:conferencia-iniciar', kwargs={'pk': self.execucao.pk}),
-            )
-        self.client.post(
-            reverse('transporte:conferencia-finalizar-chamada', kwargs={'pk': self.execucao.pk}),
-            {'ausentes': []},
-            format='json',
-        )
-        primeiro = criar_aluno('21000000050')
-        segunda_pessoa = criar_aluno('21000000051')
-        primeira = self.client.post(
-            reverse('transporte:conferencia-entrada-sem-ticket', kwargs={'pk': self.execucao.pk}),
-            {'cpf': primeiro.usuario.cpf},
-            format='json',
-        )
-        self.assertEqual(primeira.status_code, status.HTTP_201_CREATED)
-        segunda = self.client.post(
-            reverse('transporte:conferencia-entrada-sem-ticket', kwargs={'pk': self.execucao.pk}),
-            {'cpf': segunda_pessoa.usuario.cpf},
-            format='json',
-        )
-        self.assertEqual(segunda.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertIn(MENSAGEM_VAGA_RESERVADA_ESPERA, str(segunda.data))
+        self.assertEqual(len(resposta.data['dados']), 1)
         self.assertTrue(
             EntradaSemTicket.objects.filter(
-                aluno=primeiro,
+                aluno=outro,
                 execucao_rota=self.execucao,
             ).exists()
         )
+        self.assertEqual(
+            Ticket.objects.get(aluno=self.aluno_espera, execucao_rota=self.execucao).status,
+            StatusTicket.EM_ESPERA,
+        )
+
+    def test_lote_de_cpfs_grava_varios_e_rejeita_acima_das_vagas(self):
+        self.execucao.quantidade_vagas = 4
+        self.execucao.save(update_fields=['quantidade_vagas'])
+        self._iniciar_e_finalizar_chamada()
+        primeiro = criar_aluno('21000000050')
+        segunda_pessoa = criar_aluno('21000000051')
+        terceira_pessoa = criar_aluno('21000000052')
+        quarta_pessoa = criar_aluno('21000000053')
+        primeira = self.client.post(
+            reverse('transporte:conferencia-entrada-sem-ticket', kwargs={'pk': self.execucao.pk}),
+            {'cpfs': [primeiro.usuario.cpf, segunda_pessoa.usuario.cpf]},
+            format='json',
+        )
+        self.assertEqual(primeira.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(len(primeira.data['dados']), 2)
+        segunda = self.client.post(
+            reverse('transporte:conferencia-entrada-sem-ticket', kwargs={'pk': self.execucao.pk}),
+            {'cpfs': [terceira_pessoa.usuario.cpf, quarta_pessoa.usuario.cpf]},
+            format='json',
+        )
+        self.assertEqual(segunda.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertFalse(
             EntradaSemTicket.objects.filter(
-                aluno=segunda_pessoa,
+                aluno=terceira_pessoa,
                 execucao_rota=self.execucao,
             ).exists()
         )
@@ -330,43 +264,30 @@ class ConferenciaTransporteTestCase(APITestCase):
             StatusTicket.EM_ESPERA,
         )
 
-    def _iniciar_chamada_e_esvaziar_espera(self, ausentes):
-        with self._entrar_na_janela_monitoramento():
-            self.client.post(
-                reverse('transporte:conferencia-iniciar', kwargs={'pk': self.execucao.pk}),
-            )
-        self.client.post(
-            reverse('transporte:conferencia-finalizar-chamada', kwargs={'pk': self.execucao.pk}),
-            {'ausentes': ausentes},
+    def test_lote_com_cpfs_duplicados_retorna_400(self):
+        self._iniciar_e_finalizar_chamada()
+        outro = criar_aluno('21000000054')
+        resposta = self.client.post(
+            reverse('transporte:conferencia-entrada-sem-ticket', kwargs={'pk': self.execucao.pk}),
+            {'cpfs': [outro.usuario.cpf, outro.usuario.cpf]},
             format='json',
         )
-        for aluno in (self.aluno_espera, self.aluno_extra):
-            ticket_espera = Ticket.objects.get(aluno=aluno, execucao_rota=self.execucao)
-            self.client.post(
-                reverse(
-                    'transporte:conferencia-fila-remover',
-                    kwargs={'pk': self.execucao.pk, 'codigo': ticket_espera.codigo},
-                ),
-            )
+        self.assertEqual(resposta.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertFalse(
+            EntradaSemTicket.objects.filter(
+                aluno=outro,
+                execucao_rota=self.execucao,
+            ).exists()
+        )
 
     def test_ausente_entra_por_cpf_mantendo_strike(self):
-        from Transporte.entradas_sem_ticket.models import EntradaSemTicket
-
         self.execucao.quantidade_vagas = 3
         self.execucao.save(update_fields=['quantidade_vagas'])
         ticket = Ticket.objects.get(aluno=self.aluno_reserva, execucao_rota=self.execucao)
-        with self._entrar_na_janela_monitoramento():
-            self.client.post(
-                reverse('transporte:conferencia-iniciar', kwargs={'pk': self.execucao.pk}),
-            )
-        self.client.post(
-            reverse('transporte:conferencia-finalizar-chamada', kwargs={'pk': self.execucao.pk}),
-            {'ausentes': [str(ticket.codigo)]},
-            format='json',
-        )
+        self._iniciar_e_finalizar_chamada(ausentes=[str(ticket.codigo)])
         resposta = self.client.post(
             reverse('transporte:conferencia-entrada-sem-ticket', kwargs={'pk': self.execucao.pk}),
-            {'cpf': self.aluno_reserva.usuario.cpf},
+            {'cpfs': [self.aluno_reserva.usuario.cpf]},
             format='json',
         )
         self.assertEqual(resposta.status_code, status.HTTP_201_CREATED)
@@ -385,10 +306,8 @@ class ConferenciaTransporteTestCase(APITestCase):
         )
 
     def test_ausente_com_tres_strikes_nao_entra_por_cpf(self):
-        from Transporte.entradas_sem_ticket.models import EntradaSemTicket
-
         ticket = Ticket.objects.get(aluno=self.aluno_reserva, execucao_rota=self.execucao)
-        self._iniciar_chamada_e_esvaziar_espera([str(ticket.codigo)])
+        self._iniciar_e_finalizar_chamada(ausentes=[str(ticket.codigo)])
         for indice in range(2):
             _, outra_execucao = criar_rota_e_execucao(vagas=1, dias_ate_execucao=8 + indice)
             outro_ticket = Ticket.objects.create(
@@ -400,7 +319,7 @@ class ConferenciaTransporteTestCase(APITestCase):
             Strike.objects.create(ticket=outro_ticket)
         resposta = self.client.post(
             reverse('transporte:conferencia-entrada-sem-ticket', kwargs={'pk': self.execucao.pk}),
-            {'cpf': self.aluno_reserva.usuario.cpf},
+            {'cpfs': [self.aluno_reserva.usuario.cpf]},
             format='json',
         )
         self.assertEqual(resposta.status_code, status.HTTP_400_BAD_REQUEST)
@@ -414,51 +333,81 @@ class ConferenciaTransporteTestCase(APITestCase):
         )
 
     def test_cpf_inexistente_retorna_404(self):
-        with self._entrar_na_janela_monitoramento():
-            self.client.post(
-                reverse('transporte:conferencia-iniciar', kwargs={'pk': self.execucao.pk}),
-            )
-        self.client.post(
-            reverse('transporte:conferencia-finalizar-chamada', kwargs={'pk': self.execucao.pk}),
-            {'ausentes': []},
-            format='json',
-        )
-        for aluno in (self.aluno_espera, self.aluno_extra):
-            ticket_espera = Ticket.objects.get(aluno=aluno, execucao_rota=self.execucao)
-            self.client.post(
-                reverse(
-                    'transporte:conferencia-fila-remover',
-                    kwargs={'pk': self.execucao.pk, 'codigo': ticket_espera.codigo},
-                ),
-            )
+        self._iniciar_e_finalizar_chamada()
         resposta = self.client.post(
             reverse('transporte:conferencia-entrada-sem-ticket', kwargs={'pk': self.execucao.pk}),
-            {'cpf': '00000000000'},
+            {'cpfs': ['00000000000']},
             format='json',
         )
         self.assertEqual(resposta.status_code, status.HTTP_404_NOT_FOUND)
 
-    def test_finalizar_promove_espera_e_cancela_excedentes(self):
-        with self._entrar_na_janela_monitoramento():
-            self.client.post(
-                reverse('transporte:conferencia-iniciar', kwargs={'pk': self.execucao.pk}),
-            )
-        self.client.post(
-            reverse('transporte:conferencia-finalizar-chamada', kwargs={'pk': self.execucao.pk}),
-            {'ausentes': []},
-            format='json',
-        )
+    def test_finalizar_marca_espera_nao_contemplado(self):
+        self._iniciar_e_finalizar_chamada()
         resposta = self.client.post(
             reverse('transporte:conferencia-finalizar', kwargs={'pk': self.execucao.pk}),
         )
         self.assertEqual(resposta.status_code, status.HTTP_200_OK)
         self.execucao.refresh_from_db()
-        self.assertEqual(self.execucao.status, StatusExecucaoRota.FINALIZADA)
-        espera_promovida = Ticket.objects.get(aluno=self.aluno_espera, execucao_rota=self.execucao)
-        self.assertEqual(espera_promovida.status, StatusTicket.EMBARCADO)
-        espera_cancelada = Ticket.objects.get(aluno=self.aluno_extra, execucao_rota=self.execucao)
-        self.assertEqual(espera_cancelada.status, StatusTicket.NAO_CONTEMPLADO)
-        self.assertFalse(Strike.objects.filter(ticket=espera_cancelada).exists())
+        self.assertEqual(self.execucao.status, StatusExecucaoRota.EMBARCADO)
+        self.assertIsNotNone(self.execucao.embarcado_em)
+        self.assertIsNone(self.execucao.finalizada_em)
+        self.assertEqual(
+            Ticket.objects.get(aluno=self.aluno_espera, execucao_rota=self.execucao).status,
+            StatusTicket.NAO_CONTEMPLADO,
+        )
+        self.assertEqual(
+            Ticket.objects.get(aluno=self.aluno_extra, execucao_rota=self.execucao).status,
+            StatusTicket.NAO_CONTEMPLADO,
+        )
+        self.assertEqual(
+            Ticket.objects.get(aluno=self.aluno_reserva, execucao_rota=self.execucao).status,
+            StatusTicket.EMBARCADO,
+        )
+        self.assertFalse(self.execucao.entradas_cpf_concluidas)
+
+    def test_finalizar_nao_contempla_quem_embarcou_por_cpf(self):
+        self._iniciar_e_finalizar_chamada()
+        espera = Ticket.objects.get(aluno=self.aluno_espera, execucao_rota=self.execucao)
+        self.assertEqual(
+            self.client.post(
+                reverse(
+                    'transporte:conferencia-entrada-sem-ticket',
+                    kwargs={'pk': self.execucao.pk},
+                ),
+                {'cpfs': [espera.aluno.usuario.cpf]},
+                format='json',
+            ).status_code,
+            status.HTTP_201_CREATED,
+        )
+        resposta = self.client.post(
+            reverse('transporte:conferencia-finalizar', kwargs={'pk': self.execucao.pk}),
+        )
+        self.assertEqual(resposta.status_code, status.HTTP_200_OK)
+        espera.refresh_from_db()
+        self.assertEqual(espera.status, StatusTicket.EMBARCADO)
+        self.assertEqual(
+            Ticket.objects.get(aluno=self.aluno_extra, execucao_rota=self.execucao).status,
+            StatusTicket.NAO_CONTEMPLADO,
+        )
+
+    def test_finalizar_mantem_ausente_e_contempla_espera(self):
+        ticket = Ticket.objects.get(aluno=self.aluno_reserva, execucao_rota=self.execucao)
+        self._iniciar_e_finalizar_chamada(ausentes=[str(ticket.codigo)])
+        resposta = self.client.post(
+            reverse('transporte:conferencia-finalizar', kwargs={'pk': self.execucao.pk}),
+        )
+        self.assertEqual(resposta.status_code, status.HTTP_200_OK)
+        ticket.refresh_from_db()
+        self.assertEqual(ticket.status, StatusTicket.AUSENTE)
+        self.assertTrue(Strike.objects.filter(ticket=ticket).exists())
+        self.assertEqual(
+            Ticket.objects.get(aluno=self.aluno_espera, execucao_rota=self.execucao).status,
+            StatusTicket.NAO_CONTEMPLADO,
+        )
+        self.assertEqual(
+            Ticket.objects.get(aluno=self.aluno_extra, execucao_rota=self.execucao).status,
+            StatusTicket.NAO_CONTEMPLADO,
+        )
 
     def test_terceirizado_com_funcao_confere(self):
         conferente = criar_conferente(cpf='30000000002', terceirizado=True)
@@ -531,7 +480,21 @@ class ConferenciaTransporteTestCase(APITestCase):
         self.assertEqual(primeira.status_code, status.HTTP_200_OK)
         self.assertEqual(segunda.status_code, status.HTTP_200_OK)
         self.execucao.refresh_from_db()
-        self.assertEqual(self.execucao.status, StatusExecucaoRota.FINALIZADA)
+        self.assertEqual(self.execucao.status, StatusExecucaoRota.EMBARCADO)
+        self.assertIsNotNone(self.execucao.embarcado_em)
+        self.assertIsNone(self.execucao.finalizada_em)
+        self.assertEqual(
+            primeira.data['dados']['embarcado_em'],
+            segunda.data['dados']['embarcado_em'],
+        )
+        self.assertEqual(
+            Ticket.objects.get(aluno=self.aluno_espera, execucao_rota=self.execucao).status,
+            StatusTicket.NAO_CONTEMPLADO,
+        )
+        self.assertEqual(
+            Ticket.objects.get(aluno=self.aluno_extra, execucao_rota=self.execucao).status,
+            StatusTicket.NAO_CONTEMPLADO,
+        )
 
     def _finalizar_conferencia_na_janela(self):
         with self._entrar_na_janela_monitoramento():
@@ -550,7 +513,9 @@ class ConferenciaTransporteTestCase(APITestCase):
         )
         self.assertEqual(finalizar.status_code, status.HTTP_200_OK)
         self.execucao.refresh_from_db()
-        self.assertEqual(self.execucao.status, StatusExecucaoRota.FINALIZADA)
+        self.assertEqual(self.execucao.status, StatusExecucaoRota.EMBARCADO)
+        self.assertIsNotNone(self.execucao.embarcado_em)
+        self.assertIsNone(self.execucao.finalizada_em)
 
     def test_nao_inicia_apos_finalizar_conferencia(self):
         self._finalizar_conferencia_na_janela()
@@ -604,6 +569,12 @@ class ConferenciaTransporteTestCase(APITestCase):
         _, em_embarque = criar_execucao_hoje(vagas=1)
         em_embarque.status = StatusExecucaoRota.EM_EMBARQUE
         em_embarque.save(update_fields=['status'])
+        _, embarcada = criar_execucao_hoje(vagas=1)
+        embarcada.status = StatusExecucaoRota.EMBARCADO
+        embarcada.save(update_fields=['status'])
+        _, iniciada = criar_execucao_hoje(vagas=1)
+        iniciada.status = StatusExecucaoRota.INICIADA
+        iniciada.save(update_fields=['status'])
         _, finalizada = criar_execucao_hoje(vagas=1)
         finalizada.status = StatusExecucaoRota.FINALIZADA
         finalizada.save(update_fields=['status'])
@@ -616,8 +587,12 @@ class ConferenciaTransporteTestCase(APITestCase):
         self.assertIn(self.execucao.pk, por_id)
         self.assertIn(fechada.pk, por_id)
         self.assertIn(em_embarque.pk, por_id)
+        self.assertIn(embarcada.pk, por_id)
+        self.assertIn(iniciada.pk, por_id)
         self.assertIn(finalizada.pk, por_id)
         self.assertNotIn(cancelada.pk, por_id)
+        self.assertFalse(por_id[embarcada.pk]['pode_monitorar'])
+        self.assertFalse(por_id[iniciada.pk]['pode_monitorar'])
         self.assertFalse(por_id[finalizada.pk]['pode_monitorar'])
 
     def test_replay_iniciar_embarque_e_idempotente(self):
@@ -666,82 +641,142 @@ class ConferenciaTransporteTestCase(APITestCase):
         )
         self.assertEqual(resposta.status_code, status.HTTP_400_BAD_REQUEST)
 
-    def test_cpf_de_espera_nao_promove_pelo_fluxo_sem_ticket(self):
-        with self._entrar_na_janela_monitoramento():
-            self.client.post(
-                reverse('transporte:conferencia-iniciar', kwargs={'pk': self.execucao.pk}),
-            )
-        self.client.post(
-            reverse('transporte:conferencia-finalizar-chamada', kwargs={'pk': self.execucao.pk}),
-            {'ausentes': []},
-            format='json',
-        )
+    def test_cpf_de_espera_promove_ticket_sem_criar_entrada(self):
+        self._iniciar_e_finalizar_chamada()
         espera = Ticket.objects.get(aluno=self.aluno_espera, execucao_rota=self.execucao)
         resposta = self.client.post(
             reverse('transporte:conferencia-entrada-sem-ticket', kwargs={'pk': self.execucao.pk}),
-            {'cpf': espera.aluno.usuario.cpf},
+            {'cpfs': [espera.aluno.usuario.cpf]},
             format='json',
         )
-        self.assertEqual(resposta.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(resposta.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(resposta.data['dados'], [])
         espera.refresh_from_db()
-        self.assertEqual(espera.status, StatusTicket.EM_ESPERA)
+        self.assertEqual(espera.status, StatusTicket.EMBARCADO)
+        self.assertFalse(
+            EntradaSemTicket.objects.filter(
+                aluno=self.aluno_espera,
+                execucao_rota=self.execucao,
+            ).exists()
+        )
+        self.assertEqual(
+            Ticket.objects.get(aluno=self.aluno_extra, execucao_rota=self.execucao).status,
+            StatusTicket.EM_ESPERA,
+        )
+        replay = self.client.post(
+            reverse('transporte:conferencia-entrada-sem-ticket', kwargs={'pk': self.execucao.pk}),
+            {'cpfs': [espera.aluno.usuario.cpf]},
+            format='json',
+        )
+        self.assertEqual(replay.status_code, status.HTTP_200_OK)
+        self.assertEqual(replay.data['dados'], [])
 
     def test_post_validar_cpf_antes_de_gravar(self):
-        with self._entrar_na_janela_monitoramento():
-            self.client.post(
-                reverse('transporte:conferencia-iniciar', kwargs={'pk': self.execucao.pk}),
-            )
-        self.client.post(
-            reverse('transporte:conferencia-finalizar-chamada', kwargs={'pk': self.execucao.pk}),
-            {'ausentes': []},
-            format='json',
-        )
-        for aluno in (self.aluno_espera, self.aluno_extra):
-            ticket_espera = Ticket.objects.get(aluno=aluno, execucao_rota=self.execucao)
-            self.client.post(
-                reverse(
-                    'transporte:conferencia-fila-remover',
-                    kwargs={'pk': self.execucao.pk, 'codigo': ticket_espera.codigo},
-                ),
-            )
-        outro = criar_aluno('21000000044')
+        self._iniciar_e_finalizar_chamada()
+        pcd = criar_aluno_pcd('21000000044', nome='Walk-in PcD')
         resposta = self.client.post(
             reverse(
                 'transporte:conferencia-entrada-sem-ticket-validar',
                 kwargs={'pk': self.execucao.pk},
             ),
-            {'cpf': outro.usuario.cpf},
+            {'cpf': pcd.usuario.cpf},
             format='json',
         )
         self.assertEqual(resposta.status_code, status.HTTP_200_OK)
         self.assertTrue(resposta.data['dados']['elegivel'])
-        from Transporte.entradas_sem_ticket.models import EntradaSemTicket
-        self.assertFalse(EntradaSemTicket.objects.filter(aluno=outro).exists())
+        aluno = resposta.data['dados']['aluno']
+        self.assertEqual(aluno['nome'], 'Walk-in PcD')
+        self.assertTrue(aluno['tem_deficiencia'])
+        self.assertFalse(
+            EntradaSemTicket.objects.filter(aluno=pcd, execucao_rota=self.execucao).exists()
+        )
+
+    def test_validar_cpf_depois_do_lote_concluido_retorna_400(self):
+        self.execucao.quantidade_vagas = 3
+        self.execucao.save(update_fields=['quantidade_vagas'])
+        self._iniciar_e_finalizar_chamada()
+        url_lote = reverse(
+            'transporte:conferencia-entrada-sem-ticket',
+            kwargs={'pk': self.execucao.pk},
+        )
+        url_validar = reverse(
+            'transporte:conferencia-entrada-sem-ticket-validar',
+            kwargs={'pk': self.execucao.pk},
+        )
+        incluido = criar_aluno('21000000067')
+        self.assertEqual(
+            self.client.post(
+                url_lote,
+                {'cpfs': [incluido.usuario.cpf]},
+                format='json',
+            ).status_code,
+            status.HTTP_201_CREATED,
+        )
+        walk_in = criar_aluno('21000000069')
+        resposta = self.client.post(
+            url_validar,
+            {'cpf': walk_in.usuario.cpf},
+            format='json',
+        )
+        self.assertEqual(resposta.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertFalse(
+            EntradaSemTicket.objects.filter(
+                aluno=walk_in,
+                execucao_rota=self.execucao,
+            ).exists()
+        )
+
+    def test_validar_cpf_depois_do_lote_vazio_continua_elegivel(self):
+        self._iniciar_e_finalizar_chamada()
+        url_lote = reverse(
+            'transporte:conferencia-entrada-sem-ticket',
+            kwargs={'pk': self.execucao.pk},
+        )
+        self.assertEqual(
+            self.client.post(url_lote, {'cpfs': []}, format='json').status_code,
+            status.HTTP_201_CREATED,
+        )
+        walk_in = criar_aluno('21000000068')
+        resposta = self.client.post(
+            reverse(
+                'transporte:conferencia-entrada-sem-ticket-validar',
+                kwargs={'pk': self.execucao.pk},
+            ),
+            {'cpf': walk_in.usuario.cpf},
+            format='json',
+        )
+        self.assertEqual(resposta.status_code, status.HTTP_200_OK)
+        self.assertTrue(resposta.data['dados']['elegivel'])
+
+    def test_validar_cpf_de_espera_e_reservado(self):
+        self._iniciar_e_finalizar_chamada()
+        espera = self.client.post(
+            reverse(
+                'transporte:conferencia-entrada-sem-ticket-validar',
+                kwargs={'pk': self.execucao.pk},
+            ),
+            {'cpf': self.aluno_espera.usuario.cpf},
+            format='json',
+        )
+        self.assertEqual(espera.status_code, status.HTTP_200_OK)
+        reservado = self.client.post(
+            reverse(
+                'transporte:conferencia-entrada-sem-ticket-validar',
+                kwargs={'pk': self.execucao.pk},
+            ),
+            {'cpf': self.aluno_reserva.usuario.cpf},
+            format='json',
+        )
+        self.assertEqual(reservado.status_code, status.HTTP_400_BAD_REQUEST)
 
     def test_aluno_nao_matriculado_nao_entra_por_cpf(self):
         from Academico.alunos.choices import SituacaoAluno
 
-        with self._entrar_na_janela_monitoramento():
-            self.client.post(
-                reverse('transporte:conferencia-iniciar', kwargs={'pk': self.execucao.pk}),
-            )
-        self.client.post(
-            reverse('transporte:conferencia-finalizar-chamada', kwargs={'pk': self.execucao.pk}),
-            {'ausentes': []},
-            format='json',
-        )
-        for aluno in (self.aluno_espera, self.aluno_extra):
-            ticket_espera = Ticket.objects.get(aluno=aluno, execucao_rota=self.execucao)
-            self.client.post(
-                reverse(
-                    'transporte:conferencia-fila-remover',
-                    kwargs={'pk': self.execucao.pk, 'codigo': ticket_espera.codigo},
-                ),
-            )
+        self._iniciar_e_finalizar_chamada()
         outro = criar_aluno('21000000045', situacao=SituacaoAluno.FORMADO)
         resposta = self.client.post(
             reverse('transporte:conferencia-entrada-sem-ticket', kwargs={'pk': self.execucao.pk}),
-            {'cpf': outro.usuario.cpf},
+            {'cpfs': [outro.usuario.cpf]},
             format='json',
         )
         self.assertEqual(resposta.status_code, status.HTTP_400_BAD_REQUEST)
@@ -778,6 +813,116 @@ class ConferenciaTransporteTestCase(APITestCase):
         self.assertEqual(primeira.status_code, status.HTTP_200_OK)
         self.assertEqual(segunda.status_code, status.HTTP_200_OK)
 
+    def test_replay_lote_cpf_mesmo_conjunto_retorna_200(self):
+        self._iniciar_e_finalizar_chamada()
+        outro = criar_aluno('21000000060')
+        url = reverse(
+            'transporte:conferencia-entrada-sem-ticket',
+            kwargs={'pk': self.execucao.pk},
+        )
+        payload = {'cpfs': [outro.usuario.cpf]}
+        primeira = self.client.post(url, payload, format='json')
+        segunda = self.client.post(url, payload, format='json')
+        self.assertEqual(primeira.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(segunda.status_code, status.HTTP_200_OK)
+        self.assertEqual(primeira.data['dados'], segunda.data['dados'])
+        self.assertEqual(
+            EntradaSemTicket.objects.filter(execucao_rota=self.execucao).count(),
+            1,
+        )
+
+    def test_replay_lote_cpf_aceita_mesmo_conjunto_formatado(self):
+        self._iniciar_e_finalizar_chamada()
+        outro = criar_aluno('21000000070')
+        url = reverse(
+            'transporte:conferencia-entrada-sem-ticket',
+            kwargs={'pk': self.execucao.pk},
+        )
+        primeira = self.client.post(url, {'cpfs': [outro.usuario.cpf]}, format='json')
+        segunda = self.client.post(
+            url,
+            {'cpfs': ['210.000.000-70']},
+            format='json',
+        )
+        self.assertEqual(primeira.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(segunda.status_code, status.HTTP_200_OK)
+        self.assertEqual(
+            EntradaSemTicket.objects.filter(execucao_rota=self.execucao).count(),
+            1,
+        )
+
+    def test_replay_lote_cpf_conjunto_diferente_retorna_400(self):
+        self._iniciar_e_finalizar_chamada()
+        primeiro = criar_aluno('21000000061')
+        segundo = criar_aluno('21000000062')
+        url = reverse(
+            'transporte:conferencia-entrada-sem-ticket',
+            kwargs={'pk': self.execucao.pk},
+        )
+        primeira = self.client.post(url, {'cpfs': [primeiro.usuario.cpf]}, format='json')
+        segunda = self.client.post(url, {'cpfs': [segundo.usuario.cpf]}, format='json')
+        self.assertEqual(primeira.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(segunda.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertFalse(
+            EntradaSemTicket.objects.filter(
+                aluno=segundo,
+                execucao_rota=self.execucao,
+            ).exists()
+        )
+
+    def test_lote_vazio_nao_conclui_e_permite_persistir_depois(self):
+        self._iniciar_e_finalizar_chamada()
+        url = reverse(
+            'transporte:conferencia-entrada-sem-ticket',
+            kwargs={'pk': self.execucao.pk},
+        )
+        vazio = self.client.post(url, {'cpfs': []}, format='json')
+        self.assertEqual(vazio.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(vazio.data['dados'], [])
+        self.execucao.refresh_from_db()
+        self.assertFalse(self.execucao.entradas_cpf_concluidas)
+        segundo_vazio = self.client.post(url, {'cpfs': []}, format='json')
+        self.assertEqual(segundo_vazio.status_code, status.HTTP_201_CREATED)
+        self.execucao.refresh_from_db()
+        self.assertFalse(self.execucao.entradas_cpf_concluidas)
+        omitido = self.client.post(url, {}, format='json')
+        self.assertEqual(omitido.status_code, status.HTTP_201_CREATED)
+        outro = criar_aluno('21000000063')
+        persistido = self.client.post(url, {'cpfs': [outro.usuario.cpf]}, format='json')
+        self.assertEqual(persistido.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(len(persistido.data['dados']), 1)
+
+    def test_lote_vazio_depois_do_lote_real_retorna_400(self):
+        self._iniciar_e_finalizar_chamada()
+        url = reverse(
+            'transporte:conferencia-entrada-sem-ticket',
+            kwargs={'pk': self.execucao.pk},
+        )
+        outro = criar_aluno('21000000064')
+        primeira = self.client.post(url, {'cpfs': [outro.usuario.cpf]}, format='json')
+        vazio = self.client.post(url, {'cpfs': []}, format='json')
+        self.assertEqual(primeira.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(vazio.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_lote_maior_que_vagas_no_primeiro_envio_retorna_400(self):
+        self._iniciar_e_finalizar_chamada()
+        primeiro = criar_aluno('21000000065')
+        segundo = criar_aluno('21000000066')
+        resposta = self.client.post(
+            reverse(
+                'transporte:conferencia-entrada-sem-ticket',
+                kwargs={'pk': self.execucao.pk},
+            ),
+            {'cpfs': [primeiro.usuario.cpf, segundo.usuario.cpf]},
+            format='json',
+        )
+        self.assertEqual(resposta.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertFalse(
+            EntradaSemTicket.objects.filter(execucao_rota=self.execucao).exists()
+        )
+        self.execucao.refresh_from_db()
+        self.assertFalse(self.execucao.entradas_cpf_concluidas)
+
     def test_l3_nao_cancela_execucao_em_embarque(self):
         with self._entrar_na_janela_monitoramento():
             self.client.post(
@@ -787,6 +932,85 @@ class ConferenciaTransporteTestCase(APITestCase):
         self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {obter_token(admin)}')
         resposta = self.client.post(
             reverse('transporte:execucao-rota-cancelar', kwargs={'pk': self.execucao.pk}),
+        )
+        self.assertEqual(resposta.status_code, status.HTTP_400_BAD_REQUEST)
+        self.execucao.refresh_from_db()
+        self.assertEqual(self.execucao.status, StatusExecucaoRota.EM_EMBARQUE)
+
+    def test_l3_nao_cancela_execucao_embarcada(self):
+        self._finalizar_conferencia_na_janela()
+        admin = criar_usuario('30000000098', nome='Admin embarcado', admin=True)
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {obter_token(admin)}')
+        resposta = self.client.post(
+            reverse('transporte:execucao-rota-cancelar', kwargs={'pk': self.execucao.pk}),
+        )
+        self.assertEqual(resposta.status_code, status.HTTP_400_BAD_REQUEST)
+        self.execucao.refresh_from_db()
+        self.assertEqual(self.execucao.status, StatusExecucaoRota.EMBARCADO)
+
+    def test_chamada_e_cpf_bloqueados_apos_embarcado(self):
+        self._finalizar_conferencia_na_janela()
+        chamada = self.client.post(
+            reverse('transporte:conferencia-finalizar-chamada', kwargs={'pk': self.execucao.pk}),
+            {'ausentes': []},
+            format='json',
+        )
+        cpf = self.client.post(
+            reverse('transporte:conferencia-entrada-sem-ticket', kwargs={'pk': self.execucao.pk}),
+            {'cpfs': [criar_aluno('21000000077').usuario.cpf]},
+            format='json',
+        )
+        self.assertEqual(chamada.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(cpf.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_consulta_conferencia_apos_embarcado_no_mesmo_dia(self):
+        self._finalizar_conferencia_na_janela()
+        reservas = self.client.get(
+            reverse('transporte:conferencia-reservas', kwargs={'pk': self.execucao.pk}),
+        )
+        lista = self.client.get(reverse('transporte:conferencia-execucao-list'))
+        self.assertEqual(reservas.status_code, status.HTTP_200_OK)
+        self.assertEqual(lista.status_code, status.HTTP_200_OK)
+        item = next(dado for dado in lista.data['dados'] if dado['id'] == self.execucao.pk)
+        self.assertEqual(item['status'], StatusExecucaoRota.EMBARCADO)
+        self.assertIsNotNone(item['embarcado_em'])
+        self.assertIsNone(item['finalizada_em'])
+
+    def test_consulta_reservas_antes_de_iniciar_embarque_retorna_400(self):
+        resposta = self.client.get(
+            reverse('transporte:conferencia-reservas', kwargs={'pk': self.execucao.pk}),
+        )
+        self.assertEqual(resposta.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_nao_finaliza_conferencia_sem_chamada(self):
+        with self._entrar_na_janela_monitoramento():
+            iniciar = self.client.post(
+                reverse('transporte:conferencia-iniciar', kwargs={'pk': self.execucao.pk}),
+            )
+        self.assertEqual(iniciar.status_code, status.HTTP_200_OK)
+        resposta = self.client.post(
+            reverse('transporte:conferencia-finalizar', kwargs={'pk': self.execucao.pk}),
+        )
+        self.assertEqual(resposta.status_code, status.HTTP_400_BAD_REQUEST)
+        self.execucao.refresh_from_db()
+        self.assertEqual(self.execucao.status, StatusExecucaoRota.EM_EMBARQUE)
+        self.assertIsNone(self.execucao.embarcado_em)
+
+    def test_pk_inexistente_na_conferencia_retorna_404(self):
+        resposta = self.client.post(
+            reverse('transporte:conferencia-iniciar', kwargs={'pk': 999999}),
+        )
+        self.assertEqual(resposta.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_fechar_reservas_em_embarque_retorna_400(self):
+        with self._entrar_na_janela_monitoramento():
+            self.client.post(
+                reverse('transporte:conferencia-iniciar', kwargs={'pk': self.execucao.pk}),
+            )
+        admin = criar_usuario('30000000097', nome='Admin fechar embarque', admin=True)
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {obter_token(admin)}')
+        resposta = self.client.post(
+            reverse('transporte:execucao-rota-fechar-reservas', kwargs={'pk': self.execucao.pk}),
         )
         self.assertEqual(resposta.status_code, status.HTTP_400_BAD_REQUEST)
         self.execucao.refresh_from_db()
