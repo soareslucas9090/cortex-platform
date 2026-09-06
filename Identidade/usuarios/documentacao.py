@@ -620,7 +620,7 @@ class PermissaoDocumentacao:
                             'inclusive fim de semana '
                             'se houver execução. Por ID, CANCELADA é 404; EMBARCADO (e estados '
                             'posteriores da viagem) segue para '
-                            'consulta da execução e replay de finalizar (iniciar de novo retorna 400). '
+                            'consulta da execução e replay de finalizar conferência (iniciar de novo retorna 400). '
                             'O monitoramento inicia só depois de T-30 '
                             '(now > data_hora_saida − 30 min); L3 obedece a mesma data e janela. '
                             'O campo pode_monitorar indica se o botão de iniciar deve aparecer. '
@@ -629,7 +629,7 @@ class PermissaoDocumentacao:
                         ),
                         (
                             'A chamada envia só ausentes (omitir = presença, com strike). '
-                            'Finalizar a execução marca a espera restante como NAO_CONTEMPLADO. '
+                            'Finalizar a conferência marca a espera restante como NAO_CONTEMPLADO. '
                             'POST em entradas-sem-ticket/validar/ consulta sem gravar e devolve o card '
                             '(depois do lote concluído devolve 400). '
                             'O POST em entradas-sem-ticket/ recebe cpfs em lote e persiste '
@@ -748,7 +748,7 @@ class PermissaoDocumentacao:
                         'chamada de tickets e a entrada por CPF dessa execução.'
                     ),
                     'nao_sem_capacidade': (
-                        'Acessar a conferência, iniciar embarque ou finalizar a rota pelo fluxo '
+                        'Acessar a conferência, iniciar embarque ou finalizar a conferência pelo fluxo '
                         'do conferente.'
                     ),
                     'descricao': (

@@ -221,4 +221,4 @@ class ExecucaoRotaBusiness(ModelInstanceBusiness):
                 execucao.save(update_fields=['embarcado_em'])
             return execucao
         except Exception as e:
-            self.relancar_ou_erro_sistema(e, 'Não foi possível finalizar a execução.', logger)
+            self.relancar_ou_erro_sistema(e, 'Não foi possível finalizar a conferência.', logger)

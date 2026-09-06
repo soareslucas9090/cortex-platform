@@ -177,7 +177,7 @@ API ainda não existe. O conferente opera só a **conferência** (monitoramento
 - Na conferência, quem não entra em `ausentes` na chamada fica `EMBARCADO` sem QR
   (presença por omissão). O conferente é responsável pela lista; o conferente não
   valida QR. A primeira chamada que conclui grava o conjunto; um segundo envio só
-  é aceito se repetir o mesmo conjunto. Finalizar a execução marca a espera que
+  é aceito se repetir o mesmo conjunto. Finalizar a conferência marca a espera que
   não embarcou por CPF como `NAO_CONTEMPLADO`. Quem entra no lote de CPF permanece
   `EMBARCADO`. O replay da chamada compara o conjunto gravado nela, não ausências
   marcadas depois pelo L3. O monitoramento pode iniciar depois do horário de
@@ -191,7 +191,7 @@ API ainda não existe. O conferente opera só a **conferência** (monitoramento
   `entradas-sem-ticket/` recebe `{ "cpfs": [...] }`, revalida o lote e grava
   numa transação. Replay do mesmo conjunto devolve 200; conjunto diferente após
   o primeiro lote não vazio devolve 400. Lista vazia devolve 201 sem persistir e
-  não conclui o lote. O lote é opcional: finalizar a execução sem enviá-lo
+  não conclui o lote. O lote é opcional: finalizar a conferência sem enviá-lo
   marca a espera restante como `NAO_CONTEMPLADO`. Quem cancelou o próprio ticket
   pode usar este fluxo se houver vaga. Quem está `AUSENTE` nesta execução também pode: o ticket
   permanece `AUSENTE` e o strike não é desfeito. Quem está `EM_ESPERA` e entra

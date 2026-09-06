@@ -74,7 +74,7 @@ class ExecucaoRotaRules(ModelInstanceRules):
     def validar_chamada_para_finalizar(self, execucao) -> bool:
         if not execucao.chamada_tickets_concluida:
             self.return_exception(
-                'Conclua a chamada dos tickets antes de finalizar a execução.'
+                'Conclua a chamada dos tickets antes de finalizar a conferência.'
             )
         return True
 
