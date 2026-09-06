@@ -122,9 +122,7 @@ class EntradaSemTicketBusiness(ModelInstanceBusiness):
                     bloquear_ticket=True,
                 )
                 if ticket is not None and ticket.status == StatusTicket.EM_ESPERA:
-                    ticket.embarcado_em = agora
-                    ticket.state.atualizar_status(StatusTicket.EMBARCADO)
-                    continue
+                    ticket.business.marcar_contemplado()
                 entradas.append(
                     EntradaSemTicket.objects.create(
                         execucao_rota=execucao,

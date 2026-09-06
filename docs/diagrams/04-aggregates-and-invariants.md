@@ -344,7 +344,8 @@ para a data local, enriquecida com a execução correspondente.
 11. `tickets_solicitados` conta apenas tickets `RESERVADO` e `EMBARCADO`.
     `vagas_ocupadas` segue a regra da conferência: antes da chamada,
     `RESERVADO` + `EMBARCADO`; depois da chamada, `EMBARCADO` + `EntradaSemTicket`.
-    `EM_ESPERA` e `NAO_CONTEMPLADO` não ocupam vaga.
+    `EM_ESPERA` e `CONTEMPLADO` não ocupam vaga (o walk-in da espera conta só na
+    `EntradaSemTicket`).
 
 ## Onde as regras devem morar
 
@@ -392,13 +393,16 @@ para a data local, enriquecida com a execução correspondente.
     Na chamada, a primeira conclusão grava o conjunto de ausentes; o segundo
     envio só vale se repetir o mesmo conjunto. Presença por omissão é
     responsabilidade do conferente (sem QR nesta tela).
-13. Ao finalizar a conferência (`EMBARCADO`), a espera que não embarcou por CPF
-    vira `NAO_CONTEMPLADO`. Grava-se `embarcado_em`; `finalizada_em` fica para
-    o fim da viagem (`INICIADA` → `FINALIZADA`).
-    O lote de CPF é opcional: finalizar sem enviá-lo marca toda a espera restante.
+13. Ao finalizar a conferência (`EMBARCADO`), a espera que não entrou no lote de
+    CPF permanece `EM_ESPERA` — esse é o desfecho nessa execução, não um estado
+    intermediário à espera de promoção. Grava-se `embarcado_em`; `finalizada_em`
+    fica para o fim da viagem (`INICIADA` → `FINALIZADA`).
+    O lote de CPF é opcional: finalizar sem enviá-lo não reclassifica a espera.
+    `CONTEMPLADO` é gravado no lote de CPF, não neste passo.
 14. Entrada sem ticket usa as vagas restantes após a chamada (`EM_ESPERA` não reserva
-    vaga). O lote `{ "cpfs": [...] }` promove `EM_ESPERA` para `EMBARCADO` ou cria
-    `EntradaSemTicket`. Replay do mesmo conjunto é 200; conjunto diferente após o
+    vaga). O lote `{ "cpfs": [...] }` marca `EM_ESPERA` como `CONTEMPLADO` e cria
+    `EntradaSemTicket`, ou só cria a entrada se não houver ticket. Replay do mesmo
+    conjunto é 200; conjunto diferente após o
     primeiro lote não vazio é 400. Lista vazia é 201 e não conclui o lote. Depois
     do lote concluído, `validar` também é 400 (não mostra card que não dá para gravar).
     Aluno `AUSENTE` pode entrar por CPF; a ausência e o strike permanecem. Três

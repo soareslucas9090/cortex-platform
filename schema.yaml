@@ -5887,7 +5887,7 @@ paths:
     post:
       operationId: transporte_execucoes_rotas_conferencia_entradas_sem_ticket_create
       description: |-
-        Recebe `{ "cpfs": [...] }`, revalida cada CPF e grava o lote numa transação. Replay do mesmo conjunto devolve 200. Conjunto diferente após o primeiro lote não vazio devolve 400. Lista vazia não conclui o lote (201 sem persistir). Inclui aluno por CPF nas vagas restantes após a chamada de tickets. Quem está EM_ESPERA e for informado no lote tem o ticket promovido para EMBARCADO. Quem não for informado permanece EM_ESPERA até o finalizar (NAO_CONTEMPLADO). Quem está AUSENTE nesta execução pode entrar se houver vaga e o aluno tiver menos de 3 strikes ativos; o ticket permanece AUSENTE e o strike não é desfeito.
+        Recebe `{ "cpfs": [...] }`, revalida cada CPF e grava o lote numa transação. Replay do mesmo conjunto devolve 200. Conjunto diferente após o primeiro lote não vazio devolve 400. Lista vazia não conclui o lote (201 sem persistir). Inclui aluno por CPF nas vagas restantes após a chamada de tickets. Quem está EM_ESPERA e for informado no lote fica CONTEMPLADO e recebe EntradaSemTicket. Quem não for informado permanece EM_ESPERA após finalizar a conferência: esse é o desfecho nessa execução, sem promoção posterior. Quem está AUSENTE nesta execução pode entrar se houver vaga e o aluno tiver menos de 3 strikes ativos; o ticket permanece AUSENTE e o strike não é desfeito.
 
         **Permissões:** capacidade transporte.conferir. Lê e opera execuções do dia e, após iniciar o monitoramento, a chamada de tickets e a entrada por CPF dessa execução. Não amplia cadastro nem recursos globais do módulo.
       summary: Registrar entradas sem ticket em lote
@@ -5965,7 +5965,7 @@ paths:
     post:
       operationId: transporte_execucoes_rotas_conferencia_entradas_sem_ticket_validar_create
       description: |-
-        Consulta as regras de elegibilidade sem persistir e devolve os dados do aluno para o card. Depois do primeiro lote não vazio, devolve 400: o conjunto já foi concluído e a tela não deve mostrar card que não dá para gravar. O POST em entradas-sem-ticket/ revalida o lote e grava. Inclui aluno por CPF nas vagas restantes após a chamada de tickets. Quem está EM_ESPERA e for informado no lote tem o ticket promovido para EMBARCADO. Quem não for informado permanece EM_ESPERA até o finalizar (NAO_CONTEMPLADO). Quem está AUSENTE nesta execução pode entrar se houver vaga e o aluno tiver menos de 3 strikes ativos; o ticket permanece AUSENTE e o strike não é desfeito.
+        Consulta as regras de elegibilidade sem persistir e devolve os dados do aluno para o card. Depois do primeiro lote não vazio, devolve 400: o conjunto já foi concluído e a tela não deve mostrar card que não dá para gravar. O POST em entradas-sem-ticket/ revalida o lote e grava. Inclui aluno por CPF nas vagas restantes após a chamada de tickets. Quem está EM_ESPERA e for informado no lote fica CONTEMPLADO e recebe EntradaSemTicket. Quem não for informado permanece EM_ESPERA após finalizar a conferência: esse é o desfecho nessa execução, sem promoção posterior. Quem está AUSENTE nesta execução pode entrar se houver vaga e o aluno tiver menos de 3 strikes ativos; o ticket permanece AUSENTE e o strike não é desfeito.
 
         **Permissões:** capacidade transporte.conferir. Lê e opera execuções do dia e, após iniciar o monitoramento, a chamada de tickets e a entrada por CPF dessa execução. Não amplia cadastro nem recursos globais do módulo.
       summary: Validar CPF para entrada sem ticket
@@ -6026,7 +6026,7 @@ paths:
     post:
       operationId: transporte_execucoes_rotas_conferencia_finalizar_create
       description: |-
-        Encerra a conferência em EMBARCADO e marca como NAO_CONTEMPLADO quem ainda está EM_ESPERA. Quem embarcou por CPF permanece EMBARCADO. Ausentes não mudam. Não grava finalizada_em (fim da viagem do motorista).
+        Encerra a conferência em EMBARCADO. Este endpoint não altera tickets. Quem não entrou no lote de CPF permanece EM_ESPERA: esse é o desfecho nessa execução (sem promoção da fila nem status de não contemplado). CONTEMPLADO e EntradaSemTicket são gravados no lote de CPF, não aqui. Ausentes não mudam. Não grava finalizada_em (fim da viagem do motorista).
 
         **Permissões:** capacidade transporte.conferir. Lê e opera execuções do dia e, após iniciar o monitoramento, a chamada de tickets e a entrada por CPF dessa execução. Não amplia cadastro nem recursos globais do módulo.
       summary: Finalizar conferência
@@ -10868,7 +10868,7 @@ components:
       - 3
       - 4
       - 5
-      - 6
+      - 7
       type: integer
       description: |-
         * `1` - Reservado
@@ -10876,7 +10876,7 @@ components:
         * `3` - Cancelado
         * `4` - Embarcado
         * `5` - Ausente
-        * `6` - Não contemplado
+        * `7` - Contemplado
     Strike:
       type: object
       properties:

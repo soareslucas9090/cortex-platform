@@ -193,9 +193,11 @@ class IniciarEmbarqueExecucaoRotaView(PodeConferirTransporteMixin, BasicPostAPIV
     tags=['Transporte · Conferência'],
     summary='Finalizar conferência',
     description=(
-        'Encerra a conferência em EMBARCADO e marca como NAO_CONTEMPLADO quem ainda está EM_ESPERA. '
-        'Quem embarcou por CPF permanece EMBARCADO. Ausentes não mudam. '
-        'Não grava finalizada_em (fim da viagem do motorista).\n\n'
+        'Encerra a conferência em EMBARCADO. Este endpoint não altera tickets. '
+        'Quem não entrou no lote de CPF permanece EM_ESPERA: esse é o desfecho nessa execução '
+        '(sem promoção da fila nem status de não contemplado). '
+        'CONTEMPLADO e EntradaSemTicket são gravados no lote de CPF, não aqui. '
+        'Ausentes não mudam. Não grava finalizada_em (fim da viagem do motorista).\n\n'
         f'{PERMISSAO_CONFERIR}'
     ),
     request=SerializerVazio,

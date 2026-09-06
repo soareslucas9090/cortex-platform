@@ -629,13 +629,15 @@ class PermissaoDocumentacao:
                         ),
                         (
                             'A chamada envia só ausentes (omitir = presença, com strike). '
-                            'Finalizar a conferência marca a espera restante como NAO_CONTEMPLADO. '
+                            'Finalizar a conferência não altera tickets: a espera que não entrou '
+                            'no lote permanece EM_ESPERA (desfecho nessa execução, sem promoção). '
+                            'CONTEMPLADO nasce no POST de entradas-sem-ticket/, não no finalizar. '
                             'POST em entradas-sem-ticket/validar/ consulta sem gravar e devolve o card '
                             '(depois do lote concluído devolve 400). '
                             'O POST em entradas-sem-ticket/ recebe cpfs em lote e persiste '
                             '(replay do mesmo conjunto devolve 200). '
                             'O lote de CPF é opcional. '
-                            'Quem está EM_ESPERA e entra no lote tem o ticket promovido a EMBARCADO; '
+                            'Quem está EM_ESPERA e entra no lote fica CONTEMPLADO e recebe EntradaSemTicket; '
                             'quem cancelou o ticket pode usar se houver vaga. '
                             'Quem está AUSENTE nesta execução pode entrar nas mesmas condições; '
                             'o ticket permanece AUSENTE e o strike não é desfeito. '

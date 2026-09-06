@@ -141,9 +141,6 @@ class TicketHelpers(ModelInstanceHelpers):
             execucao.tickets.select_for_update(),
         ).first()
 
-    def listar_espera_bloqueada(self, execucao):
-        return self._ordenar_fila(execucao.tickets.select_for_update())
-
     def contar_espera(self, execucao) -> int:
         return execucao.tickets.filter(status=StatusTicket.EM_ESPERA).count()
 

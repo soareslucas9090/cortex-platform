@@ -22,11 +22,12 @@ ticket, ausências, strikes e justificativas.
   o andamento da conferência. `finalizada_em` fica para o fim da viagem
   (`EMBARCADO` → `INICIADA` → `FINALIZADA`).
 - **Ticket**: solicitação de um aluno em uma execução; representa reserva, posição
-  em fila, cancelamento, embarque, ausência ou não contemplado na espera (`NAO_CONTEMPLADO`).
+  em fila, cancelamento, embarque, ausência ou contemplado por walk-in (`CONTEMPLADO`).
 - **EntradaSemTicket**: embarque manual por CPF nas vagas restantes após a chamada.
-  Quem está `EM_ESPERA` e for informado no lote tem o ticket promovido para
-  `EMBARCADO`. Quem não for informado permanece `EM_ESPERA` até o finalizar,
-  quando vira `NAO_CONTEMPLADO`.
+  Quem está `EM_ESPERA` e for informado no lote fica `CONTEMPLADO` e recebe
+  `EntradaSemTicket`. Quem não for informado permanece `EM_ESPERA` após finalizar
+  a conferência: esse é o desfecho nessa execução (não há outro status nem
+  promoção da fila depois que a conferência encerra).
 - **Strike**: falta vinculada unicamente a um ticket marcado como ausente.
 - **Justificativa**: solicitação de revisão de bloqueio, cobrindo todos os strikes ativos do aluno.
 - **Bloqueio**: estado do aluno (`is_bloqueado`, `faltas`, `quantidade_bloqueios`)
@@ -163,7 +164,7 @@ API ainda não existe. O conferente opera só a **conferência** (monitoramento
 - Três ou mais strikes ativos bloqueiam novas reservas, novas entradas em fila
   e entrada sem ticket.
 - O terceiro strike não cancela tickets nem posições já existentes.
-- Há no máximo um ticket não cancelado por aluno e execução (`NAO_CONTEMPLADO`
+- Há no máximo um ticket não cancelado por aluno e execução (`CONTEMPLADO`
   também ocupa essa unicidade; só `CANCELADO` libera o par aluno+execução).
 - Com vaga, a solicitação cria `RESERVADO`; sem vaga, a reserva falha e o aluno
   precisa entrar explicitamente na fila.
@@ -177,11 +178,14 @@ API ainda não existe. O conferente opera só a **conferência** (monitoramento
 - Na conferência, quem não entra em `ausentes` na chamada fica `EMBARCADO` sem QR
   (presença por omissão). O conferente é responsável pela lista; o conferente não
   valida QR. A primeira chamada que conclui grava o conjunto; um segundo envio só
-  é aceito se repetir o mesmo conjunto. Finalizar a conferência marca a espera que
-  não embarcou por CPF como `NAO_CONTEMPLADO`. Quem entra no lote de CPF permanece
-  `EMBARCADO`. O replay da chamada compara o conjunto gravado nela, não ausências
-  marcadas depois pelo L3. O monitoramento pode iniciar depois do horário de
-  saída no mesmo dia, desde que `now > T-30`.
+  é aceito se repetir o mesmo conjunto. Finalizar a conferência **não** altera
+  quem ficou `EM_ESPERA`. Permanecer `EM_ESPERA` é o desfecho de quem não entrou
+  no lote: a execução já `EMBARCADO` não promove a fila nem cria status de
+  “não contemplado”. Quem entra no lote de CPF na espera fica `CONTEMPLADO`
+  e ganha `EntradaSemTicket` (não vira `EMBARCADO` da chamada). O replay da chamada
+  compara o conjunto gravado nela, não ausências marcadas depois pelo L3. O
+  monitoramento pode iniciar depois do horário de saída no mesmo dia, desde que
+  `now > T-30`.
 - Entrada por CPF revalida aluno ativo, matriculado, strikes, vaga, chamada
   concluída e execução em embarque. A consulta é `POST` em
   `entradas-sem-ticket/validar/` com `{ "cpf": "..." }` e não persiste (devolve
@@ -192,12 +196,13 @@ API ainda não existe. O conferente opera só a **conferência** (monitoramento
   numa transação. Replay do mesmo conjunto devolve 200; conjunto diferente após
   o primeiro lote não vazio devolve 400. Lista vazia devolve 201 sem persistir e
   não conclui o lote. O lote é opcional: finalizar a conferência sem enviá-lo
-  marca a espera restante como `NAO_CONTEMPLADO`. Quem cancelou o próprio ticket
+  deixa a espera restante como `EM_ESPERA` (desfecho nessa execução). Quem cancelou o próprio ticket
   pode usar este fluxo se houver vaga. Quem está `AUSENTE` nesta execução também pode: o ticket
   permanece `AUSENTE` e o strike não é desfeito. Quem está `EM_ESPERA` e entra
-  no lote tem o ticket promovido para `EMBARCADO` (sem criar `EntradaSemTicket`).
+  no lote fica `CONTEMPLADO` e recebe `EntradaSemTicket`.
   Três strikes ativos continuam impedindo a entrada (incluindo o strike desta
-  ausência). `EM_ESPERA` não reserva vaga após a chamada.
+  ausência). `EM_ESPERA` e `CONTEMPLADO` não ocupam vaga pela chamada; o walk-in
+  ocupa via `EntradaSemTicket`. Total embarcado = `EMBARCADO` + `EntradaSemTicket`.
 
 ### 6. Posição dos tickets e prioridade PcD
 
@@ -214,7 +219,8 @@ Ordem em cada grupo:
 
 Para tickets de reserva (`RESERVADO`, `EMBARCADO` e `AUSENTE`), o total exibido é
 a capacidade congelada da execução. Para `EM_ESPERA`, o total é a quantidade atual
-de alunos aguardando. Alterar `Usuario.deficiencia` reposiciona dinamicamente os
+de alunos aguardando. `CONTEMPLADO` não entra em nenhum dos dois grupos (o embarque
+por CPF aparece em `EntradaSemTicket`). Alterar `Usuario.deficiencia` reposiciona dinamicamente os
 tickets existentes nos dois grupos. A prioridade altera apenas a ordem exibida e
 de atendimento: nunca remove uma reserva confirmada nem promove alguém sem vaga.
 O tipo de deficiência não é exposto nas respostas dos tickets. Na listagem da

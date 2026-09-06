@@ -203,8 +203,6 @@ class ExecucaoRotaBusiness(ModelInstanceBusiness):
 
     def finalizar_conferencia(self):
         try:
-            from Transporte.tickets.models import Ticket
-
             execucao = self.obter_por_id(
                 self.object_instance.pk,
                 bloquear=True,
@@ -213,8 +211,6 @@ class ExecucaoRotaBusiness(ModelInstanceBusiness):
                 return execucao
             execucao.rules.validar_execucao_em_embarque(execucao)
             execucao.rules.validar_chamada_para_finalizar(execucao)
-            for ticket in Ticket().helper.listar_espera_bloqueada(execucao):
-                ticket.business.marcar_nao_contemplado()
             execucao = execucao.state.atualizar_status(StatusExecucaoRota.EMBARCADO)
             if execucao.embarcado_em is None:
                 execucao.embarcado_em = timezone.now()

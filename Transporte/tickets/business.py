@@ -188,18 +188,18 @@ class TicketBusiness(ModelInstanceBusiness):
         except Exception as e:
             self.relancar_ou_erro_sistema(e, 'Não foi possível marcar a ausência.', logger)
 
-    def marcar_nao_contemplado(self):
+    def marcar_contemplado(self):
         try:
             ticket = self.object_instance.helper.obter_bloqueado_por_id(
                 self.object_instance.pk,
             )
-            ticket.rules.validar_pode_marcar_nao_contemplado()
-            ticket.state.atualizar_status(StatusTicket.NAO_CONTEMPLADO)
+            ticket.rules.validar_pode_marcar_contemplado()
+            ticket.state.atualizar_status(StatusTicket.CONTEMPLADO)
             return ticket
         except Exception as e:
             self.relancar_ou_erro_sistema(
                 e,
-                'Não foi possível marcar o ticket como não contemplado.',
+                'Não foi possível marcar o ticket como contemplado.',
                 logger,
             )
 

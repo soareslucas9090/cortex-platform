@@ -20,8 +20,9 @@ PERMISSAO_CONFERIR = (
 )
 REGRA_CPF = (
     'Inclui aluno por CPF nas vagas restantes após a chamada de tickets. '
-    'Quem está EM_ESPERA e for informado no lote tem o ticket promovido para EMBARCADO. '
-    'Quem não for informado permanece EM_ESPERA até o finalizar (NAO_CONTEMPLADO).'
+    'Quem está EM_ESPERA e for informado no lote fica CONTEMPLADO e recebe EntradaSemTicket. '
+    'Quem não for informado permanece EM_ESPERA após finalizar a conferência: '
+    'esse é o desfecho nessa execução, sem promoção posterior.'
 )
 REGRA_AUSENTE_CPF = (
     'Quem está AUSENTE nesta execução pode entrar se houver vaga '

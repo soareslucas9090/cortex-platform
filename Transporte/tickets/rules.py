@@ -111,10 +111,10 @@ class TicketRules(ModelInstanceRules):
             )
         return True
 
-    def validar_pode_marcar_nao_contemplado(self) -> bool:
+    def validar_pode_marcar_contemplado(self) -> bool:
         self.validar_status(
             StatusTicket.EM_ESPERA,
-            'Somente um ticket em espera pode ser marcado como não contemplado.',
+            'Somente um ticket em espera pode ser marcado como contemplado.',
         )
         return True
 
