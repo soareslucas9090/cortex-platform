@@ -149,6 +149,7 @@ PROJECT_APPS = [
     'Transporte.tickets',
     'Transporte.strikes',
     'Transporte.justificativas',
+    'Transporte.relatorios',
     'Transporte.permissoes',
     'Transporte.entradas_sem_ticket',
     'Transporte.bloqueios',
@@ -286,4 +287,3 @@ AWS_STORAGE_BUCKET_NAME = os.environ.get('AWS_STORAGE_BUCKET_NAME', 'bucket-name
 AWS_ACCESS_KEY_ID = os.environ.get('AWS_ACCESS_KEY_ID', '')
 AWS_SECRET_ACCESS_KEY = os.environ.get('AWS_SECRET_ACCESS_KEY', '')
 CORTEX_PUBLIC_BASE_URL = os.environ.get('CORTEX_PUBLIC_BASE_URL', '').rstrip('/')
-
