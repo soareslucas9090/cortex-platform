@@ -25,6 +25,4 @@ class StrikeSerializer(serializers.ModelSerializer):
 
     @extend_schema_field(OpenApiTypes.BOOL)
     def get_bloqueia_novas_reservas(self, obj):
-        if hasattr(obj, 'quantidade_strikes_ativos'):
-            return obj.quantidade_strikes_ativos >= 3
-        return obj.helper.aluno_esta_bloqueado()
+        return obj.ticket.aluno.is_bloqueado

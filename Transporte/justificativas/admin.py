@@ -7,5 +7,5 @@ from .models import Justificativa
 
 @admin.register(Justificativa)
 class JustificativaAdmin(ReadOnlyModelAdmin):
-    list_display = ['id', 'strike', 'status', 'analisada_por', 'analisada_em']
+    list_display = ['id', 'aluno', 'status', 'analisada_por', 'analisada_em']
     list_filter = ['status']

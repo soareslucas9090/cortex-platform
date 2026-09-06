@@ -32,6 +32,14 @@ class TicketHelpers(ModelInstanceHelpers):
     def obter_por_codigo(self, codigo):
         return self._listar_com_relacionamentos().get(codigo=codigo)
 
+    def obter_bloqueado_por_id(self, ticket_id):
+        from .models import Ticket
+
+        return Ticket.objects.select_for_update().select_related(
+            'aluno__usuario',
+            'execucao_rota',
+        ).get(pk=ticket_id)
+
     def contar_strikes_ativos(self, aluno):
         return aluno.tickets_transporte.filter(
             strike__status=StatusStrike.ATIVO,
@@ -116,10 +124,50 @@ class TicketHelpers(ModelInstanceHelpers):
             return None
         return posicao['atual']
 
+    def listar_reservas_conferencia(self, execucao, cpf=None):
+        queryset = self._ordenar_reservas(execucao.tickets.all())
+        if cpf:
+            queryset = queryset.filter(aluno__usuario__cpf__icontains=cpf.strip())
+        return queryset.select_related(
+            'execucao_rota',
+            'execucao_rota__rota',
+            'execucao_rota__rota__percurso',
+            'aluno',
+            'aluno__usuario',
+        )
+
+    def listar_fila_visivel_conferencia(self, execucao):
+        limite = execucao.helper.quantidade_vagas_disponiveis()
+        queryset = self._ordenar_fila(execucao.tickets.all()).select_related(
+            'aluno',
+            'aluno__usuario',
+            'execucao_rota',
+        )
+        if limite < 1:
+            return queryset.none()
+        return queryset[:limite]
+
     def proximo_da_fila(self, execucao):
         return self._ordenar_fila(
             execucao.tickets.select_for_update(),
         ).first()
+
+    def listar_espera_bloqueada(self, execucao):
+        return self._ordenar_fila(execucao.tickets.select_for_update())
+
+    def contar_espera(self, execucao) -> int:
+        return execucao.tickets.filter(status=StatusTicket.EM_ESPERA).count()
+
+    def listar_reservados_bloqueados(self, execucao):
+        from .models import Ticket
+
+        return Ticket.objects.select_for_update().select_related(
+            'execucao_rota',
+            'aluno__usuario',
+        ).filter(
+            execucao_rota=execucao,
+            status=StatusTicket.RESERVADO,
+        )
 
     def gerar_codigo_qr(self):
         ticket = self.object_instance

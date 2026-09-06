@@ -38,14 +38,6 @@ class StrikeHelpers(ModelInstanceHelpers):
             'ticket__execucao_rota__rota__percurso',
             'ticket__aluno',
             'ticket__aluno__usuario',
-        ).annotate(
-            quantidade_strikes_ativos=Count(
-                'ticket__aluno__tickets_transporte',
-                filter=Q(
-                    ticket__aluno__tickets_transporte__strike__status=StatusStrike.ATIVO,
-                ),
-                distinct=True,
-            ),
         )
 
     def listar_para_usuario(self, usuario):
@@ -55,14 +47,5 @@ class StrikeHelpers(ModelInstanceHelpers):
         aluno = getattr(usuario, 'aluno', None)
         return queryset.filter(ticket__aluno=aluno) if aluno is not None else queryset.none()
 
-    def _contar_ativos_do_aluno(self):
-        from .models import Strike
-
-        aluno_id = self.object_instance.ticket.aluno_id
-        return Strike.objects.filter(
-            ticket__aluno_id=aluno_id,
-            status=StatusStrike.ATIVO,
-        ).count()
-
     def aluno_esta_bloqueado(self):
-        return self._contar_ativos_do_aluno() >= 3
+        return self.object_instance.ticket.aluno.is_bloqueado

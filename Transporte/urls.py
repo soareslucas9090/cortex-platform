@@ -10,4 +10,6 @@ urlpatterns = [
     path('', include('Transporte.strikes.urls')),
     path('', include('Transporte.justificativas.urls')),
     path('', include('Transporte.relatorios.urls')),
+    path('', include('Transporte.entradas_sem_ticket.urls')),
+    path('', include('Transporte.bloqueios.urls')),
 ]

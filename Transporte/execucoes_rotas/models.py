@@ -40,6 +40,30 @@ class ExecucaoRota(
         choices=StatusExecucaoRota.choices,
         default=StatusExecucaoRota.ABERTA,
     )
+    chamada_tickets_concluida = models.BooleanField(
+        'Chamada de tickets concluída',
+        default=False,
+    )
+    monitoramento_iniciado_em = models.DateTimeField(
+        'Monitoramento iniciado em',
+        null=True,
+        blank=True,
+    )
+    chamada_concluida_em = models.DateTimeField(
+        'Chamada concluída em',
+        null=True,
+        blank=True,
+    )
+    finalizada_em = models.DateTimeField(
+        'Finalizada em',
+        null=True,
+        blank=True,
+    )
+    chamada_ausentes_codigos = models.JSONField(
+        'Códigos ausentes da chamada',
+        default=list,
+        blank=True,
+    )
 
     class Meta:
         verbose_name = 'Execução de rota'

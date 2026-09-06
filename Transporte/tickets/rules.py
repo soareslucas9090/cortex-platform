@@ -11,15 +11,15 @@ from .choices import StatusTicket
 
 class TicketRules(ModelInstanceRules):
 
-    def validar_aluno_elegivel(self, usuario, quantidade_strikes_ativos) -> bool:
+    def validar_aluno_elegivel(self, usuario) -> bool:
         aluno = getattr(usuario, 'aluno', None)
         if not usuario.ativo or aluno is None or not aluno.ativo:
             self.return_exception('Somente um aluno ativo pode solicitar um ticket.')
         if aluno.situacao != SituacaoAluno.MATRICULADO:
             self.return_exception('Somente um aluno matriculado pode solicitar um ticket.')
-        if quantidade_strikes_ativos >= 3:
+        if aluno.is_bloqueado:
             self.return_exception(
-                'O aluno possui três ou mais strikes ativos e não pode solicitar novos tickets.'
+                'O aluno está bloqueado no transporte e não pode solicitar novos tickets.'
             )
         return True
 
@@ -89,6 +89,18 @@ class TicketRules(ModelInstanceRules):
     def validar_status(self, status_esperado, mensagem) -> bool:
         if self.object_instance.status != status_esperado:
             self.return_exception(mensagem)
+        return True
+
+    def validar_pertence_a_execucao(self, execucao) -> bool:
+        if self.object_instance.execucao_rota_id != execucao.pk:
+            self.return_exception('O ticket não pertence a esta execução.')
+        return True
+
+    def validar_remocao_na_fila_visivel(self, visiveis_pks) -> bool:
+        if self.object_instance.pk not in visiveis_pks:
+            self.return_exception(
+                'Só é possível remover da espera quem aparece na fila visível da conferência.'
+            )
         return True
 
     def pode_marcar_ausente(self) -> bool:

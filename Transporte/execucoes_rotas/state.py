@@ -26,7 +26,6 @@ class ExecucaoFechadaState(ExecucaoRotaState):
 class ExecucaoEmEmbarqueState(ExecucaoRotaState):
     transicoes_permitidas = frozenset({
         StatusExecucaoRota.FINALIZADA,
-        StatusExecucaoRota.CANCELADA,
     })
 
 

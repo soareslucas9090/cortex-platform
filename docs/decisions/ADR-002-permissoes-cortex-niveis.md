@@ -51,10 +51,13 @@ Novos produtos adicionam `permissoes_<modulo>()` em `UsuarioPermissions` e apps 
 
 - **Infraestrutura:** capacidades booleanas (`operar`, `cadastrar`, `autorizar`, `retirada_irrestrita`), independentes de L1–L3.
 - **Transporte:** capacidade `gerenciar` alinhada a L3 (`is_staff`, `is_admin` ou
-  superusuário) e capacidade `reservar` para aluno ativo, matriculado e com menos
-  de três strikes ativos. Percursos, rotas, administração de execuções, ausências,
-  QR Code e análise de justificativas são L3; o aluno acessa execuções abertas e
-  recursos próprios de tickets, strikes e justificativas.
+  superusuário); `motorista` para usuários com perfil Motorista ativo acessarem a
+  visão somente de leitura das rotas do dia; `reservar` para aluno ativo,
+  matriculado e não bloqueado; `conferir` para L3 ou colaborador (servidor/terceirizado)
+  com função **ou** permissão direta no usuário (OR). Percursos, rotas e análise de
+  justificativas são L3; o conferente opera apenas as execuções do dia e as filas da
+  execução monitorada. L3 não recebe a capacidade operacional de motorista
+  automaticamente.
 
 ### Documentação viva da API
 

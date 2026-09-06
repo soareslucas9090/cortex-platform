@@ -47,7 +47,8 @@ Os agregados iniciais identificados no Cortex são:
 4. `TerceirizadoAggregate`
 5. `AlunoAggregate`
 6. `CursoAggregate`
-7. `ExecucaoRotaAggregate`
+7. `RotaAggregate`
+8. `ExecucaoRotaAggregate`
 
 ---
 
@@ -304,7 +305,54 @@ Representa o curso e sua relação com os vínculos acadêmicos dos alunos.
 
 ---
 
-# 7. ExecucaoRotaAggregate
+# 7. RotaAggregate
+
+## Aggregate Root
+
+`Rota`
+
+## Entidades relacionadas
+
+- `Rota`
+- `Percurso`
+
+## Dependências conceituais externas
+
+- `Motorista`
+- `Usuario`
+- `ExecucaoRota`
+
+## Responsabilidade
+
+Representa a programação recorrente de um ônibus em determinado percurso, dia da
+semana e horário. Também fornece a visão somente de leitura das rotas programadas
+para a data local, enriquecida com a execução correspondente.
+
+## Invariantes
+
+1. Toda `Rota` deve estar associada a exatamente um `Percurso`.
+2. A visão do motorista só contém rotas e percursos ativos.
+3. A rota deve estar programada para o dia da semana correspondente à data local.
+4. Todos os motoristas ativos visualizam o mesmo conjunto completo de rotas do dia.
+5. Usuário ou perfil Motorista inativo não pode acessar a visão.
+6. A consulta não cria nem altera registros.
+7. A ordenação é por horário de saída e, em caso de empate, pelo apelido do percurso.
+8. Cada usuário possui no máximo um perfil Motorista, pois o vínculo é `OneToOne`.
+9. Um usuário vinculado a Motorista não pode ser excluído fisicamente (`PROTECT`).
+10. Quando existe execução na data, status, capacidade e ocupação vêm dela; sem
+    execução, os campos operacionais são nulos/zero e a capacidade vem da rota.
+11. A ocupação considera apenas tickets `RESERVADO` e `EMBARCADO`.
+
+## Onde as regras devem morar
+
+- autorização do perfil Motorista e definição da data: `Transporte/rotas/business.py`;
+- consultas e ordenação: `Transporte/rotas/helpers.py`;
+- identificação do perfil ativo: `Transporte/motoristas/helpers.py`;
+- contrato de resposta: `Transporte/rotas/serializers.py`.
+
+---
+
+# 8. ExecucaoRotaAggregate
 
 ### Aggregate Root
 
@@ -314,6 +362,7 @@ Representa o curso e sua relação com os vínculos acadêmicos dos alunos.
 
 - `ExecucaoRota`
 - `Ticket`
+- `EntradaSemTicket`
 - `Strike`
 - `Justificativa`
 
@@ -329,14 +378,39 @@ Representa o curso e sua relação com os vínculos acadêmicos dos alunos.
    reorganiza a posição, mas nunca remove uma reserva confirmada nem promove sem vaga.
 7. Cancelamento de reserva e promoção acontecem na mesma transação.
 8. Cada ticket ausente gera no máximo um strike.
-9. Três strikes ativos bloqueiam somente novas solicitações.
+9. Três strikes ativos bloqueiam novas reservas, entradas em fila e entradas
+   sem ticket; não cancelam tickets nem posições já existentes.
 10. QR Code só embarca ticket reservado em execução no estado de embarque.
 11. A aprovação da justificativa e a retirada do strike da contagem são atômicas.
+12. O conferente inicia o monitoramento somente se `now > T-30`; o aluno ainda
+    solicita no instante igual a T-30. Depois de `FINALIZADA` o monitoramento
+    não reinicia (replay de iniciar só em `EM_EMBARQUE`).
+13. Ao finalizar a execução, a espera que não couber fica `NAO_CONTEMPLADO`.
+14. Entrada sem ticket exige vaga além da espera
+    (`vagas_disponiveis > quantidade em EM_ESPERA`) e não promove quem está `EM_ESPERA`.
+    Aluno que cancelou o ticket ou está `AUSENTE` nesta execução pode entrar por
+    CPF nessas condições; a ausência e o strike permanecem. Três strikes ativos
+    bloqueiam a entrada.
+15. Depois de `EM_EMBARQUE` a execução não pode ser cancelada; só finaliza.
+16. Remover da espera na conferência só atinge tickets da fila visível
+    (N = vagas restantes após a chamada).
+17. Conferência por ID no dia: `CANCELADA` não existe nesse escopo;
+    `FINALIZADA` permanece para consulta da execução e replay de finalizar,
+    não de iniciar. Filas da conferência só em `EM_EMBARQUE`.
+    A lista do dia mostra `FINALIZADA` e omite `CANCELADA`.
 
 ### Fronteira transacional
 
 `ExecucaoRota` é bloqueada durante reserva e cancelamento com promoção. Tickets,
 strikes e justificativas são bloqueados nas respectivas mudanças de estado.
+
+### Relação com a visão do motorista
+
+O status, a capacidade congelada e a ocupação desta execução alimentam a visão
+diária do motorista, sem transferir para a consulta as regras transacionais de
+reserva e embarque.
+
+---
 
 # Invariantes transversais
 
@@ -344,7 +418,7 @@ As regras abaixo atravessam mais de um agregado e precisam ser tratadas com cuid
 
 ## 1. Todo perfil parte de um usuário
 
-Perfis como `Servidor`, `Terceirizado` e `Aluno` dependem da existência prévia de `Usuario`.
+Perfis como `Servidor`, `Terceirizado`, `Aluno` e `Motorista` dependem da existência prévia de `Usuario`.
 
 ## 2. Responsável de setor deve ser servidor
 
@@ -398,6 +472,16 @@ Deve orquestrar:
 - criação de curso (em `Academico/cursos/business.py`);
 - vínculo entre aluno e curso.
 
+## `Transporte/rotas/business.py` e apps operacionais de Transporte
+
+Deve orquestrar:
+
+- autorização e consulta das rotas do dia para motoristas ativos;
+- associação da execução correspondente e cálculo da ocupação real;
+- mudanças de estado das execuções;
+- reserva, fila, cancelamento, embarque e ausência;
+- strikes e análise de justificativas.
+
 ---
 
 # Regras que não devem ir para as views
@@ -439,6 +523,14 @@ As views devem apenas:
 
 - criar vínculo aluno-curso;
 - representar monitoria sem duplicar regra no agregado errado.
+
+## No domínio Transporte
+
+- consultar rotas do dia sem criar efeitos colaterais;
+- reservar a última vaga sob concorrência;
+- cancelar uma reserva e promover a fila na mesma transação;
+- validar QR Code e registrar embarque de forma idempotente;
+- registrar ausência, strike e decisão de justificativa de modo consistente.
 
 ---
 
@@ -486,7 +578,8 @@ Os agregados iniciais do Cortex foram definidos em torno de:
 - identidade da pessoa;
 - estrutura organizacional;
 - perfis institucionais;
-- perfis acadêmicos.
+- perfis acadêmicos;
+- transporte universitário e sua operação diária.
 
 A principal consequência prática desta definição é:
 

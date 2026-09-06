@@ -110,14 +110,16 @@ cortex-plataform/
 │   ├── permissoes/             # capacidades por função (sem rotas HTTP)
 │   ├── autorizacoes/
 │   └── emprestimos/
-├── Transporte/                 # Domínio do transporte universitário e tickets
+├── Transporte/                 # Domínio: cadastros e operação do transporte universitário
 │   ├── urls.py
 │   ├── percursos/
 │   ├── rotas/
+│   ├── motoristas/
 │   ├── execucoes_rotas/
 │   ├── tickets/
 │   ├── strikes/
-│   └── justificativas/
+│   ├── justificativas/
+│   └── bloqueios/
 │
 ├── docs/                       # Documentação do projeto
 │   ├── decisions/              # ADRs (Architecture Decision Records)
@@ -395,13 +397,16 @@ Cadastro de espaço físico, recursos, autorizações e empréstimos.
 - `Emprestimo` — retirada e devolução multi-item
 - `PermissaoFuncaoInfraestrutura` — capacidades por função (app interno sem rotas HTTP)
 
-### Transporte _(implementado — rotas, tickets e embarque)_
+### Transporte _(implementado — rotas, motoristas, tickets, embarque e bloqueios)_
 
 Cadastro administrativo de percursos, rotas e execuções; alunos elegíveis podem
-reservar tickets, acompanhar a fila PcD/FIFO e apresentar justificativas.
+reservar tickets, acompanhar a fila PcD/FIFO e, quando bloqueados, enviar
+justificativa de ausências para análise do TI. Motoristas ativos consultam as
+rotas do dia com status da execução e ocupação reais.
 
 - `Percurso` — apelido, descrição do trajeto e status ativo/inativo
 - `Rota` — percurso, horário de saída, dia da semana, quantidade de vagas e status ativo/inativo
+- `Motorista` — perfil ativo associado a um usuário, usado para autorizar a visão das rotas do dia
 - `ExecucaoRota` — ocorrência datada com horário e capacidade congelados
 - `Ticket` — reserva, fila, cancelamento, embarque por QR Code ou ausência
 - `Strike` e `Justificativa` — bloqueio após três faltas ativas e revisão por L3
