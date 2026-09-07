@@ -61,7 +61,10 @@ class RotaHelpers(ModelInstanceHelpers):
         from .models import Rota
 
         execucoes_do_dia = (
-            ExecucaoRota.objects.filter(data_execucao=data)
+            ExecucaoRota.objects.filter(
+                Q(data_execucao=data)
+                | Q(rota_iniciada_em__isnull=False, rota_finalizada_em__isnull=True)
+            )
             .annotate(
                 tickets_solicitados=Count(
                     'tickets',
@@ -79,10 +82,11 @@ class RotaHelpers(ModelInstanceHelpers):
         return (
             Rota.objects.select_related('percurso')
             .filter(
-                ativo=True,
-                percurso__ativo=True,
-                dia_semana=dia_semana_da_data(data),
+                Q(ativo=True, percurso__ativo=True, dia_semana=dia_semana_da_data(data))
+                | Q(execucoes__rota_iniciada_em__isnull=False,
+                    execucoes__rota_finalizada_em__isnull=True),
             )
+            .distinct()
             .annotate(
                 data_operacao=Value(data, output_field=DateField()),
             )
@@ -95,3 +99,24 @@ class RotaHelpers(ModelInstanceHelpers):
             )
             .order_by('horario_saida', 'percurso__apelido')
         )
+
+    def listar_operacoes_do_dia(self, data):
+        from copy import copy
+
+        # Uma linha por viagem; viagens pendentes de outro dia continuam acessíveis.
+        rotas = []
+        for rota in self.listar_do_dia(data):
+            for execucao in rota.execucoes_do_dia:
+                item = copy(rota)
+                item.data_operacao = execucao.data_execucao
+                item.execucoes_do_dia = [execucao]
+                rotas.append(item)
+            tem_execucao_hoje = any(e.data_execucao == data for e in rota.execucoes_do_dia)
+            if (
+                not tem_execucao_hoje and rota.ativo and rota.percurso.ativo
+                and rota.dia_semana == dia_semana_da_data(data)
+            ):
+                item = copy(rota)
+                item.execucoes_do_dia = []
+                rotas.append(item)
+        return rotas

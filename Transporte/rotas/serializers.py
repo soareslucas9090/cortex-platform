@@ -3,6 +3,7 @@ from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import extend_schema_field
 
 from Transporte.percursos.models import Percurso
+from Transporte.execucoes_rotas.viagem_serializers import ViagemRotaSerializer
 
 from .choices import DiaSemana
 from .models import Rota
@@ -52,6 +53,7 @@ class RotaDoDiaSerializer(serializers.ModelSerializer):
     status_execucao = serializers.SerializerMethodField()
     status_execucao_display = serializers.SerializerMethodField()
     tickets_solicitados = serializers.SerializerMethodField()
+    viagem = serializers.SerializerMethodField()
 
     class Meta:
         model = Rota
@@ -68,6 +70,7 @@ class RotaDoDiaSerializer(serializers.ModelSerializer):
             'status_execucao',
             'status_execucao_display',
             'tickets_solicitados',
+            'viagem',
         ]
 
     @extend_schema_field(OpenApiTypes.INT)
@@ -99,6 +102,11 @@ class RotaDoDiaSerializer(serializers.ModelSerializer):
     def _obter_execucao_do_dia(obj):
         execucoes = getattr(obj, 'execucoes_do_dia', ())
         return execucoes[0] if execucoes else None
+
+    @extend_schema_field(ViagemRotaSerializer(allow_null=True))
+    def get_viagem(self, obj):
+        execucao = self._obter_execucao_do_dia(obj)
+        return ViagemRotaSerializer(execucao, context=self.context).data if execucao else None
 
 
 class CriarRotaSerializer(serializers.Serializer):

@@ -1,7 +1,7 @@
 import logging
 from datetime import datetime
 
-from django.db import IntegrityError
+from django.db import IntegrityError, transaction
 from django.utils import timezone
 
 from AppCore.core.business.business import ModelInstanceBusiness
@@ -14,6 +14,61 @@ logger = logging.getLogger(__name__)
 
 
 class ExecucaoRotaBusiness(ModelInstanceBusiness):
+
+    def listar_historico(self, usuario, filtros=None):
+        try:
+            from Transporte.permissoes.access import usuario_pode_operar_rota
+
+            self.object_instance.rules.validar_acesso_historico(usuario_pode_operar_rota(usuario))
+            return self.object_instance.helper.listar_historico(filtros)
+        except Exception as e:
+            self.relancar_ou_erro_sistema(e, 'Não foi possível listar o histórico de rotas.', logger)
+
+    def listar_percursos_historico(self, usuario):
+        try:
+            from Transporte.permissoes.access import usuario_pode_operar_rota
+
+            self.object_instance.rules.validar_acesso_historico(usuario_pode_operar_rota(usuario))
+            return self.object_instance.helper.listar_percursos_historico()
+        except Exception as e:
+            self.relancar_ou_erro_sistema(e, 'Não foi possível listar os percursos do histórico.', logger)
+
+    def detalhar_historico(self, usuario, execucao_id):
+        try:
+            from Transporte.permissoes.access import usuario_pode_operar_rota
+
+            self.object_instance.rules.validar_acesso_historico(usuario_pode_operar_rota(usuario))
+            return self.object_instance.helper.detalhar_historico(execucao_id)
+        except Exception as e:
+            self.relancar_ou_erro_sistema(e, 'Não foi possível obter os detalhes da rota executada.', logger)
+
+    @transaction.atomic
+    def operar_rota(self, execucao_id, usuario, finalizar=False):
+        """Registra a viagem sob bloqueio, preservando horários em reenvios."""
+        try:
+            from AppCore.core.exceptions.exceptions import AuthorizationException
+            from Transporte.permissoes.access import usuario_pode_operar_rota
+
+            if not usuario_pode_operar_rota(usuario):
+                raise AuthorizationException('Acesso permitido somente a motoristas ativos e administradores.')
+            execucao = self.object_instance.helper.obter_por_id(execucao_id, bloquear=True)
+            if finalizar:
+                execucao.rules.validar_finalizacao_rota(execucao)
+                execucao.rules.validar_responsavel_rota(execucao, usuario)
+                if execucao.rota_finalizada_em is None:
+                    execucao.rota_finalizada_em = timezone.now()
+                    execucao.save(update_fields=['rota_finalizada_em'])
+            else:
+                execucao.rules.validar_inicio_rota(execucao)
+                if execucao.rota_iniciada_em is not None:
+                    execucao.rules.validar_responsavel_rota(execucao, usuario)
+                    return execucao
+                execucao.rota_iniciada_em = timezone.now()
+                execucao.rota_iniciada_por = usuario
+                execucao.save(update_fields=['rota_iniciada_em', 'rota_iniciada_por'])
+            return execucao
+        except Exception as e:
+            self.relancar_ou_erro_sistema(e, 'Não foi possível registrar a operação da rota.', logger)
 
     def listar_para_usuario(self, usuario, status_param=None, data_param=None):
         try:

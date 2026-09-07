@@ -32,15 +32,18 @@ class RotaBusiness(ModelInstanceBusiness):
             self.relancar_ou_erro_sistema(e, 'Não foi possível listar as rotas.', logger)
 
     def listar_rotas_do_dia(self, usuario, data=None):
-        """Lista as rotas do dia para um motorista ativo, sem alterar dados."""
+        """Lista as rotas do dia para motorista ativo ou administrador, sem alterar dados."""
         try:
             from Transporte.motoristas.models import Motorista
+            from Transporte.permissoes.access import usuario_e_administrador_transporte
 
             data = data or timezone.localdate()
             motorista = Motorista().helper.obter_ativo_do_usuario(usuario)
-            if motorista is None:
-                raise AuthorizationException('Acesso permitido somente a motoristas ativos.')
-            return self.object_instance.helper.listar_do_dia(data)
+            if motorista is None and not usuario_e_administrador_transporte(usuario):
+                raise AuthorizationException(
+                    'Acesso permitido somente a motoristas ativos e administradores.'
+                )
+            return self.object_instance.helper.listar_operacoes_do_dia(data)
         except Exception as e:
             self.relancar_ou_erro_sistema(e, 'Não foi possível listar as rotas do dia.', logger)
 

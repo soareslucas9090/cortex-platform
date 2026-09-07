@@ -9,12 +9,13 @@ from AppCore.basics.views.basic_views import (
     BasicPostAPIView,
     BasicRetrieveAPIView,
 )
-from Transporte.permissoes.access import PodeConferirTransporteMixin
+from Transporte.permissoes.access import PodeConferirTransporteMixin, PodeOperarRotaMixin
 from Transporte.tickets.models import Ticket
 from Transporte.tickets.serializers import TicketConferenciaSerializer
 
 from .choices import StatusExecucaoRota
 from .models import ExecucaoRota
+from .viagem_serializers import ViagemRotaSerializer
 from .serializers import (
     CriarExecucaoRotaSerializer,
     ExecucaoRotaSerializer,
@@ -27,6 +28,42 @@ PERMISSAO_LISTAGEM = (
     'demais usuários veem somente execuções abertas, em dia útil, da meia-noite '
     'do dia da viagem até exatamente 30 minutos antes da saída.'
 )
+
+
+@extend_schema(
+    tags=['Transporte · Motorista'],
+    summary='Iniciar rota após a conferência',
+    description='Motorista ativo ou L3. Registra o horário do servidor e quem iniciou. '
+                'Exige conferência finalizada e execução do dia. Reenvios preservam o início.',
+    request=SerializerVazio,
+    responses={200: ViagemRotaSerializer},
+)
+class IniciarViagemRotaView(PodeOperarRotaMixin, BasicPostAPIView):
+    serializer_class = SerializerVazio
+    mensagem_sucesso = 'Rota iniciada com sucesso.'
+
+    def do_action_post(self, serializer_data, request, *args, **kwargs):
+        execucao = ExecucaoRota().business.operar_rota(kwargs['pk'], request.user)
+        return {'dados': ViagemRotaSerializer(execucao, context={'request': request}).data}
+
+
+@extend_schema(
+    tags=['Transporte · Motorista'],
+    summary='Finalizar rota e registrar duração',
+    description='Quem iniciou a viagem (motorista ativo) ou L3 pode finalizar, inclusive '
+                'após a meia-noite. Reenvios preservam o horário final e a duração.',
+    request=SerializerVazio,
+    responses={200: ViagemRotaSerializer},
+)
+class FinalizarViagemRotaView(PodeOperarRotaMixin, BasicPostAPIView):
+    serializer_class = SerializerVazio
+    mensagem_sucesso = 'Rota finalizada com sucesso.'
+
+    def do_action_post(self, serializer_data, request, *args, **kwargs):
+        execucao = ExecucaoRota().business.operar_rota(kwargs['pk'], request.user, finalizar=True)
+        return {'dados': ViagemRotaSerializer(execucao, context={'request': request}).data}
+
+
 PERMISSAO_ADMIN = '**Permissões:** L3 (EDITAR_TUDO) — perfil TI / administradores.'
 PERMISSAO_CONFERIR = (
     '**Permissões:** capacidade transporte.conferir. Lê e opera execuções do dia e, '

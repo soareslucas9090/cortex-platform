@@ -1,4 +1,6 @@
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
+
+from django.db.models import Count, Prefetch, Q
 
 from django.utils.timezone import localdate, now
 
@@ -16,6 +18,78 @@ STATUSES_LISTAGEM_CONFERENCIA = (
 
 
 class ExecucaoRotaHelpers(ModelInstanceHelpers):
+
+    def listar_historico(self, filtros=None):
+        from Transporte.tickets.choices import StatusTicket
+        from .models import ExecucaoRota
+
+        filtros = filtros or {}
+        queryset = (
+            ExecucaoRota.objects.select_related('rota__percurso', 'rota_iniciada_por')
+            .filter(status=StatusExecucaoRota.FINALIZADA, rota_finalizada_em__isnull=False)
+            .annotate(
+                presentes=Count('tickets', filter=Q(tickets__status=StatusTicket.EMBARCADO), distinct=True),
+                ausentes=Count('tickets', filter=Q(tickets__status=StatusTicket.AUSENTE), distinct=True),
+                sem_ticket=Count('entradas_sem_ticket', distinct=True),
+            )
+        )
+        percurso_id = str(filtros.get('percurso_id', ''))
+        if percurso_id.isascii() and percurso_id.isdigit() and len(percurso_id) <= 18:
+            queryset = queryset.filter(rota__percurso_id=int(percurso_id))
+        data_filtro = filtros.get('data')
+        if data_filtro:
+            try:
+                data_valida = date.fromisoformat(data_filtro)
+            except (TypeError, ValueError):
+                pass
+            else:
+                queryset = queryset.filter(data_execucao=data_valida)
+        busca = str(filtros.get('busca') or '').strip()
+        if busca:
+            condicao = Q(rota__percurso__apelido__unaccent__icontains=busca) | Q(
+                rota__percurso__descricao__unaccent__icontains=busca,
+            )
+            for formato in ('%d/%m/%Y', '%Y-%m-%d'):
+                try:
+                    data_busca = datetime.strptime(busca, formato).date()
+                except ValueError:
+                    continue
+                condicao |= Q(data_execucao=data_busca)
+                break
+            queryset = queryset.filter(condicao)
+        ordenacao = filtros.get('ordenacao', '-data')
+        campos = {
+            'data': ('data_execucao', 'data_hora_saida', 'pk'),
+            '-data': ('-data_execucao', '-data_hora_saida', '-pk'),
+            'horario': ('data_hora_saida__time', '-data_execucao', 'pk'),
+            '-horario': ('-data_hora_saida__time', '-data_execucao', '-pk'),
+            'percurso': ('rota__percurso__apelido', '-data_execucao', 'pk'),
+            '-percurso': ('-rota__percurso__apelido', '-data_execucao', '-pk'),
+        }
+        return queryset.order_by(*campos.get(ordenacao, campos['-data']))
+
+    def listar_percursos_historico(self):
+        from Transporte.percursos.models import Percurso
+        from .models import ExecucaoRota
+
+        percursos = ExecucaoRota.objects.filter(
+            status=StatusExecucaoRota.FINALIZADA, rota_finalizada_em__isnull=False,
+        ).values('rota__percurso_id')
+        # Inclui cadastros desativados que possuem viagens concluídas.
+        return Percurso.objects.all().filter(pk__in=percursos).order_by('apelido', 'pk')
+
+    def detalhar_historico(self, execucao_id):
+        from Transporte.entradas_sem_ticket.models import EntradaSemTicket
+        from Transporte.tickets.choices import StatusTicket
+        from Transporte.tickets.models import Ticket
+
+        tickets = Ticket.objects.select_related('aluno__usuario').order_by('aluno__usuario__nome', 'pk')
+        entradas = EntradaSemTicket.objects.select_related('aluno__usuario').order_by('aluno__usuario__nome', 'pk')
+        return self.listar_historico().prefetch_related(
+            Prefetch('tickets', queryset=tickets.filter(status=StatusTicket.EMBARCADO), to_attr='tickets_presentes'),
+            Prefetch('tickets', queryset=tickets.filter(status=StatusTicket.AUSENTE), to_attr='tickets_ausentes'),
+            Prefetch('entradas_sem_ticket', queryset=entradas, to_attr='passageiros_sem_ticket'),
+        ).get(pk=execucao_id)
 
     def listar_para_usuario(self, usuario, status_param=None, data_param=None):
         from .models import ExecucaoRota

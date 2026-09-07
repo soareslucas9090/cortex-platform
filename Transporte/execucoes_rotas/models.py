@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.db import models
 
 from AppCore.basics.models.models import BasicModel
@@ -64,12 +65,35 @@ class ExecucaoRota(
         default=list,
         blank=True,
     )
+    rota_iniciada_em = models.DateTimeField('Rota iniciada em', null=True, blank=True)
+    rota_finalizada_em = models.DateTimeField('Rota finalizada em', null=True, blank=True)
+    rota_iniciada_por = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        related_name='viagens_iniciadas',
+        null=True,
+        blank=True,
+        verbose_name='Rota iniciada por',
+    )
+
+    @property
+    def duracao_rota_segundos(self):
+        if self.rota_iniciada_em is None or self.rota_finalizada_em is None:
+            return None
+        return int((self.rota_finalizada_em - self.rota_iniciada_em).total_seconds())
 
     class Meta:
         verbose_name = 'Execução de rota'
         verbose_name_plural = 'Execuções de rotas'
         ordering = ['data_hora_saida', 'rota_id']
         constraints = [
+            models.CheckConstraint(
+                condition=models.Q(rota_finalizada_em__isnull=True) | (
+                    models.Q(rota_iniciada_em__isnull=False)
+                    & models.Q(rota_finalizada_em__gte=models.F('rota_iniciada_em'))
+                ),
+                name='execucao_rota_fim_apos_inicio',
+            ),
             models.UniqueConstraint(
                 fields=['rota', 'data_execucao'],
                 name='execucao_rota_unica_por_data',

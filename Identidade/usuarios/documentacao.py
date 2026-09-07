@@ -521,7 +521,7 @@ class PermissaoDocumentacao:
             'texto': (
                 'O módulo transporte controla o cadastro de percursos e rotas, as execuções '
                 'datadas, os tickets e a conferência de embarque. L3 administra cadastros e '
-                'execuções. Motoristas ativos consultam as rotas do dia. Alunos elegíveis '
+                'execuções. Motoristas ativos e L3 consultam as rotas do dia. Alunos elegíveis '
                 'reservam tickets. Conferentes (L3 ou colaborador servidor/terceirizado com '
                 'conferir por função ou por usuário) operam as execuções do dia. O payload expõe '
                 'gerenciar, motorista, reservar, conferir, bloqueado, faltas e bloqueios.'
@@ -541,7 +541,8 @@ class PermissaoDocumentacao:
                             'destaque': 'motorista',
                             'texto': (
                                 'true somente quando o usuário possui perfil Motorista ativo e '
-                                'a própria conta de usuário está ativa.'
+                                'a própria conta de usuário está ativa. A visão das rotas do dia '
+                                'também aceita L3 por meio da capacidade gerenciar.'
                             ),
                         },
                         {

@@ -70,3 +70,4 @@ Diretrizes e regras específicas por domínio de negócio.
 - [Pessoas Institucionais](domains/pessoas-institucionais.md)
 - [Acadêmico](domains/academico.md)
 - [Transporte](domains/transporte.md)
+- [Histórico de rotas executadas](domains/transporte.md#12-histórico-de-rotas-executadas)
