@@ -71,6 +71,16 @@ class RotaHelpers(ModelInstanceHelpers):
                             StatusTicket.EMBARCADO,
                         ),
                     ),
+                    distinct=True,
+                ),
+                tickets_embarcados=Count(
+                    'tickets',
+                    filter=Q(tickets__status=StatusTicket.EMBARCADO),
+                    distinct=True,
+                ),
+                entradas_sem_ticket_count=Count(
+                    'entradas_sem_ticket',
+                    distinct=True,
                 ),
             )
             .order_by('data_hora_saida', 'rota_id')

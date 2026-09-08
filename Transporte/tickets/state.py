@@ -20,8 +20,7 @@ class TicketEmEsperaState(TicketState):
     transicoes_permitidas = frozenset({
         StatusTicket.RESERVADO,
         StatusTicket.CANCELADO,
-        StatusTicket.EMBARCADO,
-        StatusTicket.NAO_CONTEMPLADO,
+        StatusTicket.CONTEMPLADO,
     })
 
 
@@ -37,7 +36,7 @@ class TicketAusenteState(TicketState):
     pass
 
 
-class TicketNaoContempladoState(TicketState):
+class TicketContempladoState(TicketState):
     pass
 
 
@@ -47,6 +46,5 @@ ESTADOS_TICKET = {
     StatusTicket.CANCELADO: TicketCanceladoState,
     StatusTicket.EMBARCADO: TicketEmbarcadoState,
     StatusTicket.AUSENTE: TicketAusenteState,
-    StatusTicket.NAO_CONTEMPLADO: TicketNaoContempladoState,
+    StatusTicket.CONTEMPLADO: TicketContempladoState,
 }
-
