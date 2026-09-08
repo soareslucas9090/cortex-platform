@@ -46,3 +46,22 @@ class PodeConferirTransportePermission(BasePermission):
 
 class PodeConferirTransporteMixin:
     permission_classes = [IsAuthenticated, PodeConferirTransportePermission]
+
+
+def usuario_pode_operar_rota(user) -> bool:
+    from Transporte.motoristas.models import Motorista
+
+    return usuario_e_administrador_transporte(user) or (
+        Motorista().helper.usuario_e_motorista_ativo(user)
+    )
+
+
+class PodeOperarRotaPermission(BasePermission):
+    message = 'Acesso permitido somente a motoristas ativos e administradores.'
+
+    def has_permission(self, request, view):
+        return usuario_pode_operar_rota(request.user)
+
+
+class PodeOperarRotaMixin:
+    permission_classes = [IsAuthenticated, PodeOperarRotaPermission]

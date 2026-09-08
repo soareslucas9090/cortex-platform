@@ -25,7 +25,8 @@ PERMISSAO_TI = (
 )
 
 PERMISSAO_MOTORISTA = (
-    '**Permissões:** Motorista ativo. Todos os motoristas visualizam todas as rotas do dia.'
+    '**Permissões:** Motorista ativo ou L3 (administrador). '
+    'Todos visualizam todas as rotas do dia.'
 )
 
 
@@ -39,6 +40,9 @@ PERMISSAO_MOTORISTA = (
     `vagas_ocupadas` / `vagas_disponiveis` com a mesma regra da conferência
     (após a chamada: EMBARCADO + entradas sem ticket).
     Rotas ainda sem execução retornam status nulo, zero tickets e zero vagas ocupadas.
+    Inclui também viagens de dias anteriores ainda em andamento, inclusive se a rota
+    foi desativada. O objeto `viagem` informa início, fim, duração em segundos e as ações
+    permitidas ao usuário. Uma rota pode aparecer em mais de uma data de operação.
     Este endpoint é exclusivamente de leitura e não cria nem altera dados operacionais.
 
     {PERMISSAO_MOTORISTA}
@@ -46,7 +50,9 @@ PERMISSAO_MOTORISTA = (
     responses={
         status.HTTP_200_OK: RotaDoDiaSerializer(many=True),
         status.HTTP_401_UNAUTHORIZED: {'description': 'Não autenticado.'},
-        status.HTTP_403_FORBIDDEN: {'description': 'Usuário não é motorista ativo.'},
+        status.HTTP_403_FORBIDDEN: {
+            'description': 'Usuário não é motorista ativo nem administrador.'
+        },
     },
 )
 class ListarRotasDoDiaView(IsAuthenticatedMixin, BasicGetAPIView):

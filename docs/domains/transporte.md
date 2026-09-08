@@ -75,7 +75,8 @@ Transporte/
 
 ### 3. Perfil e visão das rotas do dia pelo motorista (RF013)
 
-- Todos os motoristas ativos visualizam todas as rotas ativas programadas para o dia atual.
+- Motoristas ativos e administradores visualizam todas as rotas ativas programadas
+  para o dia atual, além de viagens iniciadas em datas anteriores e ainda não finalizadas.
 - A data atual usa o timezone `America/Fortaleza` configurado no projeto.
 - Rotas são ordenadas pelo horário de saída e, em caso de empate, pelo apelido do percurso.
 - A consulta é somente de leitura e não cria nem altera registros.
@@ -95,8 +96,8 @@ Transporte/
 
 - **Ativo**: com a conta de usuário também ativa, recebe a capacidade
   `transporte.motorista` e pode consultar as rotas do dia.
-- **Inativo**: não recebe a capacidade e não pode acessar a consulta, mesmo que a
-  conta de usuário esteja ativa.
+- **Inativo**: não recebe a capacidade de motorista. Só pode acessar a consulta
+  se também for administrador e a conta de usuário estiver ativa.
 - Conta de usuário inativa sempre bloqueia o acesso, independentemente do estado do
   perfil Motorista.
 
@@ -112,10 +113,9 @@ API. O status visual é derivado assim:
 O indicador `Tickets solicitados` exibe `tickets_solicitados / quantidade_vagas`.
 A ocupação física do ônibus, após a conferência, deve usar `vagas_ocupadas` /
 `quantidade_vagas`.
-Nesta entrega a tela do motorista é só leitura: não inicia nem finaliza a
-**viagem** (`EMBARCADO` → `INICIADA` → `FINALIZADA`; `finalizada_em`). Essa
-API ainda não existe. O conferente opera só a **conferência** (monitoramento
-`EM_EMBARQUE` e encerramento em `EMBARCADO` com `embarcado_em`), não a viagem.
+A tela oferece **INICIAR ROTA** após a finalização da conferência e
+**FINALIZAR A ROTA** durante a viagem, conforme as permissões retornadas pela API.
+O fluxo e a medição do tempo estão descritos na seção 11.
 
 ### 4. Execuções de rotas
 
@@ -287,8 +287,7 @@ O payload `posicao` informa `tipo` (`RESERVA` ou `ESPERA`), `atual` e `total`.
 | `justificativa_pendente.strikes_cobertos` | Mantido para compatibilidade com clientes legados |
 Cada item de `itens_ausencia` repete o texto único da justificativa e traz a data
 e o horário da execução em que a ausência ocorreu.
-e o horário da execução em que a ausência ocorreu.
-### 8. QR Code
+
 ### 8. QR Code
 
 - O backend emite em `codigo_qr` um conteúdo opaco assinado, com UUID público do
@@ -328,9 +327,10 @@ escopo do dia, da chamada de tickets e da entrada por CPF da execução monitora
 #### Visualização (motorista)
 
 - `user.permissoes.transporte.motorista` é `true` somente para usuário e perfil Motorista ativos.
-- L3/TI não recebe a capacidade operacional automaticamente.
+- L3/TI acessa as rotas do dia e o histórico pela permissão administrativa,
+  sem precisar de perfil Motorista ou da capacidade `transporte.motorista`.
 - O endpoint de leitura usa o `IsAuthenticatedMixin` padrão do `AppCore`; a camada
-  `Business` valida que o usuário possui perfil Motorista ativo.
+  `Business` valida que o usuário possui perfil Motorista ativo ou é administrador.
 
 ### 10. Endpoints
 
@@ -350,12 +350,16 @@ Base rotas: `/cortex/transporte/rotas/`
 
 Base motorista: `/cortex/transporte/motorista/`
 
-- `GET rotas-do-dia/` — lista completa, sem paginação, restrita a motoristas ativos
+- `GET rotas-do-dia/` — lista completa, sem paginação, para motoristas ativos e administradores
+- `GET historico-rotas/`, `GET historico-rotas/percursos/` e
+  `GET historico-rotas/{id}/` — histórico de viagens finalizadas (seção 12)
 
 Base execuções: `/cortex/transporte/execucoes-rotas/`
 
 - `GET` / `POST` na raiz
 - `GET` em `<pk>/`
+- `POST` em `<pk>/motorista/iniciar-rota/` e `<pk>/motorista/finalizar-rota/`
+  — início e fim da viagem (seção 11)
 - `POST` em `abrir-reservas/`, `fechar-reservas/` e `cancelar/` (L3;
   cancelar só antes de `EM_EMBARQUE`)
 - `GET` `execucoes-rotas/conferencia/`
@@ -393,3 +397,135 @@ Bases auxiliares:
   `GET /cortex/transporte/justificativas/<pk>/` (detalhe inclui `itens_ausencia`)
 - `POST /cortex/transporte/justificativas/<pk>/aprovar/`
 - `POST /cortex/transporte/justificativas/<pk>/rejeitar/`
+
+### 11. Tempo de viagem do motorista
+
+A conferência mantém seu ciclo atual: `FINALIZADA` significa que o conferente
+encerrou a conferência. A viagem do motorista é registrada separadamente na mesma
+execução, sem alterar esse status nem os tickets.
+
+1. O conferente finaliza a chamada e a conferência.
+2. Na tela **Rotas do dia**, o motorista usa **INICIAR ROTA**. O servidor exige
+   conferência finalizada, execução do dia, rota e percurso ativos.
+3. O motorista usa **FINALIZAR A ROTA** ao chegar ao destino. O tempo total é
+   calculado em segundos pela diferença entre os horários gravados no servidor.
+
+Os campos `rota_iniciada_em`, `rota_finalizada_em` e `rota_iniciada_por` ficam
+persistidos em `ExecucaoRota` e em seu histórico. `duracao_rota_segundos` é derivado
+dos horários e fica nulo enquanto a viagem não terminou. O relógio do navegador
+serve apenas para exibição; recarregar a página não reinicia a contagem.
+
+Todos os motoristas ativos e administradores continuam vendo todas as rotas.
+Quem iniciou a viagem ou um administrador pode finalizá-la. Os endpoints exigem
+motorista ativo ou administrador, inclusive para reenvios. Repetir a mesma ação
+preserva seus horários; tentar reiniciar uma viagem concluída retorna erro.
+O registro usa transação e bloqueio de linha para impedir sobrescrita concorrente.
+
+Viagens pendentes continuam na listagem após a meia-noite e podem ser finalizadas
+mesmo que a rota tenha sido desativada durante a viagem. Uma rota pode aparecer
+para mais de uma data; a interface identifica cada cartão por rota e data.
+
+#### API
+
+Ambos os POSTs recebem `{}` e retornam o objeto `viagem` no envelope `dados`:
+
+- `POST /cortex/transporte/execucoes-rotas/{id}/motorista/iniciar-rota/`
+- `POST /cortex/transporte/execucoes-rotas/{id}/motorista/finalizar-rota/`
+
+O GET `/cortex/transporte/motorista/rotas-do-dia/` inclui `viagem` em cada item
+(nulo quando não há execução). O objeto contém o ID da execução, os três campos
+persistidos, `duracao_rota_segundos`, `pode_iniciar_rota`, `pode_finalizar_rota` e
+`servidor_agora`. As permissões são calculadas para o usuário da requisição.
+O detalhamento de execução também inclui `viagem` para consulta administrativa.
+
+#### Instalação
+
+Aplicar a migração antes de disponibilizar o backend atualizado:
+
+```sh
+python manage.py migrate execucoes_rotas
+```
+
+A migração `0005_viagem_motorista` adiciona campos opcionais, preserva registros
+anteriores e impede no banco uma finalização sem início ou com horário anterior.
+
+#### Validação
+
+`Transporte.execucoes_rotas.tests.test_viagem_motorista` cobre a liberação pela
+conferência, duração persistida, permissões, reenvios, estados inválidos e viagens
+que atravessam a meia-noite. O frontend testa a retomada da contagem, a duração
+final e a formatação acima de 24 horas em `rotas-do-dia.qa.test.ts`.
+
+### 12. Histórico de rotas executadas
+
+Disponível exclusivamente para **motoristas ativos e administradores (L3)**,
+em `Transporte → Histórico de rotas`. Conferente sem perfil motorista, aluno,
+servidor L2 e usuário comum não podem listar, detalhar, obter opções do filtro
+nem imprimir o histórico. Motoristas autorizados visualizam todas as viagens.
+
+Uma execução entra no histórico somente após **FINALIZAR A ROTA**: exige status
+de conferência `FINALIZADA` e `rota_finalizada_em` preenchido. A conferência
+finalizada, por si só, não inclui a execução; viagens em andamento também ficam
+fora. O histórico continua disponível se a rota, percurso ou antigo motorista
+forem desativados.
+
+#### Dados e contagens
+
+- **Data e horário:** data operacional e horário programado congelados na execução.
+- **Presentes:** tickets em `EMBARCADO`, incluindo passageiros promovidos da espera.
+- **Ausentes:** tickets em `AUSENTE`.
+- **Sem ticket:** registros de `EntradaSemTicket`.
+- **Tempo total:** diferença, em segundos, entre início e fim registrados no servidor.
+
+Cancelados, não contemplados e espera pendente não entram nas contagens. Os joins
+usam contagem distinta para não multiplicar os totais. Um aluno que faltou à
+chamada e depois entrou sem ticket permanece nos dois registros de origem,
+conforme a regra já existente do transporte; a ausência não é apagada.
+
+Em **Detalhes**, aparecem percurso, responsável pelo início, capacidade, horários,
+duração e nomes nas três categorias. CPF, contatos, observações e dados clínicos
+não fazem parte desse contrato. Apelido, descrição e nomes refletem os cadastros
+atuais; os horários e a capacidade pertencem à execução histórica.
+
+#### Consulta e impressão
+
+Listagem com 5 itens por página. Busca por apelido/descrição (sem diferenciar
+acentos e maiúsculas) ou data completa `DD/MM/AAAA` / `AAAA-MM-DD`. Filtros por
+percurso e data podem ser combinados. Ordenação por data, horário ou percurso,
+com desempate estável por ID. Padrão: viagens mais recentes primeiro.
+
+O botão **Imprimir** carrega todas as páginas dos filtros atuais e inclui o tempo
+total no relatório. Uma falha em qualquer página cancela a preparação; não imprime
+um relatório parcial. Dados e filtros são escapados antes de compor o HTML.
+
+#### Endpoints
+
+Contrato: [OpenAPI do histórico](../api/historico-rotas-openapi.yaml).
+
+- `GET /cortex/transporte/motorista/historico-rotas/`
+- `GET /cortex/transporte/motorista/historico-rotas/percursos/`
+- `GET /cortex/transporte/motorista/historico-rotas/{id}/`
+
+Todos exigem `PodeOperarRotaMixin`. O Business também valida acesso antes de
+delegar as consultas ao Helper. As views herdam de `BasicGetAPIView` ou
+`BasicRetrieveAPIView`, com o envelope padrão do AppCore.
+
+Filtros: `busca`, `percurso_id`, `data`, `ordenacao`, `page`, `paginacao`.
+Ordenações: `data`, `-data`, `horario`, `-horario`, `percurso`, `-percurso`.
+Filtros de domínio inválidos são ignorados. A paginação segue o AppCore.
+Detalhes de uma viagem não finalizada ou inexistente retornam 404.
+
+#### Como testar
+
+1. Publicar frontend e backend atualizados. A migração `0005_viagem_motorista`
+   da funcionalidade anterior precisa estar aplicada; o histórico não adiciona
+   tabelas nem exige outra migração.
+2. Acessar com motorista ativo ou administrador. Conferir o menu **Histórico de rotas**.
+3. Finalizar a conferência e iniciar uma rota. Ela ainda não deve aparecer no histórico.
+4. Finalizar a rota. Abrir o histórico e conferir duração e contagens em **Detalhes**.
+5. Testar busca, percurso, data, ordenação e a segunda página.
+6. Imprimir um filtro com mais de 5 viagens e conferir todas as linhas no relatório.
+7. Acessar com aluno/conferente/L2: menu oculto, rota bloqueada e API retornando 403.
+
+Testes automatizados: `Transporte.execucoes_rotas.tests.test_historico_motorista`
+e `src/lib/transporte/historico-rotas.qa.test.ts` (incluído em `npm run test:qa`).

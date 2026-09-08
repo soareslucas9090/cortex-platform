@@ -91,6 +91,7 @@ class RotasDoDiaAPITestCase(APITestCase):
                 'status_execucao',
                 'status_execucao_display',
                 'tickets_solicitados',
+                'viagem',
                 'vagas_ocupadas',
                 'vagas_disponiveis',
             },
@@ -305,10 +306,11 @@ class RotasDoDiaAPITestCase(APITestCase):
         resposta = self.client.get(self.url_lista)
         self.assertEqual(resposta.status_code, status.HTTP_403_FORBIDDEN)
 
-    def test_ti_sem_perfil_motorista_retorna_403(self):
+    def test_ti_sem_perfil_motorista_ve_rotas_do_dia(self):
         self.autenticar(self.usuario_ti)
         resposta = self.client.get(self.url_lista)
-        self.assertEqual(resposta.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(resposta.status_code, status.HTTP_200_OK)
+        self.assertEqual([item['id'] for item in resposta.data['dados']], [self.rota.pk])
 
     def test_motorista_inativo_retorna_403(self):
         self.motorista.ativo = False

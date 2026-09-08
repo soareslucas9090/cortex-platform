@@ -5,9 +5,11 @@ from drf_spectacular.utils import extend_schema_field
 from Transporte.rotas.serializers import RotaSerializer
 
 from .models import ExecucaoRota
+from .viagem_serializers import ViagemRotaSerializer
 
 
 class ExecucaoRotaSerializer(serializers.ModelSerializer):
+    viagem = ViagemRotaSerializer(source='*', read_only=True)
     rota = RotaSerializer(read_only=True)
     status_display = serializers.CharField(source='get_status_display', read_only=True)
     vagas_ocupadas = serializers.SerializerMethodField()
@@ -18,6 +20,7 @@ class ExecucaoRotaSerializer(serializers.ModelSerializer):
         model = ExecucaoRota
         fields = [
             'id',
+            'viagem',
             'rota',
             'data_execucao',
             'data_hora_saida',

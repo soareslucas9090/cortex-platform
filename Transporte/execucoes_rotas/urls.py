@@ -1,8 +1,15 @@
 from django.urls import path
 
 from AppCore.basics.views.basic_views import roteador_por_metodo
+from .historico_views import (
+    DetalharHistoricoRotaView,
+    ListarHistoricoRotasView,
+    ListarPercursosHistoricoView,
+)
 
 from .views import (
+    IniciarViagemRotaView,
+    FinalizarViagemRotaView,
     AbrirReservasExecucaoRotaView,
     CancelarExecucaoRotaView,
     CriarExecucaoRotaView,
@@ -17,6 +24,31 @@ from .views import (
 )
 
 urlpatterns = [
+    path(
+        'motorista/historico-rotas/',
+        ListarHistoricoRotasView.as_view(),
+        name='motorista-historico-rotas-list',
+    ),
+    path(
+        'motorista/historico-rotas/percursos/',
+        ListarPercursosHistoricoView.as_view(),
+        name='motorista-historico-percursos-list',
+    ),
+    path(
+        'motorista/historico-rotas/<int:pk>/',
+        DetalharHistoricoRotaView.as_view(),
+        name='motorista-historico-rotas-detail',
+    ),
+    path(
+        'execucoes-rotas/<int:pk>/motorista/iniciar-rota/',
+        roteador_por_metodo(POST=IniciarViagemRotaView),
+        name='motorista-iniciar-rota',
+    ),
+    path(
+        'execucoes-rotas/<int:pk>/motorista/finalizar-rota/',
+        roteador_por_metodo(POST=FinalizarViagemRotaView),
+        name='motorista-finalizar-rota',
+    ),
     path(
         'execucoes-rotas/',
         roteador_por_metodo(GET=ListarExecucoesRotasView, POST=CriarExecucaoRotaView),

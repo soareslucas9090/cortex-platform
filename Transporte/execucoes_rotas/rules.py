@@ -2,7 +2,7 @@ from datetime import timedelta
 
 from django.utils.timezone import localdate, now
 
-from AppCore.core.exceptions.exceptions import NotFoundException
+from AppCore.core.exceptions.exceptions import AuthorizationException, NotFoundException
 from AppCore.core.rules.rules import ModelInstanceRules
 from Transporte.rotas.choices import DiaSemana
 
@@ -41,6 +41,41 @@ def execucao_elegivel_para_iniciar_monitoramento(execucao) -> bool:
 
 
 class ExecucaoRotaRules(ModelInstanceRules):
+
+    def validar_acesso_historico(self, permitido) -> bool:
+        if not permitido:
+            self.return_exception(
+                'O histórico de rotas é exclusivo para motoristas ativos e administradores.',
+                type_exception=AuthorizationException,
+            )
+        return True
+
+    def validar_inicio_rota(self, execucao):
+        if execucao.rota_finalizada_em is not None:
+            self.return_exception('Esta rota já foi finalizada e não pode ser reiniciada.')
+        if execucao.status != StatusExecucaoRota.FINALIZADA:
+            self.return_exception('Aguarde o conferente finalizar a conferência para iniciar a rota.')
+        if execucao.data_execucao != localdate():
+            self.return_exception('Somente rotas do dia podem ser iniciadas.')
+        self.validar_rota_ativa(execucao.rota)
+
+    def validar_responsavel_rota(self, execucao, usuario):
+        from Transporte.permissoes.access import usuario_e_administrador_transporte
+
+        if (
+            execucao.rota_iniciada_por_id != usuario.pk
+            and not usuario_e_administrador_transporte(usuario)
+        ):
+            self.return_exception(
+                'Somente quem iniciou a rota ou um administrador pode finalizá-la.',
+                type_exception=AuthorizationException,
+            )
+
+    def validar_finalizacao_rota(self, execucao):
+        if execucao.rota_iniciada_em is None:
+            self.return_exception('Inicie a rota antes de finalizá-la.')
+        if now() < execucao.rota_iniciada_em:
+            self.return_exception('O horário de finalização deve ser posterior ao início.')
 
     def validar_rota_ativa(self, rota) -> bool:
         if not rota.ativo:
