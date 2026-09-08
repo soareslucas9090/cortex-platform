@@ -853,12 +853,13 @@ paths:
         de cada módulo registrado.\n\n    Inclui **cortex** (níveis L1–L3), **infraestrutura**
         (capacidades booleanas, secoes\n    estruturadas, acesso total de admin/superuser,
         elegibilidade do solicitante) e\n    **transporte** (capacidades `gerenciar`
-        para L3, `motorista` para a visão das rotas\n    do dia, `reservar` para aluno
-        elegível e `conferir` para L3 ou colaborador com\n    função). Novos módulos\n
-        \   entram automaticamente ao implementar `documentacao_<modulo>()`.\n\n    **Permissões:**
-        Qualquer usuário autenticado.\n\n    **Manutenção:** toda alteração de regra
-        de permissão deve atualizar o método\n    `documentacao_<modulo>()` correspondente
-        em `Identidade.usuarios.documentacao`.\n    "
+        para L3, `motorista` para motoristas ativos;\n    ambas liberam a visão das
+        rotas do dia, `reservar` para aluno elegível e `conferir`\n    para L3 ou
+        colaborador com\n    função). Novos módulos\n    entram automaticamente ao
+        implementar `documentacao_<modulo>()`.\n\n    **Permissões:** Qualquer usuário
+        autenticado.\n\n    **Manutenção:** toda alteração de regra de permissão deve
+        atualizar o método\n    `documentacao_<modulo>()` correspondente em `Identidade.usuarios.documentacao`.\n
+        \   "
       summary: Documentação de permissões por módulo
       tags:
       - Identidade
@@ -6330,6 +6331,52 @@ paths:
               schema:
                 description: Não autenticado.
           description: ''
+  /cortex/transporte/execucoes-rotas/{id}/motorista/finalizar-rota/:
+    post:
+      operationId: transporte_execucoes_rotas_motorista_finalizar_rota_create
+      description: Quem iniciou a viagem (motorista ativo) ou L3 pode finalizar, inclusive
+        após a meia-noite. Reenvios preservam o horário final e a duração.
+      summary: Finalizar rota e registrar duração
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - Transporte · Motorista
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ViagemRota'
+          description: ''
+  /cortex/transporte/execucoes-rotas/{id}/motorista/iniciar-rota/:
+    post:
+      operationId: transporte_execucoes_rotas_motorista_iniciar_rota_create
+      description: Motorista ativo ou L3. Registra o horário do servidor e quem iniciou.
+        Exige conferência finalizada e execução do dia. Reenvios preservam o início.
+      summary: Iniciar rota após a conferência
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - Transporte · Motorista
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ViagemRota'
+          description: ''
   /cortex/transporte/execucoes-rotas/{id}/reservar/:
     post:
       operationId: transporte_execucoes_rotas_reservar_create
@@ -6611,6 +6658,161 @@ paths:
               schema:
                 description: Justificativa não encontrada.
           description: ''
+  /cortex/transporte/motorista/historico-rotas/:
+    get:
+      operationId: transporte_motorista_historico_rotas_list
+      description: |-
+        Inclui somente viagens finalizadas pelo motorista. Preserva rotas e percursos desativados. Presentes conta tickets embarcados, ausentes conta tickets ausentes e sem_ticket conta entradas registradas sem ticket. Filtros inválidos são ignorados.
+
+        **Permissões:** Motorista ativo ou L3 (administrador). Todos consultam as viagens concluídas de todos os motoristas. Alunos, conferentes sem perfil motorista e L2 não têm acesso.
+      summary: Listar histórico de rotas executadas
+      parameters:
+      - in: query
+        name: busca
+        schema:
+          type: string
+        description: Apelido, descrição do percurso ou data (DD/MM/AAAA ou AAAA-MM-DD).
+      - in: query
+        name: data
+        schema:
+          type: string
+          format: date
+      - in: query
+        name: ordenacao
+        schema:
+          type: string
+          enum:
+          - -data
+          - -horario
+          - -percurso
+          - data
+          - horario
+          - percurso
+      - name: page
+        required: false
+        in: query
+        description: Um número de página dentro do conjunto de resultados paginado.
+        schema:
+          type: integer
+      - in: query
+        name: paginacao
+        schema:
+          type: integer
+        description: Itens por página, entre 1 e 100.
+      - in: query
+        name: percurso_id
+        schema:
+          type: integer
+      tags:
+      - Transporte · Motorista
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedHistoricoRotaList'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                description: Não autenticado.
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                description: Perfil sem acesso ao histórico.
+          description: ''
+  /cortex/transporte/motorista/historico-rotas/{id}/:
+    get:
+      operationId: transporte_motorista_historico_rotas_retrieve
+      description: |-
+        Horários, duração, responsável e nomes dos passageiros por categoria. Não expõe CPF, contatos nem informações clínicas.
+
+        **Permissões:** Motorista ativo ou L3 (administrador). Todos consultam as viagens concluídas de todos os motoristas. Alunos, conferentes sem perfil motorista e L2 não têm acesso.
+      summary: Detalhar rota executada
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - Transporte · Motorista
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DetalheHistoricoRota'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                description: Não autenticado.
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                description: Perfil sem acesso ao histórico.
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                description: Viagem inexistente ou ainda não concluída.
+          description: ''
+  /cortex/transporte/motorista/historico-rotas/percursos/:
+    get:
+      operationId: transporte_motorista_historico_rotas_percursos_list
+      description: |-
+        Opções do filtro, incluindo percursos desativados com histórico.
+
+        **Permissões:** Motorista ativo ou L3 (administrador). Todos consultam as viagens concluídas de todos os motoristas. Alunos, conferentes sem perfil motorista e L2 não têm acesso.
+      summary: Listar percursos com viagens concluídas
+      parameters:
+      - name: page
+        required: false
+        in: query
+        description: Um número de página dentro do conjunto de resultados paginado.
+        schema:
+          type: integer
+      - name: paginacao
+        required: false
+        in: query
+        description: Número de resultados a serem retornados por página.
+        schema:
+          type: integer
+      tags:
+      - Transporte · Motorista
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedPercursoHistoricoList'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                description: Não autenticado.
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                description: Perfil sem acesso ao histórico.
+          description: ''
   /cortex/transporte/motorista/rotas-do-dia/:
     get:
       operationId: transporte_motorista_rotas_do_dia_list
@@ -6620,9 +6822,13 @@ paths:
         (RESERVADO + EMBARCADO) e\n    `vagas_ocupadas` / `vagas_disponiveis` com
         a mesma regra da conferência\n    (após a chamada: EMBARCADO + entradas sem
         ticket).\n    Rotas ainda sem execução retornam status nulo, zero tickets
-        e zero vagas ocupadas.\n    Este endpoint é exclusivamente de leitura e não
-        cria nem altera dados operacionais.\n\n    **Permissões:** Motorista ativo.
-        Todos os motoristas visualizam todas as rotas do dia.\n    "
+        e zero vagas ocupadas.\n    Inclui também viagens de dias anteriores ainda
+        em andamento, inclusive se a rota\n    foi desativada. O objeto `viagem` informa
+        início, fim, duração em segundos e as ações\n    permitidas ao usuário. Uma
+        rota pode aparecer em mais de uma data de operação.\n    Este endpoint é exclusivamente
+        de leitura e não cria nem altera dados operacionais.\n\n    **Permissões:**
+        Motorista ativo ou L3 (administrador). Todos visualizam todas as rotas do
+        dia.\n    "
       summary: Listar rotas do dia
       tags:
       - Transporte · Motorista
@@ -6647,7 +6853,7 @@ paths:
           content:
             application/json:
               schema:
-                description: Usuário não é motorista ativo.
+                description: Usuário não é motorista ativo nem administrador.
           description: ''
   /cortex/transporte/percursos/:
     get:
@@ -6941,6 +7147,131 @@ paths:
             application/json:
               schema:
                 description: Percurso não encontrado.
+          description: ''
+  /cortex/transporte/relatorio-alunos/dashboard/:
+    get:
+      operationId: transporte_relatorio_alunos_dashboard_retrieve
+      description: |-
+        Retorna o resumo agregado e a distribuição por horário de rota no período informado.
+
+        **Permissões:** L3 (EDITAR_TUDO) — perfil TI / administradores.
+      summary: Dashboard do relatório de alunos
+      parameters:
+      - in: query
+        name: data_fim
+        schema:
+          type: string
+          format: date
+        description: Data final do período (AAAA-MM-DD).
+        required: true
+      - in: query
+        name: data_inicio
+        schema:
+          type: string
+          format: date
+        description: Data inicial do período (AAAA-MM-DD).
+        required: true
+      tags:
+      - Transporte · Relatórios
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RelatorioAlunosDashboard'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                description: Parâmetros inválidos.
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                description: Não autenticado.
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                description: Sem permissão.
+          description: ''
+  /cortex/transporte/relatorio-alunos/detalhes/:
+    get:
+      operationId: transporte_relatorio_alunos_detalhes_retrieve
+      description: |-
+        Lista paginada de alunos enriquecidos para a aba Detalhes, filtrada por categoria.
+
+        **Permissões:** L3 (EDITAR_TUDO) — perfil TI / administradores.
+      summary: Detalhes do relatório de alunos por categoria
+      parameters:
+      - in: query
+        name: busca
+        schema:
+          type: string
+        description: Filtra por parte do nome do aluno.
+      - in: query
+        name: categoria
+        schema:
+          type: string
+          enum:
+          - ausencias
+          - bloqueios
+          - presentes
+          - sem_ticket
+        required: true
+      - in: query
+        name: data_fim
+        schema:
+          type: string
+          format: date
+        required: true
+      - in: query
+        name: data_inicio
+        schema:
+          type: string
+          format: date
+        required: true
+      - in: query
+        name: page
+        schema:
+          type: integer
+      - in: query
+        name: paginacao
+        schema:
+          type: integer
+      tags:
+      - Transporte · Relatórios
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RelatorioAlunosDetalhes'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                description: Parâmetros inválidos.
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                description: Não autenticado.
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                description: Sem permissão.
           description: ''
   /cortex/transporte/rotas/:
     get:
@@ -8433,6 +8764,89 @@ components:
         * `deficiencia_auditiva` - Deficiência Auditiva
         * `deficiencia_multipla` - Deficiência Múltipla
         * `deficiencia_fisica` - Deficiência Física
+    DetalheHistoricoRota:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        data:
+          type: string
+          format: date
+          readOnly: true
+        horario:
+          type: string
+          readOnly: true
+        percurso:
+          allOf:
+          - $ref: '#/components/schemas/PercursoHistorico'
+          readOnly: true
+        presentes:
+          type: integer
+          readOnly: true
+        ausentes:
+          type: integer
+          readOnly: true
+        sem_ticket:
+          type: integer
+          readOnly: true
+        rota_iniciada_em:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        rota_finalizada_em:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        duracao_rota_segundos:
+          type: integer
+          readOnly: true
+          nullable: true
+        percurso_descricao:
+          type: string
+          readOnly: true
+        motorista_nome:
+          type: string
+          readOnly: true
+          nullable: true
+        quantidade_vagas:
+          type: integer
+          readOnly: true
+          title: Quantidade de vagas
+        tickets_presentes:
+          type: array
+          items:
+            $ref: '#/components/schemas/PassageiroHistorico'
+          readOnly: true
+        tickets_ausentes:
+          type: array
+          items:
+            $ref: '#/components/schemas/PassageiroHistorico'
+          readOnly: true
+        passageiros_sem_ticket:
+          type: array
+          items:
+            $ref: '#/components/schemas/PassageiroHistorico'
+          readOnly: true
+      required:
+      - ausentes
+      - data
+      - duracao_rota_segundos
+      - horario
+      - id
+      - motorista_nome
+      - passageiros_sem_ticket
+      - percurso
+      - percurso_descricao
+      - presentes
+      - quantidade_vagas
+      - rota_finalizada_em
+      - rota_iniciada_em
+      - sem_ticket
+      - tickets_ausentes
+      - tickets_presentes
     DevolverItens:
       type: object
       properties:
@@ -8687,6 +9101,10 @@ components:
         id:
           type: integer
           readOnly: true
+        viagem:
+          allOf:
+          - $ref: '#/components/schemas/ViagemRota'
+          readOnly: true
         rota:
           allOf:
           - $ref: '#/components/schemas/Rota'
@@ -8759,6 +9177,7 @@ components:
       - status_display
       - vagas_disponiveis
       - vagas_ocupadas
+      - viagem
     FinalizarChamada:
       type: object
       properties:
@@ -8815,6 +9234,57 @@ components:
       - descricao
       - id
       - papel_funcao
+    HistoricoRota:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        data:
+          type: string
+          format: date
+          readOnly: true
+        horario:
+          type: string
+          readOnly: true
+        percurso:
+          allOf:
+          - $ref: '#/components/schemas/PercursoHistorico'
+          readOnly: true
+        presentes:
+          type: integer
+          readOnly: true
+        ausentes:
+          type: integer
+          readOnly: true
+        sem_ticket:
+          type: integer
+          readOnly: true
+        rota_iniciada_em:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        rota_finalizada_em:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        duracao_rota_segundos:
+          type: integer
+          readOnly: true
+          nullable: true
+      required:
+      - ausentes
+      - data
+      - duracao_rota_segundos
+      - horario
+      - id
+      - percurso
+      - presentes
+      - rota_finalizada_em
+      - rota_iniciada_em
+      - sem_ticket
     ImportacaoErroLinha:
       type: object
       properties:
@@ -9471,6 +9941,29 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Funcao'
+    PaginatedHistoricoRotaList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/HistoricoRota'
     PaginatedJustificativaList:
       type: object
       required:
@@ -9517,6 +10010,29 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Matricula'
+    PaginatedPercursoHistoricoList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/PercursoHistorico'
     PaginatedPercursoList:
       type: object
       required:
@@ -9862,6 +10378,14 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Usuario'
+    PassageiroHistorico:
+      type: object
+      properties:
+        nome:
+          type: string
+          readOnly: true
+      required:
+      - nome
     PatchedAtualizarAluno:
       type: object
       properties:
@@ -10085,6 +10609,18 @@ components:
       - apelido
       - created_at
       - descricao
+      - id
+    PercursoHistorico:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        apelido:
+          type: string
+          readOnly: true
+      required:
+      - apelido
       - id
     PercursoResumo:
       type: object
@@ -10329,6 +10865,158 @@ components:
           items:
             type: string
             maxLength: 14
+    RelatorioAlunoDetalhe:
+      type: object
+      properties:
+        usuario_id:
+          type: integer
+        nome:
+          type: string
+        foto:
+          type: string
+          format: uri
+          nullable: true
+        turma:
+          type: string
+          nullable: true
+        matricula:
+          type: string
+          nullable: true
+        turno:
+          type: string
+          nullable: true
+        pcd:
+          type: boolean
+        primeiro_uso:
+          type: string
+          format: date
+          nullable: true
+        ultimo_uso:
+          type: string
+          format: date
+          nullable: true
+        ausencias:
+          type: integer
+        bloqueios:
+          type: integer
+        status:
+          type: string
+      required:
+      - ausencias
+      - bloqueios
+      - foto
+      - matricula
+      - nome
+      - pcd
+      - primeiro_uso
+      - status
+      - turma
+      - turno
+      - ultimo_uso
+      - usuario_id
+    RelatorioAlunosDashboard:
+      type: object
+      properties:
+        periodo:
+          $ref: '#/components/schemas/RelatorioPeriodo'
+        resumo:
+          $ref: '#/components/schemas/RelatorioResumo'
+        por_horario:
+          type: array
+          items:
+            $ref: '#/components/schemas/RelatorioPorHorario'
+      required:
+      - periodo
+      - por_horario
+      - resumo
+    RelatorioAlunosDetalhes:
+      type: object
+      properties:
+        categoria:
+          $ref: '#/components/schemas/RelatorioAlunosDetalhesCategoriaEnum'
+        count:
+          type: integer
+        next:
+          type: integer
+          nullable: true
+        previous:
+          type: integer
+          nullable: true
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/RelatorioAlunoDetalhe'
+      required:
+      - categoria
+      - count
+      - next
+      - previous
+      - results
+    RelatorioAlunosDetalhesCategoriaEnum:
+      enum:
+      - presentes
+      - ausencias
+      - bloqueios
+      - sem_ticket
+      type: string
+      description: |-
+        * `presentes` - Presentes
+        * `ausencias` - Ausências
+        * `bloqueios` - Bloqueios
+        * `sem_ticket` - Sem ticket
+    RelatorioPeriodo:
+      type: object
+      properties:
+        data_inicio:
+          type: string
+          format: date
+        data_fim:
+          type: string
+          format: date
+      required:
+      - data_fim
+      - data_inicio
+    RelatorioPorHorario:
+      type: object
+      properties:
+        horario:
+          type: string
+        presentes:
+          type: integer
+        ausentes:
+          type: integer
+        em_espera:
+          type: integer
+        bloqueados:
+          type: integer
+        sem_ticket:
+          type: integer
+      required:
+      - ausentes
+      - bloqueados
+      - em_espera
+      - horario
+      - presentes
+      - sem_ticket
+    RelatorioResumo:
+      type: object
+      properties:
+        presentes:
+          type: integer
+        ausentes:
+          type: integer
+        em_espera:
+          type: integer
+        bloqueados:
+          type: integer
+        sem_ticket:
+          type: integer
+      required:
+      - ausentes
+      - bloqueados
+      - em_espera
+      - presentes
+      - sem_ticket
     ResultadoAusenciaTicket:
       type: object
       properties:
@@ -10529,6 +11217,11 @@ components:
         tickets_solicitados:
           type: integer
           readOnly: true
+        viagem:
+          allOf:
+          - $ref: '#/components/schemas/ViagemRota'
+          nullable: true
+          readOnly: true
         vagas_ocupadas:
           type: integer
           readOnly: true
@@ -10550,6 +11243,7 @@ components:
       - tickets_solicitados
       - vagas_disponiveis
       - vagas_ocupadas
+      - viagem
     Sala:
       type: object
       properties:
@@ -11402,6 +12096,48 @@ components:
           type: string
       required:
       - codigo_qr
+    ViagemRota:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        rota_iniciada_em:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        rota_finalizada_em:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        rota_iniciada_por:
+          type: integer
+          readOnly: true
+          nullable: true
+        duracao_rota_segundos:
+          type: integer
+          readOnly: true
+          nullable: true
+        pode_iniciar_rota:
+          type: boolean
+          readOnly: true
+        pode_finalizar_rota:
+          type: boolean
+          readOnly: true
+        servidor_agora:
+          type: string
+          readOnly: true
+      required:
+      - duracao_rota_segundos
+      - id
+      - pode_finalizar_rota
+      - pode_iniciar_rota
+      - rota_finalizada_em
+      - rota_iniciada_em
+      - rota_iniciada_por
+      - servidor_agora
   securitySchemes:
     jwtAuth:
       type: http
