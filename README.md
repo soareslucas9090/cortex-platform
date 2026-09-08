@@ -409,8 +409,10 @@ rotas do dia com status da execução e ocupação reais.
 - `Motorista` — perfil ativo associado a um usuário, usado para autorizar a visão das rotas do dia
 - `ExecucaoRota` — ocorrência datada com horário e capacidade congelados
 - `Ticket` — reserva, fila, cancelamento, embarque por QR Code ou ausência
-- `Strike` e `Justificativa` — ausência registrada, bloqueio após três faltas ativas e revisão pelo TI
-- `Aluno.faltas` / `Aluno.is_bloqueado` / `Aluno.quantidade_bloqueios` — ausências ativas, bloqueio atual e histórico de bloqueios
+- `Strike` e `Justificativa` — bloqueio após três faltas ativas e revisão por L3
+- `Aluno` (campos de transporte) — `faltas` e `is_bloqueado` do ciclo atual;
+  `quantidade_bloqueios` histórico persistido (não reseta após aprovação)
+- Relatório de alunos — `ausencias` por período; `bloqueios` = `quantidade_bloqueios`
 
 ## Decisões Técnicas
 

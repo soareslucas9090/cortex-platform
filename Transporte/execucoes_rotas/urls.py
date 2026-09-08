@@ -20,9 +20,7 @@ from .views import (
     IniciarEmbarqueExecucaoRotaView,
     ListarExecucoesConferenciaView,
     ListarExecucoesRotasView,
-    ListarFilaConferenciaView,
     ListarReservasConferenciaView,
-    RemoverFilaConferenciaView,
 )
 
 urlpatterns = [
@@ -100,15 +98,5 @@ urlpatterns = [
         'execucoes-rotas/<int:pk>/conferencia/finalizar-chamada/',
         roteador_por_metodo(POST=FinalizarChamadaConferenciaView),
         name='conferencia-finalizar-chamada',
-    ),
-    path(
-        'execucoes-rotas/<int:pk>/conferencia/fila/',
-        roteador_por_metodo(GET=ListarFilaConferenciaView),
-        name='conferencia-fila',
-    ),
-    path(
-        'execucoes-rotas/<int:pk>/conferencia/fila/<uuid:codigo>/remover/',
-        roteador_por_metodo(POST=RemoverFilaConferenciaView),
-        name='conferencia-fila-remover',
     ),
 ]

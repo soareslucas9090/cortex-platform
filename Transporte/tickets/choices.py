@@ -7,5 +7,7 @@ class StatusTicket(models.IntegerChoices):
     CANCELADO = 3, 'Cancelado'
     EMBARCADO = 4, 'Embarcado'
     AUSENTE = 5, 'Ausente'
-    NAO_CONTEMPLADO = 6, 'Não contemplado'
+    CONTEMPLADO = 7, 'Contemplado'
 
+
+STATUS_NAO_CONTEMPLADO_LEGADO = 6

@@ -55,6 +55,11 @@ class ExecucaoRota(
         null=True,
         blank=True,
     )
+    embarcado_em = models.DateTimeField(
+        'Embarcado em',
+        null=True,
+        blank=True,
+    )
     finalizada_em = models.DateTimeField(
         'Finalizada em',
         null=True,
@@ -62,6 +67,20 @@ class ExecucaoRota(
     )
     chamada_ausentes_codigos = models.JSONField(
         'Códigos ausentes da chamada',
+        default=list,
+        blank=True,
+    )
+    entradas_cpf_concluidas = models.BooleanField(
+        'Entrada por CPF concluída',
+        default=False,
+    )
+    entradas_cpf_concluidas_em = models.DateTimeField(
+        'Entrada por CPF concluída em',
+        null=True,
+        blank=True,
+    )
+    entradas_cpf_codigos = models.JSONField(
+        'CPFs do lote da conferência',
         default=list,
         blank=True,
     )
@@ -75,12 +94,6 @@ class ExecucaoRota(
         blank=True,
         verbose_name='Rota iniciada por',
     )
-
-    @property
-    def duracao_rota_segundos(self):
-        if self.rota_iniciada_em is None or self.rota_finalizada_em is None:
-            return None
-        return int((self.rota_finalizada_em - self.rota_iniciada_em).total_seconds())
 
     class Meta:
         verbose_name = 'Execução de rota'
@@ -107,3 +120,8 @@ class ExecucaoRota(
     def __str__(self):
         return f'{self.rota} — {self.data_hora_saida:%d/%m/%Y %H:%M}'
 
+    @property
+    def duracao_rota_segundos(self):
+        if self.rota_iniciada_em is None or self.rota_finalizada_em is None:
+            return None
+        return int((self.rota_finalizada_em - self.rota_iniciada_em).total_seconds())

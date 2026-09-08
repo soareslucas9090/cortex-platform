@@ -54,6 +54,8 @@ class RotaDoDiaSerializer(serializers.ModelSerializer):
     status_execucao_display = serializers.SerializerMethodField()
     tickets_solicitados = serializers.SerializerMethodField()
     viagem = serializers.SerializerMethodField()
+    vagas_ocupadas = serializers.SerializerMethodField()
+    vagas_disponiveis = serializers.SerializerMethodField()
 
     class Meta:
         model = Rota
@@ -71,6 +73,8 @@ class RotaDoDiaSerializer(serializers.ModelSerializer):
             'status_execucao_display',
             'tickets_solicitados',
             'viagem',
+            'vagas_ocupadas',
+            'vagas_disponiveis',
         ]
 
     @extend_schema_field(OpenApiTypes.INT)
@@ -96,7 +100,18 @@ class RotaDoDiaSerializer(serializers.ModelSerializer):
     @extend_schema_field(OpenApiTypes.INT)
     def get_tickets_solicitados(self, obj):
         execucao = self._obter_execucao_do_dia(obj)
-        return execucao.tickets_solicitados if execucao else 0
+        return getattr(execucao, 'tickets_solicitados', 0) if execucao else 0
+
+    @extend_schema_field(OpenApiTypes.INT)
+    def get_vagas_ocupadas(self, obj):
+        execucao = self._obter_execucao_do_dia(obj)
+        if not execucao:
+            return 0
+        return execucao.helper.ocupacao_da_listagem()
+
+    @extend_schema_field(OpenApiTypes.INT)
+    def get_vagas_disponiveis(self, obj):
+        return max(self.get_capacidade(obj) - self.get_vagas_ocupadas(obj), 0)
 
     @staticmethod
     def _obter_execucao_do_dia(obj):
