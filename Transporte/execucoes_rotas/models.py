@@ -54,6 +54,11 @@ class ExecucaoRota(
         null=True,
         blank=True,
     )
+    embarcado_em = models.DateTimeField(
+        'Embarcado em',
+        null=True,
+        blank=True,
+    )
     finalizada_em = models.DateTimeField(
         'Finalizada em',
         null=True,
@@ -61,6 +66,20 @@ class ExecucaoRota(
     )
     chamada_ausentes_codigos = models.JSONField(
         'Códigos ausentes da chamada',
+        default=list,
+        blank=True,
+    )
+    entradas_cpf_concluidas = models.BooleanField(
+        'Entrada por CPF concluída',
+        default=False,
+    )
+    entradas_cpf_concluidas_em = models.DateTimeField(
+        'Entrada por CPF concluída em',
+        null=True,
+        blank=True,
+    )
+    entradas_cpf_codigos = models.JSONField(
+        'CPFs do lote da conferência',
         default=list,
         blank=True,
     )

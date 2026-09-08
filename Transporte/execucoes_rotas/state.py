@@ -7,6 +7,7 @@ class ExecucaoRotaState(ModelInstanceState):
     status_choices_class = StatusExecucaoRota
 
 
+
 class ExecucaoAbertaState(ExecucaoRotaState):
     transicoes_permitidas = frozenset({
         StatusExecucaoRota.FECHADA,
@@ -25,6 +26,18 @@ class ExecucaoFechadaState(ExecucaoRotaState):
 
 class ExecucaoEmEmbarqueState(ExecucaoRotaState):
     transicoes_permitidas = frozenset({
+        StatusExecucaoRota.EMBARCADO,
+    })
+
+
+class ExecucaoEmbarcadaState(ExecucaoRotaState):
+    transicoes_permitidas = frozenset({
+        StatusExecucaoRota.INICIADA,
+    })
+
+
+class ExecucaoIniciadaState(ExecucaoRotaState):
+    transicoes_permitidas = frozenset({
         StatusExecucaoRota.FINALIZADA,
     })
 
@@ -41,7 +54,8 @@ ESTADOS_EXECUCAO_ROTA = {
     StatusExecucaoRota.ABERTA: ExecucaoAbertaState,
     StatusExecucaoRota.FECHADA: ExecucaoFechadaState,
     StatusExecucaoRota.EM_EMBARQUE: ExecucaoEmEmbarqueState,
+    StatusExecucaoRota.EMBARCADO: ExecucaoEmbarcadaState,
+    StatusExecucaoRota.INICIADA: ExecucaoIniciadaState,
     StatusExecucaoRota.FINALIZADA: ExecucaoFinalizadaState,
     StatusExecucaoRota.CANCELADA: ExecucaoCanceladaState,
 }
-
