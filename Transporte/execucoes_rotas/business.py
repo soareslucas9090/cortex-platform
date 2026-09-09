@@ -15,6 +15,73 @@ logger = logging.getLogger(__name__)
 
 class ExecucaoRotaBusiness(ModelInstanceBusiness):
 
+    def gerar_execucoes_automaticas(self, instante=None):
+        try:
+            from Transporte.calendario_operacional.models import DiaCalendarioTransporte
+
+            from .models import ExecucaoRota
+
+            instante = instante or timezone.now()
+            instante_local = timezone.localtime(instante)
+            data_execucao = instante_local.date()
+            resultado = {
+                'data_execucao': data_execucao.isoformat(),
+                'criadas': 0,
+                'existentes': 0,
+                'fora_do_prazo': 0,
+                'dia_operacional': False,
+                'conflitos_execucoes_existentes': [],
+            }
+            calendario = DiaCalendarioTransporte()
+            excecao = calendario.helper.obter_excecao_ativa_na_data(data_execucao)
+            tipo_excecao = excecao.tipo if excecao else None
+            if not calendario.rules.permite_operacao_na_data(
+                data_execucao,
+                tipo_excecao,
+            ):
+                resultado['conflitos_execucoes_existentes'] = list(
+                    ExecucaoRota.objects.filter(data_execucao=data_execucao)
+                    .exclude(status=StatusExecucaoRota.CANCELADA)
+                    .values_list('pk', flat=True)
+                )
+                return resultado
+            resultado['dia_operacional'] = True
+
+            rules = self.object_instance.rules
+            rotas = self.object_instance.helper.listar_rotas_para_geracao_automatica(
+                data_execucao,
+            )
+            for rota in rotas:
+                data_hora_saida = timezone.make_aware(
+                    datetime.combine(data_execucao, rota.horario_saida),
+                    timezone.get_current_timezone(),
+                )
+                if not rules.pode_gerar_execucao_automatica_no_instante(
+                    data_hora_saida,
+                    instante,
+                ):
+                    resultado['fora_do_prazo'] += 1
+                    continue
+
+                _execucao, criada = ExecucaoRota.objects.get_or_create(
+                    rota=rota,
+                    data_execucao=data_execucao,
+                    defaults={
+                        'data_hora_saida': data_hora_saida,
+                        'quantidade_vagas': rota.quantidade_vagas,
+                        'status': StatusExecucaoRota.ABERTA,
+                    },
+                )
+                chave = 'criadas' if criada else 'existentes'
+                resultado[chave] += 1
+            return resultado
+        except Exception as e:
+            self.relancar_ou_erro_sistema(
+                e,
+                'Não foi possível gerar as execuções automáticas das rotas.',
+                logger,
+            )
+
     def listar_historico(self, usuario, filtros=None):
         try:
             from Transporte.permissoes.access import usuario_pode_operar_rota
@@ -72,10 +139,20 @@ class ExecucaoRotaBusiness(ModelInstanceBusiness):
 
     def listar_para_usuario(self, usuario, status_param=None, data_param=None):
         try:
+            from Transporte.calendario_operacional.models import DiaCalendarioTransporte
+
+            data_hoje = timezone.localdate()
+            calendario = DiaCalendarioTransporte()
+            excecao = calendario.helper.obter_excecao_ativa_na_data(data_hoje)
+            dia_operacional = calendario.rules.permite_operacao_na_data(
+                data_hoje,
+                excecao.tipo if excecao else None,
+            )
             return self.object_instance.helper.listar_para_usuario(
                 usuario,
                 status_param,
                 data_param,
+                dia_operacional,
             )
         except Exception as e:
             self.relancar_ou_erro_sistema(e, 'Não foi possível listar as execuções de rota.', logger)

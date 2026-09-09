@@ -20,6 +20,16 @@ STATUSES_LISTAGEM_CONFERENCIA = (
 
 class ExecucaoRotaHelpers(ModelInstanceHelpers):
 
+    def listar_rotas_para_geracao_automatica(self, data_execucao):
+        from Transporte.rotas.choices import dia_semana_da_data
+        from Transporte.rotas.models import Rota
+
+        return Rota.objects.select_related('percurso').filter(
+            ativo=True,
+            percurso__ativo=True,
+            dia_semana=dia_semana_da_data(data_execucao),
+        ).order_by('horario_saida', 'pk')
+
     def listar_historico(self, filtros=None):
         from Transporte.tickets.choices import StatusTicket
         from .models import ExecucaoRota
@@ -92,13 +102,19 @@ class ExecucaoRotaHelpers(ModelInstanceHelpers):
             Prefetch('entradas_sem_ticket', queryset=entradas, to_attr='passageiros_sem_ticket'),
         ).get(pk=execucao_id)
 
-    def listar_para_usuario(self, usuario, status_param=None, data_param=None):
+    def listar_para_usuario(
+        self,
+        usuario,
+        status_param=None,
+        data_param=None,
+        dia_operacional=True,
+    ):
         from .models import ExecucaoRota
 
         if getattr(usuario, 'tem_acesso_elevado', lambda: False)():
             queryset = ExecucaoRota.objects.select_related('rota', 'rota__percurso')
         else:
-            queryset = self._listar_disponiveis_para_aluno()
+            queryset = self._listar_disponiveis_para_aluno(dia_operacional)
 
         if (
             status_param
@@ -131,7 +147,7 @@ class ExecucaoRotaHelpers(ModelInstanceHelpers):
             data_execucao=data_execucao,
         ).exists()
 
-    def _listar_disponiveis_para_aluno(self):
+    def _listar_disponiveis_para_aluno(self, dia_operacional):
         from .models import ExecucaoRota
 
         agora = now()
@@ -141,7 +157,7 @@ class ExecucaoRotaHelpers(ModelInstanceHelpers):
             data_execucao=data_local,
             data_hora_saida__gte=agora + timedelta(minutes=30),
         ).select_related('rota', 'rota__percurso')
-        if data_local.weekday() >= 5:
+        if not dia_operacional:
             return queryset.none()
         return queryset
 

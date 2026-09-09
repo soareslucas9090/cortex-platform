@@ -13,6 +13,23 @@ logger = logging.getLogger(__name__)
 
 
 class TicketBusiness(ModelInstanceBusiness):
+    def _data_permite_operacao(self, data_execucao):
+        try:
+            from Transporte.calendario_operacional.models import DiaCalendarioTransporte
+
+            calendario = DiaCalendarioTransporte()
+            excecao = calendario.helper.obter_excecao_ativa_na_data(data_execucao)
+            return calendario.rules.permite_operacao_na_data(
+                data_execucao,
+                excecao.tipo if excecao else None,
+            )
+        except Exception as e:
+            self.relancar_ou_erro_sistema(
+                e,
+                'Não foi possível consultar o calendário de transporte.',
+                logger,
+            )
+
     def listar_para_usuario(self, usuario):
         try:
             return self.object_instance.helper.listar_para_usuario(usuario)
@@ -53,7 +70,10 @@ class TicketBusiness(ModelInstanceBusiness):
             rules = self.object_instance.rules
             aluno = getattr(usuario, 'aluno', None)
             rules.validar_aluno_elegivel(usuario)
-            rules.validar_janela_solicitacao(execucao)
+            rules.validar_janela_solicitacao(
+                execucao,
+                self._data_permite_operacao(execucao.data_execucao),
+            )
             rules.validar_ticket_inexistente(
                 self.object_instance.helper.existe_ticket_ativo(execucao, aluno),
             )
@@ -85,7 +105,10 @@ class TicketBusiness(ModelInstanceBusiness):
             rules = self.object_instance.rules
             aluno = getattr(usuario, 'aluno', None)
             rules.validar_aluno_elegivel(usuario)
-            rules.validar_janela_solicitacao(execucao)
+            rules.validar_janela_solicitacao(
+                execucao,
+                self._data_permite_operacao(execucao.data_execucao),
+            )
             rules.validar_ticket_inexistente(
                 self.object_instance.helper.existe_ticket_ativo(execucao, aluno),
             )
@@ -129,7 +152,9 @@ class TicketBusiness(ModelInstanceBusiness):
                 StatusTicket.RESERVADO,
                 'Somente um ticket reservado pode ser cancelado por esta ação.',
             )
-            ticket.rules.validar_limite_cancelamento()
+            ticket.rules.validar_limite_cancelamento(
+                self._data_permite_operacao(execucao.data_execucao),
+            )
             ticket.cancelado_em = timezone.now()
             ticket.state.atualizar_status(StatusTicket.CANCELADO)
             promovido = self._promover_proximo_da_fila(execucao)
@@ -150,7 +175,9 @@ class TicketBusiness(ModelInstanceBusiness):
                 StatusTicket.EM_ESPERA,
                 'Somente um ticket em espera pode sair da fila.',
             )
-            ticket.rules.validar_limite_cancelamento()
+            ticket.rules.validar_limite_cancelamento(
+                self._data_permite_operacao(ticket.execucao_rota.data_execucao),
+            )
             ticket.cancelado_em = timezone.now()
             ticket.state.atualizar_status(StatusTicket.CANCELADO)
             return ticket

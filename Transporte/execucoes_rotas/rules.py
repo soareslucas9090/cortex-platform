@@ -42,6 +42,13 @@ def execucao_elegivel_para_iniciar_monitoramento(execucao) -> bool:
 
 class ExecucaoRotaRules(ModelInstanceRules):
 
+    def pode_gerar_execucao_automatica_no_instante(
+        self,
+        data_hora_saida,
+        instante,
+    ) -> bool:
+        return instante <= data_hora_saida - timedelta(minutes=30)
+
     def validar_acesso_historico(self, permitido) -> bool:
         if not permitido:
             self.return_exception(
