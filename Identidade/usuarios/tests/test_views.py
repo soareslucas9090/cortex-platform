@@ -1535,3 +1535,65 @@ class BaixarModeloImportacaoUsuariosViewTest(APITestCase):
         self.assertEqual(resposta.data['detail'], RESPONSE_ERRO_INTERNO_SERVIDOR)
         self.assertNotIn('Configuração', str(resposta.data))
         self.assertNotIn('S3', str(resposta.data))
+
+
+class AlterarSenhaUsuarioTest(APITestCase):
+
+    def setUp(self):
+        self.usuario = criar_usuario('88888888888', nome='Alterar Senha Teste', password='Senha@123')
+        self.token = obter_tokens(self.usuario)
+        self.url = reverse('identidade:usuario-alterar-senha')
+        self.url_login = reverse('auth:token-jwt:login')
+        self.payload_valido = {
+            'senha_atual': 'Senha@123',
+            'nova_senha': 'NovaSenha@456',
+        }
+
+    def test_alterar_senha_com_sucesso(self):
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token}')
+        resposta = self.client.post(self.url, self.payload_valido)
+        self.assertEqual(resposta.status_code, status.HTTP_200_OK)
+        self.assertEqual(resposta.data['mensagem'], 'Senha alterada com sucesso.')
+
+        resposta_login = self.client.post(
+            self.url_login,
+            {'login': self.usuario.cpf, 'password': 'NovaSenha@456'},
+        )
+        self.assertEqual(resposta_login.status_code, status.HTTP_200_OK)
+
+    def test_senha_atual_incorreta_retorna_400(self):
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token}')
+        payload = {**self.payload_valido, 'senha_atual': 'SenhaErrada@123'}
+        resposta = self.client.post(self.url, payload)
+        self.assertEqual(resposta.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_nova_senha_fraca_retorna_400(self):
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token}')
+        payload = {**self.payload_valido, 'nova_senha': '123'}
+        resposta = self.client.post(self.url, payload)
+        self.assertEqual(resposta.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_nova_senha_igual_a_atual_retorna_400(self):
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token}')
+        payload = {
+            'senha_atual': 'Senha@123',
+            'nova_senha': 'Senha@123',
+        }
+        resposta = self.client.post(self.url, payload)
+        self.assertEqual(resposta.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_nao_autenticado_retorna_401(self):
+        resposta = self.client.post(self.url, self.payload_valido)
+        self.assertEqual(resposta.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_usuario_coletivo_nao_pode_alterar_senha(self):
+        usuario_coletivo = criar_usuario(
+            '88888888889',
+            nome='Coletivo Teste',
+            password='Senha@123',
+            usuario_coletivo=True,
+        )
+        token = obter_tokens(usuario_coletivo)
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {token}')
+        resposta = self.client.post(self.url, self.payload_valido)
+        self.assertEqual(resposta.status_code, status.HTTP_400_BAD_REQUEST)

@@ -234,6 +234,28 @@ class CriarUsuarioSerializer(serializers.Serializer):
         return value
 
 
+class AlterarSenhaSerializer(serializers.Serializer):
+    senha_atual = serializers.CharField(write_only=True)
+    nova_senha = serializers.CharField(write_only=True)
+
+    def validate_nova_senha(self, value):
+        if len(value) < 8:
+            raise serializers.ValidationError('A senha deve ter pelo menos 8 caracteres.')
+        if not re.search(r'[A-Z]', value):
+            raise serializers.ValidationError('A senha deve conter pelo menos uma letra maiúscula.')
+        if not re.search(r'[a-z]', value):
+            raise serializers.ValidationError('A senha deve conter pelo menos uma letra minúscula.')
+        if not re.search(r'\d', value):
+            raise serializers.ValidationError('A senha deve conter pelo menos um número.')
+        if not re.search(r'[!@#$%^&*()\-_=+\[\]{};:\'",.<>?/\\|`~]', value):
+            raise serializers.ValidationError('A senha deve conter pelo menos um caractere especial.')
+        return value
+
+
+class AlterarSenhaResponseSerializer(serializers.Serializer):
+    mensagem = serializers.CharField()
+
+
 class AtualizarUsuarioSerializer(serializers.Serializer):
     nome = serializers.CharField(max_length=255, required=False)
     email = serializers.EmailField(required=False, allow_null=True)

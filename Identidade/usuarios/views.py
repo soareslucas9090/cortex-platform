@@ -23,6 +23,8 @@ from AppCore.basics.views.basic_views import (
 from .models import Usuario
 from .serializers import (
     AdicionarItemColetivoSerializer,
+    AlterarSenhaResponseSerializer,
+    AlterarSenhaSerializer,
     AtualizarUsuarioSerializer,
     AtualizarFotoPrimariaSerializer,
     AtualizarFotoSecundariaSerializer,
@@ -221,6 +223,39 @@ class CriarUsuarioView(IsAdminMixin, BasicPostAPIView):
             'dados': UsuarioSerializer(usuario, context={'request': request}).data,
             'status_code': status.HTTP_201_CREATED,
         }
+
+
+@extend_schema(
+    tags=['Usuarios'],
+    summary='Alterar senha de acesso',
+    description='''
+    Permite ao usuário autenticado alterar a própria senha de acesso ao sistema.
+
+    **Permissões:** Qualquer usuário autenticado (L1–L3).
+
+    A nova senha deve atender à política de complexidade (mínimo 8 caracteres,
+    maiúscula, minúscula, número e caractere especial) e ser diferente da senha atual.
+    Contas coletivas não podem usar este endpoint.
+    ''',
+    request=AlterarSenhaSerializer,
+    responses={
+        status.HTTP_200_OK: AlterarSenhaResponseSerializer,
+        status.HTTP_400_BAD_REQUEST: {'description': 'Dados inválidos ou senha atual incorreta.'},
+        status.HTTP_401_UNAUTHORIZED: {'description': 'Não autenticado.'},
+        status.HTTP_403_FORBIDDEN: {'description': 'Operação não permitida para este tipo de conta.'},
+    },
+)
+class AlterarSenhaView(IsAuthenticatedMixin, BasicPostAPIView):
+    """POST /cortex/identidade/usuarios/alterar-senha/"""
+    serializer_class = AlterarSenhaSerializer
+    mensagem_sucesso = 'Senha alterada com sucesso.'
+
+    def do_action_post(self, serializer_data, request):
+        request.user.business.alterar_senha(
+            senha_atual=serializer_data['senha_atual'],
+            nova_senha=serializer_data['nova_senha'],
+        )
+        return {'mensagem': self.mensagem_sucesso}
 
 
 @extend_schema(
