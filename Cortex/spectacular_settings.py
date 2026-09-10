@@ -11,7 +11,6 @@ SPECTACULAR_SETTINGS = {
     'REDOC_DIST': 'SIDECAR',
     'ENUM_NAME_OVERRIDES': {
         'SituacaoAlunoEnum': 'Academico.alunos.choices.SituacaoAluno',
-        'SituacaoMatriculaEnum': 'Identidade.matriculas.choices.SituacaoMatricula',
         'CategoriaServidorEnum': 'PessoasInstitucionais.servidores.choices.CategoriaServidor',
         'CategoriaFuncaoEnum': 'Organizacional.funcoes.choices.CategoriaFuncao',
         'TipoRecursoEnum': 'Infraestrutura.recursos.choices.TipoRecurso',

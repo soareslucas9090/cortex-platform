@@ -11,6 +11,7 @@ class TerceirizadoAdmin(AtivoModelAdmin):
         'usuario',
         'empresa_instituicao',
         'cargo',
+        'matricula',
         'data_inicio',
         'data_fim',
         'ativo',
@@ -22,6 +23,7 @@ class TerceirizadoAdmin(AtivoModelAdmin):
         'usuario__cpf',
         'empresa_instituicao__nome',
         'cargo__nome',
+        'matricula',
     )
     autocomplete_fields = ('usuario', 'empresa_instituicao', 'cargo')
     date_hierarchy = 'data_inicio'
@@ -41,6 +43,7 @@ class TerceirizadoAdmin(AtivoModelAdmin):
                     usuario_pk=obj.usuario_id,
                     empresa_pk=obj.empresa_instituicao_id,
                     cargo_pk=obj.cargo_id,
+                    matricula=obj.matricula,
                     data_inicio=obj.data_inicio,
                     data_fim=obj.data_fim,
                     ativo=obj.ativo,
@@ -54,7 +57,7 @@ class TerceirizadoAdmin(AtivoModelAdmin):
             dados['empresa_instituicao_pk'] = obj.empresa_instituicao_id
         if 'cargo' in form.changed_data:
             dados['cargo_pk'] = obj.cargo_id
-        for field in ('data_inicio', 'data_fim', 'ativo'):
+        for field in ('data_inicio', 'data_fim', 'matricula', 'ativo'):
             if field in form.changed_data:
                 dados[field] = form.cleaned_data[field]
 

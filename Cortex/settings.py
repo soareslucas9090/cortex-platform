@@ -124,7 +124,6 @@ PROJECT_APPS = [
     'Identidade.usuarios',
     'Identidade.contatos',
     'Identidade.enderecos',
-    'Identidade.matriculas',
     'Organizacional.setores',
     'Organizacional.funcoes',
     'Organizacional.vinculos',

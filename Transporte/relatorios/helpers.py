@@ -4,8 +4,6 @@ from django.db.models import Count, Max, Min, Q
 
 from Academico.aluno_cursos.models import AlunoCurso
 from Academico.alunos.models import Aluno
-from Identidade.matriculas.choices import SituacaoMatricula
-from Identidade.matriculas.models import Matricula
 from Transporte.execucoes_rotas.models import ExecucaoRota
 from Transporte.strikes.choices import StatusStrike
 from Transporte.strikes.models import Strike
@@ -131,10 +129,9 @@ class RelatorioAlunosHelpers:
             .first()
         )
         matricula = (
-            Matricula.objects.filter(
-                usuario_id=usuario.pk,
-                situacao=SituacaoMatricula.ATIVA,
-            )
+            AlunoCurso.objects.filter(aluno=aluno, ativo=True, matricula__isnull=False)
+            .exclude(matricula='')
+            .order_by('-created_at')
             .values_list('matricula', flat=True)
             .first()
         )

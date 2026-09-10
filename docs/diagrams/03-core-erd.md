@@ -121,31 +121,6 @@ Representa o endereço associado ao usuário.
 
 ---
 
-## 1.4 Matricula
-
-### Descrição
-
-Representa registros de matrícula associados ao usuário.
-
-### Atributos principais
-
-- `id`
-- `usuario`
-- `matricula`
-- `situacao`
-- `created_at`
-- `updated_at`
-
-### Relacionamento
-
-- um `Usuario` pode possuir uma ou muitas `Matricula`
-
-### Observações
-
-Esse model funciona como identificador institucional/acadêmico vinculado à pessoa.
-
----
-
 # 2. Domínio Organizacional
 
 ## 2.1 Setor
@@ -268,6 +243,7 @@ Perfil institucional de servidor vinculado a um `Usuario`.
 
 - `usuario`
 - `cargo`
+- `matricula`
 - `categoria`
 - `ativo`
 - `created_at`
@@ -283,6 +259,7 @@ Perfil institucional de servidor vinculado a um `Usuario`.
 
 - `Servidor` representa professor ou técnico-administrativo
 - somente servidores podem assumir a responsabilidade principal de um setor
+- `matricula` é opcional e funciona como identificador institucional para login e consultas
 
 ---
 
@@ -317,6 +294,7 @@ Perfil institucional de terceirizado vinculado a um `Usuario`.
 
 - `usuario`
 - `empresa_instituicao`
+- `matricula`
 - `ativo`
 - `created_at`
 - `updated_at`
@@ -383,6 +361,7 @@ Representa o vínculo entre aluno e curso.
 - `id`
 - `aluno`
 - `curso`
+- `matricula`
 - `ano_conclusao`
 - `created_at`
 - `updated_at`
@@ -394,7 +373,8 @@ Representa o vínculo entre aluno e curso.
 
 ### Observações
 
-Esse model permite preservar o histórico de vínculos acadêmicos sem sobrecarregar o model `Aluno`.
+- Esse model permite preservar o histórico de vínculos acadêmicos sem sobrecarregar o model `Aluno`.
+- `matricula` é opcional e funciona como identificador acadêmico para login e consultas
 
 ---
 
@@ -404,7 +384,6 @@ Esse model permite preservar o histórico de vínculos acadêmicos sem sobrecarr
 
 - `Usuario` 1:N `Contato`
 - `Usuario` 0..1:1 `Endereco`
-- `Usuario` 1:N `Matricula`
 
 ## Relações organizacionais
 
@@ -476,7 +455,6 @@ Terceirizados não possuem `Cargo`.
 - `Identidade.usuarios` -> Model: `Usuario`
 - `Identidade.contatos` -> Model: `Contato`
 - `Identidade.enderecos` -> Model: `Endereco`
-- `Identidade.matriculas` -> Model: `Matricula`
 
 ## Módulo: `Organizacional/`
 - `Organizacional.setores` -> Model: `Setor`
@@ -635,7 +613,6 @@ Os itens abaixo podem ser refinados em artefatos posteriores ou na modelagem det
 - necessidade de datas de início/fim em `SetorVinculo`
 - necessidade de histórico explícito de função em setor
 - detalhamento da categoria do servidor
-- detalhamento da situação da matrícula
 - regras adicionais para aluno monitor
 - notificações, perfis de motorista e conferente; entrada sem ticket pertence a `ExecucaoRota`
 

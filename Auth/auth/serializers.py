@@ -85,8 +85,8 @@ class LoginInputSerializer(serializers.Serializer):
 
     login = serializers.CharField(
         help_text=(
-            'E-mail ou CPF do usuário. '
-            'Exemplos: "usuario@email.com", "12345678901" ou "123.456.789-01".'
+            'E-mail, CPF ou matrícula ativa do usuário. '
+            'Exemplos: "usuario@email.com", "12345678901", "123.456.789-01" ou "2026001".'
         )
     )
     password = serializers.CharField(

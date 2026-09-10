@@ -1,12 +1,15 @@
 """
-Backend de Autenticação — Email ou CPF
+Backend de Autenticação — Email, CPF ou Matrícula
 
-Detecta automaticamente se o identificador enviado é um e-mail ou um CPF
-e autentica o usuário correspondente.
+Detecta automaticamente se o identificador enviado é um e-mail, um CPF
+ou uma matrícula ativa e autentica o usuário correspondente.
 
 Regras:
   - Se `login` contém '@' → trata como e-mail (normaliza com strip + lowercase)
-  - Caso contrário        → trata como CPF (remove pontos, hífen e espaços)
+  - Caso contrário, se 11 dígitos → trata como CPF (remove pontos, hífen e espaços)
+  - Caso contrário → trata como matrícula ativa em AlunoCurso, Servidor ou Terceirizado
+
+Após localizar o usuário, exige CPF ou matrícula válida para permitir login.
 
 Adicione ao settings.py:
 
@@ -14,10 +17,6 @@ Adicione ao settings.py:
         'AppCore.basics.auth.backends.EmailOrCpfBackend',
         'django.contrib.auth.backends.ModelBackend',   # fallback para admin Django
     ]
-
-O model de usuário deve possuir os campos `email` e `cpf` para que o backend
-funcione plenamente. Até que o model concreto seja criado, tentativas de login
-por CPF resultam em None (campo inexistente → capturado e logado internamente).
 """
 
 import logging
@@ -27,15 +26,14 @@ from django.contrib.auth.backends import ModelBackend
 
 from AppCore.common.util.util import normalizar_cpf
 from AppCore.core.exceptions.exceptions import NotFoundException
-
-from Identidade.matriculas.choices import SituacaoMatricula
+from Identidade.usuarios.models import Usuario
 
 logger = logging.getLogger(__name__)
 
 
 class EmailOrCpfBackend(ModelBackend):
     """
-    Backend de autenticação que aceita e-mail ou CPF como identificador.
+    Backend de autenticação que aceita e-mail, CPF ou matrícula como identificador.
 
     Recebe o parâmetro ``login`` (em vez do USERNAME_FIELD padrão do Django).
     Toda falha de autenticação retorna ``None`` — o motivo nunca é exposto
@@ -49,7 +47,6 @@ class EmailOrCpfBackend(ModelBackend):
         UserModel = get_user_model()
         user = None
 
-        # Detectar tipo de identificador e buscar correspondente
         if '@' in login:
             identificador = login.strip().lower()
             try:
@@ -59,7 +56,6 @@ class EmailOrCpfBackend(ModelBackend):
             except Exception:
                 logger.exception('Erro inesperado durante busca por email.')
         else:
-            # 1. Tentar busca por CPF se o valor puder ser um CPF válido (11 dígitos)
             cpf_normalizado = normalizar_cpf(login)
             if len(cpf_normalizado) == 11:
                 try:
@@ -69,15 +65,9 @@ class EmailOrCpfBackend(ModelBackend):
                 except Exception:
                     logger.exception('Erro inesperado durante busca por CPF.')
 
-            # 2. Se não encontrou por CPF, tentar busca por matrícula ativa (situação = 1)
             if not user:
                 try:
-                    user = UserModel._default_manager.get(
-                        matriculas__matricula=login,
-                        matriculas__situacao=SituacaoMatricula.ATIVA,
-                    )
-                except (UserModel.DoesNotExist, NotFoundException):
-                    pass
+                    user = Usuario().helper.buscar_por_matricula_valida(login)
                 except UserModel.MultipleObjectsReturned:
                     logger.error(
                         'Múltiplos usuários com a mesma matrícula ativa durante login.',
@@ -86,7 +76,10 @@ class EmailOrCpfBackend(ModelBackend):
                     logger.exception('Erro inesperado durante busca por matrícula.')
 
         if not user:
-            # Executar set_password para mitigar timing attacks (Django convention)
+            UserModel().set_password(password)
+            return None
+
+        if not self._usuario_elegivel_para_login(user):
             UserModel().set_password(password)
             return None
 
@@ -97,3 +90,9 @@ class EmailOrCpfBackend(ModelBackend):
             return user
 
         return None
+
+    def _usuario_elegivel_para_login(self, user) -> bool:
+        """Exige CPF ou matrícula válida em uma das três fontes."""
+        if user.cpf:
+            return True
+        return user.helper.tem_matricula_valida()

@@ -803,7 +803,7 @@ Abaixo está o resumo dos modelos, seus relacionamentos e o status de implementa
 
 As regras específicas, escolhas de campos (choices), e detalhes de modelagem física de cada domínio foram movidos para arquivos dedicados em `docs/domains/`. Consulte-os para guias detalhados de cada módulo:
 
-- 👤 **Identidade**: [identidade.md](../domains/identidade.md) (Controles de Usuário, Autenticação, Contatos, Endereços, Matrículas)
+- 👤 **Identidade**: [identidade.md](../domains/identidade.md) (Controles de Usuário, Autenticação, Contatos, Endereços)
 - 🏢 **Organizacional**: [organizacional.md](../domains/organizacional.md) (Setores, Funções, Vínculos, Tabela Associativa)
 - 💼 **Pessoas Institucionais**: [pessoas-institucionais.md](../domains/pessoas-institucionais.md) (Servidores, Cargos, Terceirizados, Jornada de Trabalho)
 - 🎓 **Acadêmico**: [academico.md](../domains/academico.md) (Alunos, Cursos, Matrículas Acadêmicas)
@@ -825,15 +825,15 @@ As regras específicas, escolhas de campos (choices), e detalhes de modelagem f�
 | **Usuario**            | ✅ Implementado | `Identidade/usuarios/`                         | Classe base central (login CPF); 1:N com Contato/Endereco |
 | **Contato**            | ✅ Implementado | `Identidade/contatos/`                         | N:1 com Usuario                                           |
 | **Endereco**           | ✅ Implementado | `Identidade/enderecos/`                        | N:1 com Usuario                                           |
-| **Matricula**          | ✅ Implementado | `Identidade/matriculas/`                       | N:1 com Usuario                                           |
 | **Setor**              | ✅ Implementado | `Organizacional/setores/`                      | M:N com Usuario via SetorVinculo                          |
 | **Funcao**             | ✅ Implementado | `Organizacional/funcoes/`                      | Entidade independente; usada em SetorVinculo              |
 | **SetorVinculo**       | ✅ Implementado | `Organizacional/vinculos/`                     | N:1 com Usuario, N:1 com Setor, N:1 com Funcao            |
 | **Cargo**              | 🔜 Planejado    | `PessoasInstitucionais/cargos/`                | Entidade independente                                     |
-| **Servidor**           | 🔜 Planejado    | `PessoasInstitucionais/servidores/`            | OneToOne com Usuario, N:1 com Cargo                       |
+| **Servidor**           | 🔜 Planejado    | `PessoasInstitucionais/servidores/`            | OneToOne com Usuario, N:1 com Cargo; `matricula` opcional |
 | **EmpresaInstituicao** | 🔜 Planejado    | `PessoasInstitucionais/empresas_instituicoes/` | 1:N com Terceirizado                                      |
-| **Terceirizado**       | 🔜 Planejado    | `PessoasInstitucionais/terceirizados/`         | OneToOne com Usuario, N:1 com EmpresaInstituicao          |
+| **Terceirizado**       | 🔜 Planejado    | `PessoasInstitucionais/terceirizados/`         | OneToOne com Usuario, N:1 com EmpresaInstituicao; `matricula` opcional |
 | **Aluno**              | 🔜 Planejado    | `Academico/alunos/`                            | OneToOne com Usuario                                      |
+| **AlunoCurso**         | 🔜 Planejado    | `Academico/aluno_cursos/`                      | N:1 com Aluno e Curso; `matricula` opcional               |
 | **Curso**              | 🔜 Planejado    | `Academico/cursos/`                            | M:N com Aluno via AlunoCurso                              |
 
 ### Módulos de Domínio e Milestones
@@ -845,26 +845,25 @@ A ordem de criação respeita as dependências entre domínios. Apps dentro do m
 1. `Identidade/usuarios/` — Model: `Usuario` (base de autenticação; sem dependências externas)
 2. `Identidade/contatos/` — Model: `Contato` (depende de `usuarios`)
 3. `Identidade/enderecos/` — Model: `Endereco` (depende de `usuarios`)
-4. `Identidade/matriculas/` — Model: `Matricula` (depende de `usuarios`)
 
 **Módulo [Organizacional](../domains/organizacional.md)** (Milestone 2 — concluído):
 
-5. `Organizacional/setores/` — Model: `Setor` (sem dependências externas)
-6. `Organizacional/funcoes/` — Model: `Funcao` (sem dependências externas)
-7. `Organizacional/vinculos/` — Model: `SetorVinculo` (depende de `usuarios`, `setores`, `funcoes`)
+4. `Organizacional/setores/` — Model: `Setor` (sem dependências externas)
+5. `Organizacional/funcoes/` — Model: `Funcao` (sem dependências externas)
+6. `Organizacional/vinculos/` — Model: `SetorVinculo` (depende de `usuarios`, `setores`, `funcoes`)
 
 **Módulo [Pessoas Institucionais](../domains/pessoas-institucionais.md)** (Milestone 3 — concluído):
 
-8. `PessoasInstitucionais/cargos/` — Model: `Cargo` (sem dependências externas)
-9. `PessoasInstitucionais/servidores/` — Model: `Servidor` (depende de `usuarios`, `cargos`)
-10. `PessoasInstitucionais/empresas_instituicoes/` — Model: `EmpresaInstituicao` (sem dependências externas)
-11. `PessoasInstitucionais/terceirizados/` — Model: `Terceirizado` (depende de `usuarios`, `empresas_instituicoes`)
+7. `PessoasInstitucionais/cargos/` — Model: `Cargo` (sem dependências externas)
+8. `PessoasInstitucionais/servidores/` — Model: `Servidor` (depende de `usuarios`, `cargos`; `matricula` no perfil)
+9. `PessoasInstitucionais/empresas_instituicoes/` — Model: `EmpresaInstituicao` (sem dependências externas)
+10. `PessoasInstitucionais/terceirizados/` — Model: `Terceirizado` (depende de `usuarios`, `empresas_instituicoes`; `matricula` no perfil)
 
 **Módulo [Acadêmico](../domains/academico.md)** (Milestone 4 — concluído):
 
-12. `Academico/alunos/` — Model: `Aluno` (depende de `usuarios`)
-13. `Academico/cursos/` — Model: `Curso` (sem dependências externas)
-14. `Academico/aluno_cursos/` — Model: `AlunoCurso` (depende de `alunos`, `cursos`)
+11. `Academico/alunos/` — Model: `Aluno` (depende de `usuarios`)
+12. `Academico/cursos/` — Model: `Curso` (sem dependências externas)
+13. `Academico/aluno_cursos/` — Model: `AlunoCurso` (depende de `alunos`, `cursos`; `matricula` no vínculo)
 
 **Módulo Infraestrutura** (Milestone Infraestrutura v1 — concluído):
 
@@ -918,8 +917,7 @@ Identidade/
 ├── urls.py
 ├── usuarios/
 ├── contatos/
-├── enderecos/
-└── matriculas/
+└── enderecos/
 ```
 
 Exemplo de app interno:
@@ -989,7 +987,6 @@ urlpatterns = [
     path('', include('Identidade.usuarios.urls')),
     path('', include('Identidade.contatos.urls')),
     path('', include('Identidade.enderecos.urls')),
-    path('', include('Identidade.matriculas.urls')),
 ]
 ```
 

@@ -189,3 +189,96 @@ class UsuarioHelpers(ModelInstanceHelpers):
                 qs = qs.filter(terceirizado__isnull=False)
 
         return qs.order_by('nome')
+
+    def _fontes_matricula(self):
+        from Academico.aluno_cursos.models import AlunoCurso
+        from PessoasInstitucionais.servidores.models import Servidor
+        from PessoasInstitucionais.terceirizados.models import Terceirizado
+
+        return [
+            ('aluno_curso', AlunoCurso),
+            ('servidor', Servidor),
+            ('terceirizado', Terceirizado),
+        ]
+
+    def matricula_existe_no_sistema(self, numero, excluir_fonte=None, excluir_id=None):
+        """Verifica se o número já existe em AlunoCurso, Servidor ou Terceirizado."""
+        from AppCore.common.util.util import normalizar_matricula
+
+        numero = normalizar_matricula(numero)
+        if not numero:
+            return False
+
+        for fonte, model in self._fontes_matricula():
+            qs = model.objects.filter(matricula=numero)
+            if excluir_fonte == fonte and excluir_id is not None:
+                qs = qs.exclude(pk=excluir_id)
+            if qs.exists():
+                return True
+        return False
+
+    def tem_matricula_valida(self):
+        """Indica se o usuário possui ao menos uma matrícula ativa nas 3 fontes."""
+        from Academico.aluno_cursos.models import AlunoCurso
+        from PessoasInstitucionais.servidores.models import Servidor
+        from PessoasInstitucionais.terceirizados.models import Terceirizado
+
+        usuario = self.object_instance
+        filtro_matricula = {'matricula__isnull': False}
+        excluir_vazio = {'matricula': ''}
+
+        if AlunoCurso.objects.filter(
+            aluno__usuario=usuario,
+            ativo=True,
+            **filtro_matricula,
+        ).exclude(**excluir_vazio).exists():
+            return True
+        if Servidor.objects.filter(
+            usuario=usuario,
+            ativo=True,
+            **filtro_matricula,
+        ).exclude(**excluir_vazio).exists():
+            return True
+        if Terceirizado.objects.filter(
+            usuario=usuario,
+            ativo=True,
+            **filtro_matricula,
+        ).exclude(**excluir_vazio).exists():
+            return True
+        return False
+
+    def buscar_por_matricula_valida(self, valor):
+        """
+        Busca usuário por matrícula ativa em AlunoCurso, Servidor ou Terceirizado.
+        Levanta MultipleObjectsReturned se houver mais de um usuário distinto.
+        """
+        from AppCore.common.util.util import normalizar_matricula
+
+        from Academico.aluno_cursos.models import AlunoCurso
+        from PessoasInstitucionais.servidores.models import Servidor
+        from PessoasInstitucionais.terceirizados.models import Terceirizado
+        from .models import Usuario
+
+        numero = normalizar_matricula(valor)
+        if not numero:
+            return None
+
+        usuarios_ids = set()
+
+        for vinculo in AlunoCurso.objects.filter(
+            matricula=numero,
+            ativo=True,
+        ).select_related('aluno__usuario'):
+            usuarios_ids.add(vinculo.aluno.usuario_id)
+
+        for servidor in Servidor.objects.filter(matricula=numero, ativo=True):
+            usuarios_ids.add(servidor.usuario_id)
+
+        for terceirizado in Terceirizado.objects.filter(matricula=numero, ativo=True):
+            usuarios_ids.add(terceirizado.usuario_id)
+
+        if len(usuarios_ids) > 1:
+            raise Usuario.MultipleObjectsReturned()
+        if len(usuarios_ids) == 1:
+            return Usuario.objects.get(pk=usuarios_ids.pop())
+        return None

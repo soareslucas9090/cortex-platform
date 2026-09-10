@@ -33,7 +33,7 @@
 ## Usuários e acesso
 
 - A interface `UsuarioCortex` do DER corresponde diretamente a `Identidade.usuarios.Usuario`; não haverá espelho local de usuários ou tokens.
-- Nome e foto vêm de `Usuario`; matrícula vem de `Identidade.matriculas.Matricula` (join; sem snapshot).
+- Nome e foto vêm de `Usuario`; matrícula para exibição é resolvida por join nas fontes `AlunoCurso`, `Servidor` ou `Terceirizado` (sem snapshot).
 - Todo solicitante, inclusive colaborador externo, deverá possuir `Usuario` no Cortex.
 - No empréstimo:
   - **solicitante** é quem recebe os recursos;

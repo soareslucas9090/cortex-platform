@@ -208,7 +208,6 @@ class CriarUsuarioView(IsAdminMixin, BasicPostAPIView):
     def do_action_post(self, serializer_data, request):
         usuario = Usuario().business.criar_usuario(
             cpf=serializer_data.get('cpf'),
-            matricula=serializer_data.get('matricula'),
             nome=serializer_data['nome'],
             password=serializer_data.get('password'),
             email=serializer_data.get('email'),
