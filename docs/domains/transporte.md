@@ -400,15 +400,18 @@ Bases auxiliares:
 
 ### 11. Tempo de viagem do motorista
 
-A conferência mantém seu ciclo atual: `FINALIZADA` significa que o conferente
-encerrou a conferência. A viagem do motorista é registrada separadamente na mesma
-execução, sem alterar esse status nem os tickets.
+A conferência termina em `EMBARCADO` e grava `embarcado_em`. A viagem do
+motorista continua o ciclo da mesma execução: `EMBARCADO` → `INICIADA` →
+`FINALIZADA`, sem alterar os tickets.
 
 1. O conferente finaliza a chamada e a conferência.
 2. Na tela **Rotas do dia**, o motorista usa **INICIAR ROTA**. O servidor exige
-   conferência finalizada, execução do dia, rota e percurso ativos.
+   status `EMBARCADO`, execução do dia, rota e percurso ativos. O início grava
+   o responsável e o horário e muda o status para `INICIADA`.
 3. O motorista usa **FINALIZAR A ROTA** ao chegar ao destino. O tempo total é
    calculado em segundos pela diferença entre os horários gravados no servidor.
+   A finalização exige viagem iniciada, muda o status para `FINALIZADA` e grava
+   `finalizada_em` e `rota_finalizada_em` com o mesmo horário.
 
 Os campos `rota_iniciada_em`, `rota_finalizada_em` e `rota_iniciada_por` ficam
 persistidos em `ExecucaoRota` e em seu histórico. `duracao_rota_segundos` é derivado
@@ -464,7 +467,7 @@ servidor L2 e usuário comum não podem listar, detalhar, obter opções do filt
 nem imprimir o histórico. Motoristas autorizados visualizam todas as viagens.
 
 Uma execução entra no histórico somente após **FINALIZAR A ROTA**: exige status
-de conferência `FINALIZADA` e `rota_finalizada_em` preenchido. A conferência
+da execução `FINALIZADA` e `rota_finalizada_em` preenchido. A conferência
 finalizada, por si só, não inclui a execução; viagens em andamento também ficam
 fora. O histórico continua disponível se a rota, percurso ou antigo motorista
 forem desativados.
@@ -472,9 +475,11 @@ forem desativados.
 #### Dados e contagens
 
 - **Data e horário:** data operacional e horário programado congelados na execução.
-- **Presentes:** tickets em `EMBARCADO`, incluindo passageiros promovidos da espera.
+- **Presentes:** tickets em `EMBARCADO`, incluindo quem foi promovido da espera
+  para reserva e embarcou com ticket.
 - **Ausentes:** tickets em `AUSENTE`.
-- **Sem ticket:** registros de `EntradaSemTicket`.
+- **Sem ticket:** registros de `EntradaSemTicket`, incluindo alunos da espera
+  que entraram por CPF e tiveram o ticket marcado como `CONTEMPLADO`.
 - **Tempo total:** diferença, em segundos, entre início e fim registrados no servidor.
 
 Cancelados, não contemplados e espera pendente não entram nas contagens. Os joins

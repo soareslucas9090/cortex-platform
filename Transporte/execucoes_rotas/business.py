@@ -57,7 +57,8 @@ class ExecucaoRotaBusiness(ModelInstanceBusiness):
                 execucao.rules.validar_responsavel_rota(execucao, usuario)
                 if execucao.rota_finalizada_em is None:
                     execucao.rota_finalizada_em = timezone.now()
-                    execucao.save(update_fields=['rota_finalizada_em'])
+                    execucao.finalizada_em = execucao.rota_finalizada_em
+                    execucao = execucao.state.atualizar_status(StatusExecucaoRota.FINALIZADA)
             else:
                 execucao.rules.validar_inicio_rota(execucao)
                 if execucao.rota_iniciada_em is not None:
@@ -65,7 +66,7 @@ class ExecucaoRotaBusiness(ModelInstanceBusiness):
                     return execucao
                 execucao.rota_iniciada_em = timezone.now()
                 execucao.rota_iniciada_por = usuario
-                execucao.save(update_fields=['rota_iniciada_em', 'rota_iniciada_por'])
+                execucao = execucao.state.atualizar_status(StatusExecucaoRota.INICIADA)
             return execucao
         except Exception as e:
             self.relancar_ou_erro_sistema(e, 'Não foi possível registrar a operação da rota.', logger)
