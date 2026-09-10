@@ -32,7 +32,7 @@ def inserir_setores_raizes(apps, schema_editor):
         {"nome": "Coordenação do Curso Técnico em Edificações", "sigla": "CCEDI", "ativo": True},
         {"nome": "Coordenação-Geral de Assistência Estudantil", "sigla": "CGAE", "ativo": True},
         {"nome": "Coordenação do Curso Técnico em Desenvolvimento de Sistemas", "sigla": "CCTDS", "ativo": True},
-        {"nome": "Coordenação de Patrimônio e Almoxarifado", "sigla": "CPA", "ativo": True},
+        {"nome": "Coodernação da Comissão Própria de Avaliação", "sigla": "CPA", "ativo": True},
         {"nome": "Coordenação do Curso de Licenciatura em Matemática", "sigla": "CCLM", "ativo": True},
         {"nome": "Coordenação do Mestrado Profissional em Matemática", "sigla": "PROFMAT", "ativo": True},
         {"nome": "Coordenação do Curso de Licenciatura em Matemática", "sigla": "CCL", "ativo": True},
