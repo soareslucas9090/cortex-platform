@@ -642,6 +642,272 @@ class ImportacaoUsuariosBusinessImportacaoTests(TestCase):
         self.assertEqual(servidor.cargo_id, cargo.id)
 
     @patch('Identidade.usuarios.business.ImportacaoUsuariosParser.parse')
+    def test_deve_importar_aluno_com_matriculas_distintas_por_curso(self, mock_parse):
+        from Academico.aluno_cursos.models import AlunoCurso
+        from Academico.cursos.models import Curso
+        from Identidade.usuarios.importacao.importacao_dtos import (
+            LinhaAlunoCursoImportacaoDTO,
+            LinhaAlunoImportacaoDTO,
+            ReferenciasImportacaoDTO,
+        )
+
+        Curso.objects.create(nome='Curso Um', codigo_curso='C01')
+        Curso.objects.create(nome='Curso Dois', codigo_curso='C02')
+
+        estrutura = ArquivoImportacaoUsuariosDTO(
+            referencias=ReferenciasImportacaoDTO(
+                mapa_curso_id_para_codigo={1: 'C01', 2: 'C02'},
+            ),
+            usuarios=[
+                LinhaUsuarioImportacaoDTO(
+                    numero_linha=2,
+                    usuario_id_planilha=1,
+                    cpf='12345678901',
+                    nome='Aluno Dois Cursos',
+                    ativo=True,
+                )
+            ],
+            alunos=[
+                LinhaAlunoImportacaoDTO(
+                    numero_linha=2,
+                    aluno_id_planilha=1,
+                    usuario_id_planilha=1,
+                )
+            ],
+            alunos_cursos=[
+                LinhaAlunoCursoImportacaoDTO(
+                    numero_linha=2,
+                    aluno_id_planilha=1,
+                    curso_id_planilha=1,
+                    matricula='MAT-CURSO-1',
+                ),
+                LinhaAlunoCursoImportacaoDTO(
+                    numero_linha=3,
+                    aluno_id_planilha=1,
+                    curso_id_planilha=2,
+                    matricula='MAT-CURSO-2',
+                ),
+            ],
+        )
+        mock_parse.return_value = estrutura
+
+        resultado = Usuario().business.importar_usuarios_em_lote(
+            importacao_lote=self._criar_importacao_lote(),
+        )
+
+        self.assertTrue(resultado.sucesso, resultado.erros)
+        self.assertEqual(resultado.resumo.vinculos_aluno_curso_criados, 2)
+        usuario = self.User.objects.get(cpf='12345678901')
+        matriculas = set(
+            AlunoCurso.objects.filter(aluno__usuario=usuario).values_list(
+                'matricula', flat=True
+            )
+        )
+        self.assertEqual(matriculas, {'MAT-CURSO-1', 'MAT-CURSO-2'})
+
+    @patch('Identidade.usuarios.business.ImportacaoUsuariosParser.parse')
+    def test_deve_importar_usuario_servidor_e_aluno_com_matriculas_distintas(
+        self, mock_parse
+    ):
+        from Academico.aluno_cursos.models import AlunoCurso
+        from Academico.cursos.models import Curso
+        from Identidade.usuarios.importacao.importacao_dtos import (
+            LinhaAlunoCursoImportacaoDTO,
+            LinhaAlunoImportacaoDTO,
+            LinhaServidorImportacaoDTO,
+            ReferenciasImportacaoDTO,
+        )
+        from PessoasInstitucionais.cargos.models import Cargo
+        from PessoasInstitucionais.servidores.models import Servidor
+
+        cargo = Cargo.objects.create(nome='Cargo Duplo Perfil', ativo=True)
+        Curso.objects.create(nome='Curso Servidor Aluno', codigo_curso='CSA1')
+
+        estrutura = ArquivoImportacaoUsuariosDTO(
+            referencias=ReferenciasImportacaoDTO(
+                mapa_cargo_id_para_nome={1: 'Cargo Duplo Perfil'},
+                mapa_curso_id_para_codigo={1: 'CSA1'},
+            ),
+            usuarios=[
+                LinhaUsuarioImportacaoDTO(
+                    numero_linha=2,
+                    usuario_id_planilha=1,
+                    cpf='10987654321',
+                    nome='Servidor Aluno',
+                    ativo=True,
+                )
+            ],
+            alunos=[
+                LinhaAlunoImportacaoDTO(
+                    numero_linha=2,
+                    aluno_id_planilha=1,
+                    usuario_id_planilha=1,
+                )
+            ],
+            servidores=[
+                LinhaServidorImportacaoDTO(
+                    numero_linha=2,
+                    servidor_id_planilha=1,
+                    usuario_id_planilha=1,
+                    cargo_id_planilha=1,
+                    categoria='Professor',
+                    ativo=True,
+                    matricula='MAT-SERV-1',
+                )
+            ],
+            alunos_cursos=[
+                LinhaAlunoCursoImportacaoDTO(
+                    numero_linha=2,
+                    aluno_id_planilha=1,
+                    curso_id_planilha=1,
+                    matricula='MAT-ALUNO-1',
+                )
+            ],
+        )
+        mock_parse.return_value = estrutura
+
+        resultado = Usuario().business.importar_usuarios_em_lote(
+            importacao_lote=self._criar_importacao_lote(),
+        )
+
+        self.assertTrue(resultado.sucesso, resultado.erros)
+        usuario = self.User.objects.get(cpf='10987654321')
+        self.assertEqual(Servidor.objects.get(usuario=usuario).matricula, 'MAT-SERV-1')
+        self.assertEqual(
+            AlunoCurso.objects.get(aluno__usuario=usuario).matricula,
+            'MAT-ALUNO-1',
+        )
+
+    @patch('Identidade.usuarios.business.ImportacaoUsuariosParser.parse')
+    def test_deve_rejeitar_mesma_matricula_em_fontes_diferentes_do_mesmo_usuario(
+        self, mock_parse
+    ):
+        from Academico.cursos.models import Curso
+        from Identidade.usuarios.importacao.importacao_dtos import (
+            LinhaAlunoCursoImportacaoDTO,
+            LinhaAlunoImportacaoDTO,
+            LinhaServidorImportacaoDTO,
+            ReferenciasImportacaoDTO,
+        )
+        from PessoasInstitucionais.cargos.models import Cargo
+
+        Cargo.objects.create(nome='Cargo Mesma Matricula', ativo=True)
+        Curso.objects.create(nome='Curso Mesma Matricula', codigo_curso='CMM1')
+
+        estrutura = ArquivoImportacaoUsuariosDTO(
+            referencias=ReferenciasImportacaoDTO(
+                mapa_cargo_id_para_nome={1: 'Cargo Mesma Matricula'},
+                mapa_curso_id_para_codigo={1: 'CMM1'},
+            ),
+            usuarios=[
+                LinhaUsuarioImportacaoDTO(
+                    numero_linha=2,
+                    usuario_id_planilha=1,
+                    cpf='11122233344',
+                    nome='Usuario Matricula Duplicada',
+                    ativo=True,
+                )
+            ],
+            alunos=[
+                LinhaAlunoImportacaoDTO(
+                    numero_linha=2,
+                    aluno_id_planilha=1,
+                    usuario_id_planilha=1,
+                )
+            ],
+            servidores=[
+                LinhaServidorImportacaoDTO(
+                    numero_linha=2,
+                    servidor_id_planilha=1,
+                    usuario_id_planilha=1,
+                    cargo_id_planilha=1,
+                    categoria='Professor',
+                    ativo=True,
+                    matricula='MAT-DUP-1',
+                )
+            ],
+            alunos_cursos=[
+                LinhaAlunoCursoImportacaoDTO(
+                    numero_linha=2,
+                    aluno_id_planilha=1,
+                    curso_id_planilha=1,
+                    matricula='MAT-DUP-1',
+                )
+            ],
+        )
+        mock_parse.return_value = estrutura
+
+        resultado = Usuario().business.importar_usuarios_em_lote(
+            importacao_lote=self._criar_importacao_lote(),
+        )
+
+        self.assertFalse(resultado.sucesso)
+        self.assertTrue(
+            any(erro.aba == 'Aluno_Curso' for erro in resultado.erros),
+            resultado.erros,
+        )
+
+    @patch('Identidade.usuarios.business.ImportacaoUsuariosParser.parse')
+    def test_deve_rejeitar_matricula_repetida_entre_usuarios_no_lote(self, mock_parse):
+        from AppCore.core.exceptions.exceptions import ValidationException
+        from Identidade.usuarios.importacao.importacao_dtos import (
+            LinhaServidorImportacaoDTO,
+            ReferenciasImportacaoDTO,
+        )
+        from PessoasInstitucionais.cargos.models import Cargo
+
+        Cargo.objects.create(nome='Cargo Unicidade', ativo=True)
+
+        estrutura = ArquivoImportacaoUsuariosDTO(
+            referencias=ReferenciasImportacaoDTO(
+                mapa_cargo_id_para_nome={1: 'Cargo Unicidade'},
+            ),
+            usuarios=[
+                LinhaUsuarioImportacaoDTO(
+                    numero_linha=2,
+                    usuario_id_planilha=1,
+                    cpf='10000000001',
+                    nome='Usuario A',
+                    ativo=True,
+                ),
+                LinhaUsuarioImportacaoDTO(
+                    numero_linha=3,
+                    usuario_id_planilha=2,
+                    cpf='10000000002',
+                    nome='Usuario B',
+                    ativo=True,
+                ),
+            ],
+            servidores=[
+                LinhaServidorImportacaoDTO(
+                    numero_linha=2,
+                    servidor_id_planilha=1,
+                    usuario_id_planilha=1,
+                    cargo_id_planilha=1,
+                    categoria='Professor',
+                    ativo=True,
+                    matricula='MAT-GLOBAL-1',
+                ),
+                LinhaServidorImportacaoDTO(
+                    numero_linha=3,
+                    servidor_id_planilha=2,
+                    usuario_id_planilha=2,
+                    cargo_id_planilha=1,
+                    categoria='Professor',
+                    ativo=True,
+                    matricula='MAT-GLOBAL-1',
+                ),
+            ],
+        )
+        mock_parse.return_value = estrutura
+
+        with self.assertRaises(ValidationException) as contexto:
+            Usuario().business.importar_usuarios_em_lote(
+                importacao_lote=self._criar_importacao_lote(),
+            )
+        self.assertIn('outro usuário', contexto.exception.message)
+
+    @patch('Identidade.usuarios.business.ImportacaoUsuariosParser.parse')
     def test_deve_retornar_erro_se_cpf_for_invalido(self, mock_parse):
         estrutura = ArquivoImportacaoUsuariosDTO(
             usuarios=[

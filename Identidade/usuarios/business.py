@@ -434,7 +434,11 @@ class UsuarioBusiness(ModelInstanceBusiness):
                     if len(cpf_digitos) >= 3:
                         l.cpf = cpf_digitos.zfill(11)
                     cpfs_planilha.append(self.object_instance.helper.normalizar_cpf(l.cpf))
-            matriculas_planilha = list({m for m in mapa_matriculas.values() if m})
+            matriculas_planilha = [
+                matricula
+                for matriculas in mapa_matriculas.values()
+                for matricula in matriculas
+            ]
             usuarios_por_cpf = {u.cpf: u for u in Usuario.objects.filter(cpf__in=cpfs_planilha) if u.cpf}
             usuarios_por_matricula = {}
             matriculas_em_lote = set()
@@ -451,14 +455,12 @@ class UsuarioBusiness(ModelInstanceBusiness):
                             mapa_matriculas,
                             usuarios_por_cpf,
                             usuarios_por_matricula,
-                            matriculas_em_lote,
                         )
                         mapa_usuarios[linha.usuario_id_planilha] = usuario
 
                         if usuario.cpf:
                             usuarios_por_cpf[usuario.cpf] = usuario
-                        matricula_planilha = mapa_matriculas.get(linha.usuario_id_planilha)
-                        if matricula_planilha:
+                        for matricula_planilha in mapa_matriculas.get(linha.usuario_id_planilha, []):
                             usuarios_por_matricula[matricula_planilha] = usuario
 
                         if criado:
@@ -724,17 +726,13 @@ class UsuarioBusiness(ModelInstanceBusiness):
         mapa_matriculas,
         usuarios_por_cpf,
         usuarios_por_matricula,
-        matriculas_em_lote,
     ):
         try:
             from .models import Usuario
-            from AppCore.common.util.util import normalizar_matricula
 
             self.object_instance.rules.usuario_id_planilha_obrigatorio(linha.usuario_id_planilha)
             cpf_normalizado = None
-            matricula_planilha = normalizar_matricula(
-                mapa_matriculas.get(linha.usuario_id_planilha)
-            )
+            matriculas_do_usuario = list(mapa_matriculas.get(linha.usuario_id_planilha) or [])
             if linha.cpf:
                 cpf_digitos = ''.join(c for c in linha.cpf if c.isdigit())
                 if len(cpf_digitos) >= 3:
@@ -743,9 +741,12 @@ class UsuarioBusiness(ModelInstanceBusiness):
                 self.object_instance.rules.cpf_valido_importacao(linha.cpf)
                 cpf_normalizado = self.object_instance.helper.normalizar_cpf(linha.cpf)
                 usuario = usuarios_por_cpf.get(cpf_normalizado)
-            elif matricula_planilha:
+            elif matriculas_do_usuario:
                 cpf_normalizado = None
-                usuario = usuarios_por_matricula.get(matricula_planilha)
+                usuario = self._resolver_usuario_por_matriculas(
+                    matriculas_do_usuario,
+                    usuarios_por_matricula,
+                )
             else:
                 raise ValidationException('O usuário deve possuir CPF ou Matrícula.')
             if usuario:
@@ -759,12 +760,11 @@ class UsuarioBusiness(ModelInstanceBusiness):
                     usuario.last_login = linha.ultimo_login
                 usuario.save()
                 return usuario, False
-            senha_padrao = cpf_normalizado if cpf_normalizado else matricula_planilha
-            if matricula_planilha:
-                self._validar_matricula_importacao(
-                    matricula_planilha,
-                    matriculas_em_lote,
-                )
+            senha_padrao = (
+                cpf_normalizado if cpf_normalizado else matriculas_do_usuario[0]
+            )
+            for matricula in matriculas_do_usuario:
+                self.object_instance.rules.matricula_unica_no_sistema(matricula)
             usuario = Usuario.objects.create_user(
                 cpf=cpf_normalizado,
                 password=senha_padrao,
@@ -828,7 +828,31 @@ class UsuarioBusiness(ModelInstanceBusiness):
         except Exception as e:
             self.relancar_ou_erro_sistema(e, 'Não foi possível executar _criar_ou_atualizar_endereco.', logger)
 
+    def _resolver_usuario_por_matriculas(self, matriculas, usuarios_por_matricula):
+        """Localiza o usuário do lote/banco por qualquer uma das matrículas informadas."""
+        try:
+            encontrados = []
+            ids_vistos = set()
+            for matricula in matriculas:
+                usuario = usuarios_por_matricula.get(matricula)
+                if usuario is None or usuario.pk in ids_vistos:
+                    continue
+                ids_vistos.add(usuario.pk)
+                encontrados.append(usuario)
+            if len(encontrados) > 1:
+                raise ValidationException(
+                    'As matrículas informadas para este usuário correspondem a contas diferentes.'
+                )
+            return encontrados[0] if encontrados else None
+        except Exception as e:
+            self.relancar_ou_erro_sistema(
+                e,
+                'Não foi possível executar _resolver_usuario_por_matriculas.',
+                logger,
+            )
+
     def _construir_mapa_matriculas_por_usuario(self, estrutura):
+        """Agrupa as matrículas da planilha por usuario_id. Um usuário pode ter várias."""
         try:
             from AppCore.common.util.util import normalizar_matricula
 
@@ -844,17 +868,14 @@ class UsuarioBusiness(ModelInstanceBusiness):
                 matricula = normalizar_matricula(matricula)
                 if usuario_id_planilha is None or not matricula:
                     return
-                existente = mapa.get(usuario_id_planilha)
-                if existente and existente != matricula:
-                    raise ValidationException(
-                        'O usuário possui matrículas distintas nas abas de importação.'
-                    )
-                mapa[usuario_id_planilha] = matricula
                 outro_usuario = matricula_por_usuario.get(matricula)
                 if outro_usuario is not None and outro_usuario != usuario_id_planilha:
                     raise ValidationException(
                         'A matrícula já foi informada para outro usuário nesta importação.'
                     )
+                matriculas = mapa.setdefault(usuario_id_planilha, [])
+                if matricula not in matriculas:
+                    matriculas.append(matricula)
                 matricula_por_usuario[matricula] = usuario_id_planilha
 
             for linha in estrutura.servidores:
@@ -887,7 +908,9 @@ class UsuarioBusiness(ModelInstanceBusiness):
             if not matricula:
                 return None
             if matricula in matriculas_em_lote:
-                return matricula
+                raise ValidationException(
+                    'A matrícula já foi informada nesta importação.'
+                )
             self.object_instance.rules.matricula_unica_no_sistema(
                 matricula,
                 excluir_fonte=excluir_fonte,

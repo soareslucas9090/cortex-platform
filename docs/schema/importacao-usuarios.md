@@ -197,6 +197,12 @@ Eles devem ser usados apenas como **identificadores temporários internos do arq
 - `funcao_id` deve ser resolvido contra os dados seed já existentes no banco;
 - esta aba não deve criar setores nem funções.
 
+## Matrícula
+
+- Um mesmo usuário pode ter **mais de uma matrícula**: números distintos em `Aluno_Curso` (um por curso), `Servidor` e `Terceirizado`.
+- Cada número, quando informado, permanece **único no sistema**: não pode se repetir entre usuários nem entre as três fontes.
+- Células vazias, `-` ou o texto `NULL`/`null` são tratadas como matrícula ausente.
+
 ## Regras de validação estrutural
 
 A importação deve validar:
