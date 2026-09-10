@@ -28,9 +28,9 @@ class ImportacaoReferenciasParserTests(TestCase):
         mock_get_data.return_value = {
             'Usuario': [
                 ['usuario_id\n(int, PK)', 'cpf\n(String)', 'nome\n(String)', 'foto\n(String)',
-                 'deficiencia\n(String)', 'ativo\n(boolean)', 'ultimo_login\n(Date)',
+                 'ativo\n(boolean)', 'ultimo_login\n(Date)',
                  'colaborador_externo\n(Booleano)'],
-                [1, '12345678901', 'Usuário Teste', '', '', 'true', '', 'false'],
+                [1, '12345678901', 'Usuário Teste', '', 'true', '', 'false'],
             ],
             'Setor': [
                 ['setor_id\n(int, PK)', 'nome\n(String)', 'sigla\n(String)', 'ativo\n(boolean)'],
@@ -64,9 +64,9 @@ class ImportacaoReferenciasParserTests(TestCase):
         mock_get_data.return_value = {
             'Usuario': [
                 ['usuario_id\n(int, PK)', 'cpf\n(String)', 'nome\n(String)', 'foto\n(String)',
-                 'deficiencia\n(String)', 'ativo\n(boolean)', 'ultimo_login\n(Date)',
+                 'ativo\n(boolean)', 'ultimo_login\n(Date)',
                  'colaborador_externo\n(booleano)'],
-                [1, '12345678901', 'Usuário Teste', '', '', 'true', '', 'false'],
+                [1, '12345678901', 'Usuário Teste', '', 'true', '', 'false'],
             ],
             'Servidor': [
                 ['servidor_id\n(int, PK)', 'usuario_id\n(int, FK)', 'cargo_id\n(int, FK)',

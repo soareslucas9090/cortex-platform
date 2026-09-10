@@ -172,8 +172,8 @@ class ImportacaoUsuariosParser:
         if '\n' in texto:
             texto = texto.split('\n')[0].strip()
 
-        if ' (' in texto:
-            texto = texto.split(' (')[0].strip()
+        if '(' in texto:
+            texto = texto.split('(')[0].strip()
 
         texto = texto.lower()
         return ALIAS_CABECALHOS_IMPORTACAO.get(texto, texto)
@@ -190,7 +190,6 @@ class ImportacaoUsuariosParser:
                 cpf=self._to_str(linha.get('cpf')),
                 nome=self._to_str(linha.get('nome')),
                 foto=self._to_str(linha.get('foto')),
-                deficiencia=self._to_str(linha.get('deficiencia')),
                 ativo=self._to_bool(linha.get('ativo'), default=True),
                 ultimo_login=linha.get('ultimo_login'),
                 colaborador_externo=self._to_bool(linha.get('colaborador_externo'), default=False),
@@ -236,6 +235,7 @@ class ImportacaoUsuariosParser:
                 aluno_id_planilha=self._to_int(linha.get('aluno_id')),
                 usuario_id_planilha=self._to_int(linha.get('usuario_id')),
                 ira=linha.get('ira'),
+                deficiencia=self._to_str(linha.get('deficiencia')),
             )
             for linha in linhas
         ]

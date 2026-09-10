@@ -16,6 +16,9 @@ from AppCore.common.textos.mensagens import RESPONSE_ERRO_INTERNO_SERVIDOR
 from Infraestrutura.permissoes.choices import capacidades_infraestrutura_vazias
 from Identidade.usuarios.choices import PERMISSAO_CORTEX_EDITAR_TUDO
 from Identidade.usuarios.importacao.importacao_parser import ImportacaoUsuariosParser
+from Identidade.usuarios.importacao.importacao_exceptions import (
+    ColunasObrigatoriasAusentesException,
+)
 from Identidade.usuarios.importacao.importacao_dtos import (
     ArquivoImportacaoUsuariosDTO,
     LinhaUsuarioImportacaoDTO,
@@ -388,12 +391,11 @@ class ImportacaoUsuariosParserTests(TestCase):
                     'cpf\n(String)',
                     'nome\n(String)',
                     'foto\n(String)',
-                    'deficiencia\n(String)',
                     'ativo\n(boolean)',
                     'ultimo_login\n(Date)',
                     'colaborador_externo\n(Booleano)',
                 ],
-                [1, '12345678901', 'Usuário Teste', '', '', True, None, None],
+                [1, '12345678901', 'Usuário Teste', '', True, None, None],
             ]
         }
 
@@ -422,12 +424,11 @@ class ImportacaoUsuariosParserTests(TestCase):
                     'cpf\n(String)',
                     'nome\n(String)',
                     'foto\n(String)',
-                    'deficiencia\n(String)',
                     'ativo\n(boolean)',
                     'ultimo_login\n(Date)',
                     'colaborador_externo\n(Booleano)',
                 ],
-                [3, '11122233344', 'Externo Teste', '', '', True, None, 'NULL'],
+                [3, '11122233344', 'Externo Teste', '', True, None, 'NULL'],
             ]
         }
 
@@ -452,13 +453,12 @@ class ImportacaoUsuariosParserTests(TestCase):
                     'cpf\n(String)',
                     'nome\n(String)',
                     'foto\n(String)',
-                    'deficiencia\n(String)',
                     'ativo\n(boolean)',
                     'ultimo_login\n(Date)',
                     'colaborador_externo\n(Booleano)',
                 ],
-                ['', '', '', '', '', '', '', ''],
-                [2, '98765432100', 'Outro Usuário', '', '', True, None, False],
+                ['', '', '', '', '', '', ''],
+                [2, '98765432100', 'Outro Usuário', '', True, None, False],
             ]
         }
 
@@ -480,6 +480,103 @@ class ImportacaoUsuariosParserTests(TestCase):
             parser.parse(arquivo)
 
         self.assertIn('Extensão', str(exc.exception))
+
+    @patch('Identidade.usuarios.importacao.importacao_parser.get_data')
+    def test_deve_fazer_parse_da_aba_aluno_com_deficiencia(self, mock_get_data):
+        parser = ImportacaoUsuariosParser()
+        arquivo = SimpleUploadedFile(
+            'modelo-importacao-usuarios.ods',
+            b'fake-content',
+            content_type='application/vnd.oasis.opendocument.spreadsheet',
+        )
+        mock_get_data.return_value = {
+            'Usuario': [
+                [
+                    'usuario_id(int, PK)',
+                    'cpf(String)',
+                    'nome(String)',
+                    'foto(String)',
+                    'ativo(boolean)',
+                    'ultimo_login(Date)',
+                    'colaborador_externo(booleano)',
+                ],
+                [1, '12345678901', 'Aluno Teste', '', True, None, False],
+            ],
+            'Aluno': [
+                [
+                    'aluno_id(int, PK)',
+                    'usuario_id(int, FK)',
+                    'ira(double)',
+                    'deficiencia(String)',
+                ],
+                [1, 1, 8.5, 'deficiencia_fisica'],
+            ],
+        }
+
+        resultado = parser.parse(arquivo)
+
+        self.assertEqual(len(resultado.alunos), 1)
+        self.assertEqual(resultado.alunos[0].deficiencia, 'deficiencia_fisica')
+        self.assertEqual(resultado.alunos[0].ira, 8.5)
+
+    @patch('Identidade.usuarios.importacao.importacao_parser.get_data')
+    def test_deve_aceitar_endereco_sem_cep_complemento_e_numero(self, mock_get_data):
+        parser = ImportacaoUsuariosParser()
+        arquivo = SimpleUploadedFile(
+            'modelo-importacao-usuarios.ods',
+            b'fake-content',
+            content_type='application/vnd.oasis.opendocument.spreadsheet',
+        )
+        mock_get_data.return_value = {
+            'Usuario': [
+                [
+                    'usuario_id(int, PK)',
+                    'cpf(String)',
+                    'nome(String)',
+                    'foto(String)',
+                    'ativo(boolean)',
+                    'ultimo_login(Date)',
+                    'colaborador_externo(booleano)',
+                ],
+                [1, '12345678901', 'Usuário Teste', '', True, None, False],
+            ],
+            'Endereco': [
+                [
+                    'usuario_id(int, FK)',
+                    'endereco(String)',
+                    'bairro(String)',
+                    'cidade(String)',
+                    'estado(String)',
+                ],
+                [1, 'Rua A', 'Centro', 'Floriano', 'PI'],
+            ],
+        }
+
+        resultado = parser.parse(arquivo)
+
+        self.assertEqual(len(resultado.enderecos), 1)
+        self.assertEqual(resultado.enderecos[0].cidade, 'Floriano')
+        self.assertEqual(resultado.enderecos[0].cep, '')
+
+    @patch('Identidade.usuarios.importacao.importacao_parser.get_data')
+    def test_deve_rejeitar_colunas_obrigatorias_ausentes(self, mock_get_data):
+        parser = ImportacaoUsuariosParser()
+        arquivo = SimpleUploadedFile(
+            'modelo-importacao-usuarios.ods',
+            b'fake-content',
+            content_type='application/vnd.oasis.opendocument.spreadsheet',
+        )
+        mock_get_data.return_value = {
+            'Usuario': [
+                ['usuario_id(int, PK)', 'cpf(String)'],
+                [1, '12345678901'],
+            ],
+        }
+
+        with self.assertRaises(ColunasObrigatoriasAusentesException) as exc:
+            parser.parse(arquivo)
+
+        self.assertIn('colunas obrigatórias', str(exc.exception))
 
 
 class ImportacaoUsuariosBusinessPreviewTests(TestCase):
@@ -515,6 +612,17 @@ class ImportacaoUsuariosBusinessPreviewTests(TestCase):
         self.assertFalse(resultado.sucesso)
         self.assertEqual(len(resultado.erros), 1)
         self.assertEqual(resultado.erros[0].aba, '__arquivo__')
+
+    @patch('Identidade.usuarios.business.ImportacaoUsuariosParser.parse')
+    def test_preview_deve_relancar_erro_de_colunas_ausentes(self, mock_parse):
+        mock_parse.side_effect = ColunasObrigatoriasAusentesException(
+            'A aba "Usuario" não contém as colunas obrigatórias: nome.'
+        )
+
+        with self.assertRaises(ColunasObrigatoriasAusentesException) as exc:
+            Usuario().business.pre_visualizar_importacao(arquivo=BytesIO(b'test'))
+
+        self.assertIn('colunas obrigatórias', str(exc.exception))
 
 
 class ImportacaoUsuariosBusinessImportacaoTests(TestCase):
@@ -640,6 +748,39 @@ class ImportacaoUsuariosBusinessImportacaoTests(TestCase):
         servidor = Servidor.objects.get(usuario=usuario_criado)
         self.assertEqual(servidor.matricula, 'MATR999888')
         self.assertEqual(servidor.cargo_id, cargo.id)
+
+    @patch('Identidade.usuarios.business.ImportacaoUsuariosParser.parse')
+    def test_deve_importar_deficiencia_da_aba_aluno(self, mock_parse):
+        from Identidade.usuarios.importacao.importacao_dtos import LinhaAlunoImportacaoDTO
+
+        estrutura = ArquivoImportacaoUsuariosDTO(
+            usuarios=[
+                LinhaUsuarioImportacaoDTO(
+                    numero_linha=2,
+                    usuario_id_planilha=1,
+                    cpf='12345678901',
+                    nome='Aluno PcD',
+                    ativo=True,
+                )
+            ],
+            alunos=[
+                LinhaAlunoImportacaoDTO(
+                    numero_linha=2,
+                    aluno_id_planilha=1,
+                    usuario_id_planilha=1,
+                    deficiencia='Deficiência Física',
+                )
+            ],
+        )
+        mock_parse.return_value = estrutura
+
+        resultado = Usuario().business.importar_usuarios_em_lote(
+            importacao_lote=self._criar_importacao_lote(),
+        )
+
+        self.assertTrue(resultado.sucesso, resultado.erros)
+        usuario = self.User.objects.get(cpf='12345678901')
+        self.assertEqual(usuario.deficiencia, 'deficiencia_fisica')
 
     @patch('Identidade.usuarios.business.ImportacaoUsuariosParser.parse')
     def test_deve_importar_aluno_com_matriculas_distintas_por_curso(self, mock_parse):
@@ -1000,6 +1141,27 @@ class ImportacaoUsuariosApiTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.data['status'], 'success')
         self.assertIn('dados', response.data)
+
+    @patch('Identidade.usuarios.business.UsuarioBusiness.pre_visualizar_importacao')
+    def test_endpoint_preview_deve_retornar_400_quando_colunas_ausentes(self, mock_preview):
+        mock_preview.side_effect = ColunasObrigatoriasAusentesException(
+            'A aba "Usuario" não contém as colunas obrigatórias: nome.'
+        )
+        arquivo = SimpleUploadedFile(
+            'modelo-importacao-usuarios.ods',
+            b'fake-content',
+            content_type='application/vnd.oasis.opendocument.spreadsheet',
+        )
+
+        response = self.client.post(
+            reverse('identidade:usuarios-importacao-pre-visualizar'),
+            {'file': arquivo},
+            format='multipart',
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.data['status'], 'error')
+        self.assertIn('colunas obrigatórias', response.data['detail'])
 
     @patch('Identidade.usuarios.business.UsuarioBusiness.iniciar_importacao')
     def test_endpoint_importacao_deve_retornar_202(self, mock_iniciar):

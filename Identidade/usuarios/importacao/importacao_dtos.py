@@ -9,7 +9,6 @@ class LinhaUsuarioImportacaoDTO:
     cpf: str
     nome: str
     foto: str = ''
-    deficiencia: str = ''
     ativo: bool = True
     ultimo_login: Any = None
     colaborador_externo: bool = False
@@ -43,6 +42,7 @@ class LinhaAlunoImportacaoDTO:
     aluno_id_planilha: int
     usuario_id_planilha: int
     ira: Any = None
+    deficiencia: str = ''
 
 
 @dataclass

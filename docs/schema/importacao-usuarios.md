@@ -68,7 +68,6 @@ Eles devem ser usados apenas como **identificadores temporários internos do arq
 - `cpf (String)`
 - `nome (String)`
 - `foto (String)`
-- `deficiencia (String)`
 - `ativo (boolean)`
 - `ultimo_login (Date)`
 - `colaborador_externo (boolean)`
@@ -103,11 +102,10 @@ Eles devem ser usados apenas como **identificadores temporários internos do arq
 - `usuario_id (int, FK)`
 - `endereco (String)`
 - `bairro (String)`
-- `cep (String)`
-- `complemento (String)`
-- `numero (int)`
 - `cidade (String)`
 - `estado (String)`
+
+Campos opcionais, se presentes no arquivo, também são lidos: `cep`, `complemento`, `numero`.
 
 ### Regras
 - `usuario_id` deve existir previamente na aba `Usuario`.
@@ -120,10 +118,12 @@ Eles devem ser usados apenas como **identificadores temporários internos do arq
 - `aluno_id (int, PK)`
 - `usuario_id (int, FK)`
 - `ira (float)`
+- `deficiencia (String)`
 
 ### Regras
 - `aluno_id` é obrigatório para correlação interna com `Aluno_Curso`;
-- `usuario_id` deve existir previamente na aba `Usuario`.
+- `usuario_id` deve existir previamente na aba `Usuario`;
+- `deficiencia`, quando informada, é persistida no `Usuario` vinculado ao aluno.
 
 ---
 

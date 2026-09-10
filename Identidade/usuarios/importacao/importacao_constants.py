@@ -40,7 +40,6 @@ COLUNAS_ABA_USUARIO = [
     'cpf',
     'nome',
     'foto',
-    'deficiencia',
     'ativo',
     'ultimo_login',
     'colaborador_externo',
@@ -57,9 +56,6 @@ COLUNAS_ABA_ENDERECO = [
     'usuario_id',
     'endereco',
     'bairro',
-    'cep',
-    'complemento',
-    'numero',
     'cidade',
     'estado',
 ]
@@ -68,6 +64,7 @@ COLUNAS_ABA_ALUNO = [
     'aluno_id',
     'usuario_id',
     'ira',
+    'deficiencia',
 ]
 
 COLUNAS_ABA_ALUNO_CURSO = [

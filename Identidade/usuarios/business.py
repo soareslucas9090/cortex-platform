@@ -11,6 +11,7 @@ from AppCore.core.exceptions.exceptions import (
     SystemErrorException,
     ValidationException,
 )
+from Identidade.usuarios.importacao.importacao_exceptions import ImportacaoUsuariosException
 from AppCore.common.util.util import normalizar_cpf, normalizar_cep
 
 from Identidade.usuarios.importacao.importacao_parser import ImportacaoUsuariosParser
@@ -30,6 +31,10 @@ class UsuarioBusiness(ModelInstanceBusiness):
     Orquestra todas as operações sobre o Usuario e seus sub-recursos
     (Contato, Endereco, Matricula).
     """
+
+    exceptions_handled = ModelInstanceBusiness.exceptions_handled + (
+        ImportacaoUsuariosException,
+    )
 
     # ------------------------------------------------------------------
     # Operações de criação (sem object_instance)
@@ -751,7 +756,6 @@ class UsuarioBusiness(ModelInstanceBusiness):
                 raise ValidationException('O usuário deve possuir CPF ou Matrícula.')
             if usuario:
                 usuario.nome = linha.nome
-                usuario.deficiencia = linha.deficiencia
                 usuario.ativo = linha.ativo
                 usuario.colaborador_externo = linha.colaborador_externo
                 if linha.foto:
@@ -769,7 +773,6 @@ class UsuarioBusiness(ModelInstanceBusiness):
                 cpf=cpf_normalizado,
                 password=senha_padrao,
                 nome=linha.nome,
-                deficiencia=linha.deficiencia,
                 ativo=linha.ativo,
                 colaborador_externo=linha.colaborador_externo,
                 foto=linha.foto or None,
@@ -928,6 +931,11 @@ class UsuarioBusiness(ModelInstanceBusiness):
     def _garantir_aluno(self, usuario, linha):
         try:
             from Academico.alunos.models import Aluno
+            from Identidade.usuarios.utils import normalizar_deficiencia
+
+            if linha.deficiencia:
+                usuario.deficiencia = normalizar_deficiencia(linha.deficiencia)
+                usuario.save(update_fields=['deficiencia'])
             aluno = Aluno.objects.filter(usuario=usuario).first()
             if aluno:
                 if linha.ira is not None:
