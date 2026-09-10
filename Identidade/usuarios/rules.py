@@ -82,13 +82,20 @@ class UsuarioRules(ModelInstanceRules):
             self.return_exception('O usuário já está ativo.')
         return True
 
-    def matricula_nao_duplicada(self, numero_matricula: str, excluir_id=None) -> bool:
-        """Valida que o número de matrícula não está duplicado globalmente."""
-        from Identidade.matriculas.models import Matricula
-        qs = Matricula.objects.filter(matricula=numero_matricula)
-        if excluir_id is not None:
-            qs = qs.exclude(pk=excluir_id)
-        if qs.exists():
+    def matricula_unica_no_sistema(
+        self,
+        numero_matricula: str,
+        excluir_fonte=None,
+        excluir_id=None,
+    ) -> bool:
+        """Valida unicidade global da matrícula entre AlunoCurso, Servidor e Terceirizado."""
+        from AppCore.common.util.util import normalizar_matricula
+        from .models import Usuario
+
+        numero = normalizar_matricula(numero_matricula)
+        if not numero:
+            return True
+        if Usuario().helper.matricula_existe_no_sistema(numero, excluir_fonte, excluir_id):
             self.return_exception('Já existe um usuário cadastrado com esta matrícula.')
         return True
 

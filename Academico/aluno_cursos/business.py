@@ -13,6 +13,7 @@ class AlunoCursoBusiness(ModelInstanceBusiness):
         try:
             from Academico.alunos.models import Aluno
             from Academico.cursos.models import Curso
+            from AppCore.common.util.util import normalizar_matricula
             from .models import AlunoCurso
             try:
                 aluno = Aluno.objects.get(pk=aluno_id)
@@ -23,6 +24,10 @@ class AlunoCursoBusiness(ModelInstanceBusiness):
             except Curso.DoesNotExist:
                 raise ValidationException('Curso não encontrado.')
             self.object_instance.rules.vinculo_unico_ativo(aluno=aluno, curso=curso)
+            if 'matricula' in kwargs:
+                kwargs['matricula'] = normalizar_matricula(kwargs['matricula'])
+                if kwargs['matricula']:
+                    self.object_instance.rules.matricula_unica(kwargs['matricula'])
             return AlunoCurso.objects.create(aluno=aluno, curso=curso, **kwargs)
         except Exception as e:
             self.relancar_ou_erro_sistema(e, 'Não foi possível criar o vínculo acadêmico.', logger)
@@ -30,6 +35,15 @@ class AlunoCursoBusiness(ModelInstanceBusiness):
     def atualizar_dados(self, dados: dict):
         """Atualiza campos do vínculo (ex: ano_conclusao, ativo)."""
         try:
+            from AppCore.common.util.util import normalizar_matricula
+
+            if 'matricula' in dados:
+                dados['matricula'] = normalizar_matricula(dados['matricula'])
+                if dados['matricula']:
+                    self.object_instance.rules.matricula_unica(
+                        dados['matricula'],
+                        excluir_id=self.object_instance.pk,
+                    )
             for attr, value in dados.items():
                 setattr(self.object_instance, attr, value)
             self.object_instance.save()

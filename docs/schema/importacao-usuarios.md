@@ -20,7 +20,6 @@ Estas abas participam diretamente do processamento da importação:
 - `Usuario`
 - `Contato`
 - `Endereco`
-- `Matricula`
 - `Aluno`
 - `Aluno_Curso`
 - `Servidor`
@@ -52,12 +51,11 @@ Eles devem ser usados apenas como **identificadores temporários internos do arq
 1. `Usuario`
 2. `Contato`
 3. `Endereco`
-4. `Matricula`
-5. `Aluno`
-6. `Servidor`
-7. `Terceirizado`
-8. `Setor_Lotacao`
-9. `Aluno_Curso`
+4. `Aluno`
+5. `Servidor`
+6. `Terceirizado`
+7. `Setor_Lotacao`
+8. `Aluno_Curso`
 
 ## Abas e colunas esperadas
 
@@ -116,19 +114,6 @@ Eles devem ser usados apenas como **identificadores temporários internos do arq
 
 ---
 
-## Aba `Matricula`
-
-### Colunas
-- `usuario_id (int, FK)`
-- `matricula (String)`
-- `situacao (String)`
-
-### Regras
-- `usuario_id` deve existir previamente na aba `Usuario`;
-- `situacao` deve ser compatível com a modelagem do projeto.
-
----
-
 ## Aba `Aluno`
 
 ### Colunas
@@ -148,10 +133,16 @@ Eles devem ser usados apenas como **identificadores temporários internos do arq
 - `aluno_id (int, FK)`
 - `curso_id (int, FK)`
 - `ano_conclusao (int)`
+- `matricula (String)`
+- `ira (double)`
+- `turma (String)`
+- `turno (String)`
+- `situacao_curso (String)`
 
 ### Regras
 - `aluno_id` deve existir previamente na aba `Aluno`;
 - `curso_id` deve ser resolvido contra os dados seed já existentes no banco;
+- `matricula`, quando informada, deve ser única no sistema;
 - esta aba não deve criar cursos.
 
 ---
@@ -164,10 +155,12 @@ Eles devem ser usados apenas como **identificadores temporários internos do arq
 - `cargo_id (int, FK)`
 - `categoria (String)`
 - `ativo (boolean)`
+- `matricula (String)`
 
 ### Regras
 - `usuario_id` deve existir previamente na aba `Usuario`;
 - `cargo_id` deve ser resolvido contra os dados seed já existentes no banco;
+- `matricula`, quando informada, deve ser única no sistema;
 - esta aba não deve criar cargos.
 
 ---
@@ -179,10 +172,12 @@ Eles devem ser usados apenas como **identificadores temporários internos do arq
 - `usuario_id (int, FK)`
 - `empresa_instituicao_id (int, FK)`
 - `ativo (boolean)`
+- `matricula (String)`
 
 ### Regras
 - `usuario_id` deve existir previamente na aba `Usuario`;
 - `empresa_instituicao_id` deve ser resolvido contra os dados seed já existentes no banco;
+- `matricula`, quando informada, deve ser única no sistema;
 - esta aba não deve criar empresas/instituições.
 
 ---
@@ -216,7 +211,6 @@ A importação deve validar:
 
 - `Contato` depende de `Usuario`
 - `Endereco` depende de `Usuario`
-- `Matricula` depende de `Usuario`
 - `Aluno` depende de `Usuario`
 - `Aluno_Curso` depende de `Aluno`
 - `Servidor` depende de `Usuario`

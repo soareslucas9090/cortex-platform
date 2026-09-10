@@ -11,7 +11,7 @@ from rest_framework import status
 from rest_framework.test import APITestCase
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from Identidade.usuarios.models import Usuario
+from Identidade.usuarios.models import ImportacaoLote, StatusImportacao, Usuario
 from AppCore.common.textos.mensagens import RESPONSE_ERRO_INTERNO_SERVIDOR
 from Infraestrutura.permissoes.choices import capacidades_infraestrutura_vazias
 from Identidade.usuarios.choices import PERMISSAO_CORTEX_EDITAR_TUDO
@@ -179,26 +179,21 @@ class CriarUsuarioViewTest(APITestCase):
         resposta = self.client.post(self.url, payload)
         self.assertEqual(resposta.status_code, status.HTTP_201_CREATED)
 
-    def test_admin_cria_usuario_apenas_com_matricula(self):
+    def test_admin_cria_usuario_sem_cpf_com_senha(self):
         self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token_admin}')
         payload = {
             'nome': 'Usuário Sem CPF',
-            'matricula': 'MATR12345',
             'password': 'Senha@123',
         }
         resposta = self.client.post(self.url, payload)
         self.assertEqual(resposta.status_code, status.HTTP_201_CREATED)
         self.assertIn('dados', resposta.data)
         self.assertIsNone(resposta.data['dados']['cpf'])
-        # Verificar que a matrícula foi criada no banco
-        usuario_criado = Usuario.objects.get(id=resposta.data['dados']['id'])
-        self.assertTrue(usuario_criado.matriculas.filter(matricula='MATR12345').exists())
 
-    def test_criar_usuario_sem_cpf_e_sem_matricula_retorna_400(self):
+    def test_criar_usuario_sem_cpf_e_sem_senha_retorna_400(self):
         self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token_admin}')
         payload = {
             'nome': 'Usuário Sem Nada',
-            'password': 'Senha@123',
         }
         resposta = self.client.post(self.url, payload)
         self.assertEqual(resposta.status_code, status.HTTP_400_BAD_REQUEST)
@@ -527,6 +522,17 @@ class ImportacaoUsuariosBusinessImportacaoTests(TestCase):
     def setUp(self):
         self.User = get_user_model()
 
+    def _criar_importacao_lote(self):
+        ImportacaoLote.objects.filter(status=StatusImportacao.EM_ANDAMENTO).update(
+            status=StatusImportacao.CONCLUIDA,
+        )
+        return ImportacaoLote.objects.create(
+            arquivo=SimpleUploadedFile('test.ods', b'test'),
+            status=StatusImportacao.EM_ANDAMENTO,
+            total_linhas=0,
+            linhas_processadas=0,
+        )
+
     @patch('Identidade.usuarios.business.ImportacaoUsuariosParser.parse')
     def test_deve_importar_usuario_novo_com_sucesso(self, mock_parse):
         estrutura = ArquivoImportacaoUsuariosDTO(
@@ -542,14 +548,9 @@ class ImportacaoUsuariosBusinessImportacaoTests(TestCase):
         )
         mock_parse.return_value = estrutura
 
-        from unittest.mock import MagicMock
-        importacao_mock = MagicMock()
-        importacao_mock.id = 999
-        importacao_mock.arquivo = BytesIO(b'test')
-        importacao_mock.linhas_processadas = 0
-        importacao_mock.total_linhas = 0
-        
-        resultado = Usuario().business.importar_usuarios_em_lote(importacao_lote=importacao_mock)
+        resultado = Usuario().business.importar_usuarios_em_lote(
+            importacao_lote=self._criar_importacao_lote(),
+        )
 
         self.assertTrue(resultado.sucesso)
         self.assertEqual(resultado.resumo.usuarios_criados, 1)
@@ -576,14 +577,9 @@ class ImportacaoUsuariosBusinessImportacaoTests(TestCase):
         )
         mock_parse.return_value = estrutura
 
-        from unittest.mock import MagicMock
-        importacao_mock = MagicMock()
-        importacao_mock.id = 999
-        importacao_mock.arquivo = BytesIO(b'test')
-        importacao_mock.linhas_processadas = 0
-        importacao_mock.total_linhas = 0
-
-        resultado = Usuario().business.importar_usuarios_em_lote(importacao_lote=importacao_mock)
+        resultado = Usuario().business.importar_usuarios_em_lote(
+            importacao_lote=self._criar_importacao_lote(),
+        )
 
         usuario.refresh_from_db()
 
@@ -593,9 +589,19 @@ class ImportacaoUsuariosBusinessImportacaoTests(TestCase):
 
     @patch('Identidade.usuarios.business.ImportacaoUsuariosParser.parse')
     def test_deve_importar_usuario_sem_cpf_com_matricula_com_sucesso(self, mock_parse):
-        from Identidade.usuarios.importacao.importacao_dtos import LinhaMatriculaImportacaoDTO
+        from Identidade.usuarios.importacao.importacao_dtos import (
+            LinhaServidorImportacaoDTO,
+            ReferenciasImportacaoDTO,
+        )
+        from PessoasInstitucionais.cargos.models import Cargo
+        from PessoasInstitucionais.servidores.models import Servidor
+
+        cargo = Cargo.objects.create(nome='Cargo Importação Teste', ativo=True)
 
         estrutura = ArquivoImportacaoUsuariosDTO(
+            referencias=ReferenciasImportacaoDTO(
+                mapa_cargo_id_para_nome={1: 'Cargo Importação Teste'},
+            ),
             usuarios=[
                 LinhaUsuarioImportacaoDTO(
                     numero_linha=2,
@@ -605,36 +611,35 @@ class ImportacaoUsuariosBusinessImportacaoTests(TestCase):
                     ativo=True,
                 )
             ],
-            matriculas=[
-                LinhaMatriculaImportacaoDTO(
+            servidores=[
+                LinhaServidorImportacaoDTO(
                     numero_linha=2,
+                    servidor_id_planilha=1,
                     usuario_id_planilha=1,
+                    cargo_id_planilha=1,
+                    categoria='Professor',
+                    ativo=True,
                     matricula='MATR999888',
-                    situacao='1',
                 )
-            ]
+            ],
         )
         mock_parse.return_value = estrutura
 
-        from unittest.mock import MagicMock
-        importacao_mock = MagicMock()
-        importacao_mock.id = 999
-        importacao_mock.arquivo = BytesIO(b'test')
-        importacao_mock.linhas_processadas = 0
-        importacao_mock.total_linhas = 0
-        
-        resultado = Usuario().business.importar_usuarios_em_lote(importacao_lote=importacao_mock)
+        resultado = Usuario().business.importar_usuarios_em_lote(
+            importacao_lote=self._criar_importacao_lote(),
+        )
 
         self.assertTrue(resultado.sucesso)
         self.assertEqual(resultado.resumo.usuarios_criados, 1)
-        
-        # Verificar que o usuário foi criado e não possui CPF
+        self.assertEqual(resultado.resumo.servidores_criados, 1)
+
         usuario_criado = self.User.objects.filter(nome='Usuário Sem CPF Importado').first()
         self.assertIsNotNone(usuario_criado)
         self.assertIsNone(usuario_criado.cpf)
-        
-        # Verificar que a matrícula correspondente foi criada
-        self.assertTrue(usuario_criado.matriculas.filter(matricula='MATR999888').exists())
+
+        servidor = Servidor.objects.get(usuario=usuario_criado)
+        self.assertEqual(servidor.matricula, 'MATR999888')
+        self.assertEqual(servidor.cargo_id, cargo.id)
 
     @patch('Identidade.usuarios.business.ImportacaoUsuariosParser.parse')
     def test_deve_retornar_erro_se_cpf_for_invalido(self, mock_parse):
@@ -651,14 +656,9 @@ class ImportacaoUsuariosBusinessImportacaoTests(TestCase):
         )
         mock_parse.return_value = estrutura
 
-        from unittest.mock import MagicMock
-        importacao_mock = MagicMock()
-        importacao_mock.id = 999
-        importacao_mock.arquivo = BytesIO(b'test')
-        importacao_mock.linhas_processadas = 0
-        importacao_mock.total_linhas = 0
-
-        resultado = Usuario().business.importar_usuarios_em_lote(importacao_lote=importacao_mock)
+        resultado = Usuario().business.importar_usuarios_em_lote(
+            importacao_lote=self._criar_importacao_lote(),
+        )
 
         self.assertFalse(resultado.sucesso)
         self.assertEqual(resultado.resumo.usuarios_criados, 0)
@@ -680,14 +680,9 @@ class ImportacaoUsuariosBusinessImportacaoTests(TestCase):
         )
         mock_parse.return_value = estrutura
 
-        from unittest.mock import MagicMock
-        importacao_mock = MagicMock()
-        importacao_mock.id = 999
-        importacao_mock.arquivo = BytesIO(b'test')
-        importacao_mock.linhas_processadas = 0
-        importacao_mock.total_linhas = 0
-
-        resultado = Usuario().business.importar_usuarios_em_lote(importacao_lote=importacao_mock)
+        resultado = Usuario().business.importar_usuarios_em_lote(
+            importacao_lote=self._criar_importacao_lote(),
+        )
 
         self.assertTrue(resultado.sucesso)
         self.assertEqual(resultado.resumo.usuarios_criados, 1)
@@ -921,28 +916,68 @@ class CancelarImportacaoViewTests(TestCase):
 class AutenticacaoUsuarioTest(APITestCase):
 
     def setUp(self):
-        from Identidade.matriculas.models import Matricula
-        from Identidade.matriculas.choices import SituacaoMatricula
+        from Academico.alunos.models import Aluno
+        from Academico.aluno_cursos.models import AlunoCurso
+        from Academico.cursos.models import Curso
+        from PessoasInstitucionais.cargos.models import Cargo
+        from PessoasInstitucionais.empresas_instituicoes.models import EmpresaInstituicao
+        from PessoasInstitucionais.servidores.choices import CategoriaServidor
+        from PessoasInstitucionais.servidores.models import Servidor
+        from PessoasInstitucionais.terceirizados.models import Terceirizado
+
         self.User = get_user_model()
         self.url = reverse('auth:token-jwt:login')
 
-        # Criar usuário com CPF e testar login
         self.usuario_cpf = self.User.objects.create_user(
             cpf='22222222222',
             nome='Usuario CPF',
-            password='Password123'
+            password='Password123',
         )
 
-        # Criar usuário apenas com matrícula e testar login
-        self.usuario_matricula = self.User.objects.create_user(
+        self.usuario_matricula_aluno = self.User.objects.create_user(
             cpf=None,
-            nome='Usuario Matricula',
-            password='PasswordMatricula123'
+            nome='Usuario Matricula Aluno',
+            password='PasswordMatricula123',
         )
-        Matricula.objects.create(
-            usuario=self.usuario_matricula,
+        aluno = Aluno.objects.create(usuario=self.usuario_matricula_aluno)
+        curso = Curso.objects.create(nome='Curso Login', codigo_curso='CL01')
+        AlunoCurso().business.criar_vinculo(
+            aluno_id=aluno.pk,
+            curso_id=curso.pk,
             matricula='MATRICULA999',
-            situacao=SituacaoMatricula.ATIVA
+        )
+
+        self.usuario_matricula_servidor = self.User.objects.create_user(
+            cpf=None,
+            nome='Usuario Matricula Servidor',
+            password='PasswordServidor123',
+        )
+        cargo = Cargo.objects.create(nome='Cargo Login')
+        Servidor().business.criar_servidor(
+            usuario_pk=self.usuario_matricula_servidor.pk,
+            cargo_pk=cargo.pk,
+            categoria=CategoriaServidor.DOCENTE,
+            matricula='MATSERV001',
+        )
+
+        self.usuario_matricula_terceirizado = self.User.objects.create_user(
+            cpf=None,
+            nome='Usuario Matricula Terceirizado',
+            password='PasswordTerc123',
+        )
+        empresa = EmpresaInstituicao.objects.create(nome='Empresa Login')
+        Terceirizado().business.criar_terceirizado(
+            usuario_pk=self.usuario_matricula_terceirizado.pk,
+            empresa_pk=empresa.pk,
+            data_inicio='2024-01-01',
+            matricula='MATTERC001',
+        )
+
+        self.usuario_email_sem_cpf = self.User.objects.create_user(
+            cpf=None,
+            email='semcpf@exemplo.com',
+            nome='Usuario Email Sem CPF',
+            password='PasswordEmail123',
         )
 
     def test_login_por_cpf_com_sucesso(self):
@@ -954,27 +989,48 @@ class AutenticacaoUsuarioTest(APITestCase):
         self.assertEqual(resposta.status_code, status.HTTP_200_OK)
         self.assertIn('access', resposta.data)
 
-    def test_login_por_matricula_com_sucesso(self):
+    def test_login_por_matricula_aluno_curso_com_sucesso(self):
         payload = {
             'login': 'MATRICULA999',
-            'password': 'PasswordMatricula123'
+            'password': 'PasswordMatricula123',
         }
         resposta = self.client.post(self.url, payload)
         self.assertEqual(resposta.status_code, status.HTTP_200_OK)
         self.assertIn('access', resposta.data)
 
-    def test_login_por_matricula_inativa_falha(self):
-        from Identidade.matriculas.models import Matricula
-        from Identidade.matriculas.choices import SituacaoMatricula
+    def test_login_por_matricula_servidor_com_sucesso(self):
+        payload = {
+            'login': 'MATSERV001',
+            'password': 'PasswordServidor123',
+        }
+        resposta = self.client.post(self.url, payload)
+        self.assertEqual(resposta.status_code, status.HTTP_200_OK)
 
-        # Inativar a matrícula
-        matricula_obj = self.usuario_matricula.matriculas.first()
-        matricula_obj.situacao = SituacaoMatricula.INATIVA
-        matricula_obj.save()
+    def test_login_por_matricula_terceirizado_com_sucesso(self):
+        payload = {
+            'login': 'MATTERC001',
+            'password': 'PasswordTerc123',
+        }
+        resposta = self.client.post(self.url, payload)
+        self.assertEqual(resposta.status_code, status.HTTP_200_OK)
+
+    def test_login_por_matricula_inativa_falha(self):
+        from Academico.aluno_cursos.models import AlunoCurso
+
+        vinculo = AlunoCurso.objects.get(matricula='MATRICULA999')
+        vinculo.business.encerrar(ano_conclusao=2025)
 
         payload = {
             'login': 'MATRICULA999',
-            'password': 'PasswordMatricula123'
+            'password': 'PasswordMatricula123',
+        }
+        resposta = self.client.post(self.url, payload)
+        self.assertEqual(resposta.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_login_por_email_sem_cpf_e_sem_matricula_falha(self):
+        payload = {
+            'login': 'semcpf@exemplo.com',
+            'password': 'PasswordEmail123',
         }
         resposta = self.client.post(self.url, payload)
         self.assertEqual(resposta.status_code, status.HTTP_401_UNAUTHORIZED)

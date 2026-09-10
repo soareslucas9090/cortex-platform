@@ -8,10 +8,11 @@ O domínio `Identidade` é responsável pela autenticação, perfis de usuários
 
 ### Modelos e Relacionamentos
 
-- **Usuario**: Classe base central do sistema (autenticação baseada em CPF). Possui relacionamento 1:N com `Contato` e `Endereco`.
+- **Usuario**: Classe base central do sistema (autenticação por e-mail, CPF ou matrícula). Possui relacionamento 1:N com `Contato` e `Endereco`.
 - **Contato**: Informações de contato do usuário (relacionamento N:1 com `Usuario`).
 - **Endereco**: Endereços do usuário (relacionamento N:1 com `Usuario`).
-- **Matricula**: Matrículas vinculadas ao usuário (relacionamento N:1 com `Usuario`).
+
+A **matrícula** não é entidade própria em Identidade: ela vive como atributo opcional em `AlunoCurso`, `Servidor` e `Terceirizado`. Normalização em `AppCore/common/util/util.py` (`normalizar_matricula`); busca por login, elegibilidade e unicidade global em `Usuario().helper` e `Usuario().rules` (`Identidade/usuarios/helpers.py` e `rules.py`).
 
 ### Estrutura de Apps
 
@@ -19,10 +20,9 @@ O domínio `Identidade` é responsável pela autenticação, perfis de usuários
 Identidade/
 ├── __init__.py
 ├── urls.py
-├── usuarios/        # App Django do model Usuario
+├── usuarios/        # App Django do model Usuario (helpers/rules de matrícula)
 ├── contatos/        # App Django do model Contato
-├── enderecos/       # App Django do model Endereco
-└── matriculas/      # App Django do model Matricula
+└── enderecos/       # App Django do model Endereco
 ```
 
 ---
@@ -30,7 +30,9 @@ Identidade/
 ## Regras Específicas do Domínio
 
 ### 1. Autenticação e Usuários
-- **Login por CPF**: O identificador único para login é o **CPF** (`cpf`), não o e-mail.
+- **Login híbrido**: O endpoint aceita **e-mail**, **CPF** ou **matrícula** no campo `login` (`EmailOrCpfBackend`).
+- **Fontes da matrícula**: Para autenticação e elegibilidade, a matrícula é resolvida em vínculos ativos de `AlunoCurso`, `Servidor` ou `Terceirizado`.
+- **Elegibilidade**: Após localizar o usuário, o backend exige **CPF** ou **matrícula válida** em uma das três fontes para permitir login.
 - **Não há auto-cadastro**: Usuários não podem se cadastrar sozinhos no sistema. A criação é feita exclusivamente por administradores.
 - **Criação de Usuários**: Deve suportar criação individual ou em lote via payload JSON por um administrador ou via portal Admin. Não há fluxo de envio de e-mail para confirmação automática de cadastro.
 - **Usuário coletivo**: flag `usuario_coletivo` na criação/edição do usuário. Conta compartilhada (ex.: guarita) usada na operação de Infraestrutura. O pool de associações (empresas, cargos, funções, setores) **não** é enviado na criação; é configurado em endpoints dedicados:

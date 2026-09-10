@@ -18,7 +18,6 @@ from .importacao_dtos import (
     LinhaAlunoImportacaoDTO,
     LinhaContatoImportacaoDTO,
     LinhaEnderecoImportacaoDTO,
-    LinhaMatriculaImportacaoDTO,
     LinhaServidorImportacaoDTO,
     LinhaSetorLotacaoImportacaoDTO,
     LinhaTerceirizadoImportacaoDTO,
@@ -58,9 +57,6 @@ class ImportacaoUsuariosParser:
 
         if 'Endereco' in planilha:
             resultado.enderecos = self._parse_enderecos(planilha['Endereco'])
-
-        if 'Matricula' in planilha:
-            resultado.matriculas = self._parse_matriculas(planilha['Matricula'])
 
         if 'Aluno' in planilha:
             resultado.alunos = self._parse_alunos(planilha['Aluno'])
@@ -158,6 +154,8 @@ class ImportacaoUsuariosParser:
         return linhas
 
     def _limpar_valor(self, valor):
+        if valor is None:
+            return None
         if isinstance(valor, str):
             v_strip = valor.strip()
             v_upper = v_strip.upper()
@@ -230,18 +228,6 @@ class ImportacaoUsuariosParser:
             for linha in linhas
         ]
 
-    def _parse_matriculas(self, dados_aba):
-        linhas = self._extrair_linhas(dados_aba, 'Matricula')
-        return [
-            LinhaMatriculaImportacaoDTO(
-                numero_linha=linha['numero_linha'],
-                usuario_id_planilha=self._to_int(linha.get('usuario_id')),
-                matricula=self._to_str(linha.get('matricula')),
-                situacao=self._to_str(linha.get('situacao')),
-            )
-            for linha in linhas
-        ]
-
     def _parse_alunos(self, dados_aba):
         linhas = self._extrair_linhas(dados_aba, 'Aluno')
         return [
@@ -262,6 +248,11 @@ class ImportacaoUsuariosParser:
                 aluno_id_planilha=self._to_int(linha.get('aluno_id')),
                 curso_id_planilha=self._to_int(linha.get('curso_id')),
                 ano_conclusao=linha.get('ano_conclusao'),
+                matricula=self._to_str(linha.get('matricula')),
+                ira=linha.get('ira'),
+                turma=self._to_str(linha.get('turma')),
+                turno=self._to_str(linha.get('turno')),
+                situacao_curso=self._to_str(linha.get('situacao_curso')),
             )
             for linha in linhas
         ]
@@ -276,6 +267,7 @@ class ImportacaoUsuariosParser:
                 cargo_id_planilha=self._to_int(linha.get('cargo_id')),
                 categoria=self._to_str(linha.get('categoria')),
                 ativo=self._to_bool(linha.get('ativo'), default=True),
+                matricula=self._to_str(linha.get('matricula')),
             )
             for linha in linhas
         ]
@@ -289,6 +281,7 @@ class ImportacaoUsuariosParser:
                 usuario_id_planilha=self._to_int(linha.get('usuario_id')),
                 empresa_instituicao_id_planilha=self._to_int(linha.get('empresa_instituicao_id')),
                 ativo=self._to_bool(linha.get('ativo'), default=True),
+                matricula=self._to_str(linha.get('matricula')),
             )
             for linha in linhas
         ]

@@ -30,8 +30,18 @@ class AlunoCurso(ModelHelperMixin, ModelBusinessMixin, ModelRulesMixin, BasicMod
         related_name='alunos_vinculados',
         verbose_name='Curso',
     )
+    matricula = models.CharField('Matrícula', max_length=50, null=True, blank=True)
     ano_conclusao = models.IntegerField(
         'Ano de Conclusão',
+        null=True,
+        blank=True,
+    )
+    ira = models.FloatField('IRA', null=True, blank=True)
+    turma = models.CharField('Turma', max_length=50, null=True, blank=True)
+    turno = models.CharField('Turno', max_length=50, null=True, blank=True)
+    situacao_curso = models.CharField(
+        'Situação do Curso',
+        max_length=100,
         null=True,
         blank=True,
     )
@@ -41,6 +51,13 @@ class AlunoCurso(ModelHelperMixin, ModelBusinessMixin, ModelRulesMixin, BasicMod
         verbose_name = 'Vínculo Aluno-Curso'
         verbose_name_plural = 'Vínculos Aluno-Curso'
         ordering = ['aluno__usuario__nome', 'curso__nome']
+        constraints = [
+            models.UniqueConstraint(
+                fields=['matricula'],
+                condition=models.Q(matricula__isnull=False),
+                name='aluno_cursos_matricula_unica',
+            ),
+        ]
 
     def __str__(self):
         return f'{self.aluno} → {self.curso}'

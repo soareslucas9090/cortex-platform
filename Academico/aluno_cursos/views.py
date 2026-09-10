@@ -127,10 +127,15 @@ class CriarAlunoCursoView(IsAdminMixin, BasicPostAPIView):
     mensagem_sucesso = 'Vínculo acadêmico criado com sucesso.'
 
     def do_action_post(self, serializer_data, request, *args, **kwargs):
+        extras = {
+            chave: valor
+            for chave, valor in serializer_data.items()
+            if chave not in ('aluno', 'curso')
+        }
         vinculo = AlunoCurso().business.criar_vinculo(
             aluno_id=serializer_data['aluno'],
             curso_id=serializer_data['curso'],
-            ano_conclusao=serializer_data.get('ano_conclusao'),
+            **extras,
         )
         return {
             'mensagem': self.mensagem_sucesso,

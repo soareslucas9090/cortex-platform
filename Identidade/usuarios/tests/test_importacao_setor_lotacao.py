@@ -1,7 +1,8 @@
 from io import BytesIO
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase
 
 from Identidade.usuarios.importacao.importacao_dtos import (
@@ -15,7 +16,7 @@ from Identidade.usuarios.importacao.importacao_resolucao import (
     ImportacaoReferenciasResolver,
     normalizar_id_referencia,
 )
-from Identidade.usuarios.models import Usuario
+from Identidade.usuarios.models import ImportacaoLote, StatusImportacao, Usuario
 from Organizacional.funcoes.models import Funcao
 from Organizacional.setores.models import Setor
 from Organizacional.vinculos.models import SetorVinculo
@@ -67,10 +68,11 @@ class ImportacaoReferenciasParserTests(TestCase):
                  'colaborador_externo\n(booleano)'],
                 [1, '12345678901', 'Usuário Teste', '', '', 'true', '', 'false'],
             ],
-            'Matricula': [
-                ['usuario_id\n(int, FK)', 'matricula\n(String)', 'situacao\n(String)'],
-                ['', '', '', 8235],
-                [1, '2026001', 'ATIVA'],
+            'Servidor': [
+                ['servidor_id\n(int, PK)', 'usuario_id\n(int, FK)', 'cargo_id\n(int, FK)',
+                 'categoria\n(String)', 'ativo\n(boolean)', 'matricula\n(String)'],
+                ['', '', '', '', '', ''],
+                [1, 1, 1, 'Professor', 'true', '2026001'],
             ],
         }
 
@@ -78,8 +80,8 @@ class ImportacaoReferenciasParserTests(TestCase):
         arquivo.name = 'modelo-importacao-usuarios.ods'
         resultado = ImportacaoUsuariosParser().parse(arquivo)
 
-        self.assertEqual(len(resultado.matriculas), 1)
-        self.assertEqual(resultado.matriculas[0].matricula, '2026001')
+        self.assertEqual(len(resultado.servidores), 1)
+        self.assertEqual(resultado.servidores[0].matricula, '2026001')
 
 
 class ImportacaoReferenciasResolverTests(TestCase):
@@ -114,12 +116,15 @@ class ImportacaoSetorLotacaoBusinessTests(TestCase):
         self.User = get_user_model()
 
     def _criar_importacao_mock(self):
-        importacao_mock = MagicMock()
-        importacao_mock.id = 999
-        importacao_mock.arquivo = BytesIO(b'test')
-        importacao_mock.linhas_processadas = 0
-        importacao_mock.total_linhas = 0
-        return importacao_mock
+        ImportacaoLote.objects.filter(status=StatusImportacao.EM_ANDAMENTO).update(
+            status=StatusImportacao.CONCLUIDA,
+        )
+        return ImportacaoLote.objects.create(
+            arquivo=SimpleUploadedFile('test.ods', b'test'),
+            status=StatusImportacao.EM_ANDAMENTO,
+            total_linhas=0,
+            linhas_processadas=0,
+        )
 
     @patch('Identidade.usuarios.business.ImportacaoUsuariosParser.parse')
     def test_deve_importar_lotacao_com_ids_internos_diferentes_das_pks(self, mock_parse):
