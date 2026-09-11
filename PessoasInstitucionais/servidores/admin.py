@@ -7,9 +7,9 @@ from .models import Servidor
 
 @admin.register(Servidor)
 class ServidorAdmin(AtivoModelAdmin):
-    list_display = ('usuario', 'cargo', 'categoria', 'ativo', 'created_at')
+    list_display = ('usuario', 'cargo', 'matricula', 'categoria', 'ativo', 'created_at')
     list_filter = ('ativo', 'categoria', 'cargo')
-    search_fields = ('usuario__nome', 'usuario__cpf', 'cargo__nome')
+    search_fields = ('usuario__nome', 'usuario__cpf', 'cargo__nome', 'matricula')
     autocomplete_fields = ('usuario', 'cargo')
     ordering = ('usuario__nome',)
 
@@ -23,6 +23,7 @@ class ServidorAdmin(AtivoModelAdmin):
                     usuario_pk=obj.usuario_id,
                     cargo_pk=obj.cargo_id,
                     categoria=obj.categoria,
+                    matricula=obj.matricula,
                     ativo=obj.ativo,
                 )
             )
@@ -32,7 +33,7 @@ class ServidorAdmin(AtivoModelAdmin):
         dados = {}
         if 'cargo' in form.changed_data:
             dados['cargo_pk'] = obj.cargo_id
-        for field in ('categoria', 'ativo'):
+        for field in ('categoria', 'matricula', 'ativo'):
             if field in form.changed_data:
                 dados[field] = form.cleaned_data[field]
 

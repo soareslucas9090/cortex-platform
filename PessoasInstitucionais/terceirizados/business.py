@@ -48,6 +48,12 @@ class TerceirizadoBusiness(ModelInstanceBusiness):
                 except Cargo.DoesNotExist:
                     raise NotFoundException('Cargo não encontrado.')
                 self.object_instance.rules.cargo_ativo(cargo)
+            from AppCore.common.util.util import normalizar_matricula
+
+            if 'matricula' in kwargs:
+                kwargs['matricula'] = normalizar_matricula(kwargs['matricula'])
+                if kwargs['matricula']:
+                    self.object_instance.rules.matricula_unica(kwargs['matricula'])
             return Terceirizado.objects.create(
                 usuario=usuario,
                 empresa_instituicao=empresa,
@@ -62,6 +68,15 @@ class TerceirizadoBusiness(ModelInstanceBusiness):
     def atualizar_dados(self, dados: dict):
         """Atualiza campos do terceirizado. Revalida empresa e cargo se estiverem nos dados."""
         try:
+            from AppCore.common.util.util import normalizar_matricula
+
+            if 'matricula' in dados:
+                dados['matricula'] = normalizar_matricula(dados['matricula'])
+                if dados['matricula']:
+                    self.object_instance.rules.matricula_unica(
+                        dados['matricula'],
+                        excluir_id=self.object_instance.pk,
+                    )
             if 'empresa_pk' in dados or 'empresa_instituicao_pk' in dados:
                 from PessoasInstitucionais.empresas_instituicoes.models import EmpresaInstituicao
                 empresa_pk = dados.pop('empresa_pk', None) or dados.pop('empresa_instituicao_pk', None)

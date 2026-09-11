@@ -104,8 +104,9 @@ A autenticação será composta por duas peças:
 
 Responsável por:
 
-- detectar se o identificador é email ou CPF;
+- detectar se o identificador é e-mail, CPF ou matrícula;
 - localizar o usuário;
+- aplicar o gate de elegibilidade (CPF ou matrícula válida);
 - validar a senha;
 - respeitar status de autenticação do usuário.
 
@@ -172,11 +173,15 @@ A autenticação deve falhar com mensagem genérica quando:
 
 ### Regra 1
 
-Se `login` contém `@`, tratar como email.
+Se `login` contém `@`, tratar como e-mail.
 
 ### Regra 2
 
-Caso contrário, tratar como CPF.
+Caso contrário, se o valor normalizado tiver 11 dígitos, tratar como CPF.
+
+### Regra 3
+
+Caso contrário, tratar como matrícula ativa em `AlunoCurso`, `Servidor` ou `Terceirizado` (via `Usuario().helper.buscar_por_matricula_valida`).
 
 ---
 
@@ -208,6 +213,28 @@ Exemplo:
 
 ---
 
+## Regra de normalização da matrícula
+
+Antes da busca:
+
+- aplicar `strip()`;
+- valores vazios ou `NULL` são ignorados.
+
+A matrícula é buscada apenas em vínculos **ativos** de `AlunoCurso`, `Servidor` ou `Terceirizado`.
+
+---
+
+## Gate de elegibilidade para login
+
+Após localizar o usuário (por qualquer identificador), o backend só autentica se:
+
+1. o usuário possui `cpf` preenchido; **ou**
+2. o usuário possui ao menos uma matrícula ativa em `AlunoCurso`, `Servidor` ou `Terceirizado` (`user.helper.tem_matricula_valida()`).
+
+Sem CPF nem matrícula válida, a autenticação falha de forma genérica.
+
+---
+
 ## Fluxo exato de autenticação
 
 1. O cliente envia:
@@ -224,6 +251,7 @@ Exemplo:
 
 6. O backend valida:
    - existência do usuário;
+   - elegibilidade (CPF ou matrícula válida);
    - senha;
    - possibilidade de autenticação (`ativo`).
 
@@ -279,7 +307,7 @@ Arquivo:
 
 Mudança:
 
-- documentar `login` como email ou CPF
+- documentar `login` como e-mail, CPF ou matrícula
 
 ### View de login
 
@@ -322,11 +350,13 @@ Responsável por:
 
 ## Regras de autenticação
 
-1. O sistema usa identificador híbrido de login (E-mail, CPF, Matrícula).
+1. O sistema usa identificador híbrido de login (e-mail, CPF, matrícula).
 2. CPF deve autenticar com ou sem máscara.
-3. Email deve autenticar ignorando capitalização.
-4. Usuário inativo não autentica.
-5. A resposta de erro deve ser genérica.
+3. E-mail deve autenticar ignorando capitalização.
+4. Matrícula deve ser resolvida nas três fontes (`AlunoCurso`, `Servidor`, `Terceirizado`).
+5. Usuário sem CPF precisa de matrícula válida para autenticar.
+6. Usuário inativo não autentica.
+7. A resposta de erro deve ser genérica.
 
 ---
 
@@ -343,7 +373,7 @@ Responsável por:
 
 Ao final:
 
-- o sistema terá login por email ou CPF;
+- o sistema terá login por e-mail, CPF ou matrícula;
 - o endpoint continuará único;
 - o contrato será claro;
 - o `Auth` ficará coerente com o domínio do projeto;
@@ -357,6 +387,6 @@ O Cortex deve adotar um modelo de autenticação com:
 
 - campo único `login`;
 - senha em `password`;
-- backend customizado para email ou CPF;
+- backend customizado para e-mail, CPF ou matrícula;
 - `Usuario` concreto com `email` e `cpf` únicos;
 - documentação Swagger alinhada com o contrato real da API.

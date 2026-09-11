@@ -20,7 +20,6 @@ Estas abas participam diretamente do processamento da importação:
 - `Usuario`
 - `Contato`
 - `Endereco`
-- `Matricula`
 - `Aluno`
 - `Aluno_Curso`
 - `Servidor`
@@ -52,12 +51,11 @@ Eles devem ser usados apenas como **identificadores temporários internos do arq
 1. `Usuario`
 2. `Contato`
 3. `Endereco`
-4. `Matricula`
-5. `Aluno`
-6. `Servidor`
-7. `Terceirizado`
-8. `Setor_Lotacao`
-9. `Aluno_Curso`
+4. `Aluno`
+5. `Servidor`
+6. `Terceirizado`
+7. `Setor_Lotacao`
+8. `Aluno_Curso`
 
 ## Abas e colunas esperadas
 
@@ -70,7 +68,6 @@ Eles devem ser usados apenas como **identificadores temporários internos do arq
 - `cpf (String)`
 - `nome (String)`
 - `foto (String)`
-- `deficiencia (String)`
 - `ativo (boolean)`
 - `ultimo_login (Date)`
 - `colaborador_externo (boolean)`
@@ -105,27 +102,13 @@ Eles devem ser usados apenas como **identificadores temporários internos do arq
 - `usuario_id (int, FK)`
 - `endereco (String)`
 - `bairro (String)`
-- `cep (String)`
-- `complemento (String)`
-- `numero (int)`
 - `cidade (String)`
 - `estado (String)`
 
+Campos opcionais, se presentes no arquivo, também são lidos: `cep`, `complemento`, `numero`.
+
 ### Regras
 - `usuario_id` deve existir previamente na aba `Usuario`.
-
----
-
-## Aba `Matricula`
-
-### Colunas
-- `usuario_id (int, FK)`
-- `matricula (String)`
-- `situacao (String)`
-
-### Regras
-- `usuario_id` deve existir previamente na aba `Usuario`;
-- `situacao` deve ser compatível com a modelagem do projeto.
 
 ---
 
@@ -135,10 +118,12 @@ Eles devem ser usados apenas como **identificadores temporários internos do arq
 - `aluno_id (int, PK)`
 - `usuario_id (int, FK)`
 - `ira (float)`
+- `deficiencia (String)`
 
 ### Regras
 - `aluno_id` é obrigatório para correlação interna com `Aluno_Curso`;
-- `usuario_id` deve existir previamente na aba `Usuario`.
+- `usuario_id` deve existir previamente na aba `Usuario`;
+- `deficiencia`, quando informada, é persistida no `Usuario` vinculado ao aluno.
 
 ---
 
@@ -148,10 +133,16 @@ Eles devem ser usados apenas como **identificadores temporários internos do arq
 - `aluno_id (int, FK)`
 - `curso_id (int, FK)`
 - `ano_conclusao (int)`
+- `matricula (String)`
+- `ira (double)`
+- `turma (String)`
+- `turno (String)`
+- `situacao_curso (String)`
 
 ### Regras
 - `aluno_id` deve existir previamente na aba `Aluno`;
 - `curso_id` deve ser resolvido contra os dados seed já existentes no banco;
+- `matricula`, quando informada, deve ser única no sistema;
 - esta aba não deve criar cursos.
 
 ---
@@ -164,10 +155,12 @@ Eles devem ser usados apenas como **identificadores temporários internos do arq
 - `cargo_id (int, FK)`
 - `categoria (String)`
 - `ativo (boolean)`
+- `matricula (String)`
 
 ### Regras
 - `usuario_id` deve existir previamente na aba `Usuario`;
 - `cargo_id` deve ser resolvido contra os dados seed já existentes no banco;
+- `matricula`, quando informada, deve ser única no sistema;
 - esta aba não deve criar cargos.
 
 ---
@@ -179,10 +172,12 @@ Eles devem ser usados apenas como **identificadores temporários internos do arq
 - `usuario_id (int, FK)`
 - `empresa_instituicao_id (int, FK)`
 - `ativo (boolean)`
+- `matricula (String)`
 
 ### Regras
 - `usuario_id` deve existir previamente na aba `Usuario`;
 - `empresa_instituicao_id` deve ser resolvido contra os dados seed já existentes no banco;
+- `matricula`, quando informada, deve ser única no sistema;
 - esta aba não deve criar empresas/instituições.
 
 ---
@@ -202,6 +197,12 @@ Eles devem ser usados apenas como **identificadores temporários internos do arq
 - `funcao_id` deve ser resolvido contra os dados seed já existentes no banco;
 - esta aba não deve criar setores nem funções.
 
+## Matrícula
+
+- Um mesmo usuário pode ter **mais de uma matrícula**: números distintos em `Aluno_Curso` (um por curso), `Servidor` e `Terceirizado`.
+- Cada número, quando informado, permanece **único no sistema**: não pode se repetir entre usuários nem entre as três fontes.
+- Células vazias, `-` ou o texto `NULL`/`null` são tratadas como matrícula ausente.
+
 ## Regras de validação estrutural
 
 A importação deve validar:
@@ -216,7 +217,6 @@ A importação deve validar:
 
 - `Contato` depende de `Usuario`
 - `Endereco` depende de `Usuario`
-- `Matricula` depende de `Usuario`
 - `Aluno` depende de `Usuario`
 - `Aluno_Curso` depende de `Aluno`
 - `Servidor` depende de `Usuario`

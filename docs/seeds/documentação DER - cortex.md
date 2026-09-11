@@ -28,7 +28,7 @@ A modelagem representa um sistema institucional/acadêmico contendo:
     
 -   Funções administrativas
     
--   Matrículas e lotações
+-   Matrículas (em perfis/vínculos) e lotações
     
 -   Contatos e endereços
     
@@ -192,38 +192,6 @@ estado
 String
 
 Estado
-
-----------
-
-## Matricula
-
-Informações de matrícula institucional.
-
-### Campos
-
-Campo
-
-Tipo
-
-Descrição
-
-usuario_id
-
-int (FK)
-
-Referência para Usuario
-
-matricula
-
-String
-
-Código da matrícula
-
-situacao
-
-String
-
-Situação da matrícula
 
 ----------
 
@@ -415,6 +383,36 @@ int
 
 Ano de conclusão
 
+matricula
+
+String
+
+Código de matrícula acadêmica (opcional; único no sistema)
+
+ira
+
+double
+
+Índice de rendimento acadêmico
+
+turma
+
+String
+
+Turma
+
+turno
+
+String
+
+Turno
+
+situacao_curso
+
+String
+
+Situação do vínculo com o curso
+
 ----------
 
 ## Servidor
@@ -458,6 +456,12 @@ ativo
 boolean
 
 Indica se o servidor está ativo
+
+matricula
+
+String
+
+Código de matrícula institucional (opcional; único no sistema)
 
 ----------
 
@@ -593,6 +597,12 @@ ativo
 boolean
 
 Status do vínculo
+
+matricula
+
+String
+
+Código de matrícula institucional (opcional; único no sistema)
 
 ----------
 
@@ -913,13 +923,11 @@ Ela pode possuir:
     
 -   Um endereço
     
--   Uma matrícula
+-   Um perfil de aluno (com matrícula opcional em `Aluno_Curso`)
     
--   Um perfil de aluno
+-   Um perfil de servidor (com `matricula` opcional)
     
--   Um perfil de servidor
-    
--   Um perfil de terceirizado
+-   Um perfil de terceirizado (com `matricula` opcional)
     
 -   Uma ou mais lotações institucionais
     

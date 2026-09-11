@@ -63,7 +63,6 @@ Os agregados iniciais identificados no Cortex são:
 - `Usuario`
 - `Contato`
 - `Endereco`
-- `Matricula`
 
 ## Responsabilidade
 
@@ -77,20 +76,19 @@ As informações de identidade tendem a mudar em conjunto e dependem semanticame
 
 1. Todo `Contato` deve pertencer a um `Usuario`.
 2. Todo `Endereco` deve pertencer a um `Usuario`.
-3. Toda `Matricula` deve pertencer a um `Usuario`.
-4. O `cpf` do usuário deve ser único no sistema.
-5. O login do sistema deve ser baseado no `cpf`.
-6. Perfis institucionais e acadêmicos não devem duplicar dados centrais de identidade.
+3. O `cpf` do usuário deve ser único no sistema.
+4. O login do sistema aceita e-mail, CPF ou matrícula ativa.
+5. Perfis institucionais e acadêmicos não devem duplicar dados centrais de identidade.
 
 ## Regras operacionais
 
 - criação de usuário deve garantir unicidade de `cpf`;
 - atualização de dados cadastrais deve ocorrer a partir do agregado de usuário;
-- contatos, endereço e matrículas devem ser manipulados preservando o vínculo com o usuário.
+- contatos e endereço devem ser manipulados preservando o vínculo com o usuário.
 
 ## Onde as regras devem morar
 
-- validações simples e teóricas: `Identidade/usuarios/rules.py` (e respectivos apps como `contatos`, `enderecos` e `matriculas`)
+- validações simples e teóricas: `Identidade/usuarios/rules.py` (e respectivos apps como `contatos` e `enderecos`)
 - orquestração de criação/atualização: `Identidade/usuarios/business.py` (e respectivos apps)
 
 ---
@@ -177,6 +175,7 @@ As regras de servidor são específicas e não devem se misturar com identidade 
 3. `Cargo` é exclusivo de `Servidor`.
 4. Um `Cargo` pode estar associado a múltiplos servidores.
 5. Apenas servidores podem ocupar a responsabilidade principal de um setor.
+6. Quando informada, `matricula` deve ser única no sistema (validação cruzada com `AlunoCurso` e `Terceirizado`).
 
 ## Regras operacionais
 
@@ -217,6 +216,7 @@ Representa o perfil institucional de terceirizado vinculado a uma empresa/instit
 2. Todo `Terceirizado` deve estar associado a uma `EmpresaInstituicao`.
 3. `EmpresaInstituicao`, no escopo atual, é utilizada apenas para terceirizados.
 4. Terceirizados não possuem `Cargo`.
+5. Quando informada, `matricula` deve ser única no sistema (validação cruzada com `AlunoCurso` e `Servidor`).
 
 ## Regras operacionais
 
@@ -258,6 +258,7 @@ Representa o perfil acadêmico do usuário e seus vínculos com cursos.
 3. Todo `AlunoCurso` deve estar associado a um `Curso`.
 4. A atuação de um aluno como monitor não deve ser modelada diretamente em `Aluno`.
 5. A monitoria de aluno deve ser representada no domínio `Organizacional`, por meio de `SetorVinculo` + `Funcao`.
+6. Quando informada em `AlunoCurso`, `matricula` deve ser única no sistema (validação cruzada com `Servidor` e `Terceirizado`).
 
 ## Regras operacionais
 
@@ -461,7 +462,8 @@ Deve orquestrar:
 
 - criação de usuário;
 - atualização cadastral;
-- manutenção de contatos (em `Identidade/contatos/business.py`), endereços (em `Identidade/enderecos/business.py`) e matrículas (em `Identidade/matriculas/business.py`).
+- manutenção de contatos (em `Identidade/contatos/business.py`) e endereços (em `Identidade/enderecos/business.py`).
+- matrícula: `normalizar_matricula` em `AppCore/common/util/util.py`; busca, elegibilidade e unicidade global em `Usuario().helper` / `Usuario().rules`.
 
 ## `Organizacional/vinculos/business.py` e `Organizacional/setores/business.py`
 
@@ -584,7 +586,7 @@ Este documento ainda pode evoluir com:
 - datas de início/fim em `SetorVinculo`;
 - regras de troca de cargo;
 - regras de coexistência de perfis no mesmo usuário;
-- restrições mais detalhadas de matrícula e situação acadêmica;
+- restrições mais detalhadas de situação acadêmica;
 - regras específicas para múltiplos vínculos simultâneos no mesmo setor.
 
 ---
