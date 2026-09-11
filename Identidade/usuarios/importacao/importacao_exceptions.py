@@ -1,4 +1,7 @@
-class ImportacaoUsuariosException(Exception):
+from AppCore.core.exceptions.exceptions import ValidationException
+
+
+class ImportacaoUsuariosException(ValidationException):
     """Exceção base da importação em lote de usuários."""
 
 

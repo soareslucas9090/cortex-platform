@@ -7,13 +7,14 @@ from .models import AlunoCurso
 
 @admin.register(AlunoCurso)
 class AlunoCursoAdmin(AtivoModelAdmin):
-    list_display = ('aluno', 'curso', 'ano_conclusao', 'ativo', 'created_at')
+    list_display = ('aluno', 'curso', 'matricula', 'ano_conclusao', 'ativo', 'created_at')
     list_filter = ('ativo', 'curso', 'aluno__situacao')
     search_fields = (
         'aluno__usuario__nome',
         'aluno__usuario__cpf',
         'curso__nome',
         'curso__codigo_curso',
+        'matricula',
     )
     autocomplete_fields = ('aluno', 'curso')
     ordering = ('aluno__usuario__nome', 'curso__nome')
@@ -31,7 +32,12 @@ class AlunoCursoAdmin(AtivoModelAdmin):
                 lambda: AlunoCurso().business.criar_vinculo(
                     aluno_id=obj.aluno_id,
                     curso_id=obj.curso_id,
+                    matricula=obj.matricula,
                     ano_conclusao=obj.ano_conclusao,
+                    ira=obj.ira,
+                    turma=obj.turma,
+                    turno=obj.turno,
+                    situacao_curso=obj.situacao_curso,
                     ativo=obj.ativo,
                 )
             )

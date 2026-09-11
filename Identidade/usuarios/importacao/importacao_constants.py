@@ -1,7 +1,6 @@
 ABA_USUARIO = 'Usuario'
 ABA_CONTATO = 'Contato'
 ABA_ENDERECO = 'Endereco'
-ABA_MATRICULA = 'Matricula'
 ABA_ALUNO = 'Aluno'
 ABA_CURSO = 'Curso'
 ABA_ALUNO_CURSO = 'Aluno_Curso'
@@ -17,7 +16,6 @@ ABAS_OPERACIONAIS = [
     ABA_USUARIO,
     ABA_CONTATO,
     ABA_ENDERECO,
-    ABA_MATRICULA,
     ABA_ALUNO,
     ABA_ALUNO_CURSO,
     ABA_SERVIDOR,
@@ -42,7 +40,6 @@ COLUNAS_ABA_USUARIO = [
     'cpf',
     'nome',
     'foto',
-    'deficiencia',
     'ativo',
     'ultimo_login',
     'colaborador_externo',
@@ -59,29 +56,26 @@ COLUNAS_ABA_ENDERECO = [
     'usuario_id',
     'endereco',
     'bairro',
-    'cep',
-    'complemento',
-    'numero',
     'cidade',
     'estado',
-]
-
-COLUNAS_ABA_MATRICULA = [
-    'usuario_id',
-    'matricula',
-    'situacao',
 ]
 
 COLUNAS_ABA_ALUNO = [
     'aluno_id',
     'usuario_id',
     'ira',
+    'deficiencia',
 ]
 
 COLUNAS_ABA_ALUNO_CURSO = [
     'aluno_id',
     'curso_id',
     'ano_conclusao',
+    'matricula',
+    'ira',
+    'turma',
+    'turno',
+    'situacao_curso',
 ]
 
 COLUNAS_ABA_SERVIDOR = [
@@ -90,6 +84,7 @@ COLUNAS_ABA_SERVIDOR = [
     'cargo_id',
     'categoria',
     'ativo',
+    'matricula',
 ]
 
 COLUNAS_ABA_TERCEIRIZADO = [
@@ -97,6 +92,7 @@ COLUNAS_ABA_TERCEIRIZADO = [
     'usuario_id',
     'empresa_instituicao_id',
     'ativo',
+    'matricula',
 ]
 
 COLUNAS_ABA_SETOR_LOTACAO = [
@@ -149,7 +145,6 @@ COLUNAS_ESPERADAS_POR_ABA = {
     ABA_USUARIO: COLUNAS_ABA_USUARIO,
     ABA_CONTATO: COLUNAS_ABA_CONTATO,
     ABA_ENDERECO: COLUNAS_ABA_ENDERECO,
-    ABA_MATRICULA: COLUNAS_ABA_MATRICULA,
     ABA_ALUNO: COLUNAS_ABA_ALUNO,
     ABA_ALUNO_CURSO: COLUNAS_ABA_ALUNO_CURSO,
     ABA_SERVIDOR: COLUNAS_ABA_SERVIDOR,
@@ -165,7 +160,6 @@ COLUNAS_ESPERADAS_POR_ABA = {
 DEPENDENCIAS_ENTRE_ABAS = {
     ABA_CONTATO: [ABA_USUARIO],
     ABA_ENDERECO: [ABA_USUARIO],
-    ABA_MATRICULA: [ABA_USUARIO],
     ABA_ALUNO: [ABA_USUARIO],
     ABA_ALUNO_CURSO: [ABA_ALUNO],
     ABA_SERVIDOR: [ABA_USUARIO],

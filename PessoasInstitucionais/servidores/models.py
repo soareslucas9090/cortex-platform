@@ -35,12 +35,20 @@ class Servidor(ModelHelperMixin, ModelBusinessMixin, ModelRulesMixin, BasicModel
         'Categoria',
         choices=CategoriaServidor.choices,
     )
+    matricula = models.CharField('Matrícula', max_length=50, null=True, blank=True)
     ativo = models.BooleanField('Ativo', default=True)
 
     class Meta:
         verbose_name = 'Servidor'
         verbose_name_plural = 'Servidores'
         ordering = ['usuario__nome']
+        constraints = [
+            models.UniqueConstraint(
+                fields=['matricula'],
+                condition=models.Q(matricula__isnull=False),
+                name='servidores_matricula_unica',
+            ),
+        ]
 
     def __str__(self):
         return f'{self.usuario.nome} - {self.cargo.nome}'

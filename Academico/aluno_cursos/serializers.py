@@ -19,7 +19,12 @@ class AlunoCursoSerializer(serializers.ModelSerializer):
             'curso_id',
             'curso_nome',
             'curso_codigo',
+            'matricula',
             'ano_conclusao',
+            'ira',
+            'turma',
+            'turno',
+            'situacao_curso',
             'ativo',
             'created_at',
             'updated_at',
@@ -34,11 +39,21 @@ class AlunoCursoSerializer(serializers.ModelSerializer):
 class CriarAlunoCursoSerializer(serializers.Serializer):
     aluno = serializers.IntegerField(required=True)
     curso = serializers.IntegerField(required=True)
+    matricula = serializers.CharField(required=False, allow_null=True, allow_blank=True)
     ano_conclusao = serializers.IntegerField(required=False, allow_null=True)
+    ira = serializers.FloatField(required=False, allow_null=True)
+    turma = serializers.CharField(required=False, allow_null=True, allow_blank=True)
+    turno = serializers.CharField(required=False, allow_null=True, allow_blank=True)
+    situacao_curso = serializers.CharField(required=False, allow_null=True, allow_blank=True)
 
 
 class AtualizarAlunoCursoSerializer(serializers.Serializer):
+    matricula = serializers.CharField(required=False, allow_null=True, allow_blank=True)
     ano_conclusao = serializers.IntegerField(required=False, allow_null=True)
+    ira = serializers.FloatField(required=False, allow_null=True)
+    turma = serializers.CharField(required=False, allow_null=True, allow_blank=True)
+    turno = serializers.CharField(required=False, allow_null=True, allow_blank=True)
+    situacao_curso = serializers.CharField(required=False, allow_null=True, allow_blank=True)
     ativo = serializers.BooleanField(required=False)
 
 

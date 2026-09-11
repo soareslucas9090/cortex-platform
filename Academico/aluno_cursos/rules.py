@@ -3,6 +3,17 @@ from AppCore.core.rules.rules import ModelInstanceRules
 
 class AlunoCursoRules(ModelInstanceRules):
 
+    def matricula_unica(self, numero_matricula: str, excluir_id=None) -> bool:
+        """Valida unicidade global da matrícula."""
+        from Identidade.usuarios.models import Usuario
+
+        Usuario().rules.matricula_unica_no_sistema(
+            numero_matricula,
+            excluir_fonte='aluno_curso',
+            excluir_id=excluir_id,
+        )
+        return True
+
     def vinculo_unico_ativo(self, aluno, curso) -> bool:
         """Valida que não existe já um vínculo ativo do mesmo aluno no mesmo curso."""
         from .models import AlunoCurso

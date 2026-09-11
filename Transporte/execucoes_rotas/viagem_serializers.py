@@ -36,10 +36,11 @@ class ViagemRotaSerializer(serializers.ModelSerializer):
     def get_pode_iniciar_rota(self, obj) -> bool:
         return bool(
             self._pode_operar()
-            and obj.status == StatusExecucaoRota.FINALIZADA
+            and obj.status == StatusExecucaoRota.EMBARCADO
             and obj.data_execucao == timezone.localdate()
             and obj.rota.ativo and obj.rota.percurso.ativo
             and obj.rota_iniciada_em is None
+            and obj.rota_finalizada_em is None
         )
 
     def get_pode_finalizar_rota(self, obj) -> bool:
@@ -47,6 +48,7 @@ class ViagemRotaSerializer(serializers.ModelSerializer):
         usuario = request.user if request else None
         return bool(
             self._pode_operar()
+            and obj.status == StatusExecucaoRota.INICIADA
             and obj.rota_iniciada_em is not None
             and obj.rota_finalizada_em is None
             and (

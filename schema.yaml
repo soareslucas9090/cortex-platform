@@ -1066,14 +1066,16 @@ paths:
         definir a conta coletiva. O pool de associações é mantido\n    em `GET/PUT
         /usuarios/{pk}/coletivo/` (L3).\n\n    **Permissões:** L2+ (LER_TUDO) lê;
         escrita pelo dono (L1) ou L3 (EDITAR_TUDO).\n    O campo `usuario_coletivo`
-        não é aceito neste PATCH.\n\n    CPF não é alterável neste endpoint.\n\n    **Normalização
-        de Deficiência (campo `deficiencia`):**\n    O campo é normalizado automaticamente
-        no save (removendo acentos, convertendo para caixa baixa e substituindo espaços
-        por `_`).\n    - Opções válidas resultantes: `deficiencia_intelectual`, `deficiencia_visual`,
-        `deficiencia_auditiva`, `deficiencia_multipla`, `deficiencia_fisica`.\n    -
-        Se a string enviada (ex: \"Deficiência Múltipla\") equivaler a uma das chaves
-        após a normalização, ela será associada.\n    - Se não houver correspondência,
-        o valor será gravado como `null`.\n    "
+        não é aceito neste PATCH.\n\n    **CPF:** somente L3 pode informar o CPF quando
+        o usuário ainda não possui CPF\n    cadastrado. Se o CPF já estiver preenchido,
+        a API retorna erro de permissão —\n    a edição nesse caso é exclusiva do
+        Django admin.\n\n    **Normalização de Deficiência (campo `deficiencia`):**\n
+        \   O campo é normalizado automaticamente no save (removendo acentos, convertendo
+        para caixa baixa e substituindo espaços por `_`).\n    - Opções válidas resultantes:
+        `deficiencia_intelectual`, `deficiencia_visual`, `deficiencia_auditiva`, `deficiencia_multipla`,
+        `deficiencia_fisica`.\n    - Se a string enviada (ex: \"Deficiência Múltipla\")
+        equivaler a uma das chaves após a normalização, ela será associada.\n    -
+        Se não houver correspondência, o valor será gravado como `null`.\n    "
       summary: Atualizar dados do usuário
       parameters:
       - in: path
@@ -1914,181 +1916,6 @@ paths:
             application/json:
               schema:
                 description: Usuário não encontrado.
-          description: ''
-  /cortex/identidade/usuarios/{usuario_pk}/matriculas/:
-    get:
-      operationId: identidade_usuarios_matriculas_list
-      description: "\n    Retorna a lista de matrículas de um usuário específico.\n\n
-        \   **Permissões:** O próprio usuário ou administradores.\n\n    **Query params:**\n
-        \   - `situacao` (int, opcional): filtra por situação — `1` (Ativa) ou `2`
-        (Inativa).\n      Omitindo, retorna todas.\n    - `matricula` (str, opcional):
-        filtra pela string da matrícula.\n    - `paginacao` (int, opcional): tamanho
-        da página, entre 1 e 100. Padrão: 10.\n\n    **Segurança:** os resultados
-        já estão restritos ao usuário da URL — query params\n    apenas reduzem o
-        conjunto, nunca expandem o acesso.\n    "
-      summary: Listar matrículas do usuário
-      parameters:
-      - in: query
-        name: matricula
-        schema:
-          type: string
-        description: Filtra pela string da matrícula.
-      - name: page
-        required: false
-        in: query
-        description: Um número de página dentro do conjunto de resultados paginado.
-        schema:
-          type: integer
-      - in: query
-        name: paginacao
-        schema:
-          type: integer
-        description: Tamanho da página (1–100, padrão 10).
-      - in: query
-        name: situacao
-        schema:
-          type: integer
-          enum:
-          - 1
-          - 2
-        description: 'Filtra por situação: 1 = Ativa, 2 = Inativa.'
-      - in: path
-        name: usuario_pk
-        schema:
-          type: integer
-        required: true
-      tags:
-      - Identidade
-      security:
-      - jwtAuth: []
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/PaginatedMatriculaList'
-          description: ''
-        '401':
-          content:
-            application/json:
-              schema:
-                description: Não autenticado.
-          description: ''
-        '403':
-          content:
-            application/json:
-              schema:
-                description: Sem permissão.
-          description: ''
-        '404':
-          content:
-            application/json:
-              schema:
-                description: Usuário não encontrado.
-          description: ''
-    post:
-      operationId: identidade_usuarios_matriculas_create
-      description: "\n    Adiciona uma nova matrícula (número) ao usuário.\n\n    **Permissões:**
-        Apenas administradores.\n    "
-      summary: Adicionar matrícula ao usuário
-      parameters:
-      - in: path
-        name: usuario_pk
-        schema:
-          type: integer
-        required: true
-      tags:
-      - Identidade
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/AdicionarMatricula'
-          application/x-www-form-urlencoded:
-            schema:
-              $ref: '#/components/schemas/AdicionarMatricula'
-          multipart/form-data:
-            schema:
-              $ref: '#/components/schemas/AdicionarMatricula'
-        required: true
-      security:
-      - jwtAuth: []
-      responses:
-        '201':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Matricula'
-          description: ''
-        '400':
-          content:
-            application/json:
-              schema:
-                description: Matrícula duplicada ou dados inválidos.
-          description: ''
-        '401':
-          content:
-            application/json:
-              schema:
-                description: Não autenticado.
-          description: ''
-        '403':
-          content:
-            application/json:
-              schema:
-                description: Sem permissão de administrador.
-          description: ''
-        '404':
-          content:
-            application/json:
-              schema:
-                description: Usuário não encontrado.
-          description: ''
-  /cortex/identidade/usuarios/{usuario_pk}/matriculas/{id}/desativar/:
-    post:
-      operationId: identidade_usuarios_matriculas_desativar_create
-      description: "\n    Marca uma matrícula do usuário como inativa.\n\n    **Permissões:**
-        Apenas administradores.\n    "
-      summary: Desativar matrícula
-      parameters:
-      - in: path
-        name: id
-        schema:
-          type: integer
-        required: true
-      - in: path
-        name: usuario_pk
-        schema:
-          type: integer
-        required: true
-      tags:
-      - Identidade
-      security:
-      - jwtAuth: []
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                description: Matrícula desativada com sucesso.
-          description: ''
-        '401':
-          content:
-            application/json:
-              schema:
-                description: Não autenticado.
-          description: ''
-        '403':
-          content:
-            application/json:
-              schema:
-                description: Sem permissão de administrador.
-          description: ''
-        '404':
-          content:
-            application/json:
-              schema:
-                description: Usuário ou matrícula não encontrados.
           description: ''
   /cortex/identidade/usuarios/importacao/:
     post:
@@ -7908,15 +7735,6 @@ components:
         * `cargo` - Cargo
         * `funcao` - Função
         * `setor` - Setor
-    AdicionarMatricula:
-      type: object
-      properties:
-        matricula:
-          type: string
-          description: Número da matrícula.
-          maxLength: 50
-      required:
-      - matricula
     Aluno:
       type: object
       properties:
@@ -8014,12 +7832,34 @@ components:
         curso_codigo:
           type: string
           readOnly: true
+        matricula:
+          type: string
+          nullable: true
+          title: Matrícula
+          maxLength: 50
         ano_conclusao:
           type: integer
           maximum: 2147483647
           minimum: -2147483648
           nullable: true
           title: Ano de Conclusão
+        ira:
+          type: number
+          format: double
+          nullable: true
+        turma:
+          type: string
+          nullable: true
+          maxLength: 50
+        turno:
+          type: string
+          nullable: true
+          maxLength: 50
+        situacao_curso:
+          type: string
+          nullable: true
+          title: Situação do Curso
+          maxLength: 100
         ativo:
           type: boolean
         created_at:
@@ -8435,8 +8275,24 @@ components:
           type: integer
         curso:
           type: integer
+        matricula:
+          type: string
+          nullable: true
         ano_conclusao:
           type: integer
+          nullable: true
+        ira:
+          type: number
+          format: double
+          nullable: true
+        turma:
+          type: string
+          nullable: true
+        turno:
+          type: string
+          nullable: true
+        situacao_curso:
+          type: string
           nullable: true
       required:
       - aluno
@@ -8614,6 +8470,9 @@ components:
           type: integer
         categoria:
           $ref: '#/components/schemas/CategoriaServidorEnum'
+        matricula:
+          type: string
+          nullable: true
         ativo:
           type: boolean
           default: true
@@ -8643,6 +8502,9 @@ components:
         cargo_pk:
           type: integer
           nullable: true
+        matricula:
+          type: string
+          nullable: true
         data_inicio:
           type: string
           format: date
@@ -8664,21 +8526,16 @@ components:
           type: string
           nullable: true
           description: 'CPF do usuário (opcional). Aceita com ou sem máscara (ex:
-            12345678901 ou 123.456.789-01). Sem CPF, a matrícula é obrigatória.'
+            12345678901 ou 123.456.789-01). Sem CPF, a senha é obrigatória.'
           maxLength: 14
-        matricula:
-          type: string
-          nullable: true
-          description: Matrícula do usuário (obrigatória caso o CPF não seja informado).
-          maxLength: 50
         nome:
           type: string
           maxLength: 255
         password:
           type: string
           writeOnly: true
-          description: Senha (opcional). Se não for informada, será usada a senha
-            padrão (CPF ou matrícula).
+          description: Senha (opcional com CPF; obrigatória sem CPF). Se omitida com
+            CPF, usa o CPF como senha.
         email:
           type: string
           format: email
@@ -9552,8 +9409,8 @@ components:
       properties:
         login:
           type: string
-          description: 'E-mail ou CPF do usuário. Exemplos: "usuario@email.com", "12345678901"
-            ou "123.456.789-01".'
+          description: 'E-mail, CPF ou matrícula ativa do usuário. Exemplos: "usuario@email.com",
+            "12345678901", "123.456.789-01" ou "2026001".'
         password:
           type: string
           writeOnly: true
@@ -9593,29 +9450,6 @@ components:
       - refresh
       - tem_perfil_aluno
       - usuario_coletivo
-    Matricula:
-      type: object
-      properties:
-        id:
-          type: integer
-          readOnly: true
-        matricula:
-          type: string
-          title: Matrícula
-          maxLength: 50
-        situacao:
-          allOf:
-          - $ref: '#/components/schemas/SituacaoMatriculaEnum'
-          title: Situação
-          minimum: -2147483648
-          maximum: 2147483647
-        situacao_display:
-          type: string
-          readOnly: true
-      required:
-      - id
-      - matricula
-      - situacao_display
     NullEnum:
       enum:
       - null
@@ -9987,29 +9821,6 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Justificativa'
-    PaginatedMatriculaList:
-      type: object
-      required:
-      - count
-      - results
-      properties:
-        count:
-          type: integer
-          example: 123
-        next:
-          type: string
-          nullable: true
-          format: uri
-          example: http://api.example.org/accounts/?page=4
-        previous:
-          type: string
-          nullable: true
-          format: uri
-          example: http://api.example.org/accounts/?page=2
-        results:
-          type: array
-          items:
-            $ref: '#/components/schemas/Matricula'
     PaginatedPercursoHistoricoList:
       type: object
       required:
@@ -10401,8 +10212,24 @@ components:
     PatchedAtualizarAlunoCurso:
       type: object
       properties:
+        matricula:
+          type: string
+          nullable: true
         ano_conclusao:
           type: integer
+          nullable: true
+        ira:
+          type: number
+          format: double
+          nullable: true
+        turma:
+          type: string
+          nullable: true
+        turno:
+          type: string
+          nullable: true
+        situacao_curso:
+          type: string
           nullable: true
         ativo:
           type: boolean
@@ -10516,6 +10343,9 @@ components:
           type: integer
         categoria:
           $ref: '#/components/schemas/CategoriaServidorEnum'
+        matricula:
+          type: string
+          nullable: true
         ativo:
           type: boolean
     PatchedAtualizarSetor:
@@ -10535,6 +10365,9 @@ components:
         cargo_pk:
           type: integer
           nullable: true
+        matricula:
+          type: string
+          nullable: true
         data_inicio:
           type: string
           format: date
@@ -10547,6 +10380,12 @@ components:
     PatchedAtualizarUsuario:
       type: object
       properties:
+        cpf:
+          type: string
+          nullable: true
+          description: CPF do usuário (opcional). Aceita com ou sem máscara. Somente
+            L3 pode informar quando o usuário ainda não possui CPF cadastrado.
+          maxLength: 14
         nome:
           type: string
           maxLength: 255
@@ -11070,10 +10909,6 @@ components:
           type: integer
         enderecos_atualizados:
           type: integer
-        matriculas_criadas:
-          type: integer
-        matriculas_atualizadas:
-          type: integer
         alunos_criados:
           type: integer
         servidores_criados:
@@ -11091,8 +10926,6 @@ components:
       - enderecos_atualizados
       - enderecos_criados
       - lotacoes_criadas
-      - matriculas_atualizadas
-      - matriculas_criadas
       - servidores_criados
       - terceirizados_criados
       - total_abas_processadas
@@ -11316,6 +11149,11 @@ components:
         categoria_display:
           type: string
           readOnly: true
+        matricula:
+          type: string
+          nullable: true
+          title: Matrícula
+          maxLength: 50
         ativo:
           type: boolean
         created_at:
@@ -11425,14 +11263,6 @@ components:
         * `3` - Formado
         * `4` - Desistente
         * `5` - Transferido
-    SituacaoMatriculaEnum:
-      enum:
-      - 1
-      - 2
-      type: integer
-      description: |-
-        * `1` - Ativa
-        * `2` - Inativa
     StatusExecucaoRotaEnum:
       enum:
       - 1
@@ -11645,6 +11475,11 @@ components:
         cargo_nome:
           type: string
           readOnly: true
+        matricula:
+          type: string
+          nullable: true
+          title: Matrícula
+          maxLength: 50
         data_inicio:
           type: string
           format: date

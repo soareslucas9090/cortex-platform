@@ -8,7 +8,6 @@ from rest_framework.test import APITestCase
 
 from Academico.aluno_cursos.models import AlunoCurso
 from Academico.cursos.models import Curso
-from Identidade.matriculas.models import Matricula
 from Transporte.strikes.models import Strike
 from Transporte.tests_utils import criar_aluno, criar_rota_e_execucao, criar_usuario, obter_token
 from Transporte.tickets.choices import StatusTicket
@@ -52,8 +51,11 @@ class RelatorioAlunosApiTestCase(APITestCase):
         Strike.objects.create(ticket=ticket_ausente)
 
         curso = Curso.objects.create(nome='TADS Mód. V', codigo_curso='TADS')
-        AlunoCurso.objects.create(aluno=self.aluno_presente, curso=curso)
-        Matricula.objects.create(usuario=self.aluno_presente.usuario, matricula='2023114TADS')
+        AlunoCurso.objects.create(
+            aluno=self.aluno_presente,
+            curso=curso,
+            matricula='2023114TADS',
+        )
 
     def tearDown(self):
         self.patcher.stop()

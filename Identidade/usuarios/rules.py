@@ -70,6 +70,22 @@ class UsuarioRules(ModelInstanceRules):
             self.return_exception('Já existe um usuário cadastrado com esse CPF.')
         return True
 
+    def cpf_pode_ser_informado_via_api(self) -> bool:
+        """Bloqueia alteração de CPF já preenchido fora do Django admin."""
+        if self.object_instance.cpf:
+            self.return_not_allowed(
+                'Depois que o CPF do usuário é preenchido, a sua edição somente é permitida por admin.',
+            )
+        return True
+
+    def solicitante_pode_informar_cpf_via_api(self, solicitante) -> bool:
+        """Exige nível Cortex L3 para informar CPF via PATCH."""
+        if not solicitante or not getattr(solicitante, 'tem_acesso_elevado', lambda: False)():
+            self.return_not_allowed(
+                'Somente administradores (L3) podem informar o CPF pelo sistema.',
+            )
+        return True
+
     def pode_desativar(self) -> bool:
         """Verifica se o usuário pode ser desativado."""
         if not self.object_instance.ativo:
@@ -98,13 +114,20 @@ class UsuarioRules(ModelInstanceRules):
             raise ValidationException('Senha atual incorreta.')
         return True
 
-    def matricula_nao_duplicada(self, numero_matricula: str, excluir_id=None) -> bool:
-        """Valida que o número de matrícula não está duplicado globalmente."""
-        from Identidade.matriculas.models import Matricula
-        qs = Matricula.objects.filter(matricula=numero_matricula)
-        if excluir_id is not None:
-            qs = qs.exclude(pk=excluir_id)
-        if qs.exists():
+    def matricula_unica_no_sistema(
+        self,
+        numero_matricula: str,
+        excluir_fonte=None,
+        excluir_id=None,
+    ) -> bool:
+        """Valida unicidade global da matrícula entre AlunoCurso, Servidor e Terceirizado."""
+        from AppCore.common.util.util import normalizar_matricula
+        from .models import Usuario
+
+        numero = normalizar_matricula(numero_matricula)
+        if not numero:
+            return True
+        if Usuario().helper.matricula_existe_no_sistema(numero, excluir_fonte, excluir_id):
             self.return_exception('Já existe um usuário cadastrado com esta matrícula.')
         return True
 

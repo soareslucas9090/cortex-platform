@@ -158,21 +158,14 @@ class CriarUsuarioSerializer(serializers.Serializer):
         allow_blank=True,
         help_text=(
             'CPF do usuário (opcional). Aceita com ou sem máscara '
-            '(ex: 12345678901 ou 123.456.789-01). Sem CPF, a matrícula é obrigatória.'
+            '(ex: 12345678901 ou 123.456.789-01). Sem CPF, a senha é obrigatória.'
         ),
-    )
-    matricula = serializers.CharField(
-        max_length=50,
-        required=False,
-        allow_null=True,
-        allow_blank=True,
-        help_text='Matrícula do usuário (obrigatória caso o CPF não seja informado).',
     )
     nome = serializers.CharField(max_length=255)
     password = serializers.CharField(
         write_only=True,
         required=False,
-        help_text='Senha (opcional). Se não for informada, será usada a senha padrão (CPF ou matrícula).',
+        help_text='Senha (opcional com CPF; obrigatória sem CPF). Se omitida com CPF, usa o CPF como senha.',
     )
     email = serializers.EmailField(
         required=False,
@@ -208,10 +201,10 @@ class CriarUsuarioSerializer(serializers.Serializer):
 
     def validate(self, attrs):
         cpf = attrs.get('cpf')
-        matricula = attrs.get('matricula')
-        if not cpf and not matricula:
+        password = attrs.get('password')
+        if not cpf and not password:
             raise serializers.ValidationError(
-                'É necessário informar o CPF ou a Matrícula (obrigatória para o login quando não houver CPF).'
+                'A senha é obrigatória quando o CPF não é informado.'
             )
         return attrs
 
@@ -221,6 +214,8 @@ class CriarUsuarioSerializer(serializers.Serializer):
         return normalizar_deficiencia(value)
 
     def validate_password(self, value):
+        if not value:
+            return value
         if len(value) < 8:
             raise serializers.ValidationError('A senha deve ter pelo menos 8 caracteres.')
         if not re.search(r'[A-Z]', value):
@@ -257,6 +252,16 @@ class AlterarSenhaResponseSerializer(serializers.Serializer):
 
 
 class AtualizarUsuarioSerializer(serializers.Serializer):
+    cpf = serializers.CharField(
+        max_length=14,
+        required=False,
+        allow_null=True,
+        allow_blank=True,
+        help_text=(
+            'CPF do usuário (opcional). Aceita com ou sem máscara. '
+            'Somente L3 pode informar quando o usuário ainda não possui CPF cadastrado.'
+        ),
+    )
     nome = serializers.CharField(max_length=255, required=False)
     email = serializers.EmailField(required=False, allow_null=True)
     deficiencia = serializers.CharField(
@@ -373,8 +378,6 @@ class ResumoImportacaoSerializer(serializers.Serializer):
     contatos_atualizados = serializers.IntegerField()
     enderecos_criados = serializers.IntegerField()
     enderecos_atualizados = serializers.IntegerField()
-    matriculas_criadas = serializers.IntegerField()
-    matriculas_atualizadas = serializers.IntegerField()
     alunos_criados = serializers.IntegerField()
     servidores_criados = serializers.IntegerField()
     terceirizados_criados = serializers.IntegerField()

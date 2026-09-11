@@ -6,8 +6,6 @@ from django.core.exceptions import ValidationError
 from AppCore.basics.admin import CortexModelAdmin, ReadOnlyModelAdmin, run_business
 from Identidade.contatos.models import Contato
 from Identidade.enderecos.models import Endereco
-from Identidade.matriculas.models import Matricula
-
 from .models import Usuario
 from .models import ImportacaoLote, Usuario
 
@@ -22,14 +20,6 @@ class UsuarioChangeForm(UserChangeForm):
     class Meta(UserChangeForm.Meta):
         model = Usuario
         fields = '__all__'
-
-
-class MatriculaInline(admin.TabularInline):
-    model = Matricula
-    extra = 0
-    fields = ('matricula', 'situacao', 'created_at')
-    readonly_fields = ('created_at',)
-    show_change_link = True
 
 
 class ContatoInline(admin.TabularInline):
@@ -60,7 +50,7 @@ class EnderecoInline(admin.StackedInline):
 class UsuarioAdmin(DjangoUserAdmin, CortexModelAdmin):
     form = UsuarioChangeForm
     add_form = UsuarioCreationForm
-    inlines = (MatriculaInline, ContatoInline, EnderecoInline)
+    inlines = (ContatoInline, EnderecoInline)
     ordering = ('nome',)
     list_display = (
         'nome',
@@ -206,31 +196,11 @@ class UsuarioAdmin(DjangoUserAdmin, CortexModelAdmin):
             run_business(lambda: obj.business.atualizar_dados(dados_atualizacao))
 
     def save_formset(self, request, form, formset, change):
-        if formset.model is Matricula:
-            self._salvar_matriculas_inline(form, formset)
-            return
-
         if formset.model is Endereco:
             self._salvar_endereco_inline(form, formset)
             return
 
         formset.save()
-
-    def _salvar_matriculas_inline(self, form, formset):
-        usuario = form.instance
-        for deleted in formset.deleted_objects:
-            run_business(lambda current=deleted: current.business.desativar())
-
-        for inline_form in formset.forms:
-            if not inline_form.has_changed() or not inline_form.is_valid():
-                continue
-            matricula = inline_form.save(commit=False)
-            if matricula.pk is None:
-                run_business(
-                    lambda numero=matricula.matricula: usuario.business.adicionar_matricula(numero)
-                )
-            else:
-                matricula.save()
 
     def _salvar_endereco_inline(self, form, formset):
         usuario = form.instance

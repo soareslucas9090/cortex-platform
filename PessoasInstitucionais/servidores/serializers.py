@@ -17,7 +17,7 @@ class ServidorSerializer(serializers.ModelSerializer):
         model = Servidor
         fields = [
             'pk', 'usuario_nome', 'usuario_cpf', 'cargo', 'cargo_nome',
-            'categoria', 'categoria_display',
+            'categoria', 'categoria_display', 'matricula',
             'ativo', 'created_at', 'updated_at',
         ]
         read_only_fields = ['pk', 'created_at', 'updated_at']
@@ -27,6 +27,7 @@ class CriarServidorSerializer(serializers.Serializer):
     usuario_pk = serializers.IntegerField()
     cargo_pk = serializers.IntegerField()
     categoria = serializers.ChoiceField(choices=CategoriaServidor.choices)
+    matricula = serializers.CharField(required=False, allow_null=True, allow_blank=True)
     ativo = serializers.BooleanField(default=True, required=False)
 
 
@@ -35,4 +36,5 @@ class AtualizarServidorSerializer(serializers.Serializer):
     categoria = serializers.ChoiceField(
         choices=CategoriaServidor.choices, required=False,
     )
+    matricula = serializers.CharField(required=False, allow_null=True, allow_blank=True)
     ativo = serializers.BooleanField(required=False)
