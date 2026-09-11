@@ -53,11 +53,14 @@ class ExecucaoRotaRules(ModelInstanceRules):
     def validar_inicio_rota(self, execucao):
         if execucao.rota_finalizada_em is not None:
             self.return_exception('Esta rota já foi finalizada e não pode ser reiniciada.')
-        if execucao.status != StatusExecucaoRota.FINALIZADA:
+        if execucao.status == StatusExecucaoRota.INICIADA and execucao.rota_iniciada_em is not None:
+            return True
+        if execucao.status != StatusExecucaoRota.EMBARCADO:
             self.return_exception('Aguarde o conferente finalizar a conferência para iniciar a rota.')
         if execucao.data_execucao != localdate():
             self.return_exception('Somente rotas do dia podem ser iniciadas.')
         self.validar_rota_ativa(execucao.rota)
+        return True
 
     def validar_responsavel_rota(self, execucao, usuario):
         from Transporte.permissoes.access import usuario_e_administrador_transporte
@@ -74,8 +77,13 @@ class ExecucaoRotaRules(ModelInstanceRules):
     def validar_finalizacao_rota(self, execucao):
         if execucao.rota_iniciada_em is None:
             self.return_exception('Inicie a rota antes de finalizá-la.')
+        if execucao.status == StatusExecucaoRota.FINALIZADA and execucao.rota_finalizada_em is not None:
+            return True
+        if execucao.status != StatusExecucaoRota.INICIADA:
+            self.return_exception('Somente uma rota iniciada pode ser finalizada.')
         if now() < execucao.rota_iniciada_em:
             self.return_exception('O horário de finalização deve ser posterior ao início.')
+        return True
 
     def validar_rota_ativa(self, rota) -> bool:
         if not rota.ativo:

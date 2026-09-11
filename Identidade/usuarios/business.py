@@ -240,6 +240,20 @@ class UsuarioBusiness(ModelInstanceBusiness):
         except Exception as e:
             self.relancar_ou_erro_sistema(e, 'Não foi possível atualizar o CPF.', logger)
 
+    def informar_cpf(self, cpf: str, solicitante):
+        """
+        Permite L3 preencher CPF ausente via API.
+        Alteração após preenchimento permanece exclusiva do Django admin.
+        """
+        try:
+            self.object_instance.rules.cpf_pode_ser_informado_via_api()
+            self.object_instance.rules.solicitante_pode_informar_cpf_via_api(solicitante)
+            if cpf in (None, ''):
+                return
+            self.atualizar_cpf(cpf)
+        except Exception as e:
+            self.relancar_ou_erro_sistema(e, 'Não foi possível informar o CPF.', logger)
+
     def desativar(self):
         """Desativa o usuário."""
         try:

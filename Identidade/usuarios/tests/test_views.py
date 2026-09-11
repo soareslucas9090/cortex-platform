@@ -290,6 +290,56 @@ class AtualizarUsuarioViewTest(APITestCase):
         resposta = self.client.patch(self.url, {'email': 'novo@exemplo.com'})
         self.assertEqual(resposta.status_code, status.HTTP_200_OK)
 
+    def test_admin_informa_cpf_em_usuario_sem_cpf(self):
+        usuario_sem_cpf = criar_usuario(
+            cpf=None,
+            nome='Sem CPF',
+            password='Senha@123',
+        )
+        url = reverse('identidade:usuario-detail', kwargs={'pk': usuario_sem_cpf.pk})
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token_admin}')
+        resposta = self.client.patch(url, {'cpf': '12345678901'})
+        self.assertEqual(resposta.status_code, status.HTTP_200_OK)
+        self.assertEqual(resposta.data['dados']['cpf'], '12345678901')
+        usuario_sem_cpf.refresh_from_db()
+        self.assertEqual(usuario_sem_cpf.cpf, '12345678901')
+
+    def test_admin_nao_pode_alterar_cpf_ja_preenchido(self):
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token_admin}')
+        resposta = self.client.patch(self.url, {'cpf': '98765432100'})
+        self.assertEqual(resposta.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertIn(
+            'Depois que o CPF do usuário é preenchido, a sua edição somente é permitida por admin.',
+            resposta.data['detail'],
+        )
+        self.usuario.refresh_from_db()
+        self.assertEqual(self.usuario.cpf, '00000000002')
+
+    def test_usuario_comum_nao_pode_informar_cpf(self):
+        usuario_sem_cpf = criar_usuario(
+            cpf=None,
+            nome='Sem CPF',
+            password='Senha@123',
+        )
+        token = obter_tokens(usuario_sem_cpf)
+        url = reverse('identidade:usuario-detail', kwargs={'pk': usuario_sem_cpf.pk})
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {token}')
+        resposta = self.client.patch(url, {'cpf': '12345678901'})
+        self.assertEqual(resposta.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertIn(
+            'Somente administradores (L3) podem informar o CPF pelo sistema.',
+            resposta.data['detail'],
+        )
+
+    def test_usuario_comum_nao_pode_alterar_cpf_proprio_ja_preenchido(self):
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token_usuario}')
+        resposta = self.client.patch(self.url, {'cpf': '98765432100'})
+        self.assertEqual(resposta.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertIn(
+            'Depois que o CPF do usuário é preenchido, a sua edição somente é permitida por admin.',
+            resposta.data['detail'],
+        )
+
 
 class DesativarUsuarioViewTest(APITestCase):
 

@@ -24,9 +24,9 @@ class ViagemMotoristaAPITestCase(APITestCase):
         self.client.force_authenticate(self.usuario)
 
     def liberar(self):
-        self.execucao.status = StatusExecucaoRota.FINALIZADA
+        self.execucao.status = StatusExecucaoRota.EMBARCADO
         self.execucao.chamada_tickets_concluida = True
-        self.execucao.finalizada_em = timezone.now()
+        self.execucao.embarcado_em = timezone.now()
         self.execucao.save()
 
     def test_conferencia_libera_viagem_e_duracao_persiste(self):
@@ -38,7 +38,14 @@ class ViagemMotoristaAPITestCase(APITestCase):
         conferencia = reverse('transporte:conferencia-finalizar', args=[self.execucao.pk])
         self.assertEqual(self.client.post(chamada, {'ausentes': []}, format='json').status_code, 200)
         self.assertEqual(self.client.post(conferencia, {}).status_code, 200)
+        self.execucao.refresh_from_db()
+        self.assertEqual(self.execucao.status, StatusExecucaoRota.EMBARCADO)
+        self.assertIsNotNone(self.execucao.embarcado_em)
+        self.assertIsNone(self.execucao.finalizada_em)
+        embarcado_em = self.execucao.embarcado_em
         self.client.force_authenticate(self.usuario)
+        historico = reverse('transporte:motorista-historico-rotas-list')
+        self.assertEqual(self.client.get(historico).data['count'], 0)
         self.assertTrue(self.client.get(self.lista).data['dados'][0]['viagem']['pode_iniciar_rota'])
         agora = timezone.now()
         with patch('django.utils.timezone.now', return_value=agora):
@@ -47,6 +54,9 @@ class ViagemMotoristaAPITestCase(APITestCase):
         self.execucao.refresh_from_db()
         self.assertEqual(self.execucao.rota_iniciada_em, agora)
         self.assertEqual(self.execucao.rota_iniciada_por_id, self.usuario.pk)
+        self.assertEqual(self.execucao.status, StatusExecucaoRota.INICIADA)
+        self.assertIsNone(self.execucao.finalizada_em)
+        self.assertEqual(self.client.get(historico).data['count'], 0)
         self.assertTrue(resposta.data['dados']['pode_finalizar_rota'])
         with patch('django.utils.timezone.now', return_value=agora + timedelta(minutes=42, seconds=17)):
             resposta = self.client.post(self.fim, {})
@@ -59,6 +69,11 @@ class ViagemMotoristaAPITestCase(APITestCase):
         self.assertFalse(viagem['pode_iniciar_rota'])
         self.assertFalse(viagem['pode_finalizar_rota'])
         self.assertEqual(self.execucao.status, StatusExecucaoRota.FINALIZADA)
+        self.assertEqual(self.execucao.finalizada_em, self.execucao.rota_finalizada_em)
+        self.assertEqual(self.execucao.embarcado_em, embarcado_em)
+        itens = self.client.get(historico).data['dados']
+        self.assertEqual([item['id'] for item in itens], [self.execucao.pk])
+        self.assertEqual(itens[0]['duracao_rota_segundos'], 2537)
 
     def test_reenvios_preservam_horarios_e_nao_reinicia_concluida(self):
         self.liberar()
@@ -71,11 +86,15 @@ class ViagemMotoristaAPITestCase(APITestCase):
         self.assertEqual(repetida.status_code, 200)
         self.assertEqual(repetida.data['dados']['rota_finalizada_em'], fim['rota_finalizada_em'])
         self.assertEqual(repetida.data['dados']['duracao_rota_segundos'], fim['duracao_rota_segundos'])
+        self.execucao.refresh_from_db()
+        self.assertEqual(self.execucao.finalizada_em, self.execucao.rota_finalizada_em)
+        self.assertEqual(self.execucao.status, StatusExecucaoRota.FINALIZADA)
         self.assertEqual(self.client.post(self.inicio, {}).status_code, 400)
 
     def test_bloqueia_estados_anteriores_e_cancelada(self):
         for estado in (StatusExecucaoRota.ABERTA, StatusExecucaoRota.FECHADA,
-                       StatusExecucaoRota.EM_EMBARQUE, StatusExecucaoRota.CANCELADA):
+                       StatusExecucaoRota.EM_EMBARQUE, StatusExecucaoRota.CANCELADA,
+                       StatusExecucaoRota.FINALIZADA):
             with self.subTest(estado=estado):
                 self.execucao.status = estado
                 self.execucao.save()
@@ -85,6 +104,21 @@ class ViagemMotoristaAPITestCase(APITestCase):
     def test_nao_finaliza_sem_inicio(self):
         self.liberar()
         self.assertEqual(self.client.post(self.fim, {}).status_code, 400)
+
+    def test_nao_finaliza_estado_invalido_mesmo_com_horario_de_inicio(self):
+        self.execucao.rota_iniciada_em = timezone.now() - timedelta(minutes=10)
+        self.execucao.rota_iniciada_por = self.usuario
+        for estado in (StatusExecucaoRota.ABERTA, StatusExecucaoRota.FECHADA,
+                       StatusExecucaoRota.EM_EMBARQUE, StatusExecucaoRota.EMBARCADO,
+                       StatusExecucaoRota.CANCELADA, StatusExecucaoRota.FINALIZADA):
+            with self.subTest(estado=estado):
+                self.execucao.status = estado
+                self.execucao.save()
+                self.assertEqual(self.client.post(self.fim, {}).status_code, 400)
+                self.execucao.refresh_from_db()
+                self.assertEqual(self.execucao.status, estado)
+                self.assertIsNone(self.execucao.rota_finalizada_em)
+                self.assertFalse(self.client.get(self.lista).data['dados'][0]['viagem']['pode_finalizar_rota'])
 
     def test_outro_motorista_nao_sobrescreve_viagem_e_admin_pode_finalizar(self):
         self.liberar()
