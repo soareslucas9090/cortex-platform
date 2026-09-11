@@ -424,8 +424,10 @@ strikes e justificativas são bloqueados nas respectivas mudanças de estado.
 O status, a capacidade congelada e a ocupação desta execução alimentam a visão
 diária do motorista. `tickets_solicitados` permanece `RESERVADO` + `EMBARCADO`;
 depois da chamada, `vagas_ocupadas` soma `EMBARCADO` e `EntradaSemTicket`.
-A consulta do motorista não inicia nem finaliza a viagem; isso fica para API
-futura. O conferente encerra só a conferência (`EMBARCADO` / `embarcado_em`).
+A consulta do motorista não inicia nem finaliza a viagem. Os POSTs de operação
+do motorista fazem `EMBARCADO` → `INICIADA` → `FINALIZADA`, registrando início,
+responsável e fim. O fim grava `finalizada_em` e `rota_finalizada_em` com o mesmo
+horário. O conferente encerra só a conferência (`EMBARCADO` / `embarcado_em`).
 
 ---
 
