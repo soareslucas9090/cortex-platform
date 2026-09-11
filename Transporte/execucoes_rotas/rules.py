@@ -57,6 +57,14 @@ class ExecucaoRotaRules(ModelInstanceRules):
             )
         return True
 
+    def validar_acesso_historico_conferencia(self, permitido) -> bool:
+        if not permitido:
+            self.return_exception(
+                'O histórico da conferência é exclusivo para quem possui a capacidade de conferir.',
+                type_exception=AuthorizationException,
+            )
+        return True
+
     def validar_inicio_rota(self, execucao):
         if execucao.rota_finalizada_em is not None:
             self.return_exception('Esta rota já foi finalizada e não pode ser reiniciada.')

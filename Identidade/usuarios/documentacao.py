@@ -622,6 +622,9 @@ class PermissaoDocumentacao:
                             'se houver execução. Por ID, CANCELADA é 404; EMBARCADO (e estados '
                             'posteriores da viagem) segue para '
                             'consulta da execução e replay de finalizar conferência (iniciar de novo retorna 400). '
+                            'A primeira finalização grava embarcado_em e o usuário autenticado em conferencia_finalizada_por. '
+                            'O GET execucoes-rotas/historico/ (listagem, percursos e detalhe) lista só viagens FINALIZADA '
+                            'com rota_finalizada_em, para quem tem conferir. '
                             'O monitoramento inicia só depois de T-30 '
                             '(now > data_hora_saida − 30 min); L3 obedece a mesma data e janela. '
                             'O campo pode_monitorar indica se o botão de iniciar deve aparecer. '
@@ -642,7 +645,7 @@ class PermissaoDocumentacao:
                             'quem cancelou o ticket pode usar se houver vaga. '
                             'Quem está AUSENTE nesta execução pode entrar nas mesmas condições; '
                             'o ticket permanece AUSENTE e o strike não é desfeito. '
-                            'Três strikes ativos bloqueiam a entrada por CPF.'
+                            'Três strikes ativos não bloqueiam a entrada por CPF.'
                         ),
                         (
                             'Reserva, entrada e saída da fila e cancelamento pelo aluno funcionam '

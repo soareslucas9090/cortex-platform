@@ -94,6 +94,14 @@ class ExecucaoRota(
         blank=True,
         verbose_name='Rota iniciada por',
     )
+    conferencia_finalizada_por = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        related_name='conferencias_finalizadas',
+        null=True,
+        blank=True,
+        verbose_name='Conferência finalizada por',
+    )
 
     class Meta:
         verbose_name = 'Execução de rota'

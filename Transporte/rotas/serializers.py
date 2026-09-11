@@ -3,7 +3,6 @@ from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import extend_schema_field
 
 from Transporte.percursos.models import Percurso
-from Transporte.execucoes_rotas.viagem_serializers import ViagemRotaSerializer
 
 from .choices import DiaSemana
 from .models import Rota
@@ -37,6 +36,10 @@ class RotaSerializer(serializers.ModelSerializer):
             'created_at',
         ]
         read_only_fields = ['id', 'created_at']
+
+
+# Import tardio: execucoes_rotas.serializers usa RotaSerializer e este módulo usa ViagemRotaSerializer.
+from Transporte.execucoes_rotas.serializers import ViagemRotaSerializer  # noqa: E402
 
 
 class RotaDoDiaSerializer(serializers.ModelSerializer):

@@ -15,12 +15,16 @@ from Transporte.tickets.serializers import TicketConferenciaSerializer
 
 from .choices import StatusExecucaoRota
 from .models import ExecucaoRota
-from .viagem_serializers import ViagemRotaSerializer
 from .serializers import (
     CriarExecucaoRotaSerializer,
+    DetalheHistoricoConferenciaSerializer,
+    DetalheHistoricoRotaSerializer,
     ExecucaoRotaSerializer,
     FinalizarChamadaSerializer,
+    HistoricoRotaSerializer,
+    PercursoHistoricoSerializer,
     SerializerVazio,
+    ViagemRotaSerializer,
 )
 
 PERMISSAO_LISTAGEM = (
@@ -234,7 +238,9 @@ class IniciarEmbarqueExecucaoRotaView(PodeConferirTransporteMixin, BasicPostAPIV
         'Quem não entrou no lote de CPF permanece EM_ESPERA: esse é o desfecho nessa execução '
         '(sem promoção da fila nem status de não contemplado). '
         'CONTEMPLADO e EntradaSemTicket são gravados no lote de CPF, não aqui. '
-        'Ausentes não mudam. Não grava finalizada_em (fim da viagem do motorista).\n\n'
+        'Ausentes não mudam. Não grava finalizada_em (fim da viagem do motorista). '
+        'A primeira finalização grava embarcado_em e conferencia_finalizada_por '
+        '(usuário autenticado); replay não troca.\n\n'
         f'{PERMISSAO_CONFERIR}'
     ),
     request=SerializerVazio,
@@ -254,7 +260,7 @@ class FinalizarExecucaoRotaView(PodeConferirTransporteMixin, BasicPostAPIView):
 
     def do_action_post(self, serializer_data, request, *args, **kwargs):
         execucao = ExecucaoRota().business.obter_para_conferencia(kwargs['pk'])
-        execucao = execucao.business.finalizar_conferencia()
+        execucao = execucao.business.finalizar_conferencia(request.user)
         return {'dados': ExecucaoRotaSerializer(execucao).data}
 
 
@@ -398,3 +404,200 @@ class FinalizarChamadaConferenciaView(PodeConferirTransporteMixin, BasicPostAPIV
         )
         execucao = execucao.business.finalizar_chamada(serializer_data.get('ausentes') or [])
         return {'dados': ExecucaoRotaSerializer(execucao).data}
+
+
+PERMISSAO_HISTORICO = (
+    '**Permissões:** Motorista ativo ou L3 (administrador). '
+    'Todos consultam as viagens concluídas de todos os motoristas. '
+    'Alunos, conferentes sem perfil motorista e L2 não têm acesso.'
+)
+
+
+@extend_schema(
+    tags=['Transporte · Motorista'],
+    summary='Listar histórico de rotas executadas',
+    description=(
+        'Inclui somente viagens finalizadas pelo motorista. Preserva rotas e percursos '
+        'desativados. Presentes conta tickets embarcados, ausentes conta tickets ausentes '
+        'e sem_ticket conta entradas registradas sem ticket. '
+        'Filtros inválidos são ignorados.\n\n' + PERMISSAO_HISTORICO
+    ),
+    parameters=[
+        OpenApiParameter(
+            'busca', OpenApiTypes.STR,
+            description='Apelido, descrição do percurso ou data (DD/MM/AAAA ou AAAA-MM-DD).',
+        ),
+        OpenApiParameter('percurso_id', OpenApiTypes.INT),
+        OpenApiParameter('data', OpenApiTypes.DATE),
+        OpenApiParameter(
+            'ordenacao', OpenApiTypes.STR,
+            enum=['data', '-data', 'horario', '-horario', 'percurso', '-percurso'],
+        ),
+        OpenApiParameter('paginacao', OpenApiTypes.INT, description='Itens por página, entre 1 e 100.'),
+    ],
+    responses={
+        200: HistoricoRotaSerializer(many=True),
+        401: {'description': 'Não autenticado.'},
+        403: {'description': 'Perfil sem acesso ao histórico.'},
+    },
+)
+class ListarHistoricoRotasView(PodeOperarRotaMixin, BasicGetAPIView):
+    serializer_class = HistoricoRotaSerializer
+    pagination_class = PaginacaoCustomizada
+    mensagem_sucesso = 'Histórico de rotas listado com sucesso.'
+
+    def get_queryset(self):
+        return ExecucaoRota().business.listar_historico(self.request.user, self.request.query_params)
+
+
+@extend_schema(
+    tags=['Transporte · Motorista'],
+    summary='Listar percursos com viagens concluídas',
+    description='Opções do filtro, incluindo percursos desativados com histórico.\n\n' + PERMISSAO_HISTORICO,
+    responses={
+        200: PercursoHistoricoSerializer(many=True),
+        401: {'description': 'Não autenticado.'},
+        403: {'description': 'Perfil sem acesso ao histórico.'},
+    },
+)
+class ListarPercursosHistoricoView(PodeOperarRotaMixin, BasicGetAPIView):
+    serializer_class = PercursoHistoricoSerializer
+    pagination_class = PaginacaoCustomizada
+    mensagem_sucesso = 'Percursos do histórico listados com sucesso.'
+
+    def get_queryset(self):
+        return ExecucaoRota().business.listar_percursos_historico(self.request.user)
+
+
+@extend_schema(
+    tags=['Transporte · Motorista'],
+    summary='Detalhar rota executada',
+    description=(
+        'Horários, duração, responsável e nomes dos passageiros por categoria. '
+        'Não expõe CPF, contatos nem informações clínicas.\n\n' + PERMISSAO_HISTORICO
+    ),
+    responses={
+        200: DetalheHistoricoRotaSerializer,
+        401: {'description': 'Não autenticado.'},
+        403: {'description': 'Perfil sem acesso ao histórico.'},
+        404: {'description': 'Viagem inexistente ou ainda não concluída.'},
+    },
+)
+class DetalharHistoricoRotaView(PodeOperarRotaMixin, BasicRetrieveAPIView):
+    serializer_class = DetalheHistoricoRotaSerializer
+    mensagem_sucesso = 'Detalhes da rota executada obtidos com sucesso.'
+
+    def get_object(self):
+        return ExecucaoRota().business.detalhar_historico(self.request.user, self.kwargs['pk'])
+
+
+PERMISSAO_HISTORICO_CONFERENCIA = (
+    '**Permissões:** capacidade `transporte.conferir` (conferente) ou L3 (administrador). '
+    'Alunos, L2 sem conferir e motoristas sem conferir não têm acesso.'
+)
+
+REDUZ_CONJUNTO = (
+    ' Apenas reduz o conjunto visível, nunca expande o acesso. Valor inválido é ignorado.'
+)
+PARAMETROS_FILTRO_HISTORICO = [
+    OpenApiParameter(
+        'busca', OpenApiTypes.STR,
+        description=(
+            'Apelido, descrição do percurso ou data (DD/MM/AAAA ou AAAA-MM-DD).'
+            + REDUZ_CONJUNTO
+        ),
+    ),
+    OpenApiParameter(
+        'percurso_id', OpenApiTypes.INT,
+        description='Filtra pelo percurso.' + REDUZ_CONJUNTO,
+    ),
+    OpenApiParameter(
+        'data', OpenApiTypes.DATE,
+        description='Filtra pela data da execução.' + REDUZ_CONJUNTO,
+    ),
+    OpenApiParameter(
+        'ordenacao', OpenApiTypes.STR,
+        enum=['data', '-data', 'horario', '-horario', 'percurso', '-percurso'],
+        description='Ordenação da lista. Valor fora do enum usa o padrão (-data).' + REDUZ_CONJUNTO,
+    ),
+    OpenApiParameter('paginacao', OpenApiTypes.INT, description='Itens por página, entre 1 e 100.'),
+]
+
+
+@extend_schema(
+    tags=['Transporte · Histórico de viagens'],
+    summary='Listar histórico da conferência',
+    description=(
+        'Inclui somente viagens finalizadas pelo motorista. Mesmos filtros e contagens '
+        'do histórico do motorista. O conferente autenticado no finalizar não aparece na lista. '
+        'Filtros inválidos são ignorados e apenas reduzem o conjunto, nunca expandem o acesso.\n\n'
+        + PERMISSAO_HISTORICO_CONFERENCIA
+    ),
+    parameters=PARAMETROS_FILTRO_HISTORICO,
+    responses={
+        200: HistoricoRotaSerializer(many=True),
+        401: {'description': 'Não autenticado.'},
+        403: {'description': 'Perfil sem capacidade conferir.'},
+    },
+)
+class ListarHistoricoConferenciaView(PodeConferirTransporteMixin, BasicGetAPIView):
+    serializer_class = HistoricoRotaSerializer
+    pagination_class = PaginacaoCustomizada
+    mensagem_sucesso = 'Histórico da conferência listado com sucesso.'
+
+    def get_queryset(self):
+        return ExecucaoRota().business.listar_historico_conferencia(
+            self.request.user, self.request.query_params,
+        )
+
+
+@extend_schema(
+    tags=['Transporte · Histórico de viagens'],
+    summary='Listar percursos com viagens no histórico da conferência',
+    description=(
+        'Opções do filtro, incluindo percursos desativados com histórico.\n\n'
+        + PERMISSAO_HISTORICO_CONFERENCIA
+    ),
+    parameters=[
+        OpenApiParameter(
+            'paginacao', OpenApiTypes.INT, description='Itens por página, entre 1 e 100.',
+        ),
+    ],
+    responses={
+        200: PercursoHistoricoSerializer(many=True),
+        401: {'description': 'Não autenticado.'},
+        403: {'description': 'Perfil sem capacidade conferir.'},
+    },
+)
+class ListarPercursosHistoricoConferenciaView(PodeConferirTransporteMixin, BasicGetAPIView):
+    serializer_class = PercursoHistoricoSerializer
+    pagination_class = PaginacaoCustomizada
+    mensagem_sucesso = 'Percursos do histórico da conferência listados com sucesso.'
+
+    def get_queryset(self):
+        return ExecucaoRota().business.listar_percursos_historico_conferencia(self.request.user)
+
+
+@extend_schema(
+    tags=['Transporte · Histórico de viagens'],
+    summary='Detalhar viagem no histórico da conferência',
+    description=(
+        'Horários, conferente que finalizou a conferência e alunos (id, nome, CPF, '
+        'tem_deficiencia) por categoria. Sem foto nem tipo clínico.\n\n'
+        + PERMISSAO_HISTORICO_CONFERENCIA
+    ),
+    responses={
+        200: DetalheHistoricoConferenciaSerializer,
+        401: {'description': 'Não autenticado.'},
+        403: {'description': 'Perfil sem capacidade conferir.'},
+        404: {'description': 'Viagem inexistente ou ainda não concluída.'},
+    },
+)
+class DetalharHistoricoConferenciaView(PodeConferirTransporteMixin, BasicRetrieveAPIView):
+    serializer_class = DetalheHistoricoConferenciaSerializer
+    mensagem_sucesso = 'Detalhes da conferência no histórico obtidos com sucesso.'
+
+    def get_object(self):
+        return ExecucaoRota().business.detalhar_historico_conferencia(
+            self.request.user, self.kwargs['pk'],
+        )

@@ -30,13 +30,13 @@ class ExecucaoRotaHelpers(ModelInstanceHelpers):
             dia_semana=dia_semana_da_data(data_execucao),
         ).order_by('horario_saida', 'pk')
 
-    def listar_historico(self, filtros=None):
+    def _queryset_historico_concluidas(self, filtros=None, *relacionados):
         from Transporte.tickets.choices import StatusTicket
         from .models import ExecucaoRota
 
         filtros = filtros or {}
         queryset = (
-            ExecucaoRota.objects.select_related('rota__percurso', 'rota_iniciada_por')
+            ExecucaoRota.objects.select_related('rota__percurso', *relacionados)
             .filter(status=StatusExecucaoRota.FINALIZADA, rota_finalizada_em__isnull=False)
             .annotate(
                 presentes=Count('tickets', filter=Q(tickets__status=StatusTicket.EMBARCADO), distinct=True),
@@ -79,6 +79,12 @@ class ExecucaoRotaHelpers(ModelInstanceHelpers):
         }
         return queryset.order_by(*campos.get(ordenacao, campos['-data']))
 
+    def listar_historico(self, filtros=None):
+        return self._queryset_historico_concluidas(filtros, 'rota_iniciada_por')
+
+    def listar_historico_conferencia(self, filtros=None):
+        return self._queryset_historico_concluidas(filtros, 'conferencia_finalizada_por')
+
     def listar_percursos_historico(self):
         from Transporte.percursos.models import Percurso
         from .models import ExecucaoRota
@@ -94,12 +100,57 @@ class ExecucaoRotaHelpers(ModelInstanceHelpers):
         from Transporte.tickets.choices import StatusTicket
         from Transporte.tickets.models import Ticket
 
-        tickets = Ticket.objects.select_related('aluno__usuario').order_by('aluno__usuario__nome', 'pk')
-        entradas = EntradaSemTicket.objects.select_related('aluno__usuario').order_by('aluno__usuario__nome', 'pk')
+        tickets = Ticket.objects.select_related('aluno__usuario').order_by(
+            'aluno__usuario__nome', 'pk',
+        )
+        entradas = EntradaSemTicket.objects.select_related('aluno__usuario').order_by(
+            'aluno__usuario__nome', 'pk',
+        )
         return self.listar_historico().prefetch_related(
-            Prefetch('tickets', queryset=tickets.filter(status=StatusTicket.EMBARCADO), to_attr='tickets_presentes'),
-            Prefetch('tickets', queryset=tickets.filter(status=StatusTicket.AUSENTE), to_attr='tickets_ausentes'),
-            Prefetch('entradas_sem_ticket', queryset=entradas, to_attr='passageiros_sem_ticket'),
+            Prefetch(
+                'tickets',
+                queryset=tickets.filter(status=StatusTicket.EMBARCADO),
+                to_attr='tickets_presentes',
+            ),
+            Prefetch(
+                'tickets',
+                queryset=tickets.filter(status=StatusTicket.AUSENTE),
+                to_attr='tickets_ausentes',
+            ),
+            Prefetch(
+                'entradas_sem_ticket',
+                queryset=entradas,
+                to_attr='passageiros_sem_ticket',
+            ),
+        ).get(pk=execucao_id)
+
+    def detalhar_historico_conferencia(self, execucao_id):
+        from Transporte.entradas_sem_ticket.models import EntradaSemTicket
+        from Transporte.tickets.choices import StatusTicket
+        from Transporte.tickets.models import Ticket
+
+        tickets = Ticket.objects.select_related('aluno__usuario').order_by(
+            'aluno__usuario__nome', 'pk',
+        )
+        entradas = EntradaSemTicket.objects.select_related('aluno__usuario').order_by(
+            'aluno__usuario__nome', 'pk',
+        )
+        return self.listar_historico_conferencia().prefetch_related(
+            Prefetch(
+                'tickets',
+                queryset=tickets.filter(status=StatusTicket.EMBARCADO),
+                to_attr='tickets_presentes',
+            ),
+            Prefetch(
+                'tickets',
+                queryset=tickets.filter(status=StatusTicket.AUSENTE),
+                to_attr='tickets_ausentes',
+            ),
+            Prefetch(
+                'entradas_sem_ticket',
+                queryset=entradas,
+                to_attr='passageiros_sem_ticket',
+            ),
         ).get(pk=execucao_id)
 
     def listar_para_usuario(

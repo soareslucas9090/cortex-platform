@@ -25,8 +25,8 @@ REGRA_CPF = (
     'esse é o desfecho nessa execução, sem promoção posterior.'
 )
 REGRA_AUSENTE_CPF = (
-    'Quem está AUSENTE nesta execução pode entrar se houver vaga '
-    'e o aluno tiver menos de 3 strikes ativos; o ticket permanece AUSENTE e o '
+    'Quem está AUSENTE nesta execução pode entrar se houver vaga; '
+    'três strikes ativos não impedem o walk-in. O ticket permanece AUSENTE e o '
     'strike não é desfeito.'
 )
 
