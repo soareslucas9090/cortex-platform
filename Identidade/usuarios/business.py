@@ -11,9 +11,9 @@ from AppCore.core.exceptions.exceptions import (
     SystemErrorException,
     ValidationException,
 )
-from Identidade.usuarios.importacao.importacao_exceptions import ImportacaoUsuariosException
-from AppCore.common.util.util import normalizar_cpf, normalizar_cep
+from AppCore.common.util.util import normalizar_cpf, normalizar_cep, validar_senha
 
+from Identidade.usuarios.importacao.importacao_exceptions import ImportacaoUsuariosException
 from Identidade.usuarios.importacao.importacao_parser import ImportacaoUsuariosParser
 from Identidade.usuarios.importacao.importacao_resolucao import ImportacaoReferenciasResolver
 from Identidade.usuarios.importacao.importacao_dtos import (
@@ -80,6 +80,19 @@ class UsuarioBusiness(ModelInstanceBusiness):
             self.object_instance.save()
         except Exception as e:
             self.relancar_ou_erro_sistema(e, 'Não foi possível atualizar os dados do usuário.', logger)
+
+    def alterar_senha(self, senha_atual: str, nova_senha: str):
+        """Altera a senha de acesso do usuário autenticado."""
+        try:
+            self.object_instance.rules.pode_alterar_senha()
+            self.object_instance.rules.validar_senha_atual(senha_atual)
+            validar_senha(nova_senha)
+            if self.object_instance.check_password(nova_senha):
+                raise BusinessRuleException('A nova senha deve ser diferente da senha atual.')
+            self.object_instance.set_password(nova_senha)
+            self.object_instance.save(update_fields=['password'])
+        except Exception as e:
+            self.relancar_ou_erro_sistema(e, 'Não foi possível alterar a senha.', logger)
 
     def definir_flag_coletivo(self, usuario_coletivo: bool):
         """Ativa/desativa a conta coletiva. Ao desativar, limpa o pool."""

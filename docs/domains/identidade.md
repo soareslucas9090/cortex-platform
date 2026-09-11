@@ -43,6 +43,72 @@ Identidade/
   - Conta coletiva não pode ser solicitante nem responsável de empréstimo.
   - No cadastro, o **CPF é opcional**; sem CPF, a **matrícula é obrigatória** (identificador de login: e-mail, CPF ou matrícula).
 
+#### Alteração de senha de acesso
+
+Usuários autenticados podem alterar a **própria** senha de acesso via:
+
+- **Endpoint:** `POST /cortex/identidade/usuarios/alterar-senha/`
+- **Permissão:** qualquer usuário autenticado (L1–L3); requer `Authorization: Bearer <access_token>`
+- **Tag Swagger:** `Usuarios`
+
+**Request:**
+
+```json
+{
+  "senha_atual": "Senha@123",
+  "nova_senha": "NovaSenha@456"
+}
+```
+
+**Response `200`:**
+
+```json
+{
+  "status": "success",
+  "mensagem": "Senha alterada com sucesso."
+}
+```
+
+**Fluxo interno (View → Business → Rules):**
+
+1. `AlterarSenhaView` valida o payload com `AlterarSenhaSerializer` e delega a `request.user.business.alterar_senha(...)`.
+2. `UsuarioRules.pode_alterar_senha()` — bloqueia usuário inativo ou conta coletiva (`usuario_coletivo=True`).
+3. `UsuarioRules.validar_senha_atual()` — confere a senha atual com `check_password`; em falha retorna `400` com mensagem genérica *"Senha atual incorreta."*.
+4. `validar_senha()` (`AppCore.common.util.util`) — aplica a política de complexidade no Business.
+5. `UsuarioBusiness.alterar_senha()` — impede reutilizar a senha atual e persiste com `set_password` + `save(update_fields=['password'])`.
+
+**Política de complexidade da nova senha:**
+
+- Mínimo 8 caracteres
+- Pelo menos 1 letra maiúscula, 1 minúscula, 1 número e 1 caractere especial
+- Deve ser **diferente** da senha atual
+
+**Restrições e erros comuns:**
+
+| Situação | HTTP | Mensagem / comportamento |
+| -------- | ---- | ------------------------ |
+| Token ausente ou inválido | `401` | Não autenticado |
+| Senha atual incorreta | `400` | *Senha atual incorreta.* |
+| Nova senha fraca ou igual à atual | `400` | Validação do serializer ou regra de negócio |
+| Conta coletiva | `400` | *Contas coletivas não podem alterar a senha...* |
+| Usuário inativo | `400` | *O usuário está inativo.* |
+
+**O que este fluxo não cobre:**
+
+- Redefinição por e-mail / código de verificação (não implementado).
+- Alteração de senha de outro usuário via API (apenas Django Admin).
+- O `PATCH /usuarios/{pk}/` **não** aceita senha — alteração de perfil e de senha são endpoints separados.
+
+**Arquivos da implementação:**
+
+| Camada | Arquivo | Responsabilidade |
+| ------ | ------- | ---------------- |
+| Rules | `Identidade/usuarios/rules.py` | `pode_alterar_senha`, `validar_senha_atual` |
+| Business | `Identidade/usuarios/business.py` | `alterar_senha` |
+| Serializer | `Identidade/usuarios/serializers.py` | `AlterarSenhaSerializer` |
+| View / URL | `Identidade/usuarios/views.py`, `urls.py` | `AlterarSenhaView`, rota `usuario-alterar-senha` |
+| Testes | `Identidade/usuarios/tests/test_views.py` | `AlterarSenhaUsuarioTest` |
+
 #### Configuração de Autenticação do Model `Usuario`
 ```python
 class Usuario(AbstractBaseUser, BasicModel):

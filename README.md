@@ -286,6 +286,7 @@ python manage.py spectacular --file schema.yaml
 | POST   | `/cortex/identidade/usuarios/`                                | Criar usuário               |
 | GET    | `/cortex/identidade/usuarios/<pk>/`                           | Detalhar usuário            |
 | PATCH  | `/cortex/identidade/usuarios/<pk>/`                           | Atualizar usuário           |
+| POST   | `/cortex/identidade/usuarios/alterar-senha/`                    | Alterar senha de acesso (autenticado) |
 | POST   | `/cortex/identidade/usuarios/<pk>/desativar/`                 | Desativar usuário           |
 | POST   | `/cortex/identidade/usuarios/<pk>/reativar/`                  | Reativar usuário            |
 | GET    | `/cortex/identidade/usuarios/<pk>/contatos/`                  | Listar contatos             |
@@ -311,6 +312,8 @@ curl -X POST /auth/token_jwt/ \
   -H "Content-Type: application/json" \
   -d '{"login": "12345678901", "password": "SuaSenha@123"}'
 ```
+
+Usuários autenticados podem alterar a própria senha em `POST /cortex/identidade/usuarios/alterar-senha/` informando `senha_atual` e `nova_senha`. Contas coletivas não podem usar esse endpoint. Detalhes em [`docs/domains/identidade.md`](docs/domains/identidade.md).
 
 ---
 

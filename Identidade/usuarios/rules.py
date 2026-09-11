@@ -98,6 +98,22 @@ class UsuarioRules(ModelInstanceRules):
             self.return_exception('O usuário já está ativo.')
         return True
 
+    def pode_alterar_senha(self) -> bool:
+        """Verifica se o usuário pode alterar a própria senha de acesso."""
+        if not self.object_instance.ativo:
+            self.return_exception('O usuário está inativo.')
+        if self.object_instance.usuario_coletivo:
+            self.return_exception(
+                'Contas coletivas não podem alterar a senha de acesso por este endpoint.',
+            )
+        return True
+
+    def validar_senha_atual(self, senha_atual: str) -> bool:
+        """Valida que a senha atual informada confere com a cadastrada."""
+        if not self.object_instance.check_password(senha_atual):
+            raise ValidationException('Senha atual incorreta.')
+        return True
+
     def matricula_unica_no_sistema(
         self,
         numero_matricula: str,
