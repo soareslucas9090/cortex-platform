@@ -83,8 +83,7 @@ cortex-plataform/
 │   ├── urls.py
 │   ├── usuarios/               # App Django do model Usuario (com business.py, rules.py, etc.)
 │   ├── contatos/               # App Django do model Contato
-│   ├── enderecos/              # App Django do model Endereco
-│   └── matriculas/             # App Django do model Matricula
+│   └── enderecos/              # App Django do model Endereco
 │
 ├── Organizacional/             # Domínio: setores, funções, vínculos (módulo agregador)
 │   ├── urls.py
@@ -287,15 +286,13 @@ python manage.py spectacular --file schema.yaml
 | POST   | `/cortex/identidade/usuarios/`                                | Criar usuário               |
 | GET    | `/cortex/identidade/usuarios/<pk>/`                           | Detalhar usuário            |
 | PATCH  | `/cortex/identidade/usuarios/<pk>/`                           | Atualizar usuário           |
+| POST   | `/cortex/identidade/usuarios/alterar-senha/`                    | Alterar senha de acesso (autenticado) |
 | POST   | `/cortex/identidade/usuarios/<pk>/desativar/`                 | Desativar usuário           |
 | POST   | `/cortex/identidade/usuarios/<pk>/reativar/`                  | Reativar usuário            |
 | GET    | `/cortex/identidade/usuarios/<pk>/contatos/`                  | Listar contatos             |
 | POST   | `/cortex/identidade/usuarios/<pk>/contatos/`                  | Adicionar contato           |
 | GET    | `/cortex/identidade/usuarios/<pk>/endereco/`                  | Obter endereço              |
 | PUT    | `/cortex/identidade/usuarios/<pk>/endereco/`                  | Criar ou atualizar endereço |
-| GET    | `/cortex/identidade/usuarios/<pk>/matriculas/`                | Listar matrículas           |
-| POST   | `/cortex/identidade/usuarios/<pk>/matriculas/`                | Adicionar matrícula         |
-| POST   | `/cortex/identidade/usuarios/<pk>/matriculas/<pk>/desativar/` | Desativar matrícula         |
 
 ---
 
@@ -315,6 +312,8 @@ curl -X POST /auth/token_jwt/ \
   -H "Content-Type: application/json" \
   -d '{"login": "12345678901", "password": "SuaSenha@123"}'
 ```
+
+Usuários autenticados podem alterar a própria senha em `POST /cortex/identidade/usuarios/alterar-senha/` informando `senha_atual` e `nova_senha`. Contas coletivas não podem usar esse endpoint. Detalhes em [`docs/domains/identidade.md`](docs/domains/identidade.md).
 
 ---
 
@@ -356,10 +355,9 @@ O AppCore define exceções semânticas mapeadas para HTTP:
 
 Cadastro base da pessoa no sistema.
 
-- `Usuario` — entidade central, login por CPF ou Matrícula
+- `Usuario` — entidade central, login por e-mail, CPF ou matrícula
 - `Contato` — e-mails e telefone
 - `Endereco` — endereço residencial
-- `Matricula` — carteirinha/matrícula institucional
 
 ### Organizacional _(implementado)_
 
@@ -373,9 +371,9 @@ Estrutura organizacional da instituição.
 
 Perfis institucionais dos usuários.
 
-- `Servidor` — servidor público (jornada 20h, 40h, DE)
+- `Servidor` — servidor público (jornada 20h, 40h, DE); `matricula` opcional
 - `Cargo` — posição formal do servidor
-- `Terceirizado` — funcionário de empresa terceirizada
+- `Terceirizado` — funcionário de empresa terceirizada; `matricula` opcional
 - `EmpresaInstituicao` — empresa ou instituição parceira
 
 ### Academico _(implementado)_
@@ -384,7 +382,7 @@ Perfil e vínculos acadêmicos.
 
 - `Aluno` — aluno matriculado
 - `Curso` — curso oferecido pela instituição
-- `AlunoCurso` — vínculo entre aluno e curso
+- `AlunoCurso` — vínculo entre aluno e curso; `matricula` opcional
 
 ### Infraestrutura _(implementado — v1)_
 

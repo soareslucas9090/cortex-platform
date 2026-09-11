@@ -14,7 +14,7 @@ class TerceirizadoSerializer(serializers.ModelSerializer):
         model = Terceirizado
         fields = [
             'pk', 'usuario_nome', 'usuario_cpf', 'empresa_instituicao', 'empresa_nome',
-            'cargo', 'cargo_nome', 'data_inicio', 'data_fim',
+            'cargo', 'cargo_nome', 'matricula', 'data_inicio', 'data_fim',
             'ativo', 'created_at', 'updated_at',
         ]
         read_only_fields = ['pk', 'created_at', 'updated_at']
@@ -24,6 +24,7 @@ class CriarTerceirizadoSerializer(serializers.Serializer):
     usuario_pk = serializers.IntegerField()
     empresa_pk = serializers.IntegerField()
     cargo_pk = serializers.IntegerField(required=False, allow_null=True)
+    matricula = serializers.CharField(required=False, allow_null=True, allow_blank=True)
     data_inicio = serializers.DateField()
     data_fim = serializers.DateField(required=False, allow_null=True)
     ativo = serializers.BooleanField(default=True, required=False)
@@ -32,6 +33,7 @@ class CriarTerceirizadoSerializer(serializers.Serializer):
 class AtualizarTerceirizadoSerializer(serializers.Serializer):
     empresa_pk = serializers.IntegerField(required=False)
     cargo_pk = serializers.IntegerField(required=False, allow_null=True)
+    matricula = serializers.CharField(required=False, allow_null=True, allow_blank=True)
     data_inicio = serializers.DateField(required=False)
     data_fim = serializers.DateField(required=False, allow_null=True)
     ativo = serializers.BooleanField(required=False)

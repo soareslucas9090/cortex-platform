@@ -11,8 +11,9 @@ from AppCore.core.exceptions.exceptions import (
     SystemErrorException,
     ValidationException,
 )
-from AppCore.common.util.util import normalizar_cpf, normalizar_cep
+from AppCore.common.util.util import normalizar_cpf, normalizar_cep, validar_senha
 
+from Identidade.usuarios.importacao.importacao_exceptions import ImportacaoUsuariosException
 from Identidade.usuarios.importacao.importacao_parser import ImportacaoUsuariosParser
 from Identidade.usuarios.importacao.importacao_resolucao import ImportacaoReferenciasResolver
 from Identidade.usuarios.importacao.importacao_dtos import (
@@ -31,44 +32,38 @@ class UsuarioBusiness(ModelInstanceBusiness):
     (Contato, Endereco, Matricula).
     """
 
+    exceptions_handled = ModelInstanceBusiness.exceptions_handled + (
+        ImportacaoUsuariosException,
+    )
+
     # ------------------------------------------------------------------
     # Operações de criação (sem object_instance)
     # ------------------------------------------------------------------
 
     def criar_usuario(
-        self, cpf: str = None, matricula: str = None, nome: str = None, password: str = None, **kwargs
+        self, cpf: str = None, nome: str = None, password: str = None, **kwargs
     ):
         try:
-            """Cria um novo usuário no sistema após validar CPF ou matrícula."""
+            """Cria um novo usuário no sistema após validar CPF (opcional) e senha."""
             from .models import Usuario
-            from Identidade.matriculas.models import Matricula
-            from Identidade.matriculas.choices import SituacaoMatricula
+
             cpf_normalizado = None
             if cpf:
                 cpf_normalizado = normalizar_cpf(cpf)
                 self.object_instance.rules.cpf_formato_valido(cpf_normalizado)
                 self.object_instance.rules.cpf_unico(cpf_normalizado)
-            else:
-                if not matricula:
-                    raise ValidationException(
-                        'A matrícula é obrigatória caso o CPF não seja informado.'
-                    )
-                self.object_instance.rules.matricula_nao_duplicada(matricula)
-            senha_final = password if password else (cpf_normalizado if cpf_normalizado else matricula)
+            elif not password:
+                raise ValidationException(
+                    'A senha é obrigatória quando o CPF não é informado.'
+                )
+            senha_final = password if password else cpf_normalizado
             with transaction.atomic():
-                user = Usuario.objects.create_user(
+                return Usuario.objects.create_user(
                     cpf=cpf_normalizado,
                     password=senha_final,
                     nome=nome,
                     **kwargs,
                 )
-                if matricula:
-                    Matricula.objects.create(
-                        usuario=user,
-                        matricula=matricula,
-                        situacao=SituacaoMatricula.ATIVA,
-                    )
-                return user
         except Exception as e:
             self.relancar_ou_erro_sistema(e, 'Não foi possível criar o usuário.', logger)
 
@@ -85,6 +80,19 @@ class UsuarioBusiness(ModelInstanceBusiness):
             self.object_instance.save()
         except Exception as e:
             self.relancar_ou_erro_sistema(e, 'Não foi possível atualizar os dados do usuário.', logger)
+
+    def alterar_senha(self, senha_atual: str, nova_senha: str):
+        """Altera a senha de acesso do usuário autenticado."""
+        try:
+            self.object_instance.rules.pode_alterar_senha()
+            self.object_instance.rules.validar_senha_atual(senha_atual)
+            validar_senha(nova_senha)
+            if self.object_instance.check_password(nova_senha):
+                raise BusinessRuleException('A nova senha deve ser diferente da senha atual.')
+            self.object_instance.set_password(nova_senha)
+            self.object_instance.save(update_fields=['password'])
+        except Exception as e:
+            self.relancar_ou_erro_sistema(e, 'Não foi possível alterar a senha.', logger)
 
     def definir_flag_coletivo(self, usuario_coletivo: bool):
         """Ativa/desativa a conta coletiva. Ao desativar, limpa o pool."""
@@ -245,6 +253,20 @@ class UsuarioBusiness(ModelInstanceBusiness):
         except Exception as e:
             self.relancar_ou_erro_sistema(e, 'Não foi possível atualizar o CPF.', logger)
 
+    def informar_cpf(self, cpf: str, solicitante):
+        """
+        Permite L3 preencher CPF ausente via API.
+        Alteração após preenchimento permanece exclusiva do Django admin.
+        """
+        try:
+            self.object_instance.rules.cpf_pode_ser_informado_via_api()
+            self.object_instance.rules.solicitante_pode_informar_cpf_via_api(solicitante)
+            if cpf in (None, ''):
+                return
+            self.atualizar_cpf(cpf)
+        except Exception as e:
+            self.relancar_ou_erro_sistema(e, 'Não foi possível informar o CPF.', logger)
+
     def desativar(self):
         """Desativa o usuário."""
         try:
@@ -295,24 +317,6 @@ class UsuarioBusiness(ModelInstanceBusiness):
             return endereco
         except Exception as e:
             self.relancar_ou_erro_sistema(e, 'Não foi possível salvar o endereço.', logger)
-
-    # ------------------------------------------------------------------
-    # Operações sobre Matricula
-    # ------------------------------------------------------------------
-
-    def adicionar_matricula(self, numero_matricula: str):
-        """Adiciona uma nova matrícula ao usuário após validar unicidade."""
-        try:
-            from Identidade.matriculas.models import Matricula
-            from Identidade.matriculas.choices import SituacaoMatricula
-            self.object_instance.rules.matricula_nao_duplicada(numero_matricula)
-            return Matricula.objects.create(
-                usuario=self.object_instance,
-                matricula=numero_matricula,
-                situacao=SituacaoMatricula.ATIVA,
-            )
-        except Exception as e:
-            self.relancar_ou_erro_sistema(e, 'Não foi possível adicionar a matrícula.', logger)
 
     def _validar_sem_importacao_em_andamento(self):
         from .models import ImportacaoLote, StatusImportacao
@@ -452,13 +456,8 @@ class UsuarioBusiness(ModelInstanceBusiness):
                     or importacao_lote.linhas_processadas == importacao_lote.total_linhas
                 ):
                     importacao_lote.save(update_fields=['linhas_processadas'])
-            mapa_matriculas = {
-                m.usuario_id_planilha: m.matricula
-                for m in estrutura.matriculas
-                if m.usuario_id_planilha is not None and m.matricula
-            }
+            mapa_matriculas = self._construir_mapa_matriculas_por_usuario(estrutura)
             from .models import Usuario
-            from Identidade.matriculas.models import Matricula
             cpfs_planilha = []
             for l in estrutura.usuarios:
                 if l.cpf:
@@ -467,23 +466,33 @@ class UsuarioBusiness(ModelInstanceBusiness):
                     if len(cpf_digitos) >= 3:
                         l.cpf = cpf_digitos.zfill(11)
                     cpfs_planilha.append(self.object_instance.helper.normalizar_cpf(l.cpf))
-            matriculas_planilha = [m for m in mapa_matriculas.values() if m]
+            matriculas_planilha = [
+                matricula
+                for matriculas in mapa_matriculas.values()
+                for matricula in matriculas
+            ]
             usuarios_por_cpf = {u.cpf: u for u in Usuario.objects.filter(cpf__in=cpfs_planilha) if u.cpf}
             usuarios_por_matricula = {}
-            if matriculas_planilha:
-                for m in Matricula.objects.filter(matricula__in=matriculas_planilha).select_related('usuario'):
-                    usuarios_por_matricula[m.matricula] = m.usuario
+            matriculas_em_lote = set()
+            for matricula in matriculas_planilha:
+                usuario = Usuario().helper.buscar_por_matricula_valida(matricula)
+                if usuario:
+                    usuarios_por_matricula[matricula] = usuario
             for linha in estrutura.usuarios:
                 _incrementar_progresso()
                 try:
                     with transaction.atomic():
-                        usuario, criado = self._criar_ou_atualizar_usuario(linha, mapa_matriculas, usuarios_por_cpf, usuarios_por_matricula)
+                        usuario, criado = self._criar_ou_atualizar_usuario(
+                            linha,
+                            mapa_matriculas,
+                            usuarios_por_cpf,
+                            usuarios_por_matricula,
+                        )
                         mapa_usuarios[linha.usuario_id_planilha] = usuario
 
                         if usuario.cpf:
                             usuarios_por_cpf[usuario.cpf] = usuario
-                        matricula_planilha = mapa_matriculas.get(linha.usuario_id_planilha)
-                        if matricula_planilha:
+                        for matricula_planilha in mapa_matriculas.get(linha.usuario_id_planilha, []):
                             usuarios_por_matricula[matricula_planilha] = usuario
 
                         if criado:
@@ -587,36 +596,6 @@ class UsuarioBusiness(ModelInstanceBusiness):
                 ['logradouro', 'bairro', 'cep', 'complemento', 'numero', 'cidade', 'estado'],
                 resumo, 'enderecos_atualizados', 'enderecos_criados', erros, 'Endereco', 'usuario_id'
             )
-            from Identidade.matriculas.models import Matricula
-            matriculas_existentes_qs = Matricula.objects.filter(usuario_id__in=usuarios_ids)
-            matriculas_existentes = {(m.usuario_id, m.matricula): m for m in matriculas_existentes_qs}
-            matriculas_to_create = []
-            matriculas_em_lote = set()
-            for linha in estrutura.matriculas:
-                _incrementar_progresso()
-                try:
-                    usuario = self.object_instance.helper.obter_usuario_por_id_planilha(linha.usuario_id_planilha, mapa_usuarios)
-                    self.object_instance.rules.usuario_referenciado_existe(usuario, 'matrícula')
-
-                    if linha.matricula in matriculas_em_lote:
-                        raise ValidationException(
-                            'A matrícula já foi informada para outro usuário nesta importação.'
-                        )
-                    self.object_instance.rules.matricula_nao_duplicada(linha.matricula)
-                    matriculas_em_lote.add(linha.matricula)
-
-                    if (usuario.id, linha.matricula) not in matriculas_existentes:
-                        nova_matricula = Matricula(usuario=usuario, matricula=linha.matricula)
-                        nova_matricula._linha = linha
-                        matriculas_to_create.append(nova_matricula)
-                        matriculas_existentes[(usuario.id, linha.matricula)] = nova_matricula
-                        resumo.matriculas_criadas += 1
-                except Exception as exc:
-                    erros.append(self._criar_erro('Matricula', linha.numero_linha, 'usuario_id', linha.usuario_id_planilha, 'erro_matricula', str(exc)))
-            self._executar_bulk_com_fallback(
-                Matricula, [], matriculas_to_create, [],
-                resumo, 'matriculas_atualizadas', 'matriculas_criadas', erros, 'Matricula', 'usuario_id'
-            )
             for linha in estrutura.alunos:
                 _incrementar_progresso()
                 try:
@@ -648,7 +627,7 @@ class UsuarioBusiness(ModelInstanceBusiness):
                         cargo = resolver_referencias.resolver_cargo(linha.cargo_id_planilha)
                         self.object_instance.rules.referencia_seed_existe(cargo, f'cargo_id={linha.cargo_id_planilha}')
 
-                        criado = self._garantir_servidor(usuario, cargo, linha)
+                        criado = self._garantir_servidor(usuario, cargo, linha, matriculas_em_lote)
                         if criado:
                             resumo.servidores_criados += 1
                 except Exception as exc:
@@ -675,7 +654,7 @@ class UsuarioBusiness(ModelInstanceBusiness):
                             f'empresa_instituicao_id={linha.empresa_instituicao_id_planilha}'
                         )
 
-                        criado = self._garantir_terceirizado(usuario, empresa, linha)
+                        criado = self._garantir_terceirizado(usuario, empresa, linha, matriculas_em_lote)
                         if criado:
                             resumo.terceirizados_criados += 1
                 except Exception as exc:
@@ -739,7 +718,7 @@ class UsuarioBusiness(ModelInstanceBusiness):
                         curso = resolver_referencias.resolver_curso(linha.curso_id_planilha)
                         self.object_instance.rules.referencia_seed_existe(curso, f'curso_id={linha.curso_id_planilha}')
 
-                        criado = self._garantir_vinculo_aluno_curso(aluno, curso, linha)
+                        criado = self._garantir_vinculo_aluno_curso(aluno, curso, linha, matriculas_em_lote)
                         if criado:
                             resumo.vinculos_aluno_curso_criados += 1
                 except Exception as exc:
@@ -773,13 +752,19 @@ class UsuarioBusiness(ModelInstanceBusiness):
         except Exception as e:
             self.relancar_ou_erro_sistema(e, 'Não foi possível executar _validar_estrutura_importacao.', logger)
 
-    def _criar_ou_atualizar_usuario(self, linha, mapa_matriculas, usuarios_por_cpf, usuarios_por_matricula):
+    def _criar_ou_atualizar_usuario(
+        self,
+        linha,
+        mapa_matriculas,
+        usuarios_por_cpf,
+        usuarios_por_matricula,
+    ):
         try:
             from .models import Usuario
-            from Identidade.matriculas.models import Matricula
+
             self.object_instance.rules.usuario_id_planilha_obrigatorio(linha.usuario_id_planilha)
             cpf_normalizado = None
-            matricula_planilha = mapa_matriculas.get(linha.usuario_id_planilha)
+            matriculas_do_usuario = list(mapa_matriculas.get(linha.usuario_id_planilha) or [])
             if linha.cpf:
                 cpf_digitos = ''.join(c for c in linha.cpf if c.isdigit())
                 if len(cpf_digitos) >= 3:
@@ -788,14 +773,16 @@ class UsuarioBusiness(ModelInstanceBusiness):
                 self.object_instance.rules.cpf_valido_importacao(linha.cpf)
                 cpf_normalizado = self.object_instance.helper.normalizar_cpf(linha.cpf)
                 usuario = usuarios_por_cpf.get(cpf_normalizado)
-            elif matricula_planilha:
+            elif matriculas_do_usuario:
                 cpf_normalizado = None
-                usuario = usuarios_por_matricula.get(matricula_planilha)
+                usuario = self._resolver_usuario_por_matriculas(
+                    matriculas_do_usuario,
+                    usuarios_por_matricula,
+                )
             else:
                 raise ValidationException('O usuário deve possuir CPF ou Matrícula.')
             if usuario:
                 usuario.nome = linha.nome
-                usuario.deficiencia = linha.deficiencia
                 usuario.ativo = linha.ativo
                 usuario.colaborador_externo = linha.colaborador_externo
                 if linha.foto:
@@ -804,23 +791,20 @@ class UsuarioBusiness(ModelInstanceBusiness):
                     usuario.last_login = linha.ultimo_login
                 usuario.save()
                 return usuario, False
-            senha_padrao = cpf_normalizado if cpf_normalizado else matricula_planilha
+            senha_padrao = (
+                cpf_normalizado if cpf_normalizado else matriculas_do_usuario[0]
+            )
+            for matricula in matriculas_do_usuario:
+                self.object_instance.rules.matricula_unica_no_sistema(matricula)
             usuario = Usuario.objects.create_user(
                 cpf=cpf_normalizado,
                 password=senha_padrao,
                 nome=linha.nome,
-                deficiencia=linha.deficiencia,
                 ativo=linha.ativo,
                 colaborador_externo=linha.colaborador_externo,
                 foto=linha.foto or None,
                 last_login=linha.ultimo_login,
             )
-            if matricula_planilha:
-                self.object_instance.rules.matricula_nao_duplicada(matricula_planilha)
-                Matricula.objects.get_or_create(
-                    usuario=usuario,
-                    matricula=matricula_planilha,
-                )
             return usuario, True
         except Exception as e:
             self.relancar_ou_erro_sistema(e, 'Não foi possível executar _criar_ou_atualizar_usuario.', logger)
@@ -874,24 +858,111 @@ class UsuarioBusiness(ModelInstanceBusiness):
         except Exception as e:
             self.relancar_ou_erro_sistema(e, 'Não foi possível executar _criar_ou_atualizar_endereco.', logger)
 
-    def _criar_ou_atualizar_matricula(self, usuario, linha):
+    def _resolver_usuario_por_matriculas(self, matriculas, usuarios_por_matricula):
+        """Localiza o usuário do lote/banco por qualquer uma das matrículas informadas."""
         try:
-            from Identidade.matriculas.models import Matricula
-            matricula = Matricula.objects.filter(usuario=usuario, matricula=linha.matricula).first()
-            if matricula:
-                return False
-            self.object_instance.rules.matricula_nao_duplicada(linha.matricula)
-            Matricula.objects.create(
-                usuario=usuario,
-                matricula=linha.matricula,
-            )
-            return True
+            encontrados = []
+            ids_vistos = set()
+            for matricula in matriculas:
+                usuario = usuarios_por_matricula.get(matricula)
+                if usuario is None or usuario.pk in ids_vistos:
+                    continue
+                ids_vistos.add(usuario.pk)
+                encontrados.append(usuario)
+            if len(encontrados) > 1:
+                raise ValidationException(
+                    'As matrículas informadas para este usuário correspondem a contas diferentes.'
+                )
+            return encontrados[0] if encontrados else None
         except Exception as e:
-            self.relancar_ou_erro_sistema(e, 'Não foi possível executar _criar_ou_atualizar_matricula.', logger)
+            self.relancar_ou_erro_sistema(
+                e,
+                'Não foi possível executar _resolver_usuario_por_matriculas.',
+                logger,
+            )
+
+    def _construir_mapa_matriculas_por_usuario(self, estrutura):
+        """Agrupa as matrículas da planilha por usuario_id. Um usuário pode ter várias."""
+        try:
+            from AppCore.common.util.util import normalizar_matricula
+
+            mapa_aluno_usuario = {
+                aluno.aluno_id_planilha: aluno.usuario_id_planilha
+                for aluno in estrutura.alunos
+                if aluno.aluno_id_planilha is not None and aluno.usuario_id_planilha is not None
+            }
+            mapa = {}
+            matricula_por_usuario = {}
+
+            def registrar(usuario_id_planilha, matricula):
+                matricula = normalizar_matricula(matricula)
+                if usuario_id_planilha is None or not matricula:
+                    return
+                outro_usuario = matricula_por_usuario.get(matricula)
+                if outro_usuario is not None and outro_usuario != usuario_id_planilha:
+                    raise ValidationException(
+                        'A matrícula já foi informada para outro usuário nesta importação.'
+                    )
+                matriculas = mapa.setdefault(usuario_id_planilha, [])
+                if matricula not in matriculas:
+                    matriculas.append(matricula)
+                matricula_por_usuario[matricula] = usuario_id_planilha
+
+            for linha in estrutura.servidores:
+                registrar(linha.usuario_id_planilha, linha.matricula)
+            for linha in estrutura.terceirizados:
+                registrar(linha.usuario_id_planilha, linha.matricula)
+            for linha in estrutura.alunos_cursos:
+                usuario_id_planilha = mapa_aluno_usuario.get(linha.aluno_id_planilha)
+                registrar(usuario_id_planilha, linha.matricula)
+
+            return mapa
+        except Exception as e:
+            self.relancar_ou_erro_sistema(
+                e,
+                'Não foi possível executar _construir_mapa_matriculas_por_usuario.',
+                logger,
+            )
+
+    def _validar_matricula_importacao(
+        self,
+        matricula,
+        matriculas_em_lote,
+        excluir_fonte=None,
+        excluir_id=None,
+    ):
+        try:
+            from AppCore.common.util.util import normalizar_matricula
+
+            matricula = normalizar_matricula(matricula)
+            if not matricula:
+                return None
+            if matricula in matriculas_em_lote:
+                raise ValidationException(
+                    'A matrícula já foi informada nesta importação.'
+                )
+            self.object_instance.rules.matricula_unica_no_sistema(
+                matricula,
+                excluir_fonte=excluir_fonte,
+                excluir_id=excluir_id,
+            )
+            matriculas_em_lote.add(matricula)
+            return matricula
+        except Exception as e:
+            self.relancar_ou_erro_sistema(
+                e,
+                'Não foi possível executar _validar_matricula_importacao.',
+                logger,
+            )
 
     def _garantir_aluno(self, usuario, linha):
         try:
             from Academico.alunos.models import Aluno
+            from Identidade.usuarios.utils import normalizar_deficiencia
+
+            if linha.deficiencia:
+                usuario.deficiencia = normalizar_deficiencia(linha.deficiencia)
+                usuario.save(update_fields=['deficiencia'])
             aluno = Aluno.objects.filter(usuario=usuario).first()
             if aluno:
                 if linha.ira is not None:
@@ -906,19 +977,28 @@ class UsuarioBusiness(ModelInstanceBusiness):
         except Exception as e:
             self.relancar_ou_erro_sistema(e, 'Não foi possível executar _garantir_aluno.', logger)
 
-    def _garantir_servidor(self, usuario, cargo, linha):
+    def _garantir_servidor(self, usuario, cargo, linha, matriculas_em_lote):
         try:
             from PessoasInstitucionais.servidores.models import Servidor
+
             servidor = Servidor.objects.filter(usuario=usuario).first()
             from PessoasInstitucionais.servidores.choices import CategoriaServidor
             for categoria in CategoriaServidor.choices:
                 if categoria[1] == linha.categoria:
                     categoria = categoria[0]
                     break
+            matricula = self._validar_matricula_importacao(
+                linha.matricula,
+                matriculas_em_lote,
+                excluir_fonte='servidor',
+                excluir_id=servidor.pk if servidor else None,
+            )
             if servidor:
                 servidor.cargo = cargo
                 servidor.categoria = categoria
                 servidor.ativo = linha.ativo
+                if matricula:
+                    servidor.matricula = matricula
                 servidor.save()
                 return False
             Servidor.objects.create(
@@ -926,24 +1006,35 @@ class UsuarioBusiness(ModelInstanceBusiness):
                 cargo=cargo,
                 categoria=categoria,
                 ativo=linha.ativo,
+                matricula=matricula,
             )
             return True
         except Exception as e:
             self.relancar_ou_erro_sistema(e, 'Não foi possível executar _garantir_servidor.', logger)
 
-    def _garantir_terceirizado(self, usuario, empresa, linha):
+    def _garantir_terceirizado(self, usuario, empresa, linha, matriculas_em_lote):
         try:
             from PessoasInstitucionais.terceirizados.models import Terceirizado
+
             terceirizado = Terceirizado.objects.filter(usuario=usuario).first()
+            matricula = self._validar_matricula_importacao(
+                linha.matricula,
+                matriculas_em_lote,
+                excluir_fonte='terceirizado',
+                excluir_id=terceirizado.pk if terceirizado else None,
+            )
             if terceirizado:
                 terceirizado.empresa_instituicao = empresa
                 terceirizado.ativo = linha.ativo
+                if matricula:
+                    terceirizado.matricula = matricula
                 terceirizado.save()
                 return False
             Terceirizado.objects.create(
                 usuario=usuario,
                 empresa_instituicao=empresa,
                 ativo=linha.ativo,
+                matricula=matricula,
             )
             return True
         except Exception as e:
@@ -978,19 +1069,49 @@ class UsuarioBusiness(ModelInstanceBusiness):
         except Exception as e:
             self.relancar_ou_erro_sistema(e, 'Não foi possível executar _garantir_lotacao.', logger)
 
-    def _garantir_vinculo_aluno_curso(self, aluno, curso, linha):
+    def _garantir_vinculo_aluno_curso(self, aluno, curso, linha, matriculas_em_lote):
         try:
             from Academico.aluno_cursos.models import AlunoCurso
+
             vinculo = AlunoCurso.objects.filter(aluno=aluno, curso=curso).first()
+            matricula = self._validar_matricula_importacao(
+                linha.matricula,
+                matriculas_em_lote,
+                excluir_fonte='aluno_curso',
+                excluir_id=vinculo.pk if vinculo else None,
+            )
             if vinculo:
+                atualizado = False
                 if linha.ano_conclusao is not None:
                     vinculo.ano_conclusao = linha.ano_conclusao
+                    atualizado = True
+                if linha.ira is not None:
+                    vinculo.ira = linha.ira
+                    atualizado = True
+                if linha.turma:
+                    vinculo.turma = linha.turma
+                    atualizado = True
+                if linha.turno:
+                    vinculo.turno = linha.turno
+                    atualizado = True
+                if linha.situacao_curso:
+                    vinculo.situacao_curso = linha.situacao_curso
+                    atualizado = True
+                if matricula:
+                    vinculo.matricula = matricula
+                    atualizado = True
+                if atualizado:
                     vinculo.save()
                 return False
             AlunoCurso.objects.create(
                 aluno=aluno,
                 curso=curso,
                 ano_conclusao=linha.ano_conclusao,
+                matricula=matricula,
+                ira=linha.ira,
+                turma=linha.turma or None,
+                turno=linha.turno or None,
+                situacao_curso=linha.situacao_curso or None,
             )
             return True
         except Exception as e:
@@ -1003,7 +1124,6 @@ class UsuarioBusiness(ModelInstanceBusiness):
                 estrutura.usuarios,
                 estrutura.contatos,
                 estrutura.enderecos,
-                estrutura.matriculas,
                 estrutura.alunos,
                 estrutura.alunos_cursos,
                 estrutura.servidores,
@@ -1022,7 +1142,6 @@ class UsuarioBusiness(ModelInstanceBusiness):
                 len(estrutura.usuarios),
                 len(estrutura.contatos),
                 len(estrutura.enderecos),
-                len(estrutura.matriculas),
                 len(estrutura.alunos),
                 len(estrutura.alunos_cursos),
                 len(estrutura.servidores),

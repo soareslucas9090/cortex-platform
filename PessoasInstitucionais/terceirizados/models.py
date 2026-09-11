@@ -49,12 +49,20 @@ class Terceirizado(ModelHelperMixin, ModelBusinessMixin, ModelRulesMixin, BasicM
         blank=True,
         help_text='Data de término do vínculo. Nulo indica vínculo em aberto.',
     )
+    matricula = models.CharField('Matrícula', max_length=50, null=True, blank=True)
     ativo = models.BooleanField('Ativo', default=True)
 
     class Meta:
         verbose_name = 'Terceirizado'
         verbose_name_plural = 'Terceirizados'
         ordering = ['usuario__nome']
+        constraints = [
+            models.UniqueConstraint(
+                fields=['matricula'],
+                condition=models.Q(matricula__isnull=False),
+                name='terceirizados_matricula_unica',
+            ),
+        ]
 
     def __str__(self):
         return f'{self.usuario.nome} - {self.empresa_instituicao.nome}'

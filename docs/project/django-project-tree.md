@@ -135,16 +135,14 @@ Identidade/
 ├── urls.py
 ├── usuarios/
 ├── contatos/
-├── enderecos/
-└── matriculas/
+└── enderecos/
 ```
 
 #### Responsabilidades
 
-- `usuarios/` → model principal `Usuario`
+- `usuarios/` → model principal `Usuario` (helpers/rules de matrícula; normalização em `AppCore/common/util`)
 - `contatos/` → model principal `Contato`
 - `enderecos/` → model principal `Endereco`
-- `matriculas/` → model principal `Matricula`
 
 ---
 
@@ -253,7 +251,6 @@ urlpatterns = [
     path('usuarios/', include('Identidade.usuarios.urls')),
     path('contatos/', include('Identidade.contatos.urls')),
     path('enderecos/', include('Identidade.enderecos.urls')),
-    path('matriculas/', include('Identidade.matriculas.urls')),
 ]
 ```
 
@@ -270,7 +267,6 @@ PROJECT_APPS = [
     'Identidade.usuarios',
     'Identidade.contatos',
     'Identidade.enderecos',
-    'Identidade.matriculas',
     'Organizacional.setores',
     'Organizacional.funcoes',
     'Organizacional.vinculos',

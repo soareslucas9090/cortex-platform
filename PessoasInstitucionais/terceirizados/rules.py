@@ -3,6 +3,17 @@ from AppCore.core.rules.rules import ModelInstanceRules
 
 class TerceirizadoRules(ModelInstanceRules):
 
+    def matricula_unica(self, numero_matricula: str, excluir_id=None) -> bool:
+        """Valida unicidade global da matrícula."""
+        from Identidade.usuarios.models import Usuario
+
+        Usuario().rules.matricula_unica_no_sistema(
+            numero_matricula,
+            excluir_fonte='terceirizado',
+            excluir_id=excluir_id,
+        )
+        return True
+
     def usuario_sem_perfil_terceirizado(self, usuario_pk) -> bool:
         """Valida que o usuário ainda não possui perfil de terceirizado."""
         from .models import Terceirizado

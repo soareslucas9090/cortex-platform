@@ -29,9 +29,9 @@ class SincronizarFaltasTransporteTestCase(APITestCase):
         Strike().business.criar_para_ticket(ticket)
         return ticket
 
-    def _aprovar_strike(self, ticket):
-        justificativa = Justificativa.objects.create(
-            strike=ticket.strike,
+    def _aprovar_strikes_ativos(self):
+        justificativa = Justificativa().business.criar_justificativa(
+            usuario=self.aluno.usuario,
             texto='Justificativa de teste.',
         )
         justificativa.business.analisar(aprovar=True, usuario=self.admin)
@@ -55,12 +55,12 @@ class SincronizarFaltasTransporteTestCase(APITestCase):
         self.assertEqual(self.aluno.quantidade_bloqueios, 1)
 
     def test_aprovacao_mantem_quantidade_bloqueios_historica(self):
-        tickets = [self._criar_strike_ativo(indice) for indice in range(3)]
+        for indice in range(3):
+            self._criar_strike_ativo(indice)
         self.aluno.refresh_from_db()
         self.assertEqual(self.aluno.quantidade_bloqueios, 1)
 
-        for ticket in tickets:
-            self._aprovar_strike(ticket)
+        self._aprovar_strikes_ativos()
 
         self.aluno.refresh_from_db()
         self.assertEqual(self.aluno.faltas, 0)
@@ -68,9 +68,9 @@ class SincronizarFaltasTransporteTestCase(APITestCase):
         self.assertEqual(self.aluno.quantidade_bloqueios, 1)
 
     def test_novo_ciclo_incrementa_quantidade_bloqueios_novamente(self):
-        tickets_primeiro_ciclo = [self._criar_strike_ativo(indice) for indice in range(3)]
-        for ticket in tickets_primeiro_ciclo:
-            self._aprovar_strike(ticket)
+        for indice in range(3):
+            self._criar_strike_ativo(indice)
+        self._aprovar_strikes_ativos()
 
         self.aluno.refresh_from_db()
         self.assertEqual(self.aluno.quantidade_bloqueios, 1)

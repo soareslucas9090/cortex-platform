@@ -40,16 +40,20 @@ class HistoricoMotoristaAPITestCase(APITestCase):
         for indice, estado in enumerate([
             StatusTicket.EMBARCADO, StatusTicket.EMBARCADO, StatusTicket.EMBARCADO,
             StatusTicket.AUSENTE, StatusTicket.AUSENTE, StatusTicket.CANCELADO,
-            StatusTicket.NAO_CONTEMPLADO,
+            StatusTicket.EM_ESPERA, StatusTicket.CONTEMPLADO,
         ]):
             aluno = criar_aluno(f'731000000{indice:02d}', nome=f'Passageiro {indice}')
             Ticket.objects.create(execucao_rota=self.execucao, aluno=aluno, status=estado)
-        for indice in range(2):
-            aluno = criar_aluno(f'732000000{indice:02d}', nome=f'Sem ticket {indice}')
-            EntradaSemTicket.objects.create(
-                execucao_rota=self.execucao, aluno=aluno, cpf=aluno.usuario.cpf,
-                data_hora_entrada=self.execucao.data_hora_saida,
-            )
+            if estado == StatusTicket.CONTEMPLADO:
+                EntradaSemTicket.objects.create(
+                    execucao_rota=self.execucao, aluno=aluno, cpf=aluno.usuario.cpf,
+                    data_hora_entrada=self.execucao.data_hora_saida,
+                )
+        aluno = criar_aluno('73200000000', nome='Sem ticket 0')
+        EntradaSemTicket.objects.create(
+            execucao_rota=self.execucao, aluno=aluno, cpf=aluno.usuario.cpf,
+            data_hora_entrada=self.execucao.data_hora_saida,
+        )
 
     def test_contagens_reais_sem_multiplicar_joins(self):
         self.criar_passageiros()
@@ -73,8 +77,13 @@ class HistoricoMotoristaAPITestCase(APITestCase):
         self.assertEqual(len(item['passageiros_sem_ticket']), item['sem_ticket'])
         for passageiro in item['tickets_presentes'] + item['tickets_ausentes'] + item['passageiros_sem_ticket']:
             self.assertEqual(set(passageiro), {'nome'})
+        self.assertCountEqual(
+            [passageiro['nome'] for passageiro in item['passageiros_sem_ticket']],
+            ['Passageiro 7', 'Sem ticket 0'],
+        )
 
     def test_so_aparece_depois_de_finalizar_viagem(self):
+        self.execucao.status = StatusExecucaoRota.INICIADA
         self.execucao.rota_finalizada_em = None
         self.execucao.save()
         self.assertEqual(self.client.get(self.lista).data['count'], 0)
@@ -86,6 +95,7 @@ class HistoricoMotoristaAPITestCase(APITestCase):
         self.assertEqual(self.client.get(self.detalhe).status_code, 200)
 
     def test_conferencia_finalizada_sem_viagem_nao_entra(self):
+        self.execucao.status = StatusExecucaoRota.EMBARCADO
         self.execucao.rota_iniciada_em = None
         self.execucao.rota_finalizada_em = None
         self.execucao.save()

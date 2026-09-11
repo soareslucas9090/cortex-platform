@@ -30,6 +30,16 @@ def normalizar_cpf(cpf: str) -> str:
     return re.sub(r'\D', '', cpf)
 
 
+def normalizar_matricula(valor):
+    """Normaliza matrícula institucional: trim; vazio/NULL → None."""
+    if valor is None:
+        return None
+    texto = str(valor).strip()
+    if not texto or texto.upper() == 'NULL':
+        return None
+    return texto
+
+
 def normalizar_cep(cep) -> str:
     """Remove formatação do CEP, mantendo apenas os dígitos, e garante 8 dígitos se não estiver vazio."""
     if not cep:

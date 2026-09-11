@@ -23,6 +23,8 @@ from AppCore.basics.views.basic_views import (
 from .models import Usuario
 from .serializers import (
     AdicionarItemColetivoSerializer,
+    AlterarSenhaResponseSerializer,
+    AlterarSenhaSerializer,
     AtualizarUsuarioSerializer,
     AtualizarFotoPrimariaSerializer,
     AtualizarFotoSecundariaSerializer,
@@ -208,7 +210,6 @@ class CriarUsuarioView(IsAdminMixin, BasicPostAPIView):
     def do_action_post(self, serializer_data, request):
         usuario = Usuario().business.criar_usuario(
             cpf=serializer_data.get('cpf'),
-            matricula=serializer_data.get('matricula'),
             nome=serializer_data['nome'],
             password=serializer_data.get('password'),
             email=serializer_data.get('email'),
@@ -221,6 +222,39 @@ class CriarUsuarioView(IsAdminMixin, BasicPostAPIView):
             'dados': UsuarioSerializer(usuario, context={'request': request}).data,
             'status_code': status.HTTP_201_CREATED,
         }
+
+
+@extend_schema(
+    tags=['Usuarios'],
+    summary='Alterar senha de acesso',
+    description='''
+    Permite ao usuário autenticado alterar a própria senha de acesso ao sistema.
+
+    **Permissões:** Qualquer usuário autenticado (L1–L3).
+
+    A nova senha deve atender à política de complexidade (mínimo 8 caracteres,
+    maiúscula, minúscula, número e caractere especial) e ser diferente da senha atual.
+    Contas coletivas não podem usar este endpoint.
+    ''',
+    request=AlterarSenhaSerializer,
+    responses={
+        status.HTTP_200_OK: AlterarSenhaResponseSerializer,
+        status.HTTP_400_BAD_REQUEST: {'description': 'Dados inválidos ou senha atual incorreta.'},
+        status.HTTP_401_UNAUTHORIZED: {'description': 'Não autenticado.'},
+        status.HTTP_403_FORBIDDEN: {'description': 'Operação não permitida para este tipo de conta.'},
+    },
+)
+class AlterarSenhaView(IsAuthenticatedMixin, BasicPostAPIView):
+    """POST /cortex/identidade/usuarios/alterar-senha/"""
+    serializer_class = AlterarSenhaSerializer
+    mensagem_sucesso = 'Senha alterada com sucesso.'
+
+    def do_action_post(self, serializer_data, request):
+        request.user.business.alterar_senha(
+            senha_atual=serializer_data['senha_atual'],
+            nova_senha=serializer_data['nova_senha'],
+        )
+        return {'mensagem': self.mensagem_sucesso}
 
 
 @extend_schema(
@@ -262,7 +296,9 @@ class DetalheUsuarioView(IsOwnerOrAdminMixin, BasicRetrieveAPIView):
     **Permissões:** L2+ (LER_TUDO) lê; escrita pelo dono (L1) ou L3 (EDITAR_TUDO).
     O campo `usuario_coletivo` não é aceito neste PATCH.
 
-    CPF não é alterável neste endpoint.
+    **CPF:** somente L3 pode informar o CPF quando o usuário ainda não possui CPF
+    cadastrado. Se o CPF já estiver preenchido, a API retorna erro de permissão —
+    a edição nesse caso é exclusiva do Django admin.
 
     **Normalização de Deficiência (campo `deficiencia`):**
     O campo é normalizado automaticamente no save (removendo acentos, convertendo para caixa baixa e substituindo espaços por `_`).
@@ -289,7 +325,11 @@ class AtualizarUsuarioView(IsOwnerOrAdminMixin, BasicPatchAPIView):
         return obj
 
     def do_action_patch(self, serializer_data, request, **kwargs):
-        self.object.business.atualizar_dados(serializer_data)
+        dados = dict(serializer_data)
+        if 'cpf' in dados:
+            self.object.business.informar_cpf(dados.pop('cpf'), solicitante=request.user)
+        if dados:
+            self.object.business.atualizar_dados(dados)
         return {
             'mensagem': self.mensagem_sucesso,
             'dados': UsuarioSerializer(self.object, context={'request': request}).data,
