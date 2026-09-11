@@ -1,4 +1,4 @@
-from datetime import timedelta
+from datetime import date, datetime, time, timedelta
 from unittest.mock import patch
 
 from django.core import signing
@@ -12,6 +12,10 @@ from rest_framework.test import APITestCase
 from Academico.alunos.choices import SituacaoAluno
 from AppCore.core.exceptions.exceptions import BusinessRuleException
 from Transporte.execucoes_rotas.choices import StatusExecucaoRota
+from Transporte.execucoes_rotas.models import ExecucaoRota
+from Transporte.percursos.models import Percurso
+from Transporte.rotas.choices import DiaSemana
+from Transporte.rotas.models import Rota
 from Transporte.strikes.helpers import sincronizar_faltas_transporte
 from Transporte.strikes.models import Strike
 from Transporte.tests_utils import (
@@ -80,13 +84,13 @@ class TicketBusinessTestCase(APITestCase):
             with self.assertRaises(BusinessRuleException):
                 Ticket().business.entrar_fila(self.execucao.pk, outro.usuario)
 
-    def test_fim_de_semana_bloqueia_reserva(self):
-        dias_ate_sabado = (5 - timezone.localdate().weekday()) % 7
-        if dias_ate_sabado == 0:
-            dias_ate_sabado = 7
+    def test_domingo_bloqueia_reserva(self):
+        dias_ate_domingo = (6 - timezone.localdate().weekday()) % 7
+        if dias_ate_domingo == 0:
+            dias_ate_domingo = 7
         _, execucao = criar_rota_e_execucao(
             vagas=1,
-            dias_ate_execucao=dias_ate_sabado,
+            dias_ate_execucao=dias_ate_domingo,
         )
         instante = timezone.localtime(execucao.data_hora_saida).replace(
             hour=1,
@@ -97,6 +101,61 @@ class TicketBusinessTestCase(APITestCase):
         with patch('Transporte.tickets.rules.now', return_value=instante):
             with self.assertRaises(BusinessRuleException):
                 Ticket().business.solicitar_reserva(execucao.pk, self.aluno.usuario)
+
+    def test_feriado_bloqueia_reserva_em_dia_util(self):
+        data_feriado = date(2026, 9, 7)
+        percurso = Percurso.objects.create(
+            apelido='Feriado para tickets',
+            descricao='Percurso de feriado',
+        )
+        rota = Rota.objects.create(
+            percurso=percurso,
+            horario_saida=time(12, 0),
+            dia_semana=DiaSemana.SEGUNDA,
+            quantidade_vagas=1,
+        )
+        execucao = ExecucaoRota().business.criar_execucao(rota.pk, data_feriado)
+        instante = timezone.make_aware(
+            datetime.combine(data_feriado, time(1, 0)),
+            timezone.get_current_timezone(),
+        )
+
+        with patch('Transporte.tickets.rules.now', return_value=instante):
+            with self.assertRaises(BusinessRuleException):
+                Ticket().business.solicitar_reserva(
+                    execucao.pk,
+                    self.aluno.usuario,
+                )
+
+    def test_sabado_letivo_permite_reserva_fila_e_cancelamento(self):
+        data_sabado = date(2026, 9, 5)
+        percurso = Percurso.objects.create(
+            apelido='Sábado letivo para tickets',
+            descricao='Percurso de sábado',
+        )
+        rota = Rota.objects.create(
+            percurso=percurso,
+            horario_saida=time(12, 0),
+            dia_semana=DiaSemana.SABADO,
+            quantidade_vagas=1,
+        )
+        execucao = ExecucaoRota().business.criar_execucao(rota.pk, data_sabado)
+        instante = timezone.make_aware(
+            datetime.combine(data_sabado, time(1, 0)),
+            timezone.get_current_timezone(),
+        )
+        outro = criar_aluno('20000000029')
+
+        with patch('Transporte.tickets.rules.now', return_value=instante):
+            reservado = Ticket().business.solicitar_reserva(
+                execucao.pk,
+                self.aluno.usuario,
+            )
+            espera = Ticket().business.entrar_fila(execucao.pk, outro.usuario)
+            reservado.business.cancelar(self.aluno.usuario)
+
+        espera.refresh_from_db()
+        self.assertEqual(espera.status, StatusTicket.RESERVADO)
 
     def test_reserva_e_lotacao_exige_fila_explicita(self):
         ticket = Ticket().business.solicitar_reserva(self.execucao.pk, self.aluno.usuario)
@@ -321,7 +380,7 @@ class TicketBusinessTestCase(APITestCase):
             )
             Strike.objects.create(ticket=ticket)
 
-        _, nova_execucao = criar_rota_e_execucao(vagas=1, dias_ate_execucao=25)
+        _, nova_execucao = criar_rota_e_execucao(vagas=1, dias_ate_execucao=26)
         ocupante = criar_aluno('20000000020')
         instante = timezone.localtime(nova_execucao.data_hora_saida).replace(
             hour=1,

@@ -1,6 +1,7 @@
 import os, sys
 from pathlib import Path
 
+from celery.schedules import crontab
 from django.core.exceptions import ImproperlyConfigured
 from dotenv import load_dotenv
 
@@ -144,6 +145,7 @@ PROJECT_APPS = [
     'Transporte.percursos',
     'Transporte.rotas',
     'Transporte.motoristas',
+    'Transporte.calendario_operacional',
     'Transporte.execucoes_rotas',
     'Transporte.tickets',
     'Transporte.strikes',
@@ -279,6 +281,12 @@ CELERY_ACCEPT_CONTENT = ['json']
 CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_SERIALIZER = 'json'
 CELERY_TIMEZONE = TIME_ZONE
+CELERY_BEAT_SCHEDULE = {
+    'gerar-execucoes-rotas-pelo-calendario': {
+        'task': 'Transporte.execucoes_rotas.tasks.gerar_execucoes_rotas_automaticas_task',
+        'schedule': crontab(minute='*/5'),
+    },
+}
 
 # Configurações do armazenamento de modelos (S3)
 AWS_S3_ENDPOINT_URL = os.environ.get('AWS_S3_ENDPOINT_URL', 'https://t3.storage.box')

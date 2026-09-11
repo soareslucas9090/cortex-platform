@@ -28,10 +28,12 @@ class TicketRules(ModelInstanceRules):
             self.return_exception('As reservas desta execução não estão abertas.')
         return True
 
-    def validar_janela_solicitacao(self, execucao) -> bool:
+    def validar_janela_solicitacao(self, execucao, dia_operacional) -> bool:
         self.validar_execucao_aberta(execucao)
-        if execucao.data_execucao.weekday() >= 5:
-            self.return_exception('Reservas e fila de espera funcionam somente de segunda a sexta.')
+        if not dia_operacional:
+            self.return_exception(
+                'Reservas e fila de espera não estão disponíveis nesta data.'
+            )
 
         agora = now()
         saida_local = localtime(execucao.data_hora_saida)
@@ -68,11 +70,13 @@ class TicketRules(ModelInstanceRules):
             return True
         self.return_not_allowed('Você não tem permissão para alterar este ticket.')
 
-    def validar_limite_cancelamento(self) -> bool:
+    def validar_limite_cancelamento(self, dia_operacional) -> bool:
         execucao = self.object_instance.execucao_rota
         self.validar_execucao_aberta(execucao)
-        if execucao.data_execucao.weekday() >= 5:
-            self.return_exception('Cancelamentos e saída da fila funcionam somente de segunda a sexta.')
+        if not dia_operacional:
+            self.return_exception(
+                'Cancelamentos e saída da fila não estão disponíveis nesta data.'
+            )
 
         agora = now()
         saida_local = localtime(execucao.data_hora_saida)

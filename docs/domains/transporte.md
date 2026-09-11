@@ -21,6 +21,10 @@ ticket, ausências, strikes e justificativas.
   `monitoramento_iniciado_em`, `chamada_concluida_em` e `embarcado_em` registram
   o andamento da conferência. `finalizada_em` fica para o fim da viagem
   (`EMBARCADO` → `INICIADA` → `FINALIZADA`).
+- **DiaCalendarioTransporte**: exceção global por data que informa se o
+  transporte opera fora da regra semanal padrão. Dias letivos e reposições
+  liberam a operação; feriados, pontos facultativos, suspensões, recessos e
+  férias bloqueiam a automação.
 - **Ticket**: solicitação de um aluno em uma execução; representa reserva, posição
   em fila, cancelamento, embarque, ausência ou contemplado por walk-in (`CONTEMPLADO`).
 - **EntradaSemTicket**: embarque manual por CPF nas vagas restantes após a chamada.
@@ -46,6 +50,7 @@ Transporte/
 ├── percursos/       # App Django do model Percurso
 ├── rotas/           # App Django do model Rota
 ├── motoristas/      # App Django do perfil Motorista
+├── calendario_operacional/ # Exceções globais do calendário do transporte
 ├── execucoes_rotas/ # App Django do model ExecucaoRota
 ├── tickets/         # App Django do model Ticket e fila de espera
 ├── entradas_sem_ticket/
@@ -117,9 +122,30 @@ A tela oferece **INICIAR ROTA** após a finalização da conferência e
 **FINALIZAR A ROTA** durante a viagem, conforme as permissões retornadas pela API.
 O fluxo e a medição do tempo estão descritos na seção 11.
 
-### 4. Execuções de rotas
+### 4. Execuções de rotas e calendário operacional
 
-- Criadas manualmente por L3 para uma rota e uma data.
+- O Celery Beat reconcilia a cada cinco minutos, todos os dias, as rotas ativas
+  da data que pertencem a percursos ativos. O calendário operacional decide se
+  a data permite criação automática.
+- A geração começa à meia-noite e inclui o instante exato de 30 minutos antes
+  da saída (`now <= data_hora_saida - 30 min`). Uma rota criada durante o dia
+  entra na próxima reconciliação somente se ainda estiver dentro desse prazo.
+- Sem exceção cadastrada, segunda a sexta são operacionais e fins de semana
+  não são. Uma exceção ativa prevalece sobre essa regra semanal.
+- Sábados letivos ou de reposição geram somente rotas cadastradas com
+  `dia_semana = sabado`. Domingo permanece bloqueado enquanto não houver uma
+  exceção letiva explícita.
+- Feriados, pontos facultativos, suspensões, recessos e férias impedem novas
+  gerações automáticas. Datas apenas comemorativas não precisam ser cadastradas
+  e não alteram a operação.
+- Uma execução existente em data posteriormente bloqueada não é cancelada. A
+  task devolve seus IDs em `conflitos_execucoes_existentes` e registra aviso no log.
+- A operação é idempotente pela unicidade de `rota` + `data_execucao`: uma
+  execução manual já existente ou uma task repetida não gera duplicata.
+- A execução congela horário de saída e quantidade de vagas no momento da
+  criação. Alterações posteriores na rota não modificam esse snapshot.
+- A criação manual por L3 permanece disponível como contingência
+  administrativa e obedece às validações já existentes.
 - A data deve corresponder ao dia da semana da rota.
 - Unicidade por `rota` + `data_execucao`: rotas distintas do mesmo percurso e dia,
   em horários diferentes, podem ter execuções normalmente.
@@ -127,8 +153,9 @@ O fluxo e a medição do tempo estão descritos na seção 11.
   `FINALIZADA`, `CANCELADA`. Inteiros: `FINALIZADA = 4`, `CANCELADA = 5`,
   `EMBARCADO = 6`, `INICIADA = 7` (sem remapeamento de valores antigos).
 - Reservas e entradas na fila exigem estado `ABERTA`.
-- Para alunos, execuções disponíveis são exibidas somente de segunda a sexta,
-  da meia-noite do próprio dia até exatamente 30 minutos antes da saída.
+- Para alunos, execuções disponíveis são exibidas somente em datas operacionais,
+  da meia-noite do próprio dia até exatamente 30 minutos antes da saída. Isso
+  inclui sábados letivos e de reposição configurados no calendário.
 - Conferente e L3 iniciam o monitoramento (`EM_EMBARQUE`) somente pelo
   `iniciar` da conferência, depois de 30 minutos antes da saída
   (`now > data_hora_saida − 30 min`), em execução `ABERTA` ou `FECHADA`.
@@ -168,10 +195,10 @@ O fluxo e a medição do tempo estão descritos na seção 11.
   também ocupa essa unicidade; só `CANCELADO` libera o par aluno+execução).
 - Com vaga, a solicitação cria `RESERVADO`; sem vaga, a reserva falha e o aluno
   precisa entrar explicitamente na fila.
-- Reserva, entrada na fila, cancelamento e saída da fila funcionam somente de
-  segunda a sexta, entre a meia-noite do dia da execução e exatamente 30 minutos
-  antes da saída. O instante exato do limite ainda é permitido; depois dele, todas
-  essas ações são bloqueadas.
+- Reserva, entrada na fila, cancelamento e saída da fila funcionam somente em
+  datas operacionais, entre a meia-noite do dia da execução e exatamente 30
+  minutos antes da saída. O instante exato do limite ainda é permitido; depois
+  dele, todas essas ações são bloqueadas.
 - Cancelar uma reserva promove o primeiro ticket da fila na mesma transação.
 - A capacidade e a promoção usam bloqueio pessimista na execução para proteger a
   última vaga em requisições concorrentes.
