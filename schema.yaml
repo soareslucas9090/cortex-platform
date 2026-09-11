@@ -1066,14 +1066,16 @@ paths:
         definir a conta coletiva. O pool de associações é mantido\n    em `GET/PUT
         /usuarios/{pk}/coletivo/` (L3).\n\n    **Permissões:** L2+ (LER_TUDO) lê;
         escrita pelo dono (L1) ou L3 (EDITAR_TUDO).\n    O campo `usuario_coletivo`
-        não é aceito neste PATCH.\n\n    CPF não é alterável neste endpoint.\n\n    **Normalização
-        de Deficiência (campo `deficiencia`):**\n    O campo é normalizado automaticamente
-        no save (removendo acentos, convertendo para caixa baixa e substituindo espaços
-        por `_`).\n    - Opções válidas resultantes: `deficiencia_intelectual`, `deficiencia_visual`,
-        `deficiencia_auditiva`, `deficiencia_multipla`, `deficiencia_fisica`.\n    -
-        Se a string enviada (ex: \"Deficiência Múltipla\") equivaler a uma das chaves
-        após a normalização, ela será associada.\n    - Se não houver correspondência,
-        o valor será gravado como `null`.\n    "
+        não é aceito neste PATCH.\n\n    **CPF:** somente L3 pode informar o CPF quando
+        o usuário ainda não possui CPF\n    cadastrado. Se o CPF já estiver preenchido,
+        a API retorna erro de permissão —\n    a edição nesse caso é exclusiva do
+        Django admin.\n\n    **Normalização de Deficiência (campo `deficiencia`):**\n
+        \   O campo é normalizado automaticamente no save (removendo acentos, convertendo
+        para caixa baixa e substituindo espaços por `_`).\n    - Opções válidas resultantes:
+        `deficiencia_intelectual`, `deficiencia_visual`, `deficiencia_auditiva`, `deficiencia_multipla`,
+        `deficiencia_fisica`.\n    - Se a string enviada (ex: \"Deficiência Múltipla\")
+        equivaler a uma das chaves após a normalização, ela será associada.\n    -
+        Se não houver correspondência, o valor será gravado como `null`.\n    "
       summary: Atualizar dados do usuário
       parameters:
       - in: path
@@ -10378,6 +10380,12 @@ components:
     PatchedAtualizarUsuario:
       type: object
       properties:
+        cpf:
+          type: string
+          nullable: true
+          description: CPF do usuário (opcional). Aceita com ou sem máscara. Somente
+            L3 pode informar quando o usuário ainda não possui CPF cadastrado.
+          maxLength: 14
         nome:
           type: string
           maxLength: 255
