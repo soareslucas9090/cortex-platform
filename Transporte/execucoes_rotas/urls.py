@@ -1,30 +1,26 @@
 from django.urls import path
 
 from AppCore.basics.views.basic_views import roteador_por_metodo
-from .historico_conferencia_views import (
-    DetalharHistoricoConferenciaView,
-    ListarHistoricoConferenciaView,
-    ListarPercursosHistoricoConferenciaView,
-)
-from .historico_views import (
-    DetalharHistoricoRotaView,
-    ListarHistoricoRotasView,
-    ListarPercursosHistoricoView,
-)
 
 from .views import (
-    IniciarViagemRotaView,
-    FinalizarViagemRotaView,
     AbrirReservasExecucaoRotaView,
     CancelarExecucaoRotaView,
     CriarExecucaoRotaView,
     DetalharExecucaoRotaView,
+    DetalharHistoricoConferenciaView,
+    DetalharHistoricoRotaView,
     FecharReservasExecucaoRotaView,
     FinalizarChamadaConferenciaView,
     FinalizarExecucaoRotaView,
+    FinalizarViagemRotaView,
     IniciarEmbarqueExecucaoRotaView,
+    IniciarViagemRotaView,
     ListarExecucoesConferenciaView,
     ListarExecucoesRotasView,
+    ListarHistoricoConferenciaView,
+    ListarHistoricoRotasView,
+    ListarPercursosHistoricoConferenciaView,
+    ListarPercursosHistoricoView,
     ListarReservasConferenciaView,
 )
 
