@@ -396,8 +396,9 @@ para a data local, enriquecida com a execução correspondente.
     responsabilidade do conferente (sem QR nesta tela).
 13. Ao finalizar a conferência (`EMBARCADO`), a espera que não entrou no lote de
     CPF permanece `EM_ESPERA` — esse é o desfecho nessa execução, não um estado
-    intermediário à espera de promoção. Grava-se `embarcado_em`; `finalizada_em`
-    fica para o fim da viagem (`INICIADA` → `FINALIZADA`).
+    intermediário à espera de promoção. Grava-se `embarcado_em` e
+    `conferencia_finalizada_por` (usuário autenticado); `finalizada_em`
+    fica para o fim da viagem (`INICIADA` → `FINALIZADA`). Replay não troca.
     O lote de CPF é opcional: finalizar sem enviá-lo não reclassifica a espera.
     `CONTEMPLADO` é gravado no lote de CPF, não neste passo.
 14. Entrada sem ticket usa as vagas restantes após a chamada (`EM_ESPERA` não reserva

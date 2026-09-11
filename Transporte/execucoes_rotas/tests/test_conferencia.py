@@ -350,6 +350,7 @@ class ConferenciaTransporteTestCase(APITestCase):
         self.execucao.refresh_from_db()
         self.assertEqual(self.execucao.status, StatusExecucaoRota.EMBARCADO)
         self.assertIsNotNone(self.execucao.embarcado_em)
+        self.assertEqual(self.execucao.conferencia_finalizada_por_id, self.conferente.pk)
         self.assertIsNone(self.execucao.finalizada_em)
         espera = Ticket.objects.get(aluno=self.aluno_espera, execucao_rota=self.execucao)
         extra = Ticket.objects.get(aluno=self.aluno_extra, execucao_rota=self.execucao)
@@ -527,11 +528,20 @@ class ConferenciaTransporteTestCase(APITestCase):
         self.execucao.refresh_from_db()
         self.assertEqual(self.execucao.status, StatusExecucaoRota.EMBARCADO)
         self.assertIsNotNone(self.execucao.embarcado_em)
+        self.assertEqual(self.execucao.conferencia_finalizada_por_id, self.conferente.pk)
         self.assertIsNone(self.execucao.finalizada_em)
         self.assertEqual(
             primeira.data['dados']['embarcado_em'],
             segunda.data['dados']['embarcado_em'],
         )
+        outro = criar_conferente(cpf='30000000099', nome='Outro conferente')
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {obter_token(outro)}')
+        replay_outro = self.client.post(
+            reverse('transporte:conferencia-finalizar', kwargs={'pk': self.execucao.pk}),
+        )
+        self.assertEqual(replay_outro.status_code, status.HTTP_200_OK)
+        self.execucao.refresh_from_db()
+        self.assertEqual(self.execucao.conferencia_finalizada_por_id, self.conferente.pk)
         self.assertEqual(
             Ticket.objects.get(aluno=self.aluno_espera, execucao_rota=self.execucao).status,
             StatusTicket.EM_ESPERA,
@@ -540,6 +550,19 @@ class ConferenciaTransporteTestCase(APITestCase):
             Ticket.objects.get(aluno=self.aluno_extra, execucao_rota=self.execucao).status,
             StatusTicket.EM_ESPERA,
         )
+
+    def test_replay_nao_preenche_responsavel_legado(self):
+        self._iniciar_e_finalizar_chamada()
+        agora = timezone.now()
+        self.execucao.status = StatusExecucaoRota.EMBARCADO
+        self.execucao.embarcado_em = agora
+        self.execucao.save(update_fields=['status', 'embarcado_em'])
+        resposta = self.client.post(
+            reverse('transporte:conferencia-finalizar', kwargs={'pk': self.execucao.pk}),
+        )
+        self.assertEqual(resposta.status_code, status.HTTP_200_OK)
+        self.execucao.refresh_from_db()
+        self.assertIsNone(self.execucao.conferencia_finalizada_por_id)
 
     def _finalizar_conferencia_na_janela(self):
         with self._entrar_na_janela_monitoramento():
@@ -560,6 +583,7 @@ class ConferenciaTransporteTestCase(APITestCase):
         self.execucao.refresh_from_db()
         self.assertEqual(self.execucao.status, StatusExecucaoRota.EMBARCADO)
         self.assertIsNotNone(self.execucao.embarcado_em)
+        self.assertEqual(self.execucao.conferencia_finalizada_por_id, self.conferente.pk)
         self.assertIsNone(self.execucao.finalizada_em)
 
     def test_nao_inicia_apos_finalizar_conferencia(self):

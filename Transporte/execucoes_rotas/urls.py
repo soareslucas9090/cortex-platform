@@ -1,6 +1,11 @@
 from django.urls import path
 
 from AppCore.basics.views.basic_views import roteador_por_metodo
+from .historico_conferencia_views import (
+    DetalharHistoricoConferenciaView,
+    ListarHistoricoConferenciaView,
+    ListarPercursosHistoricoConferenciaView,
+)
 from .historico_views import (
     DetalharHistoricoRotaView,
     ListarHistoricoRotasView,
@@ -58,6 +63,21 @@ urlpatterns = [
         'execucoes-rotas/conferencia/',
         roteador_por_metodo(GET=ListarExecucoesConferenciaView),
         name='conferencia-execucao-list',
+    ),
+    path(
+        'execucoes-rotas/historico/',
+        ListarHistoricoConferenciaView.as_view(),
+        name='execucao-rota-historico-list',
+    ),
+    path(
+        'execucoes-rotas/historico/percursos/',
+        ListarPercursosHistoricoConferenciaView.as_view(),
+        name='execucao-rota-historico-percursos-list',
+    ),
+    path(
+        'execucoes-rotas/historico/<int:pk>/',
+        DetalharHistoricoConferenciaView.as_view(),
+        name='execucao-rota-historico-detail',
     ),
     path(
         'execucoes-rotas/<int:pk>/',

@@ -180,9 +180,11 @@ O fluxo e a medição do tempo estão descritos na seção 11.
   de `EMBARCADO` a lista basta. Outro dia continua 404.
 - Depois de `EM_EMBARQUE`, L3 **não** cancela a execução: só finaliza a
   conferência (vai para `EMBARCADO`) ou deixa o monitoramento seguir.
-- O conferente grava `embarcado_em` ao encerrar a conferência e **não**
+- O conferente grava `embarcado_em` e `conferencia_finalizada_por` (usuário
+  autenticado; não vem no body) ao encerrar a conferência e **não**
   preenche `finalizada_em` (reservado ao fim da viagem do motorista:
-  `EMBARCADO` → `INICIADA` → `FINALIZADA`, fora desta entrega de API).
+  `EMBARCADO` → `INICIADA` → `FINALIZADA`). Replay não altera timestamp nem
+  conferente.
 
 ### 5. Tickets, capacidade e cancelamento
 
@@ -390,6 +392,8 @@ Base execuções: `/cortex/transporte/execucoes-rotas/`
 - `POST` em `abrir-reservas/`, `fechar-reservas/` e `cancelar/` (L3;
   cancelar só antes de `EM_EMBARQUE`)
 - `GET` `execucoes-rotas/conferencia/`
+- `GET` `execucoes-rotas/historico/`, `historico/percursos/` e
+  `historico/{id}/` — histórico da conferência (seção 12)
 - `POST` `execucoes-rotas/<pk>/conferencia/iniciar/` e `.../conferencia/finalizar/`
   (capacidade `conferir`)
 - `GET` `execucoes-rotas/<pk>/conferencia/reservas/`
@@ -532,7 +536,10 @@ um relatório parcial. Dados e filtros são escapados antes de compor o HTML.
 
 #### Endpoints
 
-Contrato: [OpenAPI do histórico](../api/historico-rotas-openapi.yaml).
+Contrato: [OpenAPI do histórico](../api/historico-rotas-openapi.yaml)
+(motorista **e** conferente). O schema completo da API está em `schema.yaml`.
+O `GET /cortex/transporte/execucoes-rotas/{id}/` **não** é histórico nem
+detalhe da conferência do dia: é o detalhe genérico (aluno/L3).
 
 - `GET /cortex/transporte/motorista/historico-rotas/`
 - `GET /cortex/transporte/motorista/historico-rotas/percursos/`
@@ -547,17 +554,54 @@ Ordenações: `data`, `-data`, `horario`, `-horario`, `percurso`, `-percurso`.
 Filtros de domínio inválidos são ignorados. A paginação segue o AppCore.
 Detalhes de uma viagem não finalizada ou inexistente retornam 404.
 
-#### Como testar
+#### Como testar (motorista)
 
-1. Publicar frontend e backend atualizados. A migração `0005_viagem_motorista`
-   da funcionalidade anterior precisa estar aplicada; o histórico não adiciona
-   tabelas nem exige outra migração.
+1. Publicar frontend e backend atualizados.
 2. Acessar com motorista ativo ou administrador. Conferir o menu **Histórico de rotas**.
 3. Finalizar a conferência e iniciar uma rota. Ela ainda não deve aparecer no histórico.
 4. Finalizar a rota. Abrir o histórico e conferir duração e contagens em **Detalhes**.
 5. Testar busca, percurso, data, ordenação e a segunda página.
 6. Imprimir um filtro com mais de 5 viagens e conferir todas as linhas no relatório.
-7. Acessar com aluno/conferente/L2: menu oculto, rota bloqueada e API retornando 403.
+7. Acessar com aluno, conferente sem perfil motorista ou L2: menu oculto e API
+   `motorista/historico-rotas/` retornando 403.
 
-Testes automatizados: `Transporte.execucoes_rotas.tests.test_historico_motorista`
+#### Histórico da conferência
+
+API paralela para quem tem capacidade `conferir` (conferente e L3), o mesmo
+critério da conferência do dia: não se exige perfil de colaborador ativo extra.
+Quem tem `conferir` vê **todas** as viagens concluídas, como o motorista vê
+todas as rotas — não só as que ele próprio finalizou. O universo é
+`FINALIZADA` + `rota_finalizada_em`. Motorista sem `conferir` recebe 403. A listagem reutiliza o contrato de filtros e contagens do motorista; o
+detalhe inclui `conferencia_finalizada_em` (`embarcado_em`),
+`conferencia_finalizada_por` `{id, nome}` (nulo em registros antigos) e alunos
+com `id`, `nome`, `cpf` e `tem_deficiencia` (sem foto). O serializer operacional
+da execução não expõe o conferente.
+
+- `GET /cortex/transporte/execucoes-rotas/historico/`
+- `GET /cortex/transporte/execucoes-rotas/historico/percursos/`
+- `GET /cortex/transporte/execucoes-rotas/historico/{id}/`
+
+Exigem `PodeConferirTransporteMixin`. O detalhe do **dia** (monitoramento) usa
+a lista `execucoes-rotas/conferencia/` ou os POSTs de iniciar/finalizar — não o
+GET genérico `execucoes-rotas/{id}/`. A primeira finalização da conferência
+grava `conferencia_finalizada_por` com o usuário autenticado.
+
+A migração `0004_conferencia_finalizada_por` adiciona a FK opcional.
+
+#### Como testar (conferência)
+
+1. Publicar backend atualizado e aplicar a migração `0004_conferencia_finalizada_por`.
+2. Acessar com capacidade `conferir` (conferente ou L3). Não se exige colaborador
+   ativo extra.
+3. Finalizar só a conferência: a viagem **não** entra na lista; o detalhe é 404.
+4. Depois que o motorista finaliza a rota, a viagem aparece para **todos** os
+   conferentes — não só para quem gravou `conferencia_finalizada_por`.
+5. Conferir no detalhe `conferencia_finalizada_em`, o conferente `{id, nome}` e
+   alunos com CPF/`tem_deficiencia`. Na lista o conferente não aparece.
+6. Testar busca, percurso, data e ordenação. Filtros inválidos são ignorados e
+   só reduzem o conjunto.
+7. Acessar sem `conferir` (aluno, motorista só operar, L2, anônimo): 403 ou 401.
+
+Testes automatizados: `Transporte.execucoes_rotas.tests.test_historico_motorista`,
+`Transporte.execucoes_rotas.tests.test_historico`
 e `src/lib/transporte/historico-rotas.qa.test.ts` (incluído em `npm run test:qa`).

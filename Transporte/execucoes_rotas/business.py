@@ -109,6 +109,47 @@ class ExecucaoRotaBusiness(ModelInstanceBusiness):
         except Exception as e:
             self.relancar_ou_erro_sistema(e, 'Não foi possível obter os detalhes da rota executada.', logger)
 
+    def listar_historico_conferencia(self, usuario, filtros=None):
+        try:
+            from Transporte.permissoes.access import usuario_pode_conferir_transporte
+
+            self.object_instance.rules.validar_acesso_historico_conferencia(
+                usuario_pode_conferir_transporte(usuario),
+            )
+            return self.object_instance.helper.listar_historico_conferencia(filtros)
+        except Exception as e:
+            self.relancar_ou_erro_sistema(e, 'Não foi possível listar o histórico da conferência.', logger)
+
+    def listar_percursos_historico_conferencia(self, usuario):
+        try:
+            from Transporte.permissoes.access import usuario_pode_conferir_transporte
+
+            self.object_instance.rules.validar_acesso_historico_conferencia(
+                usuario_pode_conferir_transporte(usuario),
+            )
+            return self.object_instance.helper.listar_percursos_historico()
+        except Exception as e:
+            self.relancar_ou_erro_sistema(
+                e, 'Não foi possível listar os percursos do histórico da conferência.', logger,
+            )
+
+    def detalhar_historico_conferencia(self, usuario, execucao_id):
+        try:
+            from Transporte.permissoes.access import usuario_pode_conferir_transporte
+
+            from .models import ExecucaoRota
+
+            self.object_instance.rules.validar_acesso_historico_conferencia(
+                usuario_pode_conferir_transporte(usuario),
+            )
+            return self.object_instance.helper.detalhar_historico_conferencia(execucao_id)
+        except ExecucaoRota.DoesNotExist:
+            raise NotFoundException('Viagem inexistente ou ainda não concluída.')
+        except Exception as e:
+            self.relancar_ou_erro_sistema(
+                e, 'Não foi possível obter os detalhes da conferência no histórico.', logger,
+            )
+
     @transaction.atomic
     def operar_rota(self, execucao_id, usuario, finalizar=False):
         """Registra a viagem sob bloqueio, preservando horários em reenvios."""
@@ -334,7 +375,7 @@ class ExecucaoRotaBusiness(ModelInstanceBusiness):
                 logger,
             )
 
-    def finalizar_conferencia(self):
+    def finalizar_conferencia(self, usuario):
         try:
             execucao = self.obter_por_id(
                 self.object_instance.pk,
@@ -347,7 +388,8 @@ class ExecucaoRotaBusiness(ModelInstanceBusiness):
             execucao = execucao.state.atualizar_status(StatusExecucaoRota.EMBARCADO)
             if execucao.embarcado_em is None:
                 execucao.embarcado_em = timezone.now()
-                execucao.save(update_fields=['embarcado_em'])
+                execucao.conferencia_finalizada_por = usuario
+                execucao.save(update_fields=['embarcado_em', 'conferencia_finalizada_por'])
             return execucao
         except Exception as e:
             self.relancar_ou_erro_sistema(e, 'Não foi possível finalizar a conferência.', logger)

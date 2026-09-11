@@ -234,7 +234,9 @@ class IniciarEmbarqueExecucaoRotaView(PodeConferirTransporteMixin, BasicPostAPIV
         'Quem não entrou no lote de CPF permanece EM_ESPERA: esse é o desfecho nessa execução '
         '(sem promoção da fila nem status de não contemplado). '
         'CONTEMPLADO e EntradaSemTicket são gravados no lote de CPF, não aqui. '
-        'Ausentes não mudam. Não grava finalizada_em (fim da viagem do motorista).\n\n'
+        'Ausentes não mudam. Não grava finalizada_em (fim da viagem do motorista). '
+        'A primeira finalização grava embarcado_em e conferencia_finalizada_por '
+        '(usuário autenticado); replay não troca.\n\n'
         f'{PERMISSAO_CONFERIR}'
     ),
     request=SerializerVazio,
@@ -254,7 +256,7 @@ class FinalizarExecucaoRotaView(PodeConferirTransporteMixin, BasicPostAPIView):
 
     def do_action_post(self, serializer_data, request, *args, **kwargs):
         execucao = ExecucaoRota().business.obter_para_conferencia(kwargs['pk'])
-        execucao = execucao.business.finalizar_conferencia()
+        execucao = execucao.business.finalizar_conferencia(request.user)
         return {'dados': ExecucaoRotaSerializer(execucao).data}
 
 

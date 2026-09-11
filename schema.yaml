@@ -5854,7 +5854,7 @@ paths:
     post:
       operationId: transporte_execucoes_rotas_conferencia_finalizar_create
       description: |-
-        Encerra a conferência em EMBARCADO. Este endpoint não altera tickets. Quem não entrou no lote de CPF permanece EM_ESPERA: esse é o desfecho nessa execução (sem promoção da fila nem status de não contemplado). CONTEMPLADO e EntradaSemTicket são gravados no lote de CPF, não aqui. Ausentes não mudam. Não grava finalizada_em (fim da viagem do motorista).
+        Encerra a conferência em EMBARCADO. Este endpoint não altera tickets. Quem não entrou no lote de CPF permanece EM_ESPERA: esse é o desfecho nessa execução (sem promoção da fila nem status de não contemplado). CONTEMPLADO e EntradaSemTicket são gravados no lote de CPF, não aqui. Ausentes não mudam. Não grava finalizada_em (fim da viagem do motorista). A primeira finalização grava embarcado_em e conferencia_finalizada_por (usuário autenticado); replay não troca.
 
         **Permissões:** capacidade transporte.conferir. Lê e opera execuções do dia e, após iniciar o monitoramento, a chamada de tickets e a entrada por CPF dessa execução. Não amplia cadastro nem recursos globais do módulo.
       summary: Finalizar conferência
@@ -6289,6 +6289,170 @@ paths:
             application/json:
               schema:
                 description: Sem capacidade conferir.
+          description: ''
+  /cortex/transporte/execucoes-rotas/historico/:
+    get:
+      operationId: transporte_execucoes_rotas_historico_list
+      description: |-
+        Inclui somente viagens finalizadas pelo motorista. Mesmos filtros e contagens do histórico do motorista. O conferente autenticado no finalizar não aparece na lista. Filtros inválidos são ignorados e apenas reduzem o conjunto, nunca expandem o acesso.
+
+        **Permissões:** capacidade `transporte.conferir` (conferente) ou L3 (administrador). Alunos, L2 sem conferir e motoristas sem conferir não têm acesso.
+      summary: Listar histórico da conferência
+      parameters:
+      - in: query
+        name: busca
+        schema:
+          type: string
+        description: Apelido, descrição do percurso ou data (DD/MM/AAAA ou AAAA-MM-DD).
+          Apenas reduz o conjunto visível, nunca expande o acesso. Valor inválido
+          é ignorado.
+      - in: query
+        name: data
+        schema:
+          type: string
+          format: date
+        description: Filtra pela data da execução. Apenas reduz o conjunto visível,
+          nunca expande o acesso. Valor inválido é ignorado.
+      - in: query
+        name: ordenacao
+        schema:
+          type: string
+          enum:
+          - -data
+          - -horario
+          - -percurso
+          - data
+          - horario
+          - percurso
+        description: Ordenação da lista. Valor fora do enum usa o padrão (-data).
+          Apenas reduz o conjunto visível, nunca expande o acesso. Valor inválido
+          é ignorado.
+      - name: page
+        required: false
+        in: query
+        description: Um número de página dentro do conjunto de resultados paginado.
+        schema:
+          type: integer
+      - in: query
+        name: paginacao
+        schema:
+          type: integer
+        description: Itens por página, entre 1 e 100.
+      - in: query
+        name: percurso_id
+        schema:
+          type: integer
+        description: Filtra pelo percurso. Apenas reduz o conjunto visível, nunca
+          expande o acesso. Valor inválido é ignorado.
+      tags:
+      - Transporte · Histórico de viagens
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedHistoricoRotaList'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                description: Não autenticado.
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                description: Perfil sem capacidade conferir.
+          description: ''
+  /cortex/transporte/execucoes-rotas/historico/{id}/:
+    get:
+      operationId: transporte_execucoes_rotas_historico_retrieve
+      description: |-
+        Horários, conferente que finalizou a conferência e alunos (id, nome, CPF, tem_deficiencia) por categoria. Sem foto nem tipo clínico.
+
+        **Permissões:** capacidade `transporte.conferir` (conferente) ou L3 (administrador). Alunos, L2 sem conferir e motoristas sem conferir não têm acesso.
+      summary: Detalhar viagem no histórico da conferência
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - Transporte · Histórico de viagens
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DetalheHistoricoConferencia'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                description: Não autenticado.
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                description: Perfil sem capacidade conferir.
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                description: Viagem inexistente ou ainda não concluída.
+          description: ''
+  /cortex/transporte/execucoes-rotas/historico/percursos/:
+    get:
+      operationId: transporte_execucoes_rotas_historico_percursos_list
+      description: |-
+        Opções do filtro, incluindo percursos desativados com histórico.
+
+        **Permissões:** capacidade `transporte.conferir` (conferente) ou L3 (administrador). Alunos, L2 sem conferir e motoristas sem conferir não têm acesso.
+      summary: Listar percursos com viagens no histórico da conferência
+      parameters:
+      - name: page
+        required: false
+        in: query
+        description: Um número de página dentro do conjunto de resultados paginado.
+        schema:
+          type: integer
+      - name: paginacao
+        required: false
+        in: query
+        description: Itens por página, entre 1 e 100.
+        schema:
+          type: integer
+      tags:
+      - Transporte · Histórico de viagens
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedPercursoHistoricoList'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                description: Não autenticado.
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                description: Perfil sem capacidade conferir.
           description: ''
   /cortex/transporte/justificativas/:
     get:
@@ -7906,6 +8070,26 @@ components:
       - id
       - nome
       - tem_deficiencia
+    AlunoHistoricoConferencia:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        nome:
+          type: string
+          readOnly: true
+        cpf:
+          type: string
+          readOnly: true
+        tem_deficiencia:
+          type: boolean
+          readOnly: true
+      required:
+      - cpf
+      - id
+      - nome
+      - tem_deficiencia
     AlunoTicket:
       type: object
       properties:
@@ -8215,6 +8399,18 @@ components:
       required:
       - beneficiario_id
       - data_inicio
+    ConferenteHistorico:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        nome:
+          type: string
+          readOnly: true
+      required:
+      - id
+      - nome
     Contato:
       type: object
       properties:
@@ -8621,6 +8817,96 @@ components:
         * `deficiencia_auditiva` - Deficiência Auditiva
         * `deficiencia_multipla` - Deficiência Múltipla
         * `deficiencia_fisica` - Deficiência Física
+    DetalheHistoricoConferencia:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        data:
+          type: string
+          format: date
+          readOnly: true
+        horario:
+          type: string
+          readOnly: true
+        percurso:
+          allOf:
+          - $ref: '#/components/schemas/PercursoHistorico'
+          readOnly: true
+        presentes:
+          type: integer
+          readOnly: true
+        ausentes:
+          type: integer
+          readOnly: true
+        sem_ticket:
+          type: integer
+          readOnly: true
+        rota_iniciada_em:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        rota_finalizada_em:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        duracao_rota_segundos:
+          type: integer
+          readOnly: true
+          nullable: true
+        percurso_descricao:
+          type: string
+          readOnly: true
+        quantidade_vagas:
+          type: integer
+          readOnly: true
+          title: Quantidade de vagas
+        conferencia_finalizada_em:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        conferencia_finalizada_por:
+          allOf:
+          - $ref: '#/components/schemas/ConferenteHistorico'
+          readOnly: true
+          nullable: true
+        tickets_presentes:
+          type: array
+          items:
+            $ref: '#/components/schemas/AlunoHistoricoConferencia'
+          readOnly: true
+        tickets_ausentes:
+          type: array
+          items:
+            $ref: '#/components/schemas/AlunoHistoricoConferencia'
+          readOnly: true
+        passageiros_sem_ticket:
+          type: array
+          items:
+            $ref: '#/components/schemas/AlunoHistoricoConferencia'
+          readOnly: true
+      required:
+      - ausentes
+      - conferencia_finalizada_em
+      - conferencia_finalizada_por
+      - data
+      - duracao_rota_segundos
+      - horario
+      - id
+      - passageiros_sem_ticket
+      - percurso
+      - percurso_descricao
+      - presentes
+      - quantidade_vagas
+      - rota_finalizada_em
+      - rota_iniciada_em
+      - sem_ticket
+      - tickets_ausentes
+      - tickets_presentes
     DetalheHistoricoRota:
       type: object
       properties:
