@@ -645,7 +645,7 @@ class PermissaoDocumentacao:
                             'quem cancelou o ticket pode usar se houver vaga. '
                             'Quem está AUSENTE nesta execução pode entrar nas mesmas condições; '
                             'o ticket permanece AUSENTE e o strike não é desfeito. '
-                            'Três strikes ativos bloqueiam a entrada por CPF.'
+                            'Três strikes ativos não bloqueiam a entrada por CPF.'
                         ),
                         (
                             'Reserva, entrada e saída da fila e cancelamento pelo aluno funcionam '

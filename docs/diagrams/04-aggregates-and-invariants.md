@@ -383,8 +383,9 @@ para a data local, enriquecida com a execução correspondente.
    reorganiza a posição, mas nunca remove uma reserva confirmada nem promove sem vaga.
 7. Cancelamento de reserva e promoção acontecem na mesma transação.
 8. Cada ticket ausente gera no máximo um strike.
-9. Três strikes ativos bloqueiam novas reservas, entradas em fila e entradas
-   sem ticket; não cancelam tickets nem posições já existentes.
+9. Três strikes ativos bloqueiam novas reservas e entradas em fila;
+    não cancelam tickets nem posições já existentes. Entrada sem ticket (walk-in)
+    permanece permitida.
 10. QR Code só embarca ticket reservado em execução no estado de embarque.
 11. A aprovação da justificativa e a retirada do strike da contagem são atômicas.
 12. O conferente inicia o monitoramento somente se `now > T-30` e somente pelo
@@ -408,7 +409,7 @@ para a data local, enriquecida com a execução correspondente.
     primeiro lote não vazio é 400. Lista vazia é 201 e não conclui o lote. Depois
     do lote concluído, `validar` também é 400 (não mostra card que não dá para gravar).
     Aluno `AUSENTE` pode entrar por CPF; a ausência e o strike permanecem. Três
-    strikes ativos bloqueiam a entrada.
+    strikes ativos não bloqueiam essa entrada.
 15. Depois de `EM_EMBARQUE` a execução não pode ser cancelada; só finaliza a conferência (`EMBARCADO`).
 16. Conferência por ID no dia: `CANCELADA` não existe nesse escopo;
     `EMBARCADO`, `INICIADA` e `FINALIZADA` permanecem para consulta da execução

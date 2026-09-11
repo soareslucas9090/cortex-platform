@@ -190,8 +190,8 @@ O fluxo e a medição do tempo estão descritos na seção 11.
 
 - Somente usuário e aluno ativos, com situação `MATRICULADO`, podem solicitar
   ticket (reserva ou fila) ou entrar por CPF.
-- Três ou mais strikes ativos bloqueiam novas reservas, novas entradas em fila
-  e entrada sem ticket.
+- Três ou mais strikes ativos bloqueiam novas reservas e novas entradas em fila.
+  A entrada por CPF (walk-in) permanece permitida.
 - O terceiro strike não cancela tickets nem posições já existentes.
 - Há no máximo um ticket não cancelado por aluno e execução (`CONTEMPLADO`
   também ocupa essa unicidade; só `CANCELADO` libera o par aluno+execução).
@@ -215,7 +215,7 @@ O fluxo e a medição do tempo estão descritos na seção 11.
   compara o conjunto gravado nela, não ausências marcadas depois pelo L3. O
   monitoramento pode iniciar depois do horário de saída no mesmo dia, desde que
   `now > T-30`.
-- Entrada por CPF revalida aluno ativo, matriculado, strikes, vaga, chamada
+- Entrada por CPF revalida aluno ativo, matriculado, vaga, chamada
   concluída e execução em embarque. A consulta é `POST` em
   `entradas-sem-ticket/validar/` com `{ "cpf": "..." }` e não persiste (devolve
   dados do aluno para o card, inclusive `tem_deficiencia`). Depois do primeiro
@@ -229,7 +229,7 @@ O fluxo e a medição do tempo estão descritos na seção 11.
   pode usar este fluxo se houver vaga. Quem está `AUSENTE` nesta execução também pode: o ticket
   permanece `AUSENTE` e o strike não é desfeito. Quem está `EM_ESPERA` e entra
   no lote fica `CONTEMPLADO` e recebe `EntradaSemTicket`.
-  Três strikes ativos continuam impedindo a entrada (incluindo o strike desta
+  Três strikes ativos não impedem o walk-in (incluindo o strike desta
   ausência). `EM_ESPERA` e `CONTEMPLADO` não ocupam vaga pela chamada; o walk-in
   ocupa via `EntradaSemTicket`. Total embarcado = `EMBARCADO` + `EntradaSemTicket`.
 

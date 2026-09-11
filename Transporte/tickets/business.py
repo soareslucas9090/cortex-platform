@@ -56,6 +56,17 @@ class TicketBusiness(ModelInstanceBusiness):
                 logger,
             )
 
+    def validar_aluno_para_entrada_cpf(self, usuario):
+        try:
+            self.object_instance.rules.validar_aluno_ativo_matriculado(usuario)
+            return True
+        except Exception as e:
+            self.relancar_ou_erro_sistema(
+                e,
+                'Não foi possível validar o aluno para entrada por CPF.',
+                logger,
+            )
+
     def solicitar_reserva(self, execucao_id, usuario):
         try:
             from Transporte.execucoes_rotas.models import ExecucaoRota

@@ -36,7 +36,7 @@ class EntradaSemTicketBusiness(ModelInstanceBusiness):
             rules.validar_execucao_em_embarque(execucao)
             rules.validar_chamada_concluida(execucao)
 
-            Ticket().business.validar_elegibilidade_aluno(aluno.usuario)
+            Ticket().business.validar_aluno_para_entrada_cpf(aluno.usuario)
 
             ticket = self.object_instance.helper.obter_ticket_ativo(
                 execucao,
