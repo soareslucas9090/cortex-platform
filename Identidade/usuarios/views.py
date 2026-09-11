@@ -261,7 +261,9 @@ class DetalheUsuarioView(IsOwnerOrAdminMixin, BasicRetrieveAPIView):
     **Permissões:** L2+ (LER_TUDO) lê; escrita pelo dono (L1) ou L3 (EDITAR_TUDO).
     O campo `usuario_coletivo` não é aceito neste PATCH.
 
-    CPF não é alterável neste endpoint.
+    **CPF:** somente L3 pode informar o CPF quando o usuário ainda não possui CPF
+    cadastrado. Se o CPF já estiver preenchido, a API retorna erro de permissão —
+    a edição nesse caso é exclusiva do Django admin.
 
     **Normalização de Deficiência (campo `deficiencia`):**
     O campo é normalizado automaticamente no save (removendo acentos, convertendo para caixa baixa e substituindo espaços por `_`).
@@ -288,7 +290,11 @@ class AtualizarUsuarioView(IsOwnerOrAdminMixin, BasicPatchAPIView):
         return obj
 
     def do_action_patch(self, serializer_data, request, **kwargs):
-        self.object.business.atualizar_dados(serializer_data)
+        dados = dict(serializer_data)
+        if 'cpf' in dados:
+            self.object.business.informar_cpf(dados.pop('cpf'), solicitante=request.user)
+        if dados:
+            self.object.business.atualizar_dados(dados)
         return {
             'mensagem': self.mensagem_sucesso,
             'dados': UsuarioSerializer(self.object, context={'request': request}).data,

@@ -230,6 +230,16 @@ class CriarUsuarioSerializer(serializers.Serializer):
 
 
 class AtualizarUsuarioSerializer(serializers.Serializer):
+    cpf = serializers.CharField(
+        max_length=14,
+        required=False,
+        allow_null=True,
+        allow_blank=True,
+        help_text=(
+            'CPF do usuário (opcional). Aceita com ou sem máscara. '
+            'Somente L3 pode informar quando o usuário ainda não possui CPF cadastrado.'
+        ),
+    )
     nome = serializers.CharField(max_length=255, required=False)
     email = serializers.EmailField(required=False, allow_null=True)
     deficiencia = serializers.CharField(

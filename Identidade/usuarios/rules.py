@@ -70,6 +70,22 @@ class UsuarioRules(ModelInstanceRules):
             self.return_exception('Já existe um usuário cadastrado com esse CPF.')
         return True
 
+    def cpf_pode_ser_informado_via_api(self) -> bool:
+        """Bloqueia alteração de CPF já preenchido fora do Django admin."""
+        if self.object_instance.cpf:
+            self.return_not_allowed(
+                'Depois que o CPF do usuário é preenchido, a sua edição somente é permitida por admin.',
+            )
+        return True
+
+    def solicitante_pode_informar_cpf_via_api(self, solicitante) -> bool:
+        """Exige nível Cortex L3 para informar CPF via PATCH."""
+        if not solicitante or not getattr(solicitante, 'tem_acesso_elevado', lambda: False)():
+            self.return_not_allowed(
+                'Somente administradores (L3) podem informar o CPF pelo sistema.',
+            )
+        return True
+
     def pode_desativar(self) -> bool:
         """Verifica se o usuário pode ser desativado."""
         if not self.object_instance.ativo:
