@@ -1,4 +1,4 @@
-from datetime import time, timedelta
+from datetime import date, time, timedelta
 
 from django.utils import timezone
 from rest_framework_simplejwt.tokens import RefreshToken
@@ -64,8 +64,35 @@ def criar_aluno_pcd(cpf, nome='Aluno PcD', **kwargs):
     )
 
 
-def criar_rota_e_execucao(vagas=1, dias_ate_execucao=7, horario_saida=time(12, 0)):
-    data_execucao = timezone.localdate() + timedelta(days=dias_ate_execucao)
+def data_permite_operacao(data: date) -> bool:
+    from Transporte.calendario_operacional.models import DiaCalendarioTransporte
+
+    calendario = DiaCalendarioTransporte()
+    excecao = calendario.helper.obter_excecao_ativa_na_data(data)
+    return calendario.rules.permite_operacao_na_data(
+        data,
+        excecao.tipo if excecao else None,
+    )
+
+
+def proxima_data_operacional(a_partir_de=None, deslocamento_dias=0) -> date:
+    data = (a_partir_de or timezone.localdate()) + timedelta(days=deslocamento_dias)
+    for _ in range(60):
+        if data_permite_operacao(data):
+            return data
+        data += timedelta(days=1)
+    raise ValueError('Nenhuma data operacional encontrada nos próximos 60 dias.')
+
+
+def criar_rota_e_execucao(
+    vagas=1,
+    dias_ate_execucao=7,
+    horario_saida=time(12, 0),
+    data_execucao=None,
+):
+    if data_execucao is None:
+        data_base = timezone.localdate() + timedelta(days=dias_ate_execucao)
+        data_execucao = proxima_data_operacional(a_partir_de=data_base)
     percurso = Percurso.objects.create(
         apelido=f'Percurso {timezone.now().timestamp()}',
         descricao='Percurso de teste',
@@ -113,7 +140,7 @@ def criar_conferente_por_usuario(cpf='30000000011', nome='Conferente usuário'):
 def criar_execucao_hoje(vagas=2, horario_saida=time(18, 0)):
     return criar_rota_e_execucao(
         vagas=vagas,
-        dias_ate_execucao=0,
         horario_saida=horario_saida,
+        data_execucao=timezone.localdate(),
     )
 

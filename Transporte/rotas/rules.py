@@ -58,8 +58,11 @@ class RotaRules(ModelInstanceRules):
 
     def pode_reativar(self) -> bool:
         """Rota só pode ser reativada se estiver inativa e o percurso estiver ativo."""
+        from Transporte.percursos.models import Percurso
+
         if self.object_instance.ativo:
             self.return_exception('A rota já está ativa.')
-        if not self.object_instance.percurso.ativo:
+        percurso = Percurso.objects.only('ativo').get(pk=self.object_instance.percurso_id)
+        if not percurso.ativo:
             self.return_exception('Não é possível reativar uma rota cujo percurso está inativo.')
         return True

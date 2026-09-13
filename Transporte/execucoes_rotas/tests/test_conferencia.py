@@ -33,22 +33,24 @@ class ConferenciaTransporteTestCase(APITestCase):
         self.aluno_reserva = criar_aluno('21000000001', nome='Reservado')
         self.aluno_espera = criar_aluno('21000000002', nome='Espera')
         self.aluno_extra = criar_aluno('21000000003', nome='Extra')
-        instante_reserva = timezone.localtime(self.execucao.data_hora_saida).replace(
-            hour=1,
-            minute=0,
-            second=0,
-            microsecond=0,
+        agora = timezone.now()
+        Ticket.objects.create(
+            execucao_rota=self.execucao,
+            aluno=self.aluno_reserva,
+            status=StatusTicket.RESERVADO,
+            reservado_em=agora,
         )
-        patcher = patch('Transporte.tickets.rules.now', return_value=instante_reserva)
-        patcher.start()
-        self.addCleanup(patcher.stop)
-        Ticket().business.solicitar_reserva(self.execucao.pk, self.aluno_reserva.usuario)
-        Ticket().business.entrar_fila(self.execucao.pk, self.aluno_espera.usuario)
+        Ticket.objects.create(
+            execucao_rota=self.execucao,
+            aluno=self.aluno_espera,
+            status=StatusTicket.EM_ESPERA,
+            entrou_em_espera_em=agora,
+        )
         Ticket.objects.create(
             execucao_rota=self.execucao,
             aluno=self.aluno_extra,
             status=StatusTicket.EM_ESPERA,
-            entrou_em_espera_em=timezone.now(),
+            entrou_em_espera_em=agora,
         )
         self.execucao.quantidade_vagas = 2
         self.execucao.save(update_fields=['quantidade_vagas'])

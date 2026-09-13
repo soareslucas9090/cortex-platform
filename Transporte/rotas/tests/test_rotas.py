@@ -174,8 +174,9 @@ class RotaBusinessTestCase(APITestCase):
         rota.business.desativar()
         self.percurso.ativo = False
         self.percurso.save(update_fields=['ativo'])
-        with self.assertRaises(BusinessRuleException):
+        with self.assertRaises(BusinessRuleException) as ctx:
             rota.business.reativar()
+        self.assertIn('percurso está inativo', str(ctx.exception))
 
     def test_nao_desativa_percurso_com_rota_ativa(self):
         Rota().business.criar_rota(
@@ -335,6 +336,15 @@ class RotasAPITestCase(APITestCase):
         self.assertEqual(resposta.status_code, status.HTTP_200_OK)
         self.rota.refresh_from_db()
         self.assertTrue(self.rota.ativo)
+
+    def test_reativar_rota_percurso_inativo(self):
+        self.rota.business.desativar()
+        self.percurso.ativo = False
+        self.percurso.save(update_fields=['ativo'])
+        url = reverse('transporte:rota-reativar', kwargs={'pk': self.rota.pk})
+        resposta = self.client.post(url)
+        self.assertEqual(resposta.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('percurso está inativo', str(resposta.data))
 
     def test_nao_autenticado_retorna_401(self):
         self.client.credentials()

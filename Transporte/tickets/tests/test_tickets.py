@@ -79,19 +79,19 @@ class TicketBusinessTestCase(APITestCase):
             microseconds=1,
         )
         with patch('Transporte.tickets.rules.now', return_value=depois_limite):
-            with self.assertRaises(BusinessRuleException):
+            with self.assertRaises(BusinessRuleException) as contexto_reserva:
                 Ticket().business.solicitar_reserva(self.execucao.pk, outro.usuario)
-            with self.assertRaises(BusinessRuleException):
+            self.assertIn('30 minutos antes da saída', str(contexto_reserva.exception))
+            with self.assertRaises(BusinessRuleException) as contexto_fila:
                 Ticket().business.entrar_fila(self.execucao.pk, outro.usuario)
+            self.assertIn('30 minutos antes da saída', str(contexto_fila.exception))
 
     def test_domingo_bloqueia_reserva(self):
         dias_ate_domingo = (6 - timezone.localdate().weekday()) % 7
         if dias_ate_domingo == 0:
             dias_ate_domingo = 7
-        _, execucao = criar_rota_e_execucao(
-            vagas=1,
-            dias_ate_execucao=dias_ate_domingo,
-        )
+        data_domingo = timezone.localdate() + timedelta(days=dias_ate_domingo)
+        _, execucao = criar_rota_e_execucao(vagas=1, data_execucao=data_domingo)
         instante = timezone.localtime(execucao.data_hora_saida).replace(
             hour=1,
             minute=0,
@@ -99,8 +99,9 @@ class TicketBusinessTestCase(APITestCase):
             microsecond=0,
         )
         with patch('Transporte.tickets.rules.now', return_value=instante):
-            with self.assertRaises(BusinessRuleException):
+            with self.assertRaises(BusinessRuleException) as contexto:
                 Ticket().business.solicitar_reserva(execucao.pk, self.aluno.usuario)
+        self.assertIn('não estão disponíveis nesta data', str(contexto.exception))
 
     def test_feriado_bloqueia_reserva_em_dia_util(self):
         data_feriado = date(2026, 9, 7)
@@ -121,11 +122,12 @@ class TicketBusinessTestCase(APITestCase):
         )
 
         with patch('Transporte.tickets.rules.now', return_value=instante):
-            with self.assertRaises(BusinessRuleException):
+            with self.assertRaises(BusinessRuleException) as contexto:
                 Ticket().business.solicitar_reserva(
                     execucao.pk,
                     self.aluno.usuario,
                 )
+        self.assertIn('não estão disponíveis nesta data', str(contexto.exception))
 
     def test_sabado_letivo_permite_reserva_fila_e_cancelamento(self):
         data_sabado = date(2026, 9, 5)
@@ -170,20 +172,23 @@ class TicketBusinessTestCase(APITestCase):
         self.assertEqual(espera.status, StatusTicket.EM_ESPERA)
 
     def test_nao_entra_na_fila_quando_ha_vaga(self):
-        with self.assertRaises(BusinessRuleException):
+        with self.assertRaises(BusinessRuleException) as contexto:
             Ticket().business.entrar_fila(self.execucao.pk, self.aluno.usuario)
+        self.assertIn('vagas disponíveis', str(contexto.exception))
 
     def test_apenas_aluno_ativo_e_matriculado_reserva(self):
         self.aluno.situacao = SituacaoAluno.TRANCADO
         self.aluno.save(update_fields=['situacao'])
-        with self.assertRaises(BusinessRuleException):
+        with self.assertRaises(BusinessRuleException) as contexto:
             Ticket().business.solicitar_reserva(self.execucao.pk, self.aluno.usuario)
+        self.assertIn('matriculado', str(contexto.exception))
 
     def test_apenas_aluno_ativo_e_matriculado_entra_fila(self):
         Ticket().business.solicitar_reserva(self.execucao.pk, self.aluno.usuario)
         outro = criar_aluno('20000000019', situacao=SituacaoAluno.TRANCADO)
-        with self.assertRaises(BusinessRuleException):
+        with self.assertRaises(BusinessRuleException) as contexto:
             Ticket().business.entrar_fila(self.execucao.pk, outro.usuario)
+        self.assertIn('matriculado', str(contexto.exception))
 
     def test_fila_prioriza_pcd_sem_deslocar_reserva(self):
         reservado = Ticket().business.solicitar_reserva(self.execucao.pk, self.aluno.usuario)
@@ -363,8 +368,9 @@ class TicketBusinessTestCase(APITestCase):
         self.aluno.refresh_from_db()
         self.assertTrue(self.aluno.is_bloqueado)
         _, nova_execucao = criar_rota_e_execucao(vagas=1, dias_ate_execucao=21)
-        with self.assertRaises(BusinessRuleException):
+        with self.assertRaises(BusinessRuleException) as contexto:
             Ticket().business.solicitar_reserva(nova_execucao.pk, self.aluno.usuario)
+        self.assertIn('bloqueado', str(contexto.exception))
         ticket_existente.refresh_from_db()
         self.assertEqual(ticket_existente.status, StatusTicket.RESERVADO)
 
@@ -390,8 +396,9 @@ class TicketBusinessTestCase(APITestCase):
         )
         with patch('Transporte.tickets.rules.now', return_value=instante):
             Ticket().business.solicitar_reserva(nova_execucao.pk, ocupante.usuario)
-            with self.assertRaises(BusinessRuleException):
+            with self.assertRaises(BusinessRuleException) as contexto:
                 Ticket().business.entrar_fila(nova_execucao.pk, self.aluno.usuario)
+            self.assertIn('bloqueado', str(contexto.exception))
         ticket_existente.refresh_from_db()
         self.assertEqual(ticket_existente.status, StatusTicket.RESERVADO)
 

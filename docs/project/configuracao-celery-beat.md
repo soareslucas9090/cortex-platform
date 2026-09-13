@@ -1,8 +1,8 @@
-# Configuração do Celery Beat no Railway
+# Configuração do Celery Beat
 
-Este guia descreve como executar o Celery Beat do Cortex no Railway. O Beat é
-responsável por disparar as tarefas periódicas configuradas no Django; o Celery
-Worker apenas recebe e processa essas tarefas.
+Este guia descreve como executar o Celery Beat do Cortex. O Beat é responsável por
+disparar as tarefas periódicas configuradas no Django; o Celery Worker apenas
+recebe e processa essas tarefas.
 
 No domínio de Transporte, o Beat envia a tarefa
 `Transporte.execucoes_rotas.tasks.gerar_execucoes_rotas_automaticas_task` a cada
@@ -11,9 +11,9 @@ dia da semana e com as exceções do calendário operacional.
 
 ## Arquitetura esperada
 
-O projeto do Railway deve possuir, no mínimo, os seguintes serviços:
+O ambiente de produção deve possuir, no mínimo, os seguintes processos:
 
-| Serviço | Responsabilidade | Processo contínuo |
+| Processo | Responsabilidade | Contínuo |
 | --- | --- | --- |
 | Web | Executar a API Django/Gunicorn | Sim |
 | Worker | Processar tarefas assíncronas | Sim |
@@ -24,50 +24,32 @@ O projeto do Railway deve possuir, no mínimo, os seguintes serviços:
 O Worker e o Beat devem apontar para o mesmo código, banco de dados e Redis da
 aplicação Web.
 
-> O Beat deve possuir apenas uma réplica. Duas instâncias podem enviar a mesma
-> tarefa periódica simultaneamente.
+> O Beat deve possuir apenas uma instância ativa. Duas instâncias podem enviar a
+> mesma tarefa periódica simultaneamente.
 
 ## Pré-requisitos
 
 Antes de configurar o Beat, confirme que:
 
 - a aplicação Web e o Worker estão publicados e saudáveis;
-- o PostgreSQL e o Redis estão disponíveis no mesmo projeto/ambiente;
+- o PostgreSQL e o Redis estão disponíveis no mesmo ambiente;
 - o Worker consegue se conectar ao Redis;
 - as migrações do Django foram aplicadas;
-- o serviço usa a mesma branch ou o mesmo commit implantado nos demais
+- o processo do Beat usa a mesma versão do código implantada nos demais
   processos do backend.
 
-## 1. Criar o serviço
+## Variáveis de ambiente
 
-No painel do Railway:
-
-1. Abra o projeto e o ambiente que executam o backend.
-2. Clique em **New** e crie um serviço vazio ou conecte novamente o mesmo
-   repositório GitHub usado pelo backend.
-3. Nomeie o serviço como `celery-beat`.
-4. Em **Source**, selecione o mesmo repositório e a mesma branch do serviço Web
-   e do Worker.
-5. Se houver configuração de **Root Directory**, **Build Command** ou caminho de
-   Dockerfile no Worker, replique-a no Beat.
-
-O serviço não recebe requisições HTTP, portanto não precisa de domínio público.
-
-## 2. Configurar as variáveis
-
-Em **Variables**, replique as variáveis do Worker. É importante que os dois
-serviços usem as mesmas referências de PostgreSQL e Redis.
-
-As variáveis consumidas diretamente pelo Celery no Cortex são:
+O Beat precisa das mesmas variáveis de ambiente do Worker. Em especial, as
+variáveis consumidas diretamente pelo Celery no Cortex são:
 
 ```env
-CELERY_BROKER_URL=${{Redis.REDIS_URL}}
-CELERY_RESULT_BACKEND=${{Redis.REDIS_URL}}
+CELERY_BROKER_URL=redis://<host>:<porta>/<db>
+CELERY_RESULT_BACKEND=redis://<host>:<porta>/<db>
 ```
 
-Substitua `Redis` pelo nome real do serviço Redis no projeto, caso seja
-diferente. Também replique as variáveis Django e de banco já utilizadas pelo
-Worker, especialmente:
+Também replique as variáveis Django e de banco já utilizadas pelo Worker,
+especialmente:
 
 ```text
 DJANGO_SECRET_KEY
@@ -80,29 +62,31 @@ DATABASE_HOST
 DATABASE_PORT
 ```
 
-Não copie valores manualmente quando puder usar variáveis de referência do
-Railway. Assim, uma alteração no banco ou no Redis é compartilhada entre os
-serviços.
+Beat e Worker devem usar exatamente a mesma URL de broker e o mesmo banco de
+dados. Em ambientes com múltiplos serviços, prefira variáveis de referência ou
+secrets compartilhados em vez de copiar valores manualmente.
 
-## 3. Definir o comando de inicialização
+## Comando de inicialização
 
-Em **Settings > Deploy > Custom Start Command**, informe:
+O Beat é um processo contínuo. Execute:
 
 ```bash
 celery -A Cortex beat --loglevel=INFO
 ```
 
-Esse é um processo contínuo. Não configure o serviço como um Railway Cron Job e
-não use o comando do Worker nesse serviço.
+Não substitua o Beat por um cron externo que invoque tarefas manualmente. O
+agendamento já está declarado em `Cortex/settings.py` por meio de
+`CELERY_BEAT_SCHEDULE`; não é necessário cadastrar expressões de cron em outro
+lugar.
 
-A agenda já está declarada em `Cortex/settings.py` por meio de
-`CELERY_BEAT_SCHEDULE`. Não é necessário cadastrar manualmente a expressão de
-cron no painel do Railway.
+Em Docker, systemd, Kubernetes ou plataformas PaaS, configure um serviço
+dedicado apenas para esse comando. Não use o comando do Worker no mesmo
+processo do Beat.
 
-## 4. Implantar
+## Implantação
 
-Revise as alterações pendentes no Railway e faça o deploy. Configure o serviço
-com exatamente uma réplica.
+Implante o Beat com exatamente uma réplica ativa. O serviço não recebe
+requisições HTTP e não precisa de domínio público.
 
 Após a inicialização, os logs devem indicar que o Celery Beat iniciou e carregou
 a agenda. A cada cinco minutos, deve aparecer no Beat uma mensagem semelhante a:
@@ -121,7 +105,7 @@ Depois do processamento, o Worker deve registrar a conclusão da tarefa. A
 mensagem informa a data, quantas execuções foram criadas, quantas já existiam,
 quantas estavam fora do prazo e se o dia era operacional.
 
-## 5. Validar a regra de geração
+## Validar a regra de geração
 
 A ausência de novas execuções nem sempre representa erro. A tarefa somente cria
 uma execução quando todas estas condições são atendidas:
@@ -141,14 +125,14 @@ pontos facultativos, suspensões, recessos e férias bloqueiam novas execuções
 
 ### O Beat não inicia
 
-Confira os logs do deploy, o comando de inicialização, a branch, o diretório
-raiz e se as dependências do projeto foram instaladas.
+Confira os logs do deploy, o comando de inicialização, a versão do código e se
+as dependências do projeto foram instaladas.
 
 ### Erro de conexão com o Redis
 
-Confira se `CELERY_BROKER_URL` e `CELERY_RESULT_BACKEND` referenciam o Redis do
-mesmo ambiente. Dentro do Railway, não use `localhost` para acessar outro
-serviço.
+Confira se `CELERY_BROKER_URL` e `CELERY_RESULT_BACKEND` apontam para o Redis do
+mesmo ambiente. Em ambientes com múltiplos serviços, não use `localhost` para
+acessar o broker de outro container ou máquina.
 
 ### O Beat envia, mas o Worker não recebe
 
@@ -169,15 +153,14 @@ saída. Reexecuções são idempotentes e não criam duplicatas.
 
 ## Desativação e reversão
 
-Para interromper temporariamente os disparos automáticos, pare o serviço
-`celery-beat` no Railway. Não é necessário parar o Worker, pois ele pode
-continuar processando outras tarefas assíncronas do sistema.
+Para interromper temporariamente os disparos automáticos, pare o processo do
+Beat. Não é necessário parar o Worker, pois ele pode continuar processando
+outras tarefas assíncronas do sistema.
 
 Ao reativar o Beat, ele volta a reconciliar o dia corrente a cada cinco minutos.
 Rotas cujo limite de 30 minutos já passou não são criadas retroativamente.
 
 ## Referências
 
-- [Serviços no Railway](https://docs.railway.com/services)
-- [Comandos de build e inicialização](https://docs.railway.com/builds/build-and-start-commands)
-- [Guia de Django no Railway](https://docs.railway.com/guides/django)
+- [Celery — Periodic Tasks](https://docs.celeryq.dev/en/stable/userguide/periodic-tasks.html)
+- [Celery Beat](https://docs.celeryq.dev/en/stable/userguide/periodic-tasks.html#beat-entries)

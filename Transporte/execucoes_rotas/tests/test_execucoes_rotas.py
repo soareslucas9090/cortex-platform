@@ -13,13 +13,19 @@ from Transporte.execucoes_rotas.models import ExecucaoRota
 from Transporte.execucoes_rotas.state import ExecucaoFechadaState
 from Transporte.percursos.models import Percurso
 from Transporte.rotas.models import Rota
-from Transporte.tests_utils import DIAS_POR_WEEKDAY, criar_aluno, criar_usuario, obter_token
+from Transporte.tests_utils import (
+    DIAS_POR_WEEKDAY,
+    criar_aluno,
+    criar_usuario,
+    obter_token,
+    proxima_data_operacional,
+)
 
 
 class ExecucaoRotaTestCase(APITestCase):
 
     def setUp(self):
-        self.data = timezone.localdate() + timedelta(days=7)
+        self.data = proxima_data_operacional(deslocamento_dias=7)
         self.percurso = Percurso.objects.create(apelido='Campus Centro', descricao='Teste')
         self.rota = Rota.objects.create(
             percurso=self.percurso,
@@ -120,6 +126,9 @@ class ExecucaoRotaTestCase(APITestCase):
         with patch(
             'Transporte.execucoes_rotas.helpers.now',
             return_value=instante_aberto,
+        ), patch(
+            'Transporte.execucoes_rotas.business.timezone.localdate',
+            return_value=self.data,
         ):
             resposta = self.client.get(reverse('transporte:execucao-rota-list'))
         self.assertEqual(resposta.status_code, status.HTTP_200_OK)
@@ -139,6 +148,9 @@ class ExecucaoRotaTestCase(APITestCase):
         with patch(
             'Transporte.execucoes_rotas.helpers.now',
             return_value=abertura - timedelta(microseconds=1),
+        ), patch(
+            'Transporte.execucoes_rotas.business.timezone.localdate',
+            return_value=self.data,
         ):
             self.assertFalse(
                 ExecucaoRota().business.listar_para_usuario(aluno.usuario).exists(),
@@ -147,6 +159,9 @@ class ExecucaoRotaTestCase(APITestCase):
         with patch(
             'Transporte.execucoes_rotas.helpers.now',
             return_value=abertura,
+        ), patch(
+            'Transporte.execucoes_rotas.business.timezone.localdate',
+            return_value=self.data,
         ):
             self.assertTrue(
                 ExecucaoRota().business.listar_para_usuario(aluno.usuario).exists(),
@@ -155,6 +170,9 @@ class ExecucaoRotaTestCase(APITestCase):
         with patch(
             'Transporte.execucoes_rotas.helpers.now',
             return_value=limite,
+        ), patch(
+            'Transporte.execucoes_rotas.business.timezone.localdate',
+            return_value=self.data,
         ):
             self.assertTrue(
                 ExecucaoRota().business.listar_para_usuario(aluno.usuario).exists(),
@@ -163,6 +181,9 @@ class ExecucaoRotaTestCase(APITestCase):
         with patch(
             'Transporte.execucoes_rotas.helpers.now',
             return_value=limite + timedelta(microseconds=1),
+        ), patch(
+            'Transporte.execucoes_rotas.business.timezone.localdate',
+            return_value=self.data,
         ):
             self.assertFalse(
                 ExecucaoRota().business.listar_para_usuario(aluno.usuario).exists(),
