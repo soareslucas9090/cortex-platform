@@ -302,6 +302,14 @@ O payload `posicao` informa `tipo` (`RESERVA` ou `ESPERA`), `atual` e `total`.
 Mesmo critério de **Sem ticket** do histórico de rotas (seção 12): conta
 embarques reais via `EntradaSemTicket`, não a ausência de reserva.
 
+O acesso é somente leitura e exige a capacidade
+`transporte.visualizar_relatorio_alunos`, concedida a L3 e automaticamente aos
+diretores, coordenadores e chefes (inclusive Chefe de Gabinete) com vínculo ativo.
+A permissão individual de Transporte também pode conceder a capacidade a um
+colaborador sem função gestora. Para colaboradores, o perfil de
+servidor/terceirizado precisa estar ativo; o acesso automático por categoria
+também exige setor e função ativos.
+
 - `presentes`: tickets `EMBARCADO` no período.
 - `ausentes` / `ausencias`: tickets `AUSENTE` no período.
 - `em_espera`: tickets `EM_ESPERA` no período (espera ainda pendente).
@@ -318,6 +326,13 @@ de origem: conta em `ausentes` e em `sem_ticket`. Cancelados e espera pendente
 não entram em `sem_ticket`. O dashboard e o resumo por horário somam registros
 (como `presentes` soma tickets); a aba Detalhes lista alunos distintos com
 pelo menos um registro na categoria.
+
+Arquiteturalmente, `RelatorioAlunos` é um objeto de domínio somente leitura, sem
+tabela própria, usado para compor `Business`, `Rules` e `Helpers` pelo padrão do
+AppCore. As duas views mantêm `get` explícito apenas porque retornam envelopes
+agregados já consumidos pelo frontend; elas não fazem queries nem validações e
+delegam integralmente ao Business. O `@extend_schema` permanece na classe porque
+essas URLs passam por `roteador_por_metodo`, que propaga o schema da classe.
 
 #### Payload do detalhe (modal TI)
 
@@ -356,15 +371,20 @@ strikes e justificativas.
   e não bloqueado; `conferir` é `true` para L3 **ou** servidor/terceirizado ativo
   **e** (`PermissaoFuncaoTransporte.conferir` na função do vínculo ativo **ou**
   `PermissaoUsuarioTransporte.conferir`); `bloqueado`, `faltas` e `bloqueios`
-  refletem o estado sincronizado do aluno (`bloqueios` = `quantidade_bloqueios`).
+  refletem o estado sincronizado do aluno (`bloqueios` = `quantidade_bloqueios`);
+  `visualizar_relatorio_alunos` é `true` para L3, servidor/terceirizado ativo com
+  vínculo ativo de diretor, coordenador ou chefe, ou colaborador ativo com a
+  capacidade concedida diretamente ao usuário. Uma permissão de função também
+  pode conceder a capacidade para categorias futuras.
 - **Conferente:** lista só execuções do **dia**; após iniciar a conferência, opera
   a chamada de tickets e a entrada por CPF **dessa** execução. Não acessa GET
   global de tickets.
 - **Views de conferência:** `PodeConferirTransporteMixin`.
 - **Views administrativas:** `IsAdminMixin` (`tem_acesso_elevado()`), o mesmo critério de L3.
 - **Compilação:** `UsuarioPermissions.permissoes_transporte()`.
-- **Documentação viva:** `documentacao_transporte()`. O dashboard futuro (RF012)
-  reutiliza `conferir`; não há capacidade `ver_dashboard`.
+- **Documentação viva:** `documentacao_transporte()`. O relatório de alunos
+  utiliza a capacidade exclusiva `visualizar_relatorio_alunos`; ela não concede
+  acesso à conferência de embarque.
 
 Swagger das views de conferência declara capacidade `transporte.conferir` e o
 escopo do dia, da chamada de tickets e da entrada por CPF da execução monitorada.

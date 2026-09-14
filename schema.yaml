@@ -855,11 +855,12 @@ paths:
         elegibilidade do solicitante) e\n    **transporte** (capacidades `gerenciar`
         para L3, `motorista` para motoristas ativos;\n    ambas liberam a visão das
         rotas do dia, `reservar` para aluno elegível e `conferir`\n    para L3 ou
-        colaborador com\n    função). Novos módulos\n    entram automaticamente ao
-        implementar `documentacao_<modulo>()`.\n\n    **Permissões:** Qualquer usuário
-        autenticado.\n\n    **Manutenção:** toda alteração de regra de permissão deve
-        atualizar o método\n    `documentacao_<modulo>()` correspondente em `Identidade.usuarios.documentacao`.\n
-        \   "
+        colaborador com função; `visualizar_relatorio_alunos` para L3, diretores,\n
+        \   coordenadores e chefes com vínculo ativo, ou colaborador autorizado diretamente).\n
+        \   Novos módulos\n    entram automaticamente ao implementar `documentacao_<modulo>()`.\n\n
+        \   **Permissões:** Qualquer usuário autenticado.\n\n    **Manutenção:** toda
+        alteração de regra de permissão deve atualizar o método\n    `documentacao_<modulo>()`
+        correspondente em `Identidade.usuarios.documentacao`.\n    "
       summary: Documentação de permissões por módulo
       tags:
       - Identidade
@@ -7192,11 +7193,11 @@ paths:
     get:
       operationId: transporte_relatorio_alunos_dashboard_retrieve
       description: |-
-        Retorna o resumo agregado e a distribuição por horário de rota no período informado.
+        Retorna o resumo agregado e a distribuição por horário no período informado.
 
         `sem_ticket` conta registros de `EntradaSemTicket` no período: walk-in nas vagas restantes após a chamada, inclusive quem estava `EM_ESPERA` e entrou por CPF (`CONTEMPLADO`). Não conta quem apenas deixou de reservar ticket.
 
-        **Permissões:** L3 (EDITAR_TUDO) — perfil TI / administradores.
+        **Permissões:** capacidade `transporte.visualizar_relatorio_alunos`. Disponível para L3, diretores, coordenadores e chefes com vínculo ativo, além de colaboradores autorizados diretamente.
       summary: Dashboard do relatório de alunos
       parameters:
       - in: query
@@ -7246,9 +7247,9 @@ paths:
     get:
       operationId: transporte_relatorio_alunos_detalhes_retrieve
       description: |-
-        Lista paginada de alunos enriquecidos para a aba Detalhes, filtrada por categoria.
+        Lista paginada de alunos enriquecidos para a aba Detalhes, filtrada por categoria. Query params apenas reduzem o conjunto dentro do escopo já autorizado e nunca expandem o acesso.
 
-        **Permissões:** L3 (EDITAR_TUDO) — perfil TI / administradores.
+        **Permissões:** capacidade `transporte.visualizar_relatorio_alunos`. Disponível para L3, diretores, coordenadores e chefes com vínculo ativo, além de colaboradores autorizados diretamente.
       summary: Detalhes do relatório de alunos por categoria
       parameters:
       - in: query
@@ -7282,10 +7283,12 @@ paths:
         name: page
         schema:
           type: integer
+        description: Página solicitada (mínimo 1, padrão 1).
       - in: query
         name: paginacao
         schema:
           type: integer
+        description: Itens por página (mínimo 1, máximo 100, padrão 10).
       tags:
       - Transporte · Relatórios
       security:

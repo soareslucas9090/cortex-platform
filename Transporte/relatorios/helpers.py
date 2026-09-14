@@ -2,19 +2,17 @@ from datetime import date, time
 
 from django.db.models import Count, Max, Min
 
-from Academico.aluno_cursos.models import AlunoCurso
-from Academico.alunos.models import Aluno
-from Transporte.entradas_sem_ticket.models import EntradaSemTicket
-from Transporte.execucoes_rotas.models import ExecucaoRota
+from AppCore.core.helpers.helpers import ModelInstanceHelpers
+
 from Transporte.strikes.choices import StatusStrike
-from Transporte.strikes.models import Strike
 from Transporte.tickets.choices import StatusTicket
-from Transporte.tickets.models import Ticket
 
 
-class RelatorioAlunosHelpers:
+class RelatorioAlunosHelpers(ModelInstanceHelpers):
 
     def obter_tickets_no_periodo(self, data_inicio: date, data_fim: date):
+        from Transporte.tickets.models import Ticket
+
         return Ticket.objects.filter(
             execucao_rota__data_execucao__gte=data_inicio,
             execucao_rota__data_execucao__lte=data_fim,
@@ -24,12 +22,16 @@ class RelatorioAlunosHelpers:
         )
 
     def obter_execucoes_no_periodo(self, data_inicio: date, data_fim: date):
+        from Transporte.execucoes_rotas.models import ExecucaoRota
+
         return ExecucaoRota.objects.filter(
             data_execucao__gte=data_inicio,
             data_execucao__lte=data_fim,
         ).select_related('rota')
 
     def obter_ids_alunos_bloqueados(self):
+        from Transporte.strikes.models import Strike
+
         return set(
             Strike.objects.filter(status=StatusStrike.ATIVO)
             .values('ticket__aluno_id')
@@ -39,6 +41,8 @@ class RelatorioAlunosHelpers:
         )
 
     def aluno_esta_bloqueado(self, aluno_id: int) -> bool:
+        from Transporte.strikes.models import Strike
+
         total = Strike.objects.filter(
             ticket__aluno_id=aluno_id,
             status=StatusStrike.ATIVO,
@@ -46,18 +50,24 @@ class RelatorioAlunosHelpers:
         return total >= 3
 
     def contar_strikes_ativos(self, aluno_id: int) -> int:
+        from Transporte.strikes.models import Strike
+
         return Strike.objects.filter(
             ticket__aluno_id=aluno_id,
             status=StatusStrike.ATIVO,
         ).count()
 
     def obter_entradas_sem_ticket_no_periodo(self, data_inicio: date, data_fim: date):
+        from Transporte.entradas_sem_ticket.models import EntradaSemTicket
+
         return EntradaSemTicket.objects.filter(
             execucao_rota__data_execucao__gte=data_inicio,
             execucao_rota__data_execucao__lte=data_fim,
         )
 
     def obter_alunos_sem_ticket_no_periodo(self, data_inicio: date, data_fim: date):
+        from Academico.alunos.models import Aluno
+
         ids = (
             self.obter_entradas_sem_ticket_no_periodo(data_inicio, data_fim)
             .values_list('aluno_id', flat=True)
@@ -114,7 +124,10 @@ class RelatorioAlunosHelpers:
 
         return resultado
 
-    def enriquecer_aluno(self, aluno: Aluno, data_inicio: date, data_fim: date, categoria: str):
+    def enriquecer_aluno(self, aluno, data_inicio: date, data_fim: date, categoria: str):
+        from Academico.aluno_cursos.models import AlunoCurso
+        from Transporte.tickets.models import Ticket
+
         usuario = aluno.usuario
         turma = (
             AlunoCurso.objects.filter(aluno=aluno, ativo=True)

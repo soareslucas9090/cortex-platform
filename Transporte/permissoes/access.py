@@ -48,6 +48,29 @@ class PodeConferirTransporteMixin:
     permission_classes = [IsAuthenticated, PodeConferirTransportePermission]
 
 
+def usuario_pode_visualizar_relatorio_alunos(user) -> bool:
+    if not user or not getattr(user, 'is_authenticated', False):
+        return False
+    if usuario_e_administrador_transporte(user):
+        return True
+    transporte = getattr(user, 'permissoes', {}).get('transporte', {})
+    return bool(transporte.get('visualizar_relatorio_alunos'))
+
+
+class PodeVisualizarRelatorioAlunosPermission(BasePermission):
+    message = 'Você não tem permissão para visualizar o relatório de alunos.'
+
+    def has_permission(self, request, view):
+        return usuario_pode_visualizar_relatorio_alunos(request.user)
+
+    def has_object_permission(self, request, view, obj):
+        return usuario_pode_visualizar_relatorio_alunos(request.user)
+
+
+class PodeVisualizarRelatorioAlunosMixin:
+    permission_classes = [IsAuthenticated, PodeVisualizarRelatorioAlunosPermission]
+
+
 def usuario_pode_operar_rota(user) -> bool:
     from Transporte.motoristas.models import Motorista
 

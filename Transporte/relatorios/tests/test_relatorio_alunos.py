@@ -8,7 +8,17 @@ from rest_framework.test import APITestCase
 
 from Academico.aluno_cursos.models import AlunoCurso
 from Academico.cursos.models import Curso
+from Organizacional.funcoes.choices import CategoriaFuncao
+from Organizacional.funcoes.models import Funcao
+from Organizacional.setores.models import Setor
+from Organizacional.vinculos.models import SetorVinculo
+from PessoasInstitucionais.cargos.models import Cargo
+from PessoasInstitucionais.servidores.models import Servidor
 from Transporte.entradas_sem_ticket.models import EntradaSemTicket
+from Transporte.permissoes.models import (
+    PermissaoFuncaoTransporte,
+    PermissaoUsuarioTransporte,
+)
 from Transporte.strikes.models import Strike
 from Transporte.tests_utils import criar_aluno, criar_rota_e_execucao, criar_usuario, obter_token
 from Transporte.tickets.choices import StatusTicket
@@ -92,6 +102,42 @@ class RelatorioAlunosApiTestCase(APITestCase):
     def _url_detalhes(self):
         return reverse('transporte:relatorio-alunos-detalhes')
 
+    def _criar_gestor(
+        self,
+        cpf,
+        categoria,
+        papel_funcao,
+        visualizar_relatorio_alunos=None,
+    ):
+        usuario = criar_usuario(cpf, nome=papel_funcao)
+        cargo = Cargo.objects.create(nome=f'Cargo {cpf}')
+        Servidor.objects.create(
+            usuario=usuario,
+            cargo=cargo,
+            categoria=1,
+            ativo=True,
+        )
+        funcao = Funcao.objects.create(
+            papel_funcao=papel_funcao,
+            categoria=categoria,
+            descricao=papel_funcao,
+        )
+        if visualizar_relatorio_alunos is not None:
+            PermissaoFuncaoTransporte().business.criar_permissao(
+                funcao.pk,
+                visualizar_relatorio_alunos=visualizar_relatorio_alunos,
+            )
+        setor = Setor.objects.create(
+            nome=f'Setor {cpf}',
+            sigla=f'S{cpf[-8:]}',
+        )
+        SetorVinculo.objects.create(
+            usuario=usuario,
+            setor=setor,
+            funcao=funcao,
+        )
+        return usuario, funcao
+
     def test_l3_obtem_dashboard_com_resumo(self):
         self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {obter_token(self.admin)}')
         resposta = self.client.get(self._url_dashboard(), {
@@ -106,6 +152,35 @@ class RelatorioAlunosApiTestCase(APITestCase):
         self.assertTrue(len(dados['por_horario']) >= 1)
         self.assertEqual(dados['por_horario'][0]['sem_ticket'], 3)
 
+    def test_migration_concede_relatorio_a_todas_as_funcoes_gestoras(self):
+        categorias_gestoras = (
+            CategoriaFuncao.DIRETOR,
+            CategoriaFuncao.COORDENADOR,
+            CategoriaFuncao.CHEFE,
+        )
+        for categoria in categorias_gestoras:
+            with self.subTest(categoria=categoria):
+                funcoes = Funcao.objects.filter(categoria=categoria)
+                self.assertTrue(funcoes.exists())
+                self.assertFalse(
+                    funcoes.exclude(
+                        permissao_transporte__visualizar_relatorio_alunos=True,
+                    ).exists(),
+                )
+
+        self.assertTrue(
+            Funcao.objects.filter(
+                papel_funcao='Chefe de Gabinete da Diretoria Geral',
+                permissao_transporte__visualizar_relatorio_alunos=True,
+            ).exists(),
+        )
+        self.assertFalse(
+            PermissaoFuncaoTransporte.objects.filter(
+                visualizar_relatorio_alunos=True,
+                conferir=True,
+            ).exists(),
+        )
+
     def test_l1_recebe_403_no_dashboard(self):
         self.client.credentials(
             HTTP_AUTHORIZATION=f'Bearer {obter_token(self.aluno_presente.usuario)}',
@@ -116,12 +191,159 @@ class RelatorioAlunosApiTestCase(APITestCase):
         })
         self.assertEqual(resposta.status_code, status.HTTP_403_FORBIDDEN)
 
+    def test_nao_autenticado_recebe_401_no_dashboard(self):
+        resposta = self.client.get(self._url_dashboard(), {
+            'data_inicio': self.data_inicio,
+            'data_fim': self.data_fim,
+        })
+
+        self.assertEqual(resposta.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_funcoes_gestoras_acessam_dashboard_e_detalhes_sem_receber_conferencia(self):
+        perfis = (
+            (CategoriaFuncao.DIRETOR, 'Diretor Geral'),
+            (CategoriaFuncao.COORDENADOR, 'Coordenador de Curso'),
+            (CategoriaFuncao.CHEFE, 'Chefe de Departamento'),
+            (CategoriaFuncao.CHEFE, 'Chefe de Gabinete'),
+        )
+
+        for indice, (categoria, papel_funcao) in enumerate(perfis, start=1):
+            with self.subTest(papel_funcao=papel_funcao):
+                usuario, _ = self._criar_gestor(
+                    f'3000000000{indice}',
+                    categoria,
+                    papel_funcao,
+                )
+                self.assertFalse(
+                    PermissaoFuncaoTransporte.objects.filter(
+                        funcao__papel_funcao=papel_funcao,
+                    ).exists(),
+                )
+                transporte = usuario.permissoes['transporte']
+                self.assertTrue(transporte['visualizar_relatorio_alunos'])
+                self.assertFalse(transporte['conferir'])
+
+                self.client.credentials(
+                    HTTP_AUTHORIZATION=f'Bearer {obter_token(usuario)}',
+                )
+                resposta_dashboard = self.client.get(self._url_dashboard(), {
+                    'data_inicio': self.data_inicio,
+                    'data_fim': self.data_fim,
+                })
+                resposta_detalhes = self.client.get(self._url_detalhes(), {
+                    'data_inicio': self.data_inicio,
+                    'data_fim': self.data_fim,
+                    'categoria': 'presentes',
+                })
+
+                self.assertEqual(resposta_dashboard.status_code, status.HTTP_200_OK)
+                self.assertEqual(resposta_detalhes.status_code, status.HTTP_200_OK)
+
+    def test_funcao_gestora_acessa_mesmo_com_capacidade_persistida_falsa(self):
+        usuario, funcao = self._criar_gestor(
+            '30000000005',
+            CategoriaFuncao.COORDENADOR,
+            'Coordenador sem relatório',
+            visualizar_relatorio_alunos=False,
+        )
+
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {obter_token(usuario)}')
+        resposta = self.client.get(self._url_dashboard(), {
+            'data_inicio': self.data_inicio,
+            'data_fim': self.data_fim,
+        })
+
+        self.assertFalse(funcao.permissao_transporte.visualizar_relatorio_alunos)
+        self.assertEqual(resposta.status_code, status.HTTP_200_OK)
+
+    def test_funcao_inativa_nao_concede_acesso_ao_relatorio(self):
+        usuario, funcao = self._criar_gestor(
+            '30000000006',
+            CategoriaFuncao.DIRETOR,
+            'Diretor inativo',
+        )
+        funcao.ativo = False
+        funcao.save(update_fields=['ativo'])
+
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {obter_token(usuario)}')
+        resposta = self.client.get(self._url_dashboard(), {
+            'data_inicio': self.data_inicio,
+            'data_fim': self.data_fim,
+        })
+
+        self.assertEqual(resposta.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_setor_inativo_nao_concede_acesso_ao_relatorio(self):
+        usuario, _ = self._criar_gestor(
+            '30000000008',
+            CategoriaFuncao.COORDENADOR,
+            'Coordenador com setor inativo',
+        )
+        vinculo = SetorVinculo.objects.get(usuario=usuario)
+        vinculo.setor.ativo = False
+        vinculo.setor.save(update_fields=['ativo'])
+
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {obter_token(usuario)}')
+        resposta = self.client.get(self._url_dashboard(), {
+            'data_inicio': self.data_inicio,
+            'data_fim': self.data_fim,
+        })
+
+        self.assertEqual(resposta.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_perfil_colaborador_inativo_nao_concede_acesso_ao_relatorio(self):
+        usuario, _ = self._criar_gestor(
+            '30000000009',
+            CategoriaFuncao.CHEFE,
+            'Chefe com perfil inativo',
+        )
+        usuario.servidor.ativo = False
+        usuario.servidor.save(update_fields=['ativo'])
+
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {obter_token(usuario)}')
+        resposta = self.client.get(self._url_dashboard(), {
+            'data_inicio': self.data_inicio,
+            'data_fim': self.data_fim,
+        })
+
+        self.assertEqual(resposta.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_permissao_direta_do_usuario_concede_acesso_ao_relatorio(self):
+        usuario, _ = self._criar_gestor(
+            '30000000007',
+            CategoriaFuncao.COORDENADOR,
+            'Coordenador com permissão individual',
+            visualizar_relatorio_alunos=False,
+        )
+        SetorVinculo.objects.filter(usuario=usuario).delete()
+        PermissaoUsuarioTransporte().business.criar_permissao(
+            usuario.pk,
+            visualizar_relatorio_alunos=True,
+        )
+
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {obter_token(usuario)}')
+        resposta = self.client.get(self._url_dashboard(), {
+            'data_inicio': self.data_inicio,
+            'data_fim': self.data_fim,
+        })
+
+        self.assertEqual(resposta.status_code, status.HTTP_200_OK)
+
     def test_intervalo_invalido_retorna_400(self):
         self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {obter_token(self.admin)}')
         resposta = self.client.get(self._url_dashboard(), {
             'data_inicio': self.data_fim,
             'data_fim': self.data_inicio,
         })
+        self.assertEqual(resposta.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_data_malformada_retorna_400(self):
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {obter_token(self.admin)}')
+        resposta = self.client.get(self._url_dashboard(), {
+            'data_inicio': 'data-invalida',
+            'data_fim': self.data_fim,
+        })
+
         self.assertEqual(resposta.status_code, status.HTTP_400_BAD_REQUEST)
 
     def test_detalhes_presentes_com_busca(self):
@@ -199,6 +421,20 @@ class RelatorioAlunosApiTestCase(APITestCase):
         })
         self.assertEqual(resposta.status_code, status.HTTP_200_OK)
         self.assertEqual(len(resposta.data['dados']), 1)
+
+    def test_detalhes_ignora_paginacao_invalida(self):
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {obter_token(self.admin)}')
+        resposta = self.client.get(self._url_detalhes(), {
+            'data_inicio': self.data_inicio,
+            'data_fim': self.data_fim,
+            'categoria': 'sem_ticket',
+            'page': 'invalida',
+            'paginacao': 'invalida',
+        })
+
+        self.assertEqual(resposta.status_code, status.HTTP_200_OK)
+        self.assertEqual(resposta.data['count'], 3)
+        self.assertEqual(len(resposta.data['dados']), 3)
 
     def test_detalhes_exibe_bloqueios_historicos_persistidos(self):
         self.aluno_ausente.quantidade_bloqueios = 1

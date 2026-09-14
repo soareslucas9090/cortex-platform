@@ -82,7 +82,8 @@ class UsuarioPermissions(UserModelPermission):
 
     def permissoes_transporte(self) -> dict:
         """
-        Capacidades do Transporte para gestão, visão do motorista, conferência e solicitação de tickets.
+        Capacidades do Transporte para gestão, visão do motorista, conferência,
+        relatório de alunos e solicitação de tickets.
         """
         from Transporte.permissoes.access import (
             usuario_e_administrador_transporte,
@@ -97,14 +98,19 @@ class UsuarioPermissions(UserModelPermission):
 
         gerenciar = usuario_e_administrador_transporte(user)
         conferir = gerenciar
-        if not conferir and usuario_tem_perfil_colaborador_ativo(user):
+        visualizar_relatorio_alunos = gerenciar
+        if not gerenciar and usuario_tem_perfil_colaborador_ativo(user):
             conferir = PermissaoFuncaoTransporte().helper.usuario_confere(user)
+            visualizar_relatorio_alunos = (
+                PermissaoFuncaoTransporte().helper.usuario_visualiza_relatorio_alunos(user)
+            )
 
             return {
                 'transporte': {
                     'gerenciar': False,
                     'motorista': False,
                     'conferir': conferir,
+                    'visualizar_relatorio_alunos': visualizar_relatorio_alunos,
                     'reservar': False,
                     'bloqueado': False,
                     'faltas': 0,
@@ -133,6 +139,7 @@ class UsuarioPermissions(UserModelPermission):
                 'gerenciar': gerenciar,
                 'reservar': reservar,
                 'conferir': conferir,
+                'visualizar_relatorio_alunos': visualizar_relatorio_alunos,
                 'bloqueado': bloqueado,
                 'faltas': faltas,
                 'bloqueios': bloqueios,

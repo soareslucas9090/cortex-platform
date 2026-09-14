@@ -19,6 +19,7 @@ class RelatorioAlunosRules(ModelInstanceRules):
                 f'O intervalo máximo permitido é de {INTERVALO_MAXIMO_DIAS} dias.',
                 type_exception=ValidationException,
             )
+        return True
 
     def validar_categoria(self, categoria: str):
         from .choices import CategoriaRelatorioAluno
@@ -29,3 +30,12 @@ class RelatorioAlunosRules(ModelInstanceRules):
                 'Categoria inválida. Use: presentes, ausencias, bloqueios ou sem_ticket.',
                 type_exception=ValidationException,
             )
+        return True
+
+    def validar_parametro_obrigatorio(self, valor, nome: str):
+        if valor in (None, ''):
+            self.return_exception(
+                f'O parâmetro {nome} é obrigatório.',
+                type_exception=ValidationException,
+            )
+        return True

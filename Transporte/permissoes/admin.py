@@ -7,8 +7,8 @@ from .models import PermissaoFuncaoTransporte, PermissaoUsuarioTransporte
 
 @admin.register(PermissaoFuncaoTransporte)
 class PermissaoFuncaoTransporteAdmin(admin.ModelAdmin):
-    list_display = ('funcao', 'conferir', 'created_at')
-    list_filter = ('conferir',)
+    list_display = ('funcao', 'conferir', 'visualizar_relatorio_alunos', 'created_at')
+    list_filter = ('conferir', 'visualizar_relatorio_alunos')
     search_fields = ('funcao__papel_funcao', 'funcao__descricao')
     ordering = ('funcao__papel_funcao',)
 
@@ -18,6 +18,7 @@ class PermissaoFuncaoTransporteAdmin(admin.ModelAdmin):
                 lambda: PermissaoFuncaoTransporte().business.criar_permissao(
                     funcao_id=obj.funcao_id,
                     conferir=obj.conferir,
+                    visualizar_relatorio_alunos=obj.visualizar_relatorio_alunos,
                 )
             )
             obj.pk = created.pk
@@ -33,8 +34,8 @@ class PermissaoFuncaoTransporteAdmin(admin.ModelAdmin):
 
 @admin.register(PermissaoUsuarioTransporte)
 class PermissaoUsuarioTransporteAdmin(admin.ModelAdmin):
-    list_display = ('usuario', 'conferir', 'created_at')
-    list_filter = ('conferir',)
+    list_display = ('usuario', 'conferir', 'visualizar_relatorio_alunos', 'created_at')
+    list_filter = ('conferir', 'visualizar_relatorio_alunos')
     search_fields = ('usuario__nome', 'usuario__cpf', 'usuario__email')
     autocomplete_fields = ('usuario',)
     ordering = ('usuario__nome',)
@@ -45,6 +46,7 @@ class PermissaoUsuarioTransporteAdmin(admin.ModelAdmin):
                 lambda: PermissaoUsuarioTransporte().business.criar_permissao(
                     usuario_id=obj.usuario_id,
                     conferir=obj.conferir,
+                    visualizar_relatorio_alunos=obj.visualizar_relatorio_alunos,
                 )
             )
             obj.pk = created.pk

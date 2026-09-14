@@ -55,8 +55,9 @@ logger = logging.getLogger(__name__)
     estruturadas, acesso total de admin/superuser, elegibilidade do solicitante) e
     **transporte** (capacidades `gerenciar` para L3, `motorista` para motoristas ativos;
     ambas liberam a visão das rotas do dia, `reservar` para aluno elegível e `conferir`
-    para L3 ou colaborador com
-    função). Novos módulos
+    para L3 ou colaborador com função; `visualizar_relatorio_alunos` para L3, diretores,
+    coordenadores e chefes com vínculo ativo, ou colaborador autorizado diretamente).
+    Novos módulos
     entram automaticamente ao implementar `documentacao_<modulo>()`.
 
     **Permissões:** Qualquer usuário autenticado.
