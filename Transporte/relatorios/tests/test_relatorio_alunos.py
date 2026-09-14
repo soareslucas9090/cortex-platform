@@ -8,6 +8,7 @@ from rest_framework.test import APITestCase
 
 from Academico.aluno_cursos.models import AlunoCurso
 from Academico.cursos.models import Curso
+from Transporte.entradas_sem_ticket.models import EntradaSemTicket
 from Transporte.strikes.models import Strike
 from Transporte.tests_utils import criar_aluno, criar_rota_e_execucao, criar_usuario, obter_token
 from Transporte.tickets.choices import StatusTicket
@@ -21,6 +22,8 @@ class RelatorioAlunosApiTestCase(APITestCase):
         self.aluno_presente = criar_aluno('20000000001', nome='Aluno Presente')
         self.aluno_ausente = criar_aluno('20000000002', nome='Aluno Ausente')
         self.aluno_sem_ticket = criar_aluno('20000000003', nome='Aluno Sem Ticket')
+        self.aluno_sem_reserva = criar_aluno('20000000004', nome='Aluno Sem Reserva')
+        self.aluno_espera = criar_aluno('20000000005', nome='Aluno Espera Contemplado')
 
         self.hoje = timezone.localdate()
         self.data_inicio = (self.hoje - timedelta(days=7)).isoformat()
@@ -49,6 +52,29 @@ class RelatorioAlunosApiTestCase(APITestCase):
             ausente_em=timezone.now(),
         )
         Strike.objects.create(ticket=ticket_ausente)
+        EntradaSemTicket.objects.create(
+            execucao_rota=self.execucao,
+            aluno=self.aluno_sem_ticket,
+            cpf=self.aluno_sem_ticket.usuario.cpf,
+            data_hora_entrada=timezone.now(),
+        )
+        Ticket.objects.create(
+            execucao_rota=self.execucao,
+            aluno=self.aluno_espera,
+            status=StatusTicket.CONTEMPLADO,
+        )
+        EntradaSemTicket.objects.create(
+            execucao_rota=self.execucao,
+            aluno=self.aluno_espera,
+            cpf=self.aluno_espera.usuario.cpf,
+            data_hora_entrada=timezone.now(),
+        )
+        EntradaSemTicket.objects.create(
+            execucao_rota=self.execucao,
+            aluno=self.aluno_ausente,
+            cpf=self.aluno_ausente.usuario.cpf,
+            data_hora_entrada=timezone.now(),
+        )
 
         curso = Curso.objects.create(nome='TADS Mód. V', codigo_curso='TADS')
         AlunoCurso.objects.create(
@@ -76,8 +102,9 @@ class RelatorioAlunosApiTestCase(APITestCase):
         dados = resposta.data['dados']
         self.assertEqual(dados['resumo']['presentes'], 1)
         self.assertEqual(dados['resumo']['ausentes'], 1)
-        self.assertGreaterEqual(dados['resumo']['sem_ticket'], 1)
+        self.assertEqual(dados['resumo']['sem_ticket'], 3)
         self.assertTrue(len(dados['por_horario']) >= 1)
+        self.assertEqual(dados['por_horario'][0]['sem_ticket'], 3)
 
     def test_l1_recebe_403_no_dashboard(self):
         self.client.credentials(
@@ -145,7 +172,12 @@ class RelatorioAlunosApiTestCase(APITestCase):
         })
         self.assertEqual(resposta.status_code, status.HTTP_200_OK)
         nomes = [item['nome'] for item in resposta.data['dados']]
+        self.assertEqual(resposta.data['count'], 3)
         self.assertIn('Aluno Sem Ticket', nomes)
+        self.assertIn('Aluno Espera Contemplado', nomes)
+        self.assertIn('Aluno Ausente', nomes)
+        self.assertNotIn('Aluno Sem Reserva', nomes)
+        self.assertNotIn('Aluno Presente', nomes)
 
     def test_detalhes_categoria_invalida_retorna_400(self):
         self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {obter_token(self.admin)}')

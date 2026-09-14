@@ -1,9 +1,10 @@
 from datetime import date, time
 
-from django.db.models import Count, Max, Min, Q
+from django.db.models import Count, Max, Min
 
 from Academico.aluno_cursos.models import AlunoCurso
 from Academico.alunos.models import Aluno
+from Transporte.entradas_sem_ticket.models import EntradaSemTicket
 from Transporte.execucoes_rotas.models import ExecucaoRota
 from Transporte.strikes.choices import StatusStrike
 from Transporte.strikes.models import Strike
@@ -50,19 +51,19 @@ class RelatorioAlunosHelpers:
             status=StatusStrike.ATIVO,
         ).count()
 
-    def obter_ids_alunos_com_ticket_no_periodo(self, data_inicio: date, data_fim: date):
-        return set(
-            self.obter_tickets_no_periodo(data_inicio, data_fim)
-            .exclude(status=StatusTicket.CANCELADO)
-            .values_list('aluno_id', flat=True)
-            .distinct(),
+    def obter_entradas_sem_ticket_no_periodo(self, data_inicio: date, data_fim: date):
+        return EntradaSemTicket.objects.filter(
+            execucao_rota__data_execucao__gte=data_inicio,
+            execucao_rota__data_execucao__lte=data_fim,
         )
 
     def obter_alunos_sem_ticket_no_periodo(self, data_inicio: date, data_fim: date):
-        com_ticket = self.obter_ids_alunos_com_ticket_no_periodo(data_inicio, data_fim)
-        return Aluno.objects.filter(ativo=True).exclude(
-            usuario_id__in=com_ticket,
-        ).select_related('usuario')
+        ids = (
+            self.obter_entradas_sem_ticket_no_periodo(data_inicio, data_fim)
+            .values_list('aluno_id', flat=True)
+            .distinct()
+        )
+        return Aluno.objects.filter(pk__in=ids).select_related('usuario')
 
     def formatar_horario(self, horario: time) -> str:
         return horario.strftime('%H:%M')
@@ -95,16 +96,10 @@ class RelatorioAlunosHelpers:
                 rota__horario_saida__minute=int(horario_str.split(':')[1]),
             )
             execucao_ids = set(execucoes_horario.values_list('id', flat=True))
-            alunos_com_ticket_horario = set(
-                tickets_horario.exclude(status=StatusTicket.CANCELADO)
-                .values_list('aluno_id', flat=True)
-                .distinct(),
-            )
-            alunos_ativos_total = Aluno.objects.filter(ativo=True).count()
-            sem_ticket = max(
-                0,
-                alunos_ativos_total - len(alunos_com_ticket_horario),
-            ) if execucao_ids else 0
+            sem_ticket = self.obter_entradas_sem_ticket_no_periodo(
+                data_inicio,
+                data_fim,
+            ).filter(execucao_rota_id__in=execucao_ids).count()
 
             resultado.append({
                 'horario': horario_str,

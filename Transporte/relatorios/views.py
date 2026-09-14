@@ -34,6 +34,10 @@ def _parse_date_param(valor: str | None, nome: str):
     summary='Dashboard do relatório de alunos',
     description=(
         'Retorna o resumo agregado e a distribuição por horário de rota no período informado.\n\n'
+        '`sem_ticket` conta registros de `EntradaSemTicket` no período: walk-in '
+        'nas vagas restantes após a chamada, inclusive quem estava `EM_ESPERA` e '
+        'entrou por CPF (`CONTEMPLADO`). Não conta quem apenas deixou de reservar '
+        'ticket.\n\n'
         f'{PERMISSAO_ADMIN}'
     ),
     parameters=[

@@ -57,7 +57,8 @@ Transporte/
 ├── permissoes/
 ├── strikes/         # App Django do model Strike
 ├── justificativas/  # App Django do model Justificativa
-└── bloqueios/       # Consulta de alunos bloqueados e envio de justificativa
+├── bloqueios/       # Consulta de alunos bloqueados e envio de justificativa
+└── relatorios/      # Dashboard e detalhes do relatório de alunos
 ```
 
 ## Regras Específicas do Domínio
@@ -296,12 +297,27 @@ O payload `posicao` informa `tipo` (`RESERVA` ou `ESPERA`), `atual` e `total`.
 - Aprovação de justificativa zera `faltas`, mas **mantém** `quantidade_bloqueios`
   como histórico permanente.
 
-#### Relatório de alunos (`relatorio-alunos/detalhes`)
+#### Relatório de alunos (`relatorio-alunos/dashboard` e `detalhes`)
 
-- `ausencias`: tickets `AUSENTE` no período filtrado.
-- `bloqueios`: valor persistido de `Aluno.quantidade_bloqueios` (histórico).
+Mesmo critério de **Sem ticket** do histórico de rotas (seção 12): conta
+embarques reais via `EntradaSemTicket`, não a ausência de reserva.
+
+- `presentes`: tickets `EMBARCADO` no período.
+- `ausentes` / `ausencias`: tickets `AUSENTE` no período.
+- `em_espera`: tickets `EM_ESPERA` no período (espera ainda pendente).
+- `sem_ticket`: registros de `EntradaSemTicket` no período, inclusive quem
+  estava na espera, entrou por CPF e ficou `CONTEMPLADO`. Não conta quem
+  apenas deixou de reservar ticket.
+- `bloqueios`: no dashboard, alunos do período com bloqueio ativo; no detalhe,
+  valor persistido de `Aluno.quantidade_bloqueios` (histórico).
 - `status`: `Bloqueado` quando `is_bloqueado=true`; demais categorias seguem o
-  contexto da aba (`Presente`, `Ausente`, etc.).
+  contexto da aba (`Presente`, `Ausente`, `Sem ticket`, etc.).
+
+Quem faltou à chamada e depois entrou sem ticket permanece nos dois registros
+de origem: conta em `ausentes` e em `sem_ticket`. Cancelados e espera pendente
+não entram em `sem_ticket`. O dashboard e o resumo por horário somam registros
+(como `presentes` soma tickets); a aba Detalhes lista alunos distintos com
+pelo menos um registro na categoria.
 
 #### Payload do detalhe (modal TI)
 
@@ -428,6 +444,10 @@ Bases auxiliares:
   `GET /cortex/transporte/justificativas/<pk>/` (detalhe inclui `itens_ausencia`)
 - `POST /cortex/transporte/justificativas/<pk>/aprovar/`
 - `POST /cortex/transporte/justificativas/<pk>/rejeitar/`
+- `GET /cortex/transporte/relatorio-alunos/dashboard/` — resumo do período
+  (`sem_ticket` = `EntradaSemTicket`)
+- `GET /cortex/transporte/relatorio-alunos/detalhes/` — lista paginada por
+  categoria (`presentes`, `ausencias`, `bloqueios`, `sem_ticket`)
 
 ### 11. Tempo de viagem do motorista
 

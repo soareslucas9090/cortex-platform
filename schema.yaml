@@ -7194,6 +7194,8 @@ paths:
       description: |-
         Retorna o resumo agregado e a distribuição por horário de rota no período informado.
 
+        `sem_ticket` conta registros de `EntradaSemTicket` no período: walk-in nas vagas restantes após a chamada, inclusive quem estava `EM_ESPERA` e entrou por CPF (`CONTEMPLADO`). Não conta quem apenas deixou de reservar ticket.
+
         **Permissões:** L3 (EDITAR_TUDO) — perfil TI / administradores.
       summary: Dashboard do relatório de alunos
       parameters:

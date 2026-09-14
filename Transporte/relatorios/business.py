@@ -29,7 +29,7 @@ class RelatorioAlunosBusiness:
                 aluno_id__in=bloqueados_ids,
             ).values('aluno_id').distinct().count()
 
-            sem_ticket = self.helper.obter_alunos_sem_ticket_no_periodo(
+            sem_ticket = self.helper.obter_entradas_sem_ticket_no_periodo(
                 data_inicio,
                 data_fim,
             ).count()
@@ -120,19 +120,41 @@ class RelatorioAlunosBusiness:
     def _listar_alunos_por_categoria(self, data_inicio: date, data_fim: date, categoria: str):
         from Academico.alunos.models import Aluno
 
-        tickets = self.helper.obter_tickets_no_periodo(data_inicio, data_fim)
-        bloqueados_ids = self.helper.obter_ids_alunos_bloqueados()
+        try:
+            tickets = self.helper.obter_tickets_no_periodo(data_inicio, data_fim)
+            bloqueados_ids = self.helper.obter_ids_alunos_bloqueados()
 
-        if categoria == CategoriaRelatorioAluno.PRESENTES:
-            ids = tickets.filter(status=StatusTicket.EMBARCADO).values_list('aluno_id', flat=True)
-            return Aluno.objects.filter(usuario_id__in=ids)
+            if categoria == CategoriaRelatorioAluno.PRESENTES:
+                ids = tickets.filter(status=StatusTicket.EMBARCADO).values_list(
+                    'aluno_id',
+                    flat=True,
+                )
+                return Aluno.objects.filter(usuario_id__in=ids)
 
-        if categoria == CategoriaRelatorioAluno.AUSENCIAS:
-            ids = tickets.filter(status=StatusTicket.AUSENTE).values_list('aluno_id', flat=True)
-            return Aluno.objects.filter(usuario_id__in=ids)
+            if categoria == CategoriaRelatorioAluno.AUSENCIAS:
+                ids = tickets.filter(status=StatusTicket.AUSENTE).values_list(
+                    'aluno_id',
+                    flat=True,
+                )
+                return Aluno.objects.filter(usuario_id__in=ids)
 
-        if categoria == CategoriaRelatorioAluno.BLOQUEIOS:
-            ids = tickets.filter(aluno_id__in=bloqueados_ids).values_list('aluno_id', flat=True)
-            return Aluno.objects.filter(usuario_id__in=ids).distinct()
+            if categoria == CategoriaRelatorioAluno.BLOQUEIOS:
+                ids = tickets.filter(aluno_id__in=bloqueados_ids).values_list(
+                    'aluno_id',
+                    flat=True,
+                )
+                return Aluno.objects.filter(usuario_id__in=ids).distinct()
 
-        return self.helper.obter_alunos_sem_ticket_no_periodo(data_inicio, data_fim)
+            if categoria == CategoriaRelatorioAluno.SEM_TICKET:
+                return self.helper.obter_alunos_sem_ticket_no_periodo(data_inicio, data_fim)
+
+            return Aluno.objects.none()
+        except Exception as e:
+            from AppCore.core.business.business import ModelInstanceBusiness
+
+            business = ModelInstanceBusiness()
+            business.relancar_ou_erro_sistema(
+                e,
+                'Não foi possível listar os alunos do relatório.',
+                logger,
+            )

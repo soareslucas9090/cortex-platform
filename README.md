@@ -410,7 +410,8 @@ rotas do dia com status da execução e ocupação reais.
 - `Strike` e `Justificativa` — bloqueio após três faltas ativas e revisão por L3
 - `Aluno` (campos de transporte) — `faltas` e `is_bloqueado` do ciclo atual;
   `quantidade_bloqueios` histórico persistido (não reseta após aprovação)
-- Relatório de alunos — `ausencias` por período; `bloqueios` = `quantidade_bloqueios`
+- Relatório de alunos — `ausencias` por período; `sem_ticket` = `EntradaSemTicket`;
+  `bloqueios` = `quantidade_bloqueios`
 
 ## Decisões Técnicas
 

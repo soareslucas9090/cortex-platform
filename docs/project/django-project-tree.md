@@ -404,7 +404,8 @@ Transporte/
 ├── permissoes/
 ├── strikes/
 ├── justificativas/
-└── bloqueios/
+├── bloqueios/
+└── relatorios/
 ```
 
 #### Responsabilidades
@@ -420,6 +421,8 @@ Transporte/
 - `strikes/` → model principal `Strike`
 - `justificativas/` → model principal `Justificativa`
 - `bloqueios/` → consulta de alunos bloqueados e envio de justificativa
+- `relatorios/` → dashboard e detalhes do relatório de alunos (`sem_ticket` =
+  `EntradaSemTicket`)
 
 ---
 
