@@ -753,7 +753,7 @@ Alterar mixin, escopo ou regra de acesso exige atualizar o bloco `**Permissões:
 Use tags consistentes para agrupar endpoints no Swagger:
 
 - `Auth` - Autenticação e tokens
-- `Usuarios` - Operações de usuários (inclui alteração de senha de acesso: `POST /identidade/usuarios/alterar-senha/`)
+- `Usuarios` - Operações de usuários (inclui alteração da própria senha: `POST /identidade/usuarios/alterar-senha/`; admin: `POST /identidade/usuarios/{pk}/alterar-senha/` e `POST /identidade/usuarios/{pk}/redefinir-senha-padrao/`)
 - `Usuarios.Password reset` - Reset de senha por e-mail (futuro; não implementado)
 - `Campus`, `Setores`, `Empresas`, etc. - Entidades do domínio
 

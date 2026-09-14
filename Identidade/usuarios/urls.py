@@ -4,6 +4,8 @@ from AppCore.basics.views.basic_views import roteador_por_metodo
 
 from .views import (
     AdicionarItemColetivoView,
+    AdminAlterarSenhaView,
+    AdminRedefinirSenhaPadraoView,
     AlterarSenhaView,
     AtualizarUsuarioView,
     AtualizarFotoPrimariaView,
@@ -34,6 +36,16 @@ urlpatterns = [
         name='permissoes-documentacao',
     ),
     path('usuarios/alterar-senha/', AlterarSenhaView.as_view(), name='usuario-alterar-senha'),
+    path(
+        'usuarios/<int:pk>/alterar-senha/',
+        AdminAlterarSenhaView.as_view(),
+        name='usuario-admin-alterar-senha',
+    ),
+    path(
+        'usuarios/<int:pk>/redefinir-senha-padrao/',
+        AdminRedefinirSenhaPadraoView.as_view(),
+        name='usuario-redefinir-senha-padrao',
+    ),
     path('usuarios/', roteador_por_metodo(GET=ListarUsuariosView, POST=CriarUsuarioView), name='usuario-list'),
     path('usuarios/<int:pk>/', roteador_por_metodo(GET=DetalheUsuarioView, PATCH=AtualizarUsuarioView), name='usuario-detail'),
     path(

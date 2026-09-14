@@ -23,6 +23,7 @@ from AppCore.basics.views.basic_views import (
 from .models import Usuario
 from .serializers import (
     AdicionarItemColetivoSerializer,
+    AdminAlterarSenhaSerializer,
     AlterarSenhaResponseSerializer,
     AlterarSenhaSerializer,
     AtualizarUsuarioSerializer,
@@ -249,11 +250,93 @@ class AlterarSenhaView(IsAuthenticatedMixin, BasicPostAPIView):
     serializer_class = AlterarSenhaSerializer
     mensagem_sucesso = 'Senha alterada com sucesso.'
 
+    @extend_schema(operation_id='identidade_usuarios_alterar_senha')
+    def post(self, request, *args, **kwargs):
+        return super().post(request, *args, **kwargs)
+
     def do_action_post(self, serializer_data, request):
         request.user.business.alterar_senha(
             senha_atual=serializer_data['senha_atual'],
             nova_senha=serializer_data['nova_senha'],
         )
+        return {'mensagem': self.mensagem_sucesso}
+
+
+@extend_schema(
+    tags=['Usuarios'],
+    summary='Alterar senha de outro usuário (administrador)',
+    description='''
+    Permite ao administrador definir uma nova senha de acesso para o usuário
+    informado. Não exige a senha anterior.
+
+    A nova senha deve atender à política de complexidade (mínimo 8 caracteres,
+    maiúscula, minúscula, número e caractere especial) e ser diferente da senha atual.
+
+    Para restaurar a senha institucional padrão (CPF do aluno ou matrícula do
+    servidor/terceirizado), use `POST /usuarios/{pk}/redefinir-senha-padrao/`.
+
+    **Permissões:** L3 (EDITAR_TUDO) — administradores.
+    ''',
+    request=AdminAlterarSenhaSerializer,
+    responses={
+        status.HTTP_200_OK: AlterarSenhaResponseSerializer,
+        status.HTTP_400_BAD_REQUEST: {'description': 'Dados inválidos ou senha igual à atual.'},
+        status.HTTP_401_UNAUTHORIZED: {'description': 'Não autenticado.'},
+        status.HTTP_403_FORBIDDEN: {'description': 'Sem permissão.'},
+        status.HTTP_404_NOT_FOUND: {'description': 'Usuário não encontrado.'},
+    },
+)
+class AdminAlterarSenhaView(IsAdminMixin, BasicPostAPIView):
+    """POST /cortex/identidade/usuarios/{pk}/alterar-senha/"""
+    serializer_class = AdminAlterarSenhaSerializer
+    mensagem_sucesso = 'Senha alterada com sucesso.'
+    queryset = Usuario.objects.all()
+
+    @extend_schema(operation_id='identidade_usuarios_admin_alterar_senha')
+    def post(self, request, *args, **kwargs):
+        return super().post(request, *args, **kwargs)
+
+    def do_action_post(self, serializer_data, request, **kwargs):
+        self.get_object().business.alterar_senha_por_admin(
+            nova_senha=serializer_data['nova_senha'],
+        )
+        return {'mensagem': self.mensagem_sucesso}
+
+
+@extend_schema(
+    tags=['Usuarios'],
+    summary='Redefinir senha para o padrão institucional',
+    description='''
+    Restaura a senha de acesso do usuário para o padrão institucional, sem
+    exigir a senha anterior e sem aplicar a política de complexidade:
+
+    - **Aluno:** CPF
+    - **Servidor ou terceirizado:** a própria matrícula
+
+    Se o usuário for servidor ou terceirizado ativo com matrícula, a matrícula
+    prevalece mesmo que também possua perfil de aluno.
+
+    **Permissões:** L3 (EDITAR_TUDO) — administradores.
+    ''',
+    request=SerializerVazio,
+    responses={
+        status.HTTP_200_OK: AlterarSenhaResponseSerializer,
+        status.HTTP_400_BAD_REQUEST: {
+            'description': 'Não foi possível determinar a senha padrão (falta CPF ou matrícula).',
+        },
+        status.HTTP_401_UNAUTHORIZED: {'description': 'Não autenticado.'},
+        status.HTTP_403_FORBIDDEN: {'description': 'Sem permissão.'},
+        status.HTTP_404_NOT_FOUND: {'description': 'Usuário não encontrado.'},
+    },
+)
+class AdminRedefinirSenhaPadraoView(IsAdminMixin, BasicPostAPIView):
+    """POST /cortex/identidade/usuarios/{pk}/redefinir-senha-padrao/"""
+    serializer_class = SerializerVazio
+    mensagem_sucesso = 'Senha redefinida para o padrão.'
+    queryset = Usuario.objects.all()
+
+    def do_action_post(self, serializer_data, request, **kwargs):
+        self.get_object().business.redefinir_senha_padrao()
         return {'mensagem': self.mensagem_sucesso}
 
 

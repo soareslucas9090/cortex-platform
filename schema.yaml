@@ -1129,6 +1129,70 @@ paths:
               schema:
                 description: Usuário não encontrado.
           description: ''
+  /cortex/identidade/usuarios/{id}/alterar-senha/:
+    post:
+      operationId: identidade_usuarios_admin_alterar_senha
+      description: "\n    Permite ao administrador definir uma nova senha de acesso
+        para o usuário\n    informado. Não exige a senha anterior.\n\n    A nova senha
+        deve atender à política de complexidade (mínimo 8 caracteres,\n    maiúscula,
+        minúscula, número e caractere especial) e ser diferente da senha atual.\n\n
+        \   Para restaurar a senha institucional padrão (CPF do aluno ou matrícula
+        do\n    servidor/terceirizado), use `POST /usuarios/{pk}/redefinir-senha-padrao/`.\n\n
+        \   **Permissões:** L3 (EDITAR_TUDO) — administradores.\n    "
+      summary: Alterar senha de outro usuário (administrador)
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - Usuarios
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AdminAlterarSenha'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/AdminAlterarSenha'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/AdminAlterarSenha'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AlterarSenhaResponse'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                description: Dados inválidos ou senha igual à atual.
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                description: Não autenticado.
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                description: Sem permissão.
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                description: Usuário não encontrado.
+          description: ''
   /cortex/identidade/usuarios/{id}/coletivo/:
     get:
       operationId: identidade_usuarios_coletivo_retrieve
@@ -1622,6 +1686,58 @@ paths:
               schema:
                 description: Usuário não encontrado.
           description: ''
+  /cortex/identidade/usuarios/{id}/redefinir-senha-padrao/:
+    post:
+      operationId: identidade_usuarios_redefinir_senha_padrao_create
+      description: "\n    Restaura a senha de acesso do usuário para o padrão institucional,
+        sem\n    exigir a senha anterior e sem aplicar a política de complexidade:\n\n
+        \   - **Aluno:** CPF\n    - **Servidor ou terceirizado:** a própria matrícula\n\n
+        \   Se o usuário for servidor ou terceirizado ativo com matrícula, a matrícula\n
+        \   prevalece mesmo que também possua perfil de aluno.\n\n    **Permissões:**
+        L3 (EDITAR_TUDO) — administradores.\n    "
+      summary: Redefinir senha para o padrão institucional
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - Usuarios
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AlterarSenhaResponse'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                description: Não foi possível determinar a senha padrão (falta CPF
+                  ou matrícula).
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                description: Não autenticado.
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                description: Sem permissão.
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                description: Usuário não encontrado.
+          description: ''
   /cortex/identidade/usuarios/{usuario_pk}/contatos/:
     get:
       operationId: identidade_usuarios_contatos_list
@@ -1919,7 +2035,7 @@ paths:
           description: ''
   /cortex/identidade/usuarios/alterar-senha/:
     post:
-      operationId: identidade_usuarios_alterar_senha_create
+      operationId: identidade_usuarios_alterar_senha
       description: "\n    Permite ao usuário autenticado alterar a própria senha de
         acesso ao sistema.\n\n    **Permissões:** Qualquer usuário autenticado (L1–L3).\n\n
         \   A nova senha deve atender à política de complexidade (mínimo 8 caracteres,\n
@@ -7950,6 +8066,14 @@ components:
         * `cargo` - Cargo
         * `funcao` - Função
         * `setor` - Setor
+    AdminAlterarSenha:
+      type: object
+      properties:
+        nova_senha:
+          type: string
+          writeOnly: true
+      required:
+      - nova_senha
     AlterarSenha:
       type: object
       properties:

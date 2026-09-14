@@ -114,6 +114,15 @@ class UsuarioRules(ModelInstanceRules):
             raise ValidationException('Senha atual incorreta.')
         return True
 
+    def validar_senha_padrao_disponivel(self, senha_padrao) -> bool:
+        """Exige identificador institucional para redefinir a senha ao padrão."""
+        if not senha_padrao:
+            self.return_exception(
+                'Não foi possível determinar a senha padrão deste usuário. '
+                'Alunos precisam de CPF; servidores e terceirizados, de matrícula.',
+            )
+        return True
+
     def matricula_unica_no_sistema(
         self,
         numero_matricula: str,
