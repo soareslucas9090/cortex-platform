@@ -1,4 +1,4 @@
-from datetime import time
+from datetime import time, timedelta
 
 from django.urls import reverse
 from django.utils import timezone
@@ -300,6 +300,57 @@ class RotasDoDiaAPITestCase(APITestCase):
     def test_nao_autenticado_retorna_401(self):
         resposta = self.client.get(self.url_lista)
         self.assertEqual(resposta.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_cancelamento_oculta_execucao_sem_recriar_rota_sem_execucao(self):
+        execucao = ExecucaoRota().business.criar_execucao(self.rota.pk, timezone.localdate())
+        outra_rota = criar_rota(time(18, 0))
+        self.autenticar(self.usuario_ti)
+        cancelar = reverse('transporte:execucao-rota-cancelar', args=[execucao.pk])
+        self.assertEqual(self.client.post(cancelar, {}).status_code, status.HTTP_200_OK)
+
+        for usuario in (self.usuario_motorista, self.usuario_ti):
+            with self.subTest(usuario=usuario.pk):
+                self.autenticar(usuario)
+                resposta = self.client.get(self.url_lista)
+                self.assertEqual(resposta.status_code, status.HTTP_200_OK)
+                self.assertEqual([item['id'] for item in resposta.data['dados']], [outra_rota.pk])
+        execucao.refresh_from_db()
+        self.assertEqual(execucao.status, StatusExecucaoRota.CANCELADA)
+        self.assertEqual(ExecucaoRota.objects.count(), 1)
+
+    def test_somente_execucao_cancelada_retorna_lista_vazia(self):
+        execucao = ExecucaoRota().business.criar_execucao(self.rota.pk, timezone.localdate())
+        execucao.status = StatusExecucaoRota.CANCELADA
+        execucao.save(update_fields=['status'])
+        self.autenticar(self.usuario_motorista)
+
+        resposta = self.client.get(self.url_lista)
+
+        self.assertEqual(resposta.status_code, status.HTTP_200_OK)
+        self.assertEqual(resposta.data['dados'], [])
+
+    def test_desativar_oculta_execucao_nao_iniciada_e_reativar_restaura(self):
+        execucao = ExecucaoRota().business.criar_execucao(self.rota.pk, timezone.localdate())
+        self.autenticar(self.usuario_motorista)
+        self.rota.business.desativar()
+
+        self.assertEqual(self.client.get(self.url_lista).data['dados'], [])
+
+        self.rota.business.reativar()
+        itens = self.client.get(self.url_lista).data['dados']
+        self.assertEqual([item['execucao_id'] for item in itens], [execucao.pk])
+
+    def test_cancelamento_de_outra_data_nao_oculta_rota_de_hoje(self):
+        execucao = ExecucaoRota().business.criar_execucao(self.rota.pk, timezone.localdate())
+        execucao.data_execucao -= timedelta(days=7)
+        execucao.status = StatusExecucaoRota.CANCELADA
+        execucao.save(update_fields=['data_execucao', 'status'])
+        self.autenticar(self.usuario_motorista)
+
+        itens = self.client.get(self.url_lista).data['dados']
+
+        self.assertEqual([item['id'] for item in itens], [self.rota.pk])
+        self.assertIsNone(itens[0]['execucao_id'])
 
     def test_usuario_comum_retorna_403(self):
         self.autenticar(self.usuario_comum)

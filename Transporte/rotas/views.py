@@ -40,6 +40,8 @@ PERMISSAO_MOTORISTA = (
     `vagas_ocupadas` / `vagas_disponiveis` com a mesma regra da conferência
     (após a chamada: EMBARCADO + entradas sem ticket).
     Rotas ainda sem execução retornam status nulo, zero tickets e zero vagas ocupadas.
+    Execuções canceladas não aparecem, nem como rotas sem execução. Rotas ou percursos
+    inativos só aparecem enquanto a viagem estiver iniciada e ainda não finalizada.
     Inclui também viagens de dias anteriores ainda em andamento, inclusive se a rota
     foi desativada. O objeto `viagem` informa início, fim, duração em segundos e as ações
     permitidas ao usuário. Uma rota pode aparecer em mais de uma data de operação.
