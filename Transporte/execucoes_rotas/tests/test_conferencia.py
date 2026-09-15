@@ -38,6 +38,7 @@ class ConferenciaTransporteTestCase(APITestCase):
             execucao_rota=self.execucao,
             aluno=self.aluno_reserva,
             status=StatusTicket.RESERVADO,
+            posicao_reserva=1,
             reservado_em=agora,
         )
         Ticket.objects.create(
@@ -152,6 +153,7 @@ class ConferenciaTransporteTestCase(APITestCase):
             execucao_rota=self.execucao,
             aluno=pcd,
             status=StatusTicket.RESERVADO,
+            posicao_reserva=2,
             reservado_em=timezone.now(),
         )
         with self._entrar_na_janela_monitoramento():
@@ -162,6 +164,14 @@ class ConferenciaTransporteTestCase(APITestCase):
             reverse('transporte:conferencia-reservas', kwargs={'pk': self.execucao.pk}),
         )
         self.assertEqual(reservas.status_code, status.HTTP_200_OK)
+        self.assertEqual(
+            [item['aluno']['nome'] for item in reservas.data['dados']],
+            ['Aluno PcD', 'Reservado'],
+        )
+        self.assertEqual(
+            {item['aluno']['nome']: item['posicao']['atual'] for item in reservas.data['dados']},
+            {'Aluno PcD': 2, 'Reservado': 1},
+        )
         por_nome = {item['aluno']['nome']: item['aluno'] for item in reservas.data['dados']}
         self.assertTrue(por_nome['Aluno PcD']['tem_deficiencia'])
         self.assertFalse(por_nome['Reservado']['tem_deficiencia'])

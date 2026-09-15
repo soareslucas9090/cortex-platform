@@ -75,6 +75,11 @@ class TicketRules(ModelInstanceRules):
             self.return_exception('Ainda há vagas disponíveis; solicite uma reserva direta.')
         return True
 
+    def validar_posicao_reserva(self, posicao, quantidade_vagas) -> bool:
+        if posicao is None or posicao < 1 or posicao > quantidade_vagas:
+            self.return_exception('Não há uma posição válida disponível para esta reserva.')
+        return True
+
     def validar_dono_ou_admin(self, usuario) -> bool:
         dono = self.object_instance.aluno.usuario
         if dono == usuario or getattr(usuario, 'tem_acesso_elevado', lambda: False)():

@@ -190,19 +190,19 @@ class TicketBusinessTestCase(APITestCase):
             Ticket().business.entrar_fila(self.execucao.pk, outro.usuario)
         self.assertIn('matriculado', str(contexto.exception))
 
-    def test_fila_prioriza_pcd_sem_deslocar_reserva(self):
+    def test_fila_mantem_fifo_independentemente_de_pcd(self):
         reservado = Ticket().business.solicitar_reserva(self.execucao.pk, self.aluno.usuario)
         comum = criar_aluno('20000000003')
         pcd = criar_aluno_pcd('20000000004')
         ticket_comum = Ticket().business.entrar_fila(self.execucao.pk, comum.usuario)
         ticket_pcd = Ticket().business.entrar_fila(self.execucao.pk, pcd.usuario)
 
-        self.assertEqual(ticket_pcd.business.obter_posicao_fila(), 1)
-        self.assertEqual(ticket_comum.business.obter_posicao_fila(), 2)
+        self.assertEqual(ticket_comum.business.obter_posicao_fila(), 1)
+        self.assertEqual(ticket_pcd.business.obter_posicao_fila(), 2)
         reservado.refresh_from_db()
         self.assertEqual(reservado.status, StatusTicket.RESERVADO)
 
-    def test_reservas_expoem_posicao_com_prioridade_pcd_e_capacidade_total(self):
+    def test_reservas_expoem_posicao_solicitada_e_capacidade_total(self):
         _, execucao = criar_rota_e_execucao(vagas=3)
         comum = criar_aluno('20000000010')
         pcd = criar_aluno_pcd('20000000011')
@@ -212,15 +212,15 @@ class TicketBusinessTestCase(APITestCase):
 
         self.assertEqual(
             ticket_pcd.business.obter_posicao(),
-            {'tipo': 'RESERVA', 'atual': 1, 'total': 3},
+            {'tipo': 'RESERVA', 'atual': 2, 'total': 3},
         )
         self.assertEqual(
             ticket_comum.business.obter_posicao(),
-            {'tipo': 'RESERVA', 'atual': 2, 'total': 3},
+            {'tipo': 'RESERVA', 'atual': 1, 'total': 3},
         )
         self.assertIsNone(ticket_comum.business.obter_posicao_fila())
 
-    def test_alterar_deficiencia_reposiciona_reservas_confirmadas(self):
+    def test_alterar_deficiencia_nao_reposiciona_reservas_confirmadas(self):
         _, execucao = criar_rota_e_execucao(vagas=2)
         primeiro = criar_aluno('20000000012')
         segundo = criar_aluno('20000000013')
@@ -231,8 +231,8 @@ class TicketBusinessTestCase(APITestCase):
         segundo.usuario.deficiencia = 'deficiencia_fisica'
         segundo.usuario.save(update_fields=['deficiencia'])
 
-        self.assertEqual(ticket_segundo.business.obter_posicao()['atual'], 1)
-        self.assertEqual(ticket_primeiro.business.obter_posicao()['atual'], 2)
+        self.assertEqual(ticket_segundo.business.obter_posicao()['atual'], 2)
+        self.assertEqual(ticket_primeiro.business.obter_posicao()['atual'], 1)
 
     def test_posicao_de_espera_informa_quantidade_total_na_fila(self):
         Ticket().business.solicitar_reserva(self.execucao.pk, self.aluno.usuario)
@@ -243,15 +243,15 @@ class TicketBusinessTestCase(APITestCase):
 
         self.assertEqual(
             ticket_pcd.business.obter_posicao(),
-            {'tipo': 'ESPERA', 'atual': 1, 'total': 2},
+            {'tipo': 'ESPERA', 'atual': 2, 'total': 2},
         )
         self.assertEqual(
             ticket_comum.business.obter_posicao(),
-            {'tipo': 'ESPERA', 'atual': 2, 'total': 2},
+            {'tipo': 'ESPERA', 'atual': 1, 'total': 2},
         )
-        self.assertEqual(ticket_pcd.business.obter_posicao_fila(), 1)
+        self.assertEqual(ticket_pcd.business.obter_posicao_fila(), 2)
 
-    def test_alterar_deficiencia_reposiciona_fila(self):
+    def test_alterar_deficiencia_nao_reposiciona_fila(self):
         titular = Ticket().business.solicitar_reserva(self.execucao.pk, self.aluno.usuario)
         primeiro = criar_aluno('20000000005')
         segundo = criar_aluno('20000000006')
@@ -261,26 +261,62 @@ class TicketBusinessTestCase(APITestCase):
 
         segundo.usuario.deficiencia = 'deficiencia_fisica'
         segundo.usuario.save(update_fields=['deficiencia'])
-        self.assertEqual(ticket_segundo.business.obter_posicao_fila(), 1)
-        self.assertEqual(ticket_primeiro.business.obter_posicao_fila(), 2)
+        self.assertEqual(ticket_segundo.business.obter_posicao_fila(), 2)
+        self.assertEqual(ticket_primeiro.business.obter_posicao_fila(), 1)
         self.assertEqual(titular.status, StatusTicket.RESERVADO)
 
-    def test_cancelamento_promove_primeiro_da_fila(self):
+    def test_cancelamento_promove_primeiro_fifo_e_transfere_posicao(self):
         reservado = Ticket().business.solicitar_reserva(self.execucao.pk, self.aluno.usuario)
         comum = criar_aluno('20000000007')
         pcd = criar_aluno_pcd('20000000008')
-        Ticket().business.entrar_fila(self.execucao.pk, comum.usuario)
+        ticket_comum = Ticket().business.entrar_fila(self.execucao.pk, comum.usuario)
         ticket_pcd = Ticket().business.entrar_fila(self.execucao.pk, pcd.usuario)
 
         _, promovido = reservado.business.cancelar(self.aluno.usuario)
-        ticket_pcd.refresh_from_db()
-        self.assertEqual(promovido.pk, ticket_pcd.pk)
-        self.assertEqual(ticket_pcd.status, StatusTicket.RESERVADO)
+        ticket_comum.refresh_from_db()
+        self.assertEqual(promovido.pk, ticket_comum.pk)
+        self.assertEqual(ticket_comum.status, StatusTicket.RESERVADO)
         self.assertEqual(
-            ticket_pcd.business.obter_posicao(),
+            ticket_comum.business.obter_posicao(),
             {'tipo': 'RESERVA', 'atual': 1, 'total': 1},
         )
-        self.assertIsNone(ticket_pcd.business.obter_posicao_fila())
+        self.assertIsNone(ticket_comum.business.obter_posicao_fila())
+        self.assertEqual(ticket_pcd.business.obter_posicao_fila(), 1)
+
+    def test_promovido_assume_exatamente_posicao_cancelada(self):
+        _, execucao = criar_rota_e_execucao(vagas=3)
+        primeiro = criar_aluno('20000000030')
+        segundo = criar_aluno('20000000031')
+        terceiro = criar_aluno('20000000032')
+        espera = criar_aluno('20000000033')
+        Ticket().business.solicitar_reserva(execucao.pk, primeiro.usuario)
+        cancelado = Ticket().business.solicitar_reserva(execucao.pk, segundo.usuario)
+        Ticket().business.solicitar_reserva(execucao.pk, terceiro.usuario)
+        ticket_espera = Ticket().business.entrar_fila(execucao.pk, espera.usuario)
+
+        cancelado, promovido = cancelado.business.cancelar(segundo.usuario)
+
+        self.assertEqual(cancelado.posicao_reserva, 2)
+        self.assertEqual(promovido.pk, ticket_espera.pk)
+        self.assertEqual(promovido.posicao_reserva, 2)
+        self.assertEqual(promovido.business.obter_posicao()['atual'], 2)
+        self.assertIsNone(cancelado.business.obter_posicao())
+
+    def test_nova_reserva_ocupa_menor_posicao_livre_sem_fila(self):
+        _, execucao = criar_rota_e_execucao(vagas=3)
+        primeiro = criar_aluno('20000000034')
+        segundo = criar_aluno('20000000035')
+        terceiro = criar_aluno('20000000036')
+        novo = criar_aluno('20000000037')
+        Ticket().business.solicitar_reserva(execucao.pk, primeiro.usuario)
+        cancelado = Ticket().business.solicitar_reserva(execucao.pk, segundo.usuario)
+        Ticket().business.solicitar_reserva(execucao.pk, terceiro.usuario)
+
+        cancelado.business.cancelar(segundo.usuario)
+        nova_reserva = Ticket().business.solicitar_reserva(execucao.pk, novo.usuario)
+
+        self.assertEqual(nova_reserva.posicao_reserva, 2)
+        self.assertEqual(nova_reserva.business.obter_posicao()['atual'], 2)
 
     def test_transicao_atualiza_timestamp_e_estado_em_cache(self):
         ticket = Ticket().business.solicitar_reserva(self.execucao.pk, self.aluno.usuario)

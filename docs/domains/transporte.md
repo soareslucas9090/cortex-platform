@@ -208,6 +208,9 @@ O fluxo e a medição do tempo estão descritos na seção 11.
   minutos antes da saída. O instante exato do limite ainda é permitido; depois
   dele, todas essas ações são bloqueadas.
 - Cancelar uma reserva promove o primeiro ticket da fila na mesma transação.
+- A promoção transfere ao primeiro da fila exatamente a posição liberada pelo
+  cancelamento. Sem fila, a posição permanece livre e a próxima reserva direta
+  ocupa a menor posição disponível.
 - A capacidade e a promoção usam bloqueio pessimista na execução para proteger a
   última vaga em requisições concorrentes.
 - Na conferência, quem não entra em `ausentes` na chamada fica `EMBARCADO` sem QR
@@ -239,32 +242,43 @@ O fluxo e a medição do tempo estão descritos na seção 11.
   ausência). `EM_ESPERA` e `CONTEMPLADO` não ocupam vaga pela chamada; o walk-in
   ocupa via `EntradaSemTicket`. Total embarcado = `EMBARCADO` + `EntradaSemTicket`.
 
-### 6. Posição dos tickets e prioridade PcD
+### 6. Posição dos tickets e apresentação PcD
 
-A posição é calculada dinamicamente e não é armazenada no ticket. Existem dois
-grupos independentes: reservas confirmadas e fila de espera. A fila não é uma
-entidade duplicada: corresponde aos tickets `EM_ESPERA`.
+A posição da reserva é persistida no ticket. Existem dois grupos independentes:
+reservas confirmadas e fila de espera. A fila não é uma entidade duplicada:
+corresponde aos tickets `EM_ESPERA`.
 
-Ordem em cada grupo:
+Reservas diretas ocupam sempre a menor posição disponível, entre 1 e a capacidade
+congelada da execução. Ao cancelar uma reserva, o primeiro ticket da fila de
+espera assume exatamente a posição liberada. Se não houver fila, a posição fica
+livre para a próxima reserva direta. O ticket cancelado preserva a posição para
+auditoria, mas ela não é retornada como posição ativa. Uma execução nunca pode
+ter dois tickets de reserva ativos na mesma posição.
 
-1. alunos cujo `Usuario.deficiencia` atual esteja preenchido;
-2. demais alunos;
-3. data/hora da reserva ou da entrada na fila dentro do respectivo grupo;
-4. ID interno como desempate determinístico.
+A fila de espera segue a data/hora de entrada, com ID interno como desempate
+determinístico. A promoção é estritamente FIFO e não considera deficiência.
 
 Para tickets de reserva (`RESERVADO`, `EMBARCADO` e `AUSENTE`), o total exibido é
 a capacidade congelada da execução. Para `EM_ESPERA`, o total é a quantidade atual
 de alunos aguardando. `CONTEMPLADO` não entra em nenhum dos dois grupos (o embarque
-por CPF aparece em `EntradaSemTicket`). Alterar `Usuario.deficiencia` reposiciona dinamicamente os
-tickets existentes nos dois grupos. A prioridade altera apenas a ordem exibida e
-de atendimento: nunca remove uma reserva confirmada nem promove alguém sem vaga.
-O tipo de deficiência não é exposto nas respostas dos tickets. Na listagem da
-conferência (`GET .../conferencia/reservas/`) e no `validar` de CPF,
+por CPF aparece em `EntradaSemTicket`). Alterar `Usuario.deficiencia` não muda a
+posição da reserva nem a posição ou a promoção na fila.
+
+Somente a listagem do conferente (`GET .../conferencia/reservas/`) apresenta
+primeiro os alunos cujo `Usuario.deficiencia` atual esteja preenchido. Dentro dos
+grupos PcD e não PcD, a ordem segue a posição persistida. Essa prioridade é apenas
+visual. O tipo de deficiência não é exposto nas respostas dos tickets. Na
+listagem da conferência e no `validar` de CPF,
 `aluno.tem_deficiencia` indica só se o cadastro tem deficiência preenchida, para
 o selo no monitoramento.
 
 O payload `posicao` informa `tipo` (`RESERVA` ou `ESPERA`), `atual` e `total`.
 `posicao_fila` permanece como campo compatível e só contém valor para `EM_ESPERA`.
+As migrações `tickets.0003_posicao_reserva_persistente` e
+`tickets.0004_restricao_posicao_reserva_ativa` preenchem as posições das reservas
+ativas existentes e, em uma transação posterior, criam a unicidade das posições.
+Cancelamentos antigos permanecem sem posição histórica, pois esse dado ainda não
+era persistido.
 
 ### 7. Ausências, strikes, bloqueios e justificativas
 

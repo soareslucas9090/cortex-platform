@@ -69,19 +69,32 @@ class TicketHelpers(ModelInstanceHelpers):
             ),
         )
 
-    def _ordenar_reservas(self, queryset=None):
+    def _filtrar_reservas_ativas(self, queryset=None):
         from .models import Ticket
 
         if queryset is None:
             queryset = Ticket.objects.all()
-        return self._anotar_prioridade_pcd(queryset).filter(
+        return queryset.filter(
             status__in=(
                 StatusTicket.RESERVADO,
                 StatusTicket.EMBARCADO,
                 StatusTicket.AUSENTE,
             ),
+        )
+
+    def _ordenar_reservas_por_posicao(self, queryset=None):
+        return self._filtrar_reservas_ativas(queryset).order_by(
+            F('posicao_reserva').asc(nulls_last=True),
+            F('reservado_em').asc(nulls_last=True),
+            'pk',
+        )
+
+    def _ordenar_reservas_conferencia(self, queryset=None):
+        return self._anotar_prioridade_pcd(
+            self._filtrar_reservas_ativas(queryset),
         ).order_by(
             '-prioridade_pcd',
+            F('posicao_reserva').asc(nulls_last=True),
             F('reservado_em').asc(nulls_last=True),
             'pk',
         )
@@ -91,9 +104,24 @@ class TicketHelpers(ModelInstanceHelpers):
 
         if queryset is None:
             queryset = Ticket.objects.all()
-        return self._anotar_prioridade_pcd(queryset).filter(
+        return queryset.filter(
             status=StatusTicket.EM_ESPERA,
-        ).order_by('-prioridade_pcd', 'entrou_em_espera_em', 'pk')
+        ).order_by(F('entrou_em_espera_em').asc(nulls_last=True), 'pk')
+
+    def obter_menor_posicao_disponivel(self, execucao):
+        posicoes_ocupadas = set(
+            self._filtrar_reservas_ativas(execucao.tickets.all())
+            .exclude(posicao_reserva__isnull=True)
+            .values_list('posicao_reserva', flat=True)
+        )
+        return next(
+            (
+                posicao
+                for posicao in range(1, execucao.quantidade_vagas + 1)
+                if posicao not in posicoes_ocupadas
+            ),
+            None,
+        )
 
     def _obter_posicao(self):
         ticket = self.object_instance
@@ -101,11 +129,14 @@ class TicketHelpers(ModelInstanceHelpers):
 
     def obter_posicoes_execucao(self, execucao):
         posicoes = {}
-        reservas = self._ordenar_reservas(execucao.tickets.all()).values_list('pk', flat=True)
-        for atual, ticket_id in enumerate(reservas, start=1):
+        reservas = self._ordenar_reservas_por_posicao(execucao.tickets.all()).values_list(
+            'pk',
+            'posicao_reserva',
+        )
+        for ticket_id, posicao_reserva in reservas:
             posicoes[ticket_id] = {
                 'tipo': 'RESERVA',
-                'atual': atual,
+                'atual': posicao_reserva,
                 'total': execucao.quantidade_vagas,
             }
 
@@ -125,7 +156,7 @@ class TicketHelpers(ModelInstanceHelpers):
         return posicao['atual']
 
     def listar_reservas_conferencia(self, execucao, cpf=None):
-        queryset = self._ordenar_reservas(execucao.tickets.all())
+        queryset = self._ordenar_reservas_conferencia(execucao.tickets.all())
         if cpf:
             queryset = queryset.filter(aluno__usuario__cpf__icontains=cpf.strip())
         return queryset.select_related(
