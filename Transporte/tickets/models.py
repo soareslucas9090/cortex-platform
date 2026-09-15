@@ -42,6 +42,11 @@ class Ticket(
         verbose_name='Aluno',
     )
     status = models.IntegerField('Status', choices=StatusTicket.choices)
+    posicao_reserva = models.PositiveIntegerField(
+        'Posição da reserva',
+        null=True,
+        blank=True,
+    )
     reservado_em = models.DateTimeField('Reservado em', null=True, blank=True)
     entrou_em_espera_em = models.DateTimeField('Entrou em espera em', null=True, blank=True)
     cancelado_em = models.DateTimeField('Cancelado em', null=True, blank=True)
@@ -57,6 +62,17 @@ class Ticket(
                 fields=['execucao_rota', 'aluno'],
                 condition=~models.Q(status=StatusTicket.CANCELADO),
                 name='ticket_ativo_unico_aluno_execucao',
+            ),
+            models.UniqueConstraint(
+                fields=['execucao_rota', 'posicao_reserva'],
+                condition=models.Q(
+                    status__in=(
+                        StatusTicket.RESERVADO,
+                        StatusTicket.EMBARCADO,
+                        StatusTicket.AUSENTE,
+                    ),
+                ),
+                name='ticket_posicao_reserva_ativa_unica',
             ),
         ]
         indexes = [

@@ -592,6 +592,8 @@ Vínculo entre `Aluno` e `ExecucaoRota`, identificado externamente por UUID.
 
 - estados: reservado, em espera, cancelado, embarcado e ausente;
 - no máximo um ticket não cancelado por aluno e execução;
+- `posicao_reserva` persiste a posição ocupada ou histórica; posições de reservas
+  ativas são únicas por execução;
 - tickets em espera formam a fila, sem entidades `Fila` ou `FilaEspera` separadas.
 
 ## 9.6 Strike, bloqueio e justificativa

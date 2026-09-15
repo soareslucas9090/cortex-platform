@@ -92,10 +92,18 @@ class TicketBusiness(ModelInstanceBusiness):
                 execucao,
                 self.object_instance.helper.contar_reservas(execucao),
             )
+            posicao_reserva = self.object_instance.helper.obter_menor_posicao_disponivel(
+                execucao,
+            )
+            rules.validar_posicao_reserva(
+                posicao_reserva,
+                execucao.quantidade_vagas,
+            )
             return Ticket.objects.create(
                 execucao_rota=execucao,
                 aluno=aluno,
                 status=StatusTicket.RESERVADO,
+                posicao_reserva=posicao_reserva,
                 reservado_em=timezone.now(),
             )
         except IntegrityError:
@@ -166,9 +174,14 @@ class TicketBusiness(ModelInstanceBusiness):
             ticket.rules.validar_limite_cancelamento(
                 self._data_permite_operacao(execucao.data_execucao),
             )
+            posicao_liberada = ticket.posicao_reserva
+            ticket.rules.validar_posicao_reserva(
+                posicao_liberada,
+                execucao.quantidade_vagas,
+            )
             ticket.cancelado_em = timezone.now()
             ticket.state.atualizar_status(StatusTicket.CANCELADO)
-            promovido = self._promover_proximo_da_fila(execucao)
+            promovido = self._promover_proximo_da_fila(execucao, posicao_liberada)
             return ticket, promovido
         except Exception as e:
             self.relancar_ou_erro_sistema(e, 'Não foi possível cancelar o ticket.', logger)
@@ -195,13 +208,18 @@ class TicketBusiness(ModelInstanceBusiness):
         except Exception as e:
             self.relancar_ou_erro_sistema(e, 'Não foi possível sair da fila de espera.', logger)
 
-    def _promover_proximo_da_fila(self, execucao):
+    def _promover_proximo_da_fila(self, execucao, posicao_reserva):
         try:
             from .models import Ticket
 
             ticket = Ticket().helper.proximo_da_fila(execucao)
             if ticket is None:
                 return None
+            ticket.rules.validar_posicao_reserva(
+                posicao_reserva,
+                execucao.quantidade_vagas,
+            )
+            ticket.posicao_reserva = posicao_reserva
             ticket.reservado_em = timezone.now()
             ticket.state.atualizar_status(StatusTicket.RESERVADO)
             return ticket
