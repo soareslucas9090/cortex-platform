@@ -217,6 +217,42 @@ class UsuarioHelpers(ModelInstanceHelpers):
                 return True
         return False
 
+    def obter_senha_padrao(self):
+        """
+        Resolve a senha padrão institucional do usuário.
+
+        Servidor ou terceirizado ativo com matrícula: a própria matrícula.
+        Demais casos (aluno ou usuário com CPF): o CPF.
+        """
+        from AppCore.common.util.util import normalizar_matricula
+        from PessoasInstitucionais.servidores.models import Servidor
+        from PessoasInstitucionais.terceirizados.models import Terceirizado
+
+        usuario = self.object_instance
+        servidor = (
+            Servidor.objects.filter(usuario=usuario, ativo=True)
+            .exclude(matricula__isnull=True)
+            .exclude(matricula='')
+            .first()
+        )
+        if servidor:
+            matricula = normalizar_matricula(servidor.matricula)
+            if matricula:
+                return matricula
+
+        terceirizado = (
+            Terceirizado.objects.filter(usuario=usuario, ativo=True)
+            .exclude(matricula__isnull=True)
+            .exclude(matricula='')
+            .first()
+        )
+        if terceirizado:
+            matricula = normalizar_matricula(terceirizado.matricula)
+            if matricula:
+                return matricula
+
+        return self.normalizar_cpf(usuario.cpf) or None
+
     def tem_matricula_valida(self):
         """Indica se o usuário possui ao menos uma matrícula ativa nas 3 fontes."""
         from Academico.aluno_cursos.models import AlunoCurso

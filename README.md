@@ -287,6 +287,8 @@ python manage.py spectacular --file schema.yaml
 | GET    | `/cortex/identidade/usuarios/<pk>/`                           | Detalhar usuário            |
 | PATCH  | `/cortex/identidade/usuarios/<pk>/`                           | Atualizar usuário           |
 | POST   | `/cortex/identidade/usuarios/alterar-senha/`                    | Alterar senha de acesso (autenticado) |
+| POST   | `/cortex/identidade/usuarios/<pk>/alterar-senha/`               | Admin: definir senha de outro usuário |
+| POST   | `/cortex/identidade/usuarios/<pk>/redefinir-senha-padrao/`      | Admin: restaurar senha padrão (CPF/matrícula) |
 | POST   | `/cortex/identidade/usuarios/<pk>/desativar/`                 | Desativar usuário           |
 | POST   | `/cortex/identidade/usuarios/<pk>/reativar/`                  | Reativar usuário            |
 | GET    | `/cortex/identidade/usuarios/<pk>/contatos/`                  | Listar contatos             |
@@ -313,7 +315,9 @@ curl -X POST /auth/token_jwt/ \
   -d '{"login": "12345678901", "password": "SuaSenha@123"}'
 ```
 
-Usuários autenticados podem alterar a própria senha em `POST /cortex/identidade/usuarios/alterar-senha/` informando `senha_atual` e `nova_senha`. Contas coletivas não podem usar esse endpoint. Detalhes em [`docs/domains/identidade.md`](docs/domains/identidade.md).
+Usuários autenticados podem alterar a própria senha em `POST /cortex/identidade/usuarios/alterar-senha/` informando `senha_atual` e `nova_senha`. Contas coletivas não podem usar esse endpoint.
+
+Administradores (L3) podem definir a senha de outro usuário em `POST /cortex/identidade/usuarios/<pk>/alterar-senha/` (apenas `nova_senha`, sem senha anterior) ou restaurar o padrão em `POST /cortex/identidade/usuarios/<pk>/redefinir-senha-padrao/` (CPF para alunos; matrícula para servidores e terceirizados). Detalhes em [`docs/domains/identidade.md`](docs/domains/identidade.md).
 
 ---
 

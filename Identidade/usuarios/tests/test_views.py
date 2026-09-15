@@ -2139,3 +2139,153 @@ class AlterarSenhaUsuarioTest(APITestCase):
         self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {token}')
         resposta = self.client.post(self.url, self.payload_valido)
         self.assertEqual(resposta.status_code, status.HTTP_400_BAD_REQUEST)
+
+
+class AdminAlterarSenhaUsuarioTest(APITestCase):
+
+    def setUp(self):
+        self.admin = criar_usuario('10000000001', nome='Admin Senha', is_admin=True)
+        self.usuario = criar_usuario(
+            '10000000002',
+            nome='Alvo Senha',
+            password='Senha@123',
+        )
+        self.token_admin = obter_tokens(self.admin)
+        self.token_usuario = obter_tokens(self.usuario)
+        self.url = reverse(
+            'identidade:usuario-admin-alterar-senha',
+            kwargs={'pk': self.usuario.pk},
+        )
+        self.url_padrao = reverse(
+            'identidade:usuario-redefinir-senha-padrao',
+            kwargs={'pk': self.usuario.pk},
+        )
+        self.url_login = reverse('auth:token-jwt:login')
+        self.payload_valido = {'nova_senha': 'NovaSenha@456'}
+
+    def test_admin_altera_senha_sem_informar_senha_atual(self):
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token_admin}')
+        resposta = self.client.post(self.url, self.payload_valido)
+        self.assertEqual(resposta.status_code, status.HTTP_200_OK)
+        self.assertEqual(resposta.data['mensagem'], 'Senha alterada com sucesso.')
+
+        resposta_login = self.client.post(
+            self.url_login,
+            {'login': self.usuario.cpf, 'password': 'NovaSenha@456'},
+        )
+        self.assertEqual(resposta_login.status_code, status.HTTP_200_OK)
+
+    def test_admin_nao_precisa_enviar_senha_atual(self):
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token_admin}')
+        resposta = self.client.post(self.url, {'senha_atual': 'Senha@123', **self.payload_valido})
+        self.assertEqual(resposta.status_code, status.HTTP_200_OK)
+
+    def test_nova_senha_fraca_retorna_400(self):
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token_admin}')
+        resposta = self.client.post(self.url, {'nova_senha': '123'})
+        self.assertEqual(resposta.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_nova_senha_igual_a_atual_retorna_400(self):
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token_admin}')
+        resposta = self.client.post(self.url, {'nova_senha': 'Senha@123'})
+        self.assertEqual(resposta.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_usuario_comum_nao_pode_alterar_senha_de_terceiro(self):
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token_usuario}')
+        resposta = self.client.post(self.url, self.payload_valido)
+        self.assertEqual(resposta.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_nao_autenticado_retorna_401(self):
+        resposta = self.client.post(self.url, self.payload_valido)
+        self.assertEqual(resposta.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_usuario_inexistente_retorna_404(self):
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token_admin}')
+        url = reverse('identidade:usuario-admin-alterar-senha', kwargs={'pk': 99999})
+        resposta = self.client.post(url, self.payload_valido)
+        self.assertEqual(resposta.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_admin_redefine_senha_padrao_de_aluno_para_cpf(self):
+        from Academico.alunos.models import Aluno
+
+        Aluno.objects.create(usuario=self.usuario)
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token_admin}')
+        resposta = self.client.post(self.url_padrao)
+        self.assertEqual(resposta.status_code, status.HTTP_200_OK)
+        self.assertEqual(resposta.data['mensagem'], 'Senha redefinida para o padrão.')
+
+        resposta_login = self.client.post(
+            self.url_login,
+            {'login': self.usuario.cpf, 'password': self.usuario.cpf},
+        )
+        self.assertEqual(resposta_login.status_code, status.HTTP_200_OK)
+
+    def test_admin_redefine_senha_padrao_de_servidor_para_matricula(self):
+        from PessoasInstitucionais.cargos.models import Cargo
+        from PessoasInstitucionais.servidores.models import Servidor
+
+        cargo = Cargo.objects.create(nome='Cargo Senha Padrão', ativo=True)
+        Servidor.objects.create(
+            usuario=self.usuario,
+            cargo=cargo,
+            categoria=1,
+            matricula='MATADMIN001',
+            ativo=True,
+        )
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token_admin}')
+        resposta = self.client.post(self.url_padrao)
+        self.assertEqual(resposta.status_code, status.HTTP_200_OK)
+
+        resposta_login = self.client.post(
+            self.url_login,
+            {'login': self.usuario.cpf, 'password': 'MATADMIN001'},
+        )
+        self.assertEqual(resposta_login.status_code, status.HTTP_200_OK)
+
+    def test_admin_redefine_senha_padrao_de_terceirizado_para_matricula(self):
+        from PessoasInstitucionais.cargos.models import Cargo
+        from PessoasInstitucionais.empresas_instituicoes.models import EmpresaInstituicao
+        from PessoasInstitucionais.terceirizados.models import Terceirizado
+
+        empresa = EmpresaInstituicao.objects.create(
+            nome='Empresa Senha Padrão',
+            cnpj='11222333000181',
+            ativo=True,
+        )
+        cargo = Cargo.objects.create(nome='Cargo Terceirizado Senha', ativo=True)
+        Terceirizado.objects.create(
+            usuario=self.usuario,
+            empresa_instituicao=empresa,
+            cargo=cargo,
+            matricula='MATTERCADM01',
+            ativo=True,
+        )
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token_admin}')
+        resposta = self.client.post(self.url_padrao)
+        self.assertEqual(resposta.status_code, status.HTTP_200_OK)
+
+        resposta_login = self.client.post(
+            self.url_login,
+            {'login': self.usuario.cpf, 'password': 'MATTERCADM01'},
+        )
+        self.assertEqual(resposta_login.status_code, status.HTTP_200_OK)
+
+    def test_redefinir_senha_padrao_sem_cpf_nem_matricula_retorna_400(self):
+        usuario_sem_identificador = Usuario.objects.create_user(
+            cpf=None,
+            password='Senha@123',
+            nome='Sem Identificador',
+            email='semidentificador@exemplo.com',
+        )
+        url = reverse(
+            'identidade:usuario-redefinir-senha-padrao',
+            kwargs={'pk': usuario_sem_identificador.pk},
+        )
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token_admin}')
+        resposta = self.client.post(url)
+        self.assertEqual(resposta.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_usuario_comum_nao_pode_redefinir_senha_padrao(self):
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token_usuario}')
+        resposta = self.client.post(self.url_padrao)
+        self.assertEqual(resposta.status_code, status.HTTP_403_FORBIDDEN)

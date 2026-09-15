@@ -112,6 +112,8 @@ class PermissaoDocumentacao:
                     'nivel': PERMISSAO_CORTEX_EDITAR_TUDO,
                     'pode': [
                         'criar, alterar e desativar qualquer recurso da plataforma',
+                        'alterar a senha de outro usuário sem informar a senha atual',
+                        'redefinir a senha de outro usuário para o padrão (CPF do aluno ou matrícula do servidor/terceirizado)',
                     ],
                     'nao_pode': [],
                 },

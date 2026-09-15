@@ -96,7 +96,7 @@ Usuários autenticados podem alterar a **própria** senha de acesso via:
 **O que este fluxo não cobre:**
 
 - Redefinição por e-mail / código de verificação (não implementado).
-- Alteração de senha de outro usuário via API (apenas Django Admin).
+- Alteração de senha de **outro** usuário — use os endpoints administrativos abaixo.
 - O `PATCH /usuarios/{pk}/` **não** aceita senha — alteração de perfil e de senha são endpoints separados.
 
 **Arquivos da implementação:**
@@ -108,6 +108,82 @@ Usuários autenticados podem alterar a **própria** senha de acesso via:
 | Serializer | `Identidade/usuarios/serializers.py` | `AlterarSenhaSerializer` |
 | View / URL | `Identidade/usuarios/views.py`, `urls.py` | `AlterarSenhaView`, rota `usuario-alterar-senha` |
 | Testes | `Identidade/usuarios/tests/test_views.py` | `AlterarSenhaUsuarioTest` |
+
+#### Alteração de senha por administrador
+
+Administradores (L3) podem definir a senha de **outro usuário** sem informar a senha anterior, e também restaurar a senha institucional padrão.
+
+- **Definir nova senha:** `POST /cortex/identidade/usuarios/{pk}/alterar-senha/`
+- **Redefinir para o padrão:** `POST /cortex/identidade/usuarios/{pk}/redefinir-senha-padrao/`
+- **Permissão:** L3 (`EDITAR_TUDO`) — `IsAdminMixin`
+- **Tag Swagger:** `Usuarios`
+
+**Definir nova senha — request:**
+
+```json
+{
+  "nova_senha": "NovaSenha@456"
+}
+```
+
+Não envie `senha_atual`. A nova senha segue a mesma política de complexidade do fluxo de autoatendimento e deve ser diferente da senha atual.
+
+**Redefinir para o padrão — request:** corpo vazio (`{}`).
+
+A senha padrão **não** passa pela política de complexidade:
+
+| Perfil do usuário | Senha padrão |
+| ----------------- | ------------ |
+| Servidor ativo com matrícula | a própria matrícula |
+| Terceirizado ativo com matrícula | a própria matrícula |
+| Aluno (e demais casos com CPF) | CPF |
+
+Se o usuário for servidor ou terceirizado ativo com matrícula, a matrícula prevalece mesmo que também possua perfil de aluno. Sem CPF (aluno) e sem matrícula (servidor/terceirizado), a API retorna `400`.
+
+**Response `200` (definir senha):**
+
+```json
+{
+  "status": "success",
+  "mensagem": "Senha alterada com sucesso."
+}
+```
+
+**Response `200` (redefinir padrão):**
+
+```json
+{
+  "status": "success",
+  "mensagem": "Senha redefinida para o padrão."
+}
+```
+
+**Fluxo interno (View → Business → Rules / Helpers):**
+
+1. `AdminAlterarSenhaView` / `AdminRedefinirSenhaPadraoView` localizam o usuário (`pk`) e delegam ao Business.
+2. `alterar_senha_por_admin()` — `validar_senha()` + impede reutilizar a senha atual; persiste com `set_password`.
+3. `redefinir_senha_padrao()` — `UsuarioHelpers.obter_senha_padrao()` + `UsuarioRules.validar_senha_padrao_disponivel()`; persiste sem `validar_senha()`.
+
+**Restrições e erros comuns:**
+
+| Situação | HTTP | Mensagem / comportamento |
+| -------- | ---- | ------------------------ |
+| Token ausente ou inválido | `401` | Não autenticado |
+| Usuário autenticado sem L3 | `403` | Sem permissão |
+| Usuário alvo inexistente | `404` | Usuário não encontrado |
+| Nova senha fraca ou igual à atual | `400` | Validação do serializer ou regra de negócio |
+| Sem CPF/matrícula para o padrão | `400` | *Não foi possível determinar a senha padrão deste usuário...* |
+
+**Arquivos da implementação:**
+
+| Camada | Arquivo | Responsabilidade |
+| ------ | ------- | ---------------- |
+| Helpers | `Identidade/usuarios/helpers.py` | `obter_senha_padrao` |
+| Rules | `Identidade/usuarios/rules.py` | `validar_senha_padrao_disponivel` |
+| Business | `Identidade/usuarios/business.py` | `alterar_senha_por_admin`, `redefinir_senha_padrao` |
+| Serializer | `Identidade/usuarios/serializers.py` | `AdminAlterarSenhaSerializer` |
+| View / URL | `Identidade/usuarios/views.py`, `urls.py` | `AdminAlterarSenhaView` (`usuario-admin-alterar-senha`), `AdminRedefinirSenhaPadraoView` (`usuario-redefinir-senha-padrao`) |
+| Testes | `Identidade/usuarios/tests/test_views.py` | `AdminAlterarSenhaUsuarioTest` |
 
 #### Configuração de Autenticação do Model `Usuario`
 ```python

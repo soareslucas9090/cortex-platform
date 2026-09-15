@@ -94,6 +94,29 @@ class UsuarioBusiness(ModelInstanceBusiness):
         except Exception as e:
             self.relancar_ou_erro_sistema(e, 'Não foi possível alterar a senha.', logger)
 
+    def alterar_senha_por_admin(self, nova_senha: str):
+        """Define uma nova senha de acesso sem exigir a senha atual (fluxo administrativo)."""
+        try:
+            validar_senha(nova_senha)
+            if self.object_instance.check_password(nova_senha):
+                raise BusinessRuleException('A nova senha deve ser diferente da senha atual.')
+            self.object_instance.set_password(nova_senha)
+            self.object_instance.save(update_fields=['password'])
+        except Exception as e:
+            self.relancar_ou_erro_sistema(e, 'Não foi possível alterar a senha.', logger)
+
+    def redefinir_senha_padrao(self):
+        """Restaura a senha padrão institucional (CPF do aluno ou matrícula do servidor/terceirizado)."""
+        try:
+            senha_padrao = self.object_instance.helper.obter_senha_padrao()
+            self.object_instance.rules.validar_senha_padrao_disponivel(senha_padrao)
+            self.object_instance.set_password(senha_padrao)
+            self.object_instance.save(update_fields=['password'])
+        except Exception as e:
+            self.relancar_ou_erro_sistema(
+                e, 'Não foi possível redefinir a senha para o padrão.', logger
+            )
+
     def definir_flag_coletivo(self, usuario_coletivo: bool):
         """Ativa/desativa a conta coletiva. Ao desativar, limpa o pool."""
         try:
