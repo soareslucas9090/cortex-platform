@@ -23,6 +23,10 @@ class PermissaoFuncaoTransporte(ModelHelperMixin, ModelBusinessMixin, ModelRules
         verbose_name='Função',
     )
     conferir = models.BooleanField('Conferir', default=False)
+    visualizar_relatorio_alunos = models.BooleanField(
+        'Visualizar relatório de alunos',
+        default=False,
+    )
 
     class Meta:
         verbose_name = 'Permissão de Transporte por Função'
@@ -49,6 +53,10 @@ class PermissaoUsuarioTransporte(ModelHelperMixin, ModelBusinessMixin, ModelRule
         verbose_name='Usuário',
     )
     conferir = models.BooleanField('Conferir', default=False)
+    visualizar_relatorio_alunos = models.BooleanField(
+        'Visualizar relatório de alunos',
+        default=False,
+    )
 
     class Meta:
         verbose_name = 'Permissão de Transporte por Usuário'

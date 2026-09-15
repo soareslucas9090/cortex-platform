@@ -9,7 +9,12 @@ logger = logging.getLogger(__name__)
 
 class PermissaoFuncaoTransporteBusiness(ModelInstanceBusiness):
 
-    def criar_permissao(self, funcao_id: int, conferir=False):
+    def criar_permissao(
+        self,
+        funcao_id: int,
+        conferir=False,
+        visualizar_relatorio_alunos=False,
+    ):
         try:
             from .models import PermissaoFuncaoTransporte
 
@@ -22,6 +27,7 @@ class PermissaoFuncaoTransporteBusiness(ModelInstanceBusiness):
             return PermissaoFuncaoTransporte.objects.create(
                 funcao=funcao,
                 conferir=conferir,
+                visualizar_relatorio_alunos=visualizar_relatorio_alunos,
             )
         except Exception as e:
             self.relancar_ou_erro_sistema(
@@ -45,7 +51,12 @@ class PermissaoFuncaoTransporteBusiness(ModelInstanceBusiness):
 
 class PermissaoUsuarioTransporteBusiness(ModelInstanceBusiness):
 
-    def criar_permissao(self, usuario_id: int, conferir=False):
+    def criar_permissao(
+        self,
+        usuario_id: int,
+        conferir=False,
+        visualizar_relatorio_alunos=False,
+    ):
         try:
             from .models import PermissaoUsuarioTransporte
 
@@ -58,6 +69,7 @@ class PermissaoUsuarioTransporteBusiness(ModelInstanceBusiness):
             return PermissaoUsuarioTransporte.objects.create(
                 usuario=usuario,
                 conferir=conferir,
+                visualizar_relatorio_alunos=visualizar_relatorio_alunos,
             )
         except Exception as e:
             self.relancar_ou_erro_sistema(

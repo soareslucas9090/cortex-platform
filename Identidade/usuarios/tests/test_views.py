@@ -49,6 +49,7 @@ def permissoes_esperadas(
     cortex_nivel,
     reservar=False,
     conferir=None,
+    visualizar_relatorio_alunos=None,
     bloqueado=False,
     faltas=0,
     bloqueios=0,
@@ -56,6 +57,8 @@ def permissoes_esperadas(
 ):
     if conferir is None:
         conferir = cortex_nivel == PERMISSAO_CORTEX_EDITAR_TUDO
+    if visualizar_relatorio_alunos is None:
+        visualizar_relatorio_alunos = cortex_nivel == PERMISSAO_CORTEX_EDITAR_TUDO
     return {
         'cortex': cortex_nivel,
         'infraestrutura': capacidades_infraestrutura_vazias(),
@@ -64,6 +67,7 @@ def permissoes_esperadas(
             'motorista': motorista,
             'reservar': reservar,
             'conferir': conferir,
+            'visualizar_relatorio_alunos': visualizar_relatorio_alunos,
             'bloqueado': bloqueado,
             'faltas': faltas,
             'bloqueios': bloqueios,
@@ -1789,11 +1793,15 @@ class DocumentarPermissoesViewTest(APITestCase):
         self.assertIn('retirada_irrestrita', infraestrutura['capacidades'][3]['codigo'])
 
         transporte = next(modulo for modulo in modulos if modulo['chave'] == 'transporte')
-        self.assertEqual(len(transporte['capacidades']), 4)
+        self.assertEqual(len(transporte['capacidades']), 5)
         self.assertEqual(transporte['capacidades'][0]['codigo'], 'gerenciar')
         self.assertEqual(transporte['capacidades'][1]['codigo'], 'motorista')
         self.assertEqual(transporte['capacidades'][2]['codigo'], 'reservar')
         self.assertEqual(transporte['capacidades'][3]['codigo'], 'conferir')
+        self.assertEqual(
+            transporte['capacidades'][4]['codigo'],
+            'visualizar_relatorio_alunos',
+        )
         self.assertGreaterEqual(len(transporte['exemplos']), 1)
         self.assertIn('secoes', transporte)
         self.assertGreaterEqual(len(transporte['secoes']), 3)

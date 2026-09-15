@@ -55,7 +55,8 @@ class PermissaoDocumentacao:
                 'O payload `user.permissoes` no login/me retorna `{"cortex": "<nível>"}` e '
                 'chaves adicionais por módulo: `infraestrutura` (flags booleanas) e '
                 '`transporte` (`{"gerenciar": true|false, "motorista": true|false, '
-                '"reservar": true|false, "conferir": true|false, "bloqueado": true|false, '
+                '"reservar": true|false, "conferir": true|false, '
+                '"visualizar_relatorio_alunos": true|false, "bloqueado": true|false, '
                 '"faltas": <n>, "bloqueios": <n>}`).'
             ),
             'niveis': [
@@ -526,7 +527,8 @@ class PermissaoDocumentacao:
                 'execuções. Motoristas ativos e L3 consultam as rotas do dia. Alunos elegíveis '
                 'reservam tickets. Conferentes (L3 ou colaborador servidor/terceirizado com '
                 'conferir por função ou por usuário) operam as execuções do dia. O payload expõe '
-                'gerenciar, motorista, reservar, conferir, bloqueado, faltas e bloqueios.'
+                'gerenciar, motorista, reservar, conferir, visualizar_relatorio_alunos, '
+                'bloqueado, faltas e bloqueios.'
             ),
             'secoes': [
                 {
@@ -584,11 +586,21 @@ class PermissaoDocumentacao:
                             ),
                         },
                         {
+                            'destaque': 'visualizar_relatorio_alunos',
+                            'texto': (
+                                'true para L3, para servidor/terceirizado ativo com vínculo '
+                                'ativo de diretor, coordenador ou chefe, ou por permissão '
+                                'direta do usuário. Chefe inclui Chefe de Gabinete. Não concede '
+                                'acesso à conferência de embarque.'
+                            ),
+                        },
+                        {
                             'destaque': 'Payload típico aluno',
                             'texto': (
                                 '{"transporte": {"gerenciar": false, "motorista": false, '
                                 '"reservar": true, "conferir": false, "bloqueado": false, '
-                                '"faltas": 0, "bloqueios": 0}}'
+                                '"visualizar_relatorio_alunos": false, "faltas": 0, '
+                                '"bloqueios": 0}}'
                             ),
                         },
                         {
@@ -596,7 +608,8 @@ class PermissaoDocumentacao:
                             'texto': (
                                 '{"transporte": {"gerenciar": false, "motorista": false, '
                                 '"reservar": false, "conferir": true, "bloqueado": false, '
-                                '"faltas": 0, "bloqueios": 0}}'
+                                '"visualizar_relatorio_alunos": false, "faltas": 0, '
+                                '"bloqueios": 0}}'
                             ),
                         },
                     ],
@@ -761,7 +774,25 @@ class PermissaoDocumentacao:
                     ),
                     'descricao': (
                         'Não amplia cadastro nem listagens globais de tickets, strikes ou '
-                        'justificativas. O dashboard futuro (RF012) reutiliza esta capacidade.'
+                        'justificativas e não libera o relatório de alunos.'
+                    ),
+                },
+                {
+                    'codigo': 'visualizar_relatorio_alunos',
+                    'nome': 'Visualizar relatório de alunos',
+                    'quem_usa': (
+                        'L3, diretores, coordenadores e chefes, inclusive Chefe de Gabinete'
+                    ),
+                    'pode': (
+                        'Consultar o dashboard global e os detalhes por categoria do relatório '
+                        'de alunos em transporte.'
+                    ),
+                    'nao_sem_capacidade': (
+                        'Acessar o dashboard ou os detalhes do relatório de alunos.'
+                    ),
+                    'descricao': (
+                        'Capacidade exclusivamente de leitura. Não permite conferir embarques, '
+                        'operar execuções ou administrar rotas.'
                     ),
                 },
             ],
@@ -773,6 +804,7 @@ class PermissaoDocumentacao:
                         'motorista': False,
                         'reservar': True,
                         'conferir': False,
+                        'visualizar_relatorio_alunos': False,
                         'bloqueado': False,
                         'faltas': 0,
                         'bloqueios': 0,
@@ -794,6 +826,7 @@ class PermissaoDocumentacao:
                         'motorista': False,
                         'reservar': False,
                         'conferir': True,
+                        'visualizar_relatorio_alunos': False,
                         'bloqueado': False,
                         'faltas': 0,
                         'bloqueios': 0,
@@ -815,6 +848,7 @@ class PermissaoDocumentacao:
                         'motorista': False,
                         'reservar': False,
                         'conferir': True,
+                        'visualizar_relatorio_alunos': True,
                         'bloqueado': False,
                         'faltas': 0,
                         'bloqueios': 0,
@@ -829,12 +863,34 @@ class PermissaoDocumentacao:
                     'nao_pode': [],
                 },
                 {
+                    'perfil': 'Diretor, coordenador ou chefe com vínculo ativo',
+                    'capacidades': {
+                        'gerenciar': False,
+                        'motorista': False,
+                        'reservar': False,
+                        'conferir': False,
+                        'visualizar_relatorio_alunos': True,
+                        'bloqueado': False,
+                        'faltas': 0,
+                        'bloqueios': 0,
+                    },
+                    'pode': [
+                        'consultar o dashboard global do relatório de alunos',
+                        'consultar os detalhes por categoria',
+                    ],
+                    'nao_pode': [
+                        'conferir embarque sem a capacidade conferir',
+                        'administrar percursos, rotas ou execuções',
+                    ],
+                },
+                {
                     'perfil': 'Motorista ativo',
                     'capacidades': {
                         'gerenciar': False,
                         'motorista': True,
                         'reservar': False,
                         'conferir': False,
+                        'visualizar_relatorio_alunos': False,
                         'bloqueado': False,
                         'faltas': 0,
                         'bloqueios': 0,
