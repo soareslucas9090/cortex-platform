@@ -99,7 +99,11 @@ class ViagemMotoristaAPITestCase(APITestCase):
                 self.execucao.status = estado
                 self.execucao.save()
                 self.assertEqual(self.client.post(self.inicio, {}).status_code, 400)
-                self.assertFalse(self.client.get(self.lista).data['dados'][0]['viagem']['pode_iniciar_rota'])
+                itens = self.client.get(self.lista).data['dados']
+                if estado == StatusExecucaoRota.CANCELADA:
+                    self.assertEqual(itens, [])
+                else:
+                    self.assertFalse(itens[0]['viagem']['pode_iniciar_rota'])
 
     def test_nao_finaliza_sem_inicio(self):
         self.liberar()
@@ -118,7 +122,11 @@ class ViagemMotoristaAPITestCase(APITestCase):
                 self.execucao.refresh_from_db()
                 self.assertEqual(self.execucao.status, estado)
                 self.assertIsNone(self.execucao.rota_finalizada_em)
-                self.assertFalse(self.client.get(self.lista).data['dados'][0]['viagem']['pode_finalizar_rota'])
+                itens = self.client.get(self.lista).data['dados']
+                if estado == StatusExecucaoRota.CANCELADA:
+                    self.assertEqual(itens, [])
+                else:
+                    self.assertFalse(itens[0]['viagem']['pode_finalizar_rota'])
 
     def test_outro_motorista_nao_sobrescreve_viagem_e_admin_pode_finalizar(self):
         self.liberar()
@@ -158,6 +166,47 @@ class ViagemMotoristaAPITestCase(APITestCase):
         self.assertEqual(self.client.post(self.fim, {}).status_code, 200)
         self.execucao.refresh_from_db()
         self.assertGreaterEqual(self.execucao.duracao_rota_segundos, 7200)
+        self.assertEqual(self.client.get(self.lista).data['dados'], [])
+
+    def test_rota_desativada_durante_viagem_some_so_apos_finalizar(self):
+        self.liberar()
+        self.assertEqual(self.client.post(self.inicio, {}).status_code, 200)
+        self.rota.business.desativar()
+
+        itens = self.client.get(self.lista).data['dados']
+        self.assertEqual([item['execucao_id'] for item in itens], [self.execucao.pk])
+        self.assertTrue(itens[0]['viagem']['pode_finalizar_rota'])
+        self.assertEqual(self.client.post(self.fim, {}).status_code, 200)
+        self.assertEqual(self.client.get(self.lista).data['dados'], [])
+        historico = reverse('transporte:motorista-historico-rotas-list')
+        self.assertEqual(
+            [item['id'] for item in self.client.get(historico).data['dados']],
+            [self.execucao.pk],
+        )
+
+    def test_viagem_pendente_nao_reexibe_execucao_cancelada_ou_rota_inativa_de_hoje(self):
+        self.liberar()
+        self.assertEqual(self.client.post(self.inicio, {}).status_code, 200)
+        self.execucao.refresh_from_db()
+        self.execucao.data_execucao -= timedelta(days=1)
+        self.execucao.save(update_fields=['data_execucao'])
+        execucao_hoje = ExecucaoRota().business.criar_execucao(self.rota.pk, timezone.localdate())
+
+        for rota_ativa, estado in (
+            (True, StatusExecucaoRota.CANCELADA),
+            (False, StatusExecucaoRota.ABERTA),
+            (False, StatusExecucaoRota.CANCELADA),
+        ):
+            with self.subTest(rota_ativa=rota_ativa, estado=estado):
+                self.rota.ativo = rota_ativa
+                self.rota.save(update_fields=['ativo'])
+                execucao_hoje.status = estado
+                execucao_hoje.save(update_fields=['status'])
+
+                itens = self.client.get(self.lista).data['dados']
+
+                self.assertEqual([item['execucao_id'] for item in itens], [self.execucao.pk])
+                self.assertTrue(itens[0]['viagem']['pode_finalizar_rota'])
 
     def test_nao_inicia_rota_inativa_ou_de_outro_dia(self):
         self.liberar()

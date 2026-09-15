@@ -6979,13 +6979,15 @@ paths:
         (RESERVADO + EMBARCADO) e\n    `vagas_ocupadas` / `vagas_disponiveis` com
         a mesma regra da conferência\n    (após a chamada: EMBARCADO + entradas sem
         ticket).\n    Rotas ainda sem execução retornam status nulo, zero tickets
-        e zero vagas ocupadas.\n    Inclui também viagens de dias anteriores ainda
-        em andamento, inclusive se a rota\n    foi desativada. O objeto `viagem` informa
-        início, fim, duração em segundos e as ações\n    permitidas ao usuário. Uma
-        rota pode aparecer em mais de uma data de operação.\n    Este endpoint é exclusivamente
-        de leitura e não cria nem altera dados operacionais.\n\n    **Permissões:**
-        Motorista ativo ou L3 (administrador). Todos visualizam todas as rotas do
-        dia.\n    "
+        e zero vagas ocupadas.\n    Execuções canceladas não aparecem, nem como rotas
+        sem execução. Rotas ou percursos\n    inativos só aparecem enquanto a viagem
+        estiver iniciada e ainda não finalizada.\n    Inclui também viagens de dias
+        anteriores ainda em andamento, inclusive se a rota\n    foi desativada. O
+        objeto `viagem` informa início, fim, duração em segundos e as ações\n    permitidas
+        ao usuário. Uma rota pode aparecer em mais de uma data de operação.\n    Este
+        endpoint é exclusivamente de leitura e não cria nem altera dados operacionais.\n\n
+        \   **Permissões:** Motorista ativo ou L3 (administrador). Todos visualizam
+        todas as rotas do dia.\n    "
       summary: Listar rotas do dia
       tags:
       - Transporte · Motorista

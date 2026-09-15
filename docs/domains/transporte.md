@@ -83,6 +83,11 @@ Transporte/
 
 - Motoristas ativos e administradores visualizam todas as rotas ativas programadas
   para o dia atual, além de viagens iniciadas em datas anteriores e ainda não finalizadas.
+- Execuções canceladas não aparecem nessa listagem, nem como rotas sem execução.
+  O cancelamento vale para a ocorrência da data, sem ocultar outras viagens da rota.
+- Rotas ou percursos inativos só permanecem visíveis enquanto a viagem estiver
+  iniciada e ainda não finalizada, inclusive após a meia-noite. Ao finalizar,
+  saem da listagem operacional e continuam disponíveis no histórico.
 - A data atual usa o timezone `America/Fortaleza` configurado no projeto.
 - Rotas são ordenadas pelo horário de saída e, em caso de empate, pelo apelido do percurso.
 - A consulta é somente de leitura e não cria nem altera registros.

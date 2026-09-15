@@ -113,14 +113,26 @@ class RotaHelpers(ModelInstanceHelpers):
     def listar_operacoes_do_dia(self, data):
         from copy import copy
 
+        from Transporte.execucoes_rotas.choices import StatusExecucaoRota
+
         # Uma linha por viagem; viagens pendentes de outro dia continuam acessíveis.
         rotas = []
         for rota in self.listar_do_dia(data):
             for execucao in rota.execucoes_do_dia:
+                if execucao.status == StatusExecucaoRota.CANCELADA:
+                    continue
+                viagem_em_andamento = (
+                    execucao.status == StatusExecucaoRota.INICIADA
+                    and execucao.rota_iniciada_em is not None
+                    and execucao.rota_finalizada_em is None
+                )
+                if not (rota.ativo and rota.percurso.ativo) and not viagem_em_andamento:
+                    continue
                 item = copy(rota)
                 item.data_operacao = execucao.data_execucao
                 item.execucoes_do_dia = [execucao]
                 rotas.append(item)
+            # Inclui canceladas: uma execução oculta não vira uma rota sem execução.
             tem_execucao_hoje = any(e.data_execucao == data for e in rota.execucoes_do_dia)
             if (
                 not tem_execucao_hoje and rota.ativo and rota.percurso.ativo
