@@ -6,8 +6,9 @@ recebe e processa essas tarefas.
 
 No domínio de Transporte, o Beat envia a tarefa
 `Transporte.execucoes_rotas.tasks.gerar_execucoes_rotas_automaticas_task` a cada
-cinco minutos. Essa tarefa cria as execuções das rotas do dia de acordo com o
-dia da semana e com as exceções do calendário operacional.
+cinco minutos. Essa tarefa cria as execuções das rotas do dia e, a partir das
+20h, também do dia seguinte, de acordo com o dia da semana e com as exceções do
+calendário operacional.
 
 ## Arquitetura esperada
 
@@ -111,9 +112,10 @@ A ausência de novas execuções nem sempre representa erro. A tarefa somente cr
 uma execução quando todas estas condições são atendidas:
 
 - a data é operacional segundo o calendário de Transporte;
+- a data é hoje ou, a partir das 20h, o dia seguinte;
 - a rota está ativa;
 - o percurso da rota está ativo;
-- o dia da semana da rota corresponde à data atual;
+- o dia da semana da rota corresponde à data processada;
 - o horário atual ainda não passou de 30 minutos antes da saída;
 - ainda não existe execução para a mesma rota e data.
 
@@ -157,7 +159,8 @@ Para interromper temporariamente os disparos automáticos, pare o processo do
 Beat. Não é necessário parar o Worker, pois ele pode continuar processando
 outras tarefas assíncronas do sistema.
 
-Ao reativar o Beat, ele volta a reconciliar o dia corrente a cada cinco minutos.
+Ao reativar o Beat, ele volta a reconciliar o dia corrente e, depois das 20h,
+também o dia seguinte, a cada cinco minutos.
 Rotas cujo limite de 30 minutos já passou não são criadas retroativamente.
 
 ## Referências

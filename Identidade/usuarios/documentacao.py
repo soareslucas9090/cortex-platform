@@ -664,7 +664,7 @@ class PermissaoDocumentacao:
                         ),
                         (
                             'Reserva, entrada e saída da fila e cancelamento pelo aluno funcionam '
-                            'somente de segunda a sexta, da meia-noite do dia da execução até '
+                            'somente em datas operacionais, das 20h do dia anterior à execução até '
                             'exatamente 30 minutos antes da saída.'
                         ),
                         (

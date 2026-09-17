@@ -48,13 +48,13 @@ class TicketBusinessTestCase(APITestCase):
         patcher.start()
         self.addCleanup(patcher.stop)
 
-    def test_solicitacoes_abrem_a_meia_noite_do_dia_da_execucao(self):
+    def test_solicitacoes_abrem_as_vinte_horas_do_dia_anterior(self):
         abertura = timezone.localtime(self.execucao.data_hora_saida).replace(
-            hour=0,
+            hour=20,
             minute=0,
             second=0,
             microsecond=0,
-        )
+        ) - timedelta(days=1)
         antes_da_abertura = abertura - timedelta(microseconds=1)
         with patch('Transporte.tickets.rules.now', return_value=antes_da_abertura):
             with self.assertRaises(BusinessRuleException):
@@ -71,6 +71,27 @@ class TicketBusinessTestCase(APITestCase):
             outro = criar_aluno('20000000017')
             espera = Ticket().business.entrar_fila(self.execucao.pk, outro.usuario)
         self.assertEqual(espera.status, StatusTicket.EM_ESPERA)
+
+    def test_cancelamento_abre_as_vinte_horas_do_dia_anterior(self):
+        ticket = Ticket().business.solicitar_reserva(self.execucao.pk, self.aluno.usuario)
+        abertura = timezone.localtime(self.execucao.data_hora_saida).replace(
+            hour=20,
+            minute=0,
+            second=0,
+            microsecond=0,
+        ) - timedelta(days=1)
+
+        with patch(
+            'Transporte.tickets.rules.now',
+            return_value=abertura - timedelta(microseconds=1),
+        ):
+            with self.assertRaises(BusinessRuleException):
+                ticket.business.cancelar(self.aluno.usuario)
+
+        with patch('Transporte.tickets.rules.now', return_value=abertura):
+            ticket, _ = ticket.business.cancelar(self.aluno.usuario)
+
+        self.assertEqual(ticket.status, StatusTicket.CANCELADO)
 
     def test_depois_do_limite_bloqueia_reserva_e_entrada_na_fila(self):
         Ticket().business.solicitar_reserva(self.execucao.pk, self.aluno.usuario)

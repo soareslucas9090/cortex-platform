@@ -5656,7 +5656,7 @@ paths:
       description: |-
         Lista as ocorrências das rotas. Os filtros apenas reduzem o escopo já permitido ao usuário e não liberam execuções fora dele.
 
-        **Permissões:** Autenticado. L3 (EDITAR_TUDO) vê todas as execuções; demais usuários veem somente execuções abertas, em dia útil, da meia-noite do dia da viagem até exatamente 30 minutos antes da saída.
+        **Permissões:** Autenticado. L3 (EDITAR_TUDO) vê todas as execuções; demais usuários veem somente execuções abertas, em data operacional, das 20h do dia anterior à viagem até exatamente 30 minutos antes da saída.
       summary: Listar execuções de rotas
       parameters:
       - in: query
@@ -5749,7 +5749,7 @@ paths:
       description: |-
         Retorna uma execução de rota.
 
-        **Permissões:** Autenticado. L3 (EDITAR_TUDO) vê todas as execuções; demais usuários veem somente execuções abertas, em dia útil, da meia-noite do dia da viagem até exatamente 30 minutos antes da saída.
+        **Permissões:** Autenticado. L3 (EDITAR_TUDO) vê todas as execuções; demais usuários veem somente execuções abertas, em data operacional, das 20h do dia anterior à viagem até exatamente 30 minutos antes da saída.
       summary: Detalhar execução de rota
       parameters:
       - in: path
@@ -6292,7 +6292,7 @@ paths:
     post:
       operationId: transporte_execucoes_rotas_fila_espera_entrar_create
       description: |-
-        Entra explicitamente na fila quando a execução está lotada, de segunda a sexta, da meia-noite até exatamente 30 minutos antes da saída.
+        Entra explicitamente na fila quando a execução está lotada, em data operacional, das 20h do dia anterior até exatamente 30 minutos antes da saída.
 
         **Permissões:** Usuário autenticado. A operação exige perfil de aluno ativo e matriculado; tickets são sempre escopados ao próprio aluno.
       summary: Entrar na fila de espera
@@ -6375,7 +6375,7 @@ paths:
     post:
       operationId: transporte_execucoes_rotas_reservar_create
       description: |-
-        Reserva uma vaga disponível, de segunda a sexta, da meia-noite do dia da execução até exatamente 30 minutos antes da saída.
+        Reserva uma vaga disponível, em data operacional, das 20h do dia anterior à execução até exatamente 30 minutos antes da saída.
 
         **Permissões:** Usuário autenticado. A operação exige perfil de aluno ativo e matriculado; tickets são sempre escopados ao próprio aluno.
       summary: Reservar ticket
@@ -7863,7 +7863,7 @@ paths:
     post:
       operationId: transporte_tickets_cancelar_create
       description: |-
-        Cancela uma reserva, de segunda a sexta, da meia-noite até exatamente 30 minutos antes da saída.
+        Cancela uma reserva, em data operacional, das 20h do dia anterior até exatamente 30 minutos antes da saída.
 
         **Permissões:** Usuário autenticado. A operação exige perfil de aluno ativo e matriculado; tickets são sempre escopados ao próprio aluno.
       summary: Cancelar ticket reservado
@@ -7957,7 +7957,7 @@ paths:
     post:
       operationId: transporte_tickets_sair_fila_create
       description: |-
-        Remove o próprio ticket da fila, de segunda a sexta, da meia-noite até exatamente 30 minutos antes da saída.
+        Remove o próprio ticket da fila, em data operacional, das 20h do dia anterior até exatamente 30 minutos antes da saída.
 
         **Permissões:** Usuário autenticado. A operação exige perfil de aluno ativo e matriculado; tickets são sempre escopados ao próprio aluno.
       summary: Sair da fila de espera

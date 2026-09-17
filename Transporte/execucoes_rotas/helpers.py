@@ -158,14 +158,14 @@ class ExecucaoRotaHelpers(ModelInstanceHelpers):
         usuario,
         status_param=None,
         data_param=None,
-        dia_operacional=True,
+        datas_operacionais=(),
     ):
         from .models import ExecucaoRota
 
         if getattr(usuario, 'tem_acesso_elevado', lambda: False)():
             queryset = ExecucaoRota.objects.select_related('rota', 'rota__percurso')
         else:
-            queryset = self._listar_disponiveis_para_aluno(dia_operacional)
+            queryset = self._listar_disponiveis_para_aluno(datas_operacionais)
 
         if (
             status_param
@@ -198,18 +198,15 @@ class ExecucaoRotaHelpers(ModelInstanceHelpers):
             data_execucao=data_execucao,
         ).exists()
 
-    def _listar_disponiveis_para_aluno(self, dia_operacional):
+    def _listar_disponiveis_para_aluno(self, datas_operacionais):
         from .models import ExecucaoRota
 
         agora = now()
-        data_local = localdate(agora)
         queryset = ExecucaoRota.objects.filter(
             status=StatusExecucaoRota.ABERTA,
-            data_execucao=data_local,
+            data_execucao__in=datas_operacionais,
             data_hora_saida__gte=agora + timedelta(minutes=30),
         ).select_related('rota', 'rota__percurso')
-        if not dia_operacional:
-            return queryset.none()
         return queryset
 
     def contar_vagas_ocupadas(self):

@@ -74,8 +74,8 @@ class DetalharTicketView(IsAuthenticatedMixin, BasicRetrieveAPIView):
     tags=['Transporte · Tickets'],
     summary='Reservar ticket',
     description=(
-        'Reserva uma vaga disponível, de segunda a sexta, da meia-noite do dia da '
-        f'execução até exatamente 30 minutos antes da saída.\n\n{PERMISSAO_ALUNO}'
+        'Reserva uma vaga disponível, em data operacional, das 20h do dia anterior '
+        f'à execução até exatamente 30 minutos antes da saída.\n\n{PERMISSAO_ALUNO}'
     ),
     request=SerializerVazio,
     responses={
@@ -97,8 +97,9 @@ class ReservarTicketView(IsAuthenticatedMixin, BasicPostAPIView):
     tags=['Transporte · Tickets'],
     summary='Entrar na fila de espera',
     description=(
-        'Entra explicitamente na fila quando a execução está lotada, de segunda a '
-        f'sexta, da meia-noite até exatamente 30 minutos antes da saída.\n\n{PERMISSAO_ALUNO}'
+        'Entra explicitamente na fila quando a execução está lotada, em data '
+        'operacional, das 20h do dia anterior até exatamente 30 minutos antes da '
+        f'saída.\n\n{PERMISSAO_ALUNO}'
     ),
     request=SerializerVazio,
     responses={
@@ -120,8 +121,8 @@ class EntrarFilaEsperaView(IsAuthenticatedMixin, BasicPostAPIView):
     tags=['Transporte · Tickets'],
     summary='Cancelar ticket reservado',
     description=(
-        'Cancela uma reserva, de segunda a sexta, da meia-noite até exatamente '
-        f'30 minutos antes da saída.\n\n{PERMISSAO_ALUNO}'
+        'Cancela uma reserva, em data operacional, das 20h do dia anterior até '
+        f'exatamente 30 minutos antes da saída.\n\n{PERMISSAO_ALUNO}'
     ),
     request=SerializerVazio,
     responses={
@@ -150,8 +151,8 @@ class CancelarTicketView(IsAuthenticatedMixin, BasicPostAPIView):
     tags=['Transporte · Tickets'],
     summary='Sair da fila de espera',
     description=(
-        'Remove o próprio ticket da fila, de segunda a sexta, da meia-noite até '
-        f'exatamente 30 minutos antes da saída.\n\n{PERMISSAO_ALUNO}'
+        'Remove o próprio ticket da fila, em data operacional, das 20h do dia '
+        f'anterior até exatamente 30 minutos antes da saída.\n\n{PERMISSAO_ALUNO}'
     ),
     request=SerializerVazio,
     responses={
