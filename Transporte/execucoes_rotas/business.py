@@ -1,5 +1,5 @@
 import logging
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from django.db import IntegrityError, transaction
 from django.utils import timezone
@@ -8,6 +8,7 @@ from AppCore.core.business.business import ModelInstanceBusiness
 from AppCore.core.exceptions.exceptions import BusinessRuleException, NotFoundException
 
 from .choices import STATUS_POS_CONFERENCIA, StatusExecucaoRota
+from .constantes import HORARIO_ABERTURA_SOLICITACOES
 from .rules import MENSAGEM_EXECUCAO_DUPLICADA
 
 logger = logging.getLogger(__name__)
@@ -23,58 +24,66 @@ class ExecucaoRotaBusiness(ModelInstanceBusiness):
 
             instante = instante or timezone.now()
             instante_local = timezone.localtime(instante)
-            data_execucao = instante_local.date()
-            resultado = {
-                'data_execucao': data_execucao.isoformat(),
-                'criadas': 0,
-                'existentes': 0,
-                'fora_do_prazo': 0,
-                'dia_operacional': False,
-                'conflitos_execucoes_existentes': [],
-            }
+            datas_execucao = [instante_local.date()]
+            horario_local = instante_local.time().replace(tzinfo=None)
+            if horario_local >= HORARIO_ABERTURA_SOLICITACOES:
+                datas_execucao.append(instante_local.date() + timedelta(days=1))
+
             calendario = DiaCalendarioTransporte()
-            excecao = calendario.helper.obter_excecao_ativa_na_data(data_execucao)
-            tipo_excecao = excecao.tipo if excecao else None
-            if not calendario.rules.permite_operacao_na_data(
-                data_execucao,
-                tipo_excecao,
-            ):
-                resultado['conflitos_execucoes_existentes'] = list(
-                    ExecucaoRota.objects.filter(data_execucao=data_execucao)
-                    .exclude(status=StatusExecucaoRota.CANCELADA)
-                    .values_list('pk', flat=True)
-                )
-                return resultado
-            resultado['dia_operacional'] = True
-
             rules = self.object_instance.rules
-            rotas = self.object_instance.helper.listar_rotas_para_geracao_automatica(
-                data_execucao,
-            )
-            for rota in rotas:
-                data_hora_saida = timezone.make_aware(
-                    datetime.combine(data_execucao, rota.horario_saida),
-                    timezone.get_current_timezone(),
-                )
-                if not rules.pode_gerar_execucao_automatica_no_instante(
-                    data_hora_saida,
-                    instante,
+            resultados = []
+            for data_execucao in datas_execucao:
+                resultado = {
+                    'data_execucao': data_execucao.isoformat(),
+                    'criadas': 0,
+                    'existentes': 0,
+                    'fora_do_prazo': 0,
+                    'dia_operacional': False,
+                    'conflitos_execucoes_existentes': [],
+                }
+                excecao = calendario.helper.obter_excecao_ativa_na_data(data_execucao)
+                tipo_excecao = excecao.tipo if excecao else None
+                if not calendario.rules.permite_operacao_na_data(
+                    data_execucao,
+                    tipo_excecao,
                 ):
-                    resultado['fora_do_prazo'] += 1
+                    resultado['conflitos_execucoes_existentes'] = list(
+                        ExecucaoRota.objects.filter(data_execucao=data_execucao)
+                        .exclude(status=StatusExecucaoRota.CANCELADA)
+                        .values_list('pk', flat=True)
+                    )
+                    resultados.append(resultado)
                     continue
+                resultado['dia_operacional'] = True
 
-                _execucao, criada = ExecucaoRota.objects.get_or_create(
-                    rota=rota,
-                    data_execucao=data_execucao,
-                    defaults={
-                        'data_hora_saida': data_hora_saida,
-                        'quantidade_vagas': rota.quantidade_vagas,
-                        'status': StatusExecucaoRota.ABERTA,
-                    },
+                rotas = self.object_instance.helper.listar_rotas_para_geracao_automatica(
+                    data_execucao,
                 )
-                chave = 'criadas' if criada else 'existentes'
-                resultado[chave] += 1
-            return resultado
+                for rota in rotas:
+                    data_hora_saida = timezone.make_aware(
+                        datetime.combine(data_execucao, rota.horario_saida),
+                        timezone.get_current_timezone(),
+                    )
+                    if not rules.pode_gerar_execucao_automatica_no_instante(
+                        data_hora_saida,
+                        instante,
+                    ):
+                        resultado['fora_do_prazo'] += 1
+                        continue
+
+                    _execucao, criada = ExecucaoRota.objects.get_or_create(
+                        rota=rota,
+                        data_execucao=data_execucao,
+                        defaults={
+                            'data_hora_saida': data_hora_saida,
+                            'quantidade_vagas': rota.quantidade_vagas,
+                            'status': StatusExecucaoRota.ABERTA,
+                        },
+                    )
+                    chave = 'criadas' if criada else 'existentes'
+                    resultado[chave] += 1
+                resultados.append(resultado)
+            return {'resultados': resultados}
         except Exception as e:
             self.relancar_ou_erro_sistema(
                 e,
@@ -183,18 +192,27 @@ class ExecucaoRotaBusiness(ModelInstanceBusiness):
         try:
             from Transporte.calendario_operacional.models import DiaCalendarioTransporte
 
-            data_hoje = timezone.localdate()
+            instante = timezone.now()
+            instante_local = timezone.localtime(instante)
+            datas_consulta = [instante_local.date()]
+            horario_local = instante_local.time().replace(tzinfo=None)
+            if horario_local >= HORARIO_ABERTURA_SOLICITACOES:
+                datas_consulta.append(instante_local.date() + timedelta(days=1))
+
             calendario = DiaCalendarioTransporte()
-            excecao = calendario.helper.obter_excecao_ativa_na_data(data_hoje)
-            dia_operacional = calendario.rules.permite_operacao_na_data(
-                data_hoje,
-                excecao.tipo if excecao else None,
-            )
+            datas_operacionais = []
+            for data_consulta in datas_consulta:
+                excecao = calendario.helper.obter_excecao_ativa_na_data(data_consulta)
+                if calendario.rules.permite_operacao_na_data(
+                    data_consulta,
+                    excecao.tipo if excecao else None,
+                ):
+                    datas_operacionais.append(data_consulta)
             return self.object_instance.helper.listar_para_usuario(
                 usuario,
                 status_param,
                 data_param,
-                dia_operacional,
+                datas_operacionais,
             )
         except Exception as e:
             self.relancar_ou_erro_sistema(e, 'Não foi possível listar as execuções de rota.', logger)

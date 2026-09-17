@@ -47,9 +47,10 @@ class GeracaoAutomaticaExecucoesTestCase(APITestCase):
     def test_gera_rotas_ativas_do_dia_com_snapshot(self):
         rota = self.criar_rota('Centro', horario_saida=time(7, 30), vagas=42)
 
-        resultado = ExecucaoRota().business.gerar_execucoes_automaticas(
+        retorno = ExecucaoRota().business.gerar_execucoes_automaticas(
             self.instante(self.data_segunda, time(0, 0)),
         )
+        resultado = retorno['resultados'][0]
 
         execucao = ExecucaoRota.objects.get(rota=rota, data_execucao=self.data_segunda)
         self.assertEqual(resultado['criadas'], 1)
@@ -61,9 +62,10 @@ class GeracaoAutomaticaExecucoesTestCase(APITestCase):
         data_sabado = self.data_segunda + timedelta(days=5)
         self.criar_rota('Sábado', dia_semana=DiaSemana.SABADO)
 
-        resultado = ExecucaoRota().business.gerar_execucoes_automaticas(
+        retorno = ExecucaoRota().business.gerar_execucoes_automaticas(
             self.instante(data_sabado, time(0, 0)),
         )
+        resultado = retorno['resultados'][0]
 
         self.assertEqual(resultado['criadas'], 0)
         self.assertFalse(resultado['dia_operacional'])
@@ -73,9 +75,10 @@ class GeracaoAutomaticaExecucoesTestCase(APITestCase):
         data_feriado = date(2026, 9, 7)
         self.criar_rota('Feriado', dia_semana=DiaSemana.SEGUNDA)
 
-        resultado = ExecucaoRota().business.gerar_execucoes_automaticas(
+        retorno = ExecucaoRota().business.gerar_execucoes_automaticas(
             self.instante(data_feriado, time(0, 0)),
         )
+        resultado = retorno['resultados'][0]
 
         self.assertEqual(resultado['criadas'], 0)
         self.assertFalse(resultado['dia_operacional'])
@@ -89,9 +92,10 @@ class GeracaoAutomaticaExecucoesTestCase(APITestCase):
         )
         self.criar_rota('Sexta-feira', dia_semana=DiaSemana.SEXTA)
 
-        resultado = ExecucaoRota().business.gerar_execucoes_automaticas(
+        retorno = ExecucaoRota().business.gerar_execucoes_automaticas(
             self.instante(data_sabado, time(0, 0)),
         )
+        resultado = retorno['resultados'][0]
 
         self.assertTrue(resultado['dia_operacional'])
         self.assertEqual(resultado['criadas'], 1)
@@ -107,9 +111,10 @@ class GeracaoAutomaticaExecucoesTestCase(APITestCase):
         rota = self.criar_rota('Contingência', dia_semana=DiaSemana.SEGUNDA)
         execucao = ExecucaoRota().business.criar_execucao(rota.pk, data_feriado)
 
-        resultado = ExecucaoRota().business.gerar_execucoes_automaticas(
+        retorno = ExecucaoRota().business.gerar_execucoes_automaticas(
             self.instante(data_feriado, time(0, 0)),
         )
+        resultado = retorno['resultados'][0]
 
         self.assertEqual(
             resultado['conflitos_execucoes_existentes'],
@@ -132,9 +137,10 @@ class GeracaoAutomaticaExecucoesTestCase(APITestCase):
     def test_limite_exato_t30_gera_execucao(self):
         rota = self.criar_rota('Limite exato', horario_saida=time(8, 0))
 
-        resultado = ExecucaoRota().business.gerar_execucoes_automaticas(
+        retorno = ExecucaoRota().business.gerar_execucoes_automaticas(
             self.instante(self.data_segunda, time(7, 30)),
         )
+        resultado = retorno['resultados'][0]
 
         self.assertEqual(resultado['criadas'], 1)
         self.assertTrue(
@@ -144,9 +150,10 @@ class GeracaoAutomaticaExecucoesTestCase(APITestCase):
     def test_depois_de_t30_nao_gera_execucao(self):
         self.criar_rota('Prazo encerrado', horario_saida=time(8, 0))
 
-        resultado = ExecucaoRota().business.gerar_execucoes_automaticas(
+        retorno = ExecucaoRota().business.gerar_execucoes_automaticas(
             self.instante(self.data_segunda, time(7, 30, 0, 1)),
         )
+        resultado = retorno['resultados'][0]
 
         self.assertEqual(resultado['fora_do_prazo'], 1)
         self.assertFalse(ExecucaoRota.objects.exists())
@@ -156,8 +163,8 @@ class GeracaoAutomaticaExecucoesTestCase(APITestCase):
         instante = self.instante(self.data_segunda, time(0, 0))
         ExecucaoRota().business.criar_execucao(rota.pk, self.data_segunda)
 
-        primeiro = ExecucaoRota().business.gerar_execucoes_automaticas(instante)
-        segundo = ExecucaoRota().business.gerar_execucoes_automaticas(instante)
+        primeiro = ExecucaoRota().business.gerar_execucoes_automaticas(instante)['resultados'][0]
+        segundo = ExecucaoRota().business.gerar_execucoes_automaticas(instante)['resultados'][0]
 
         self.assertEqual(primeiro['existentes'], 1)
         self.assertEqual(segundo['existentes'], 1)
@@ -177,14 +184,45 @@ class GeracaoAutomaticaExecucoesTestCase(APITestCase):
         self.assertEqual(execucao.quantidade_vagas, 20)
         self.assertEqual(timezone.localtime(execucao.data_hora_saida).time(), time(9, 0))
 
+    def test_antes_das_vinte_horas_nao_gera_execucao_do_dia_seguinte(self):
+        data_terca = self.data_segunda + timedelta(days=1)
+        rota = self.criar_rota('Terça antes das 20h', dia_semana=DiaSemana.TERCA)
+
+        retorno = ExecucaoRota().business.gerar_execucoes_automaticas(
+            self.instante(self.data_segunda, time(19, 59, 59)),
+        )
+
+        self.assertEqual(len(retorno['resultados']), 1)
+        self.assertFalse(
+            ExecucaoRota.objects.filter(rota=rota, data_execucao=data_terca).exists(),
+        )
+
+    def test_as_vinte_horas_gera_execucao_do_dia_seguinte(self):
+        data_terca = self.data_segunda + timedelta(days=1)
+        rota = self.criar_rota('Terça às 20h', dia_semana=DiaSemana.TERCA)
+
+        retorno = ExecucaoRota().business.gerar_execucoes_automaticas(
+            self.instante(self.data_segunda, time(20, 0)),
+        )
+
+        self.assertEqual(
+            [resultado['data_execucao'] for resultado in retorno['resultados']],
+            [self.data_segunda.isoformat(), data_terca.isoformat()],
+        )
+        self.assertTrue(
+            ExecucaoRota.objects.filter(rota=rota, data_execucao=data_terca).exists(),
+        )
+
     def test_task_delega_geracao_ao_business(self):
         resultado = {
-            'data_execucao': self.data_segunda.isoformat(),
-            'criadas': 2,
-            'existentes': 1,
-            'fora_do_prazo': 0,
-            'dia_operacional': True,
-            'conflitos_execucoes_existentes': [],
+            'resultados': [{
+                'data_execucao': self.data_segunda.isoformat(),
+                'criadas': 2,
+                'existentes': 1,
+                'fora_do_prazo': 0,
+                'dia_operacional': True,
+                'conflitos_execucoes_existentes': [],
+            }],
         }
         with patch(
             'Transporte.execucoes_rotas.business.ExecucaoRotaBusiness.gerar_execucoes_automaticas',

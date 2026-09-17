@@ -14,17 +14,18 @@ logger = logging.getLogger(__name__)
 def gerar_execucoes_rotas_automaticas_task():
     from .models import ExecucaoRota
 
-    resultado = ExecucaoRota().business.gerar_execucoes_automaticas()
-    logger.info(
-        'Geração automática de execuções concluída para %(data_execucao)s: '
-        '%(criadas)s criada(s), %(existentes)s existente(s) e '
-        '%(fora_do_prazo)s fora do prazo. Dia operacional: %(dia_operacional)s.',
-        resultado,
-    )
-    if resultado['conflitos_execucoes_existentes']:
-        logger.warning(
-            'A data %(data_execucao)s não é operacional, mas possui execuções '
-            'ativas cadastradas: %(conflitos_execucoes_existentes)s.',
+    retorno = ExecucaoRota().business.gerar_execucoes_automaticas()
+    for resultado in retorno['resultados']:
+        logger.info(
+            'Geração automática de execuções concluída para %(data_execucao)s: '
+            '%(criadas)s criada(s), %(existentes)s existente(s) e '
+            '%(fora_do_prazo)s fora do prazo. Dia operacional: %(dia_operacional)s.',
             resultado,
         )
-    return resultado
+        if resultado['conflitos_execucoes_existentes']:
+            logger.warning(
+                'A data %(data_execucao)s não é operacional, mas possui execuções '
+                'ativas cadastradas: %(conflitos_execucoes_existentes)s.',
+                resultado,
+            )
+    return retorno

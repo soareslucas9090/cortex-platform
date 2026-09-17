@@ -29,8 +29,8 @@ from .serializers import (
 
 PERMISSAO_LISTAGEM = (
     '**Permissões:** Autenticado. L3 (EDITAR_TUDO) vê todas as execuções; '
-    'demais usuários veem somente execuções abertas, em dia útil, da meia-noite '
-    'do dia da viagem até exatamente 30 minutos antes da saída.'
+    'demais usuários veem somente execuções abertas, em data operacional, das '
+    '20h do dia anterior à viagem até exatamente 30 minutos antes da saída.'
 )
 
 

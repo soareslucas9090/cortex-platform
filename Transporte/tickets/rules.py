@@ -4,6 +4,7 @@ from django.utils.timezone import localtime, now
 
 from Academico.alunos.choices import SituacaoAluno
 from AppCore.core.rules.rules import ModelInstanceRules
+from Transporte.execucoes_rotas.constantes import HORARIO_ABERTURA_SOLICITACOES
 from Transporte.execucoes_rotas.choices import StatusExecucaoRota
 
 from .choices import StatusTicket
@@ -48,10 +49,15 @@ class TicketRules(ModelInstanceRules):
 
         agora = now()
         saida_local = localtime(execucao.data_hora_saida)
-        abertura = saida_local.replace(hour=0, minute=0, second=0, microsecond=0)
+        abertura = saida_local.replace(
+            hour=HORARIO_ABERTURA_SOLICITACOES.hour,
+            minute=HORARIO_ABERTURA_SOLICITACOES.minute,
+            second=0,
+            microsecond=0,
+        ) - timedelta(days=1)
         limite = execucao.data_hora_saida - timedelta(minutes=30)
         if agora < abertura:
-            self.return_exception('As solicitações abrem à meia-noite do dia da execução.')
+            self.return_exception('As solicitações abrem às 20h do dia anterior à execução.')
         if agora > limite:
             self.return_exception(
                 'O prazo para reservar ou entrar na fila termina 30 minutos antes da saída.'
@@ -96,10 +102,17 @@ class TicketRules(ModelInstanceRules):
 
         agora = now()
         saida_local = localtime(execucao.data_hora_saida)
-        abertura = saida_local.replace(hour=0, minute=0, second=0, microsecond=0)
+        abertura = saida_local.replace(
+            hour=HORARIO_ABERTURA_SOLICITACOES.hour,
+            minute=HORARIO_ABERTURA_SOLICITACOES.minute,
+            second=0,
+            microsecond=0,
+        ) - timedelta(days=1)
         limite = execucao.data_hora_saida - timedelta(minutes=30)
         if agora < abertura:
-            self.return_exception('Cancelamentos e saída da fila abrem à meia-noite do dia da execução.')
+            self.return_exception(
+                'Cancelamentos e saída da fila abrem às 20h do dia anterior à execução.'
+            )
         if agora > limite:
             self.return_exception(
                 'O prazo para cancelar ou sair da fila termina 30 minutos antes da saída.'
