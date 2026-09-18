@@ -48,9 +48,9 @@ class TicketBusinessTestCase(APITestCase):
         patcher.start()
         self.addCleanup(patcher.stop)
 
-    def test_solicitacoes_abrem_as_vinte_horas_do_dia_anterior(self):
+    def test_solicitacoes_abrem_as_dezenove_horas_do_dia_anterior(self):
         abertura = timezone.localtime(self.execucao.data_hora_saida).replace(
-            hour=20,
+            hour=19,
             minute=0,
             second=0,
             microsecond=0,
@@ -72,10 +72,10 @@ class TicketBusinessTestCase(APITestCase):
             espera = Ticket().business.entrar_fila(self.execucao.pk, outro.usuario)
         self.assertEqual(espera.status, StatusTicket.EM_ESPERA)
 
-    def test_cancelamento_abre_as_vinte_horas_do_dia_anterior(self):
+    def test_cancelamento_abre_as_dezenove_horas_do_dia_anterior(self):
         ticket = Ticket().business.solicitar_reserva(self.execucao.pk, self.aluno.usuario)
         abertura = timezone.localtime(self.execucao.data_hora_saida).replace(
-            hour=20,
+            hour=19,
             minute=0,
             second=0,
             microsecond=0,

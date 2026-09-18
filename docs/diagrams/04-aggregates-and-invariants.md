@@ -377,8 +377,8 @@ para a data local, enriquecida com a execução correspondente.
 2. Vagas e horário são congelados na execução.
 3. Um aluno possui no máximo um ticket não cancelado por execução.
 4. Reserva e promoção nunca podem ultrapassar a quantidade de vagas.
-5. Reserva, fila, cancelamento e saída da fila só ocorrem em dia útil, entre 00h
-   do dia da execução e o limite inclusivo de 30 minutos antes da saída.
+5. Reserva, fila, cancelamento e saída da fila só ocorrem em data operacional,
+   entre 19h do dia anterior e o limite inclusivo de 30 minutos antes da saída.
 6. Reservas ocupam a menor posição disponível. A fila e a promoção seguem FIFO,
    sem prioridade PcD; PcD aparece primeiro apenas na listagem do conferente.
 7. Cancelamento de reserva e promoção acontecem na mesma transação. O primeiro da

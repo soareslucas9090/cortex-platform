@@ -184,12 +184,12 @@ class GeracaoAutomaticaExecucoesTestCase(APITestCase):
         self.assertEqual(execucao.quantidade_vagas, 20)
         self.assertEqual(timezone.localtime(execucao.data_hora_saida).time(), time(9, 0))
 
-    def test_antes_das_vinte_horas_nao_gera_execucao_do_dia_seguinte(self):
+    def test_antes_das_dezenove_horas_nao_gera_execucao_do_dia_seguinte(self):
         data_terca = self.data_segunda + timedelta(days=1)
-        rota = self.criar_rota('Terça antes das 20h', dia_semana=DiaSemana.TERCA)
+        rota = self.criar_rota('Terça antes das 19h', dia_semana=DiaSemana.TERCA)
 
         retorno = ExecucaoRota().business.gerar_execucoes_automaticas(
-            self.instante(self.data_segunda, time(19, 59, 59)),
+            self.instante(self.data_segunda, time(18, 59, 59, 999999)),
         )
 
         self.assertEqual(len(retorno['resultados']), 1)
@@ -197,12 +197,12 @@ class GeracaoAutomaticaExecucoesTestCase(APITestCase):
             ExecucaoRota.objects.filter(rota=rota, data_execucao=data_terca).exists(),
         )
 
-    def test_as_vinte_horas_gera_execucao_do_dia_seguinte(self):
+    def test_as_dezenove_horas_gera_execucao_do_dia_seguinte(self):
         data_terca = self.data_segunda + timedelta(days=1)
-        rota = self.criar_rota('Terça às 20h', dia_semana=DiaSemana.TERCA)
+        rota = self.criar_rota('Terça às 19h', dia_semana=DiaSemana.TERCA)
 
         retorno = ExecucaoRota().business.gerar_execucoes_automaticas(
-            self.instante(self.data_segunda, time(20, 0)),
+            self.instante(self.data_segunda, time(19, 0)),
         )
 
         self.assertEqual(

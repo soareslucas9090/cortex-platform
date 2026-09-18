@@ -138,7 +138,7 @@ class ExecucaoRotaTestCase(APITestCase):
         execucao = ExecucaoRota().business.criar_execucao(self.rota.pk, self.data)
         aluno = criar_aluno('10000000005')
         abertura = timezone.localtime(execucao.data_hora_saida).replace(
-            hour=20,
+            hour=19,
             minute=0,
             second=0,
             microsecond=0,
