@@ -57,7 +57,7 @@ class TicketRules(ModelInstanceRules):
         ) - timedelta(days=1)
         limite = execucao.data_hora_saida - timedelta(minutes=30)
         if agora < abertura:
-            self.return_exception('As solicitações abrem às 20h do dia anterior à execução.')
+            self.return_exception('As solicitações abrem às 19h do dia anterior à execução.')
         if agora > limite:
             self.return_exception(
                 'O prazo para reservar ou entrar na fila termina 30 minutos antes da saída.'
@@ -111,7 +111,7 @@ class TicketRules(ModelInstanceRules):
         limite = execucao.data_hora_saida - timedelta(minutes=30)
         if agora < abertura:
             self.return_exception(
-                'Cancelamentos e saída da fila abrem às 20h do dia anterior à execução.'
+                'Cancelamentos e saída da fila abrem às 19h do dia anterior à execução.'
             )
         if agora > limite:
             self.return_exception(

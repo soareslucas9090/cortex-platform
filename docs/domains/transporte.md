@@ -131,12 +131,12 @@ O fluxo e a medição do tempo estão descritos na seção 11.
 ### 4. Execuções de rotas e calendário operacional
 
 - O Celery Beat reconcilia a cada cinco minutos, todos os dias, as rotas ativas
-  da data atual que pertencem a percursos ativos. A partir das 20h, também
+  da data atual que pertencem a percursos ativos. A partir das 19h, também
   reconcilia as rotas do dia seguinte. O calendário operacional de cada data
   decide se ela permite criação automática.
-- A geração antecipada do dia seguinte começa às 20h e inclui o instante exato
+- A geração antecipada do dia seguinte começa às 19h e inclui o instante exato
   de 30 minutos antes da saída (`now <= data_hora_saida - 30 min`). Uma rota
-  criada depois das 20h entra na próxima reconciliação somente se ainda estiver
+  criada depois das 19h entra na próxima reconciliação somente se ainda estiver
   dentro desse prazo.
 - Sem exceção cadastrada, segunda a sexta são operacionais e fins de semana
   não são. Uma exceção ativa prevalece sobre essa regra semanal.
@@ -162,7 +162,7 @@ O fluxo e a medição do tempo estão descritos na seção 11.
   `EMBARCADO = 6`, `INICIADA = 7` (sem remapeamento de valores antigos).
 - Reservas e entradas na fila exigem estado `ABERTA`.
 - Para alunos, execuções disponíveis são exibidas somente em datas operacionais,
-  das 20h do dia anterior até exatamente 30 minutos antes da saída. Isso
+  das 19h do dia anterior até exatamente 30 minutos antes da saída. Isso
   inclui sábados letivos e de reposição configurados no calendário.
 - Conferente e L3 iniciam o monitoramento (`EM_EMBARQUE`) somente pelo
   `iniciar` da conferência, depois de 30 minutos antes da saída
@@ -206,7 +206,7 @@ O fluxo e a medição do tempo estão descritos na seção 11.
 - Com vaga, a solicitação cria `RESERVADO`; sem vaga, a reserva falha e o aluno
   precisa entrar explicitamente na fila.
 - Reserva, entrada na fila, cancelamento e saída da fila funcionam somente em
-  datas operacionais, entre as 20h do dia anterior à execução e exatamente 30
+  datas operacionais, entre as 19h do dia anterior à execução e exatamente 30
   minutos antes da saída. O instante exato do limite ainda é permitido; depois
   dele, todas essas ações são bloqueadas.
 - Cancelar uma reserva promove o primeiro ticket da fila na mesma transação.
