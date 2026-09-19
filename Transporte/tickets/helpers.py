@@ -186,6 +186,26 @@ class TicketHelpers(ModelInstanceHelpers):
             status=StatusTicket.RESERVADO,
         )
 
+    def obter_reservado_por_codigo(self, execucao, codigo):
+        from .models import Ticket
+
+        return Ticket.objects.filter(
+            execucao_rota=execucao,
+            codigo=codigo,
+            status=StatusTicket.RESERVADO,
+        ).first()
+
+    def listar_codigos_reservados(self, execucao):
+        from .models import Ticket
+
+        return [
+            str(codigo)
+            for codigo in Ticket.objects.filter(
+                execucao_rota=execucao,
+                status=StatusTicket.RESERVADO,
+            ).values_list('codigo', flat=True)
+        ]
+
     def gerar_codigo_qr(self):
         ticket = self.object_instance
         return signing.dumps(

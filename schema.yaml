@@ -5878,11 +5878,57 @@ paths:
               schema:
                 description: Execução não encontrada.
           description: ''
+  /cortex/transporte/execucoes-rotas/{id}/conferencia/chamada/rascunho/:
+    get:
+      operationId: transporte_execucoes_rotas_conferencia_chamada_rascunho_retrieve
+      description: |-
+        Devolve os códigos dos tickets reservados separados em presentes, ausentes e não classificados, com a versão do rascunho compartilhado.
+
+        **Permissões:** capacidade transporte.conferir. Lê e opera execuções do dia e, após iniciar o monitoramento, a chamada de tickets e a entrada por CPF dessa execução. Não amplia cadastro nem recursos globais do módulo.
+      summary: Consultar rascunho da chamada
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - Transporte · Conferência
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RascunhoChamada'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                description: Não autenticado.
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                description: Sem capacidade conferir.
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                description: Execução de outro dia ou cancelada (fora do escopo da
+                  conferência).
+          description: ''
   /cortex/transporte/execucoes-rotas/{id}/conferencia/entradas-sem-ticket/:
     post:
       operationId: transporte_execucoes_rotas_conferencia_entradas_sem_ticket_create
       description: |-
-        Recebe `{ "cpfs": [...] }`, revalida cada CPF e grava o lote numa transação. Replay do mesmo conjunto devolve 200. Conjunto diferente após o primeiro lote não vazio devolve 400. Lista vazia não conclui o lote (201 sem persistir). Inclui aluno por CPF nas vagas restantes após a chamada de tickets. Quem está EM_ESPERA e for informado no lote fica CONTEMPLADO e recebe EntradaSemTicket. Quem não for informado permanece EM_ESPERA após finalizar a conferência: esse é o desfecho nessa execução, sem promoção posterior. Quem está AUSENTE nesta execução pode entrar se houver vaga; três strikes ativos não impedem o walk-in. O ticket permanece AUSENTE e o strike não é desfeito.
+        Confirma o rascunho de CPFs se a versão coincidir. Rascunho vazio devolve 201 e não conclui o lote. Replay com a versão congelada devolve 200.
+
+        Inclui aluno por CPF nas vagas restantes após a chamada de tickets. Quem está EM_ESPERA e for informado no lote fica CONTEMPLADO e recebe EntradaSemTicket. Quem não for informado permanece EM_ESPERA após finalizar a conferência: esse é o desfecho nessa execução, sem promoção posterior. Quem está AUSENTE nesta execução pode entrar se houver vaga; três strikes ativos não impedem o walk-in. O ticket permanece AUSENTE e o strike não é desfeito.
 
         **Permissões:** capacidade transporte.conferir. Lê e opera execuções do dia e, após iniciar o monitoramento, a chamada de tickets e a entrada por CPF dessa execução. Não amplia cadastro nem recursos globais do módulo.
       summary: Registrar entradas sem ticket em lote
@@ -5917,6 +5963,7 @@ paths:
           multipart/form-data:
             schema:
               $ref: '#/components/schemas/RegistrarEntradaSemTicket'
+        required: true
       security:
       - jwtAuth: []
       responses:
@@ -5931,6 +5978,178 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/PaginatedEntradaSemTicketList'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                description: Regra de entrada não atendida.
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                description: Não autenticado.
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                description: Sem capacidade conferir.
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                description: Aluno ou execução não encontrada.
+          description: ''
+  /cortex/transporte/execucoes-rotas/{id}/conferencia/entradas-sem-ticket/rascunho/:
+    get:
+      operationId: transporte_execucoes_rotas_conferencia_entradas_sem_ticket_rascunho_retrieve
+      description: |-
+        Cards compartilhados do rascunho (ainda não persistidos como EntradaSemTicket) e a versão. Depois do lote gravado, `alunos` vem vazio e `concluido` é true para a tela não tratar o conjunto como pendente.
+
+        **Permissões:** capacidade transporte.conferir. Lê e opera execuções do dia e, após iniciar o monitoramento, a chamada de tickets e a entrada por CPF dessa execução. Não amplia cadastro nem recursos globais do módulo.
+      summary: Listar rascunho de entradas por CPF
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - Transporte · Conferência
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RascunhoEntradaCpf'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                description: Regra de entrada não atendida.
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                description: Não autenticado.
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                description: Sem capacidade conferir.
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                description: Aluno ou execução não encontrada.
+          description: ''
+    post:
+      operationId: transporte_execucoes_rotas_conferencia_entradas_sem_ticket_rascunho_create
+      description: |-
+        Valida o aluno e inclui o card no rascunho compartilhado, sem gravar o lote.
+
+        Inclui aluno por CPF nas vagas restantes após a chamada de tickets. Quem está EM_ESPERA e for informado no lote fica CONTEMPLADO e recebe EntradaSemTicket. Quem não for informado permanece EM_ESPERA após finalizar a conferência: esse é o desfecho nessa execução, sem promoção posterior. Quem está AUSENTE nesta execução pode entrar se houver vaga; três strikes ativos não impedem o walk-in. O ticket permanece AUSENTE e o strike não é desfeito.
+
+        **Permissões:** capacidade transporte.conferir. Lê e opera execuções do dia e, após iniciar o monitoramento, a chamada de tickets e a entrada por CPF dessa execução. Não amplia cadastro nem recursos globais do módulo.
+      summary: Adicionar CPF ao rascunho da conferência
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - Transporte · Conferência
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ValidarEntradaSemTicket'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ValidarEntradaSemTicket'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ValidarEntradaSemTicket'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CardRascunhoEntrada'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                description: Regra de entrada não atendida.
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                description: Não autenticado.
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                description: Sem capacidade conferir.
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                description: Aluno ou execução não encontrada.
+          description: ''
+  /cortex/transporte/execucoes-rotas/{id}/conferencia/entradas-sem-ticket/rascunho/remover/:
+    post:
+      operationId: transporte_execucoes_rotas_conferencia_entradas_sem_ticket_rascunho_remover_create
+      description: |-
+        Retira o card do rascunho compartilhado. Se o CPF já não estava, não altera a versão.
+
+        **Permissões:** capacidade transporte.conferir. Lê e opera execuções do dia e, após iniciar o monitoramento, a chamada de tickets e a entrada por CPF dessa execução. Não amplia cadastro nem recursos globais do módulo.
+      summary: Remover CPF do rascunho da conferência
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - Transporte · Conferência
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ValidarEntradaSemTicket'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ValidarEntradaSemTicket'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ValidarEntradaSemTicket'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExecucaoRota'
           description: ''
         '400':
           content:
@@ -6071,7 +6290,7 @@ paths:
     post:
       operationId: transporte_execucoes_rotas_conferencia_finalizar_chamada_create
       description: |-
-        Grava ausências (com strike) e embarca os demais tickets reservados.
+        Confirma o rascunho compartilhado se a versão informada coincidir. Somente os tickets ausentes no rascunho geram strike; os demais reservados embarcam (presente e não classificado).
 
         **Permissões:** capacidade transporte.conferir. Lê e opera execuções do dia e, após iniciar o monitoramento, a chamada de tickets e a entrada por CPF dessa execução. Não amplia cadastro nem recursos globais do módulo.
       summary: Finalizar chamada de tickets
@@ -6094,6 +6313,7 @@ paths:
           multipart/form-data:
             schema:
               $ref: '#/components/schemas/FinalizarChamada'
+        required: true
       security:
       - jwtAuth: []
       responses:
@@ -6219,6 +6439,74 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/PaginatedTicketConferenciaList'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                description: Não autenticado.
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                description: Sem capacidade conferir.
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                description: Execução de outro dia ou cancelada (fora do escopo da
+                  conferência).
+          description: ''
+  /cortex/transporte/execucoes-rotas/{id}/conferencia/reservas/{codigo}/rascunho/:
+    post:
+      operationId: transporte_execucoes_rotas_conferencia_reservas_rascunho_create
+      description: |-
+        Grava presente, ausente ou nulo (não classificado) sem aplicar strike. A mesma classificação de novo não altera a versão.
+
+        **Permissões:** capacidade transporte.conferir. Lê e opera execuções do dia e, após iniciar o monitoramento, a chamada de tickets e a entrada por CPF dessa execução. Não amplia cadastro nem recursos globais do módulo.
+      summary: Classificar ticket no rascunho da chamada
+      parameters:
+      - in: path
+        name: codigo
+        schema:
+          type: string
+          format: uuid
+        required: true
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - Transporte · Conferência
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ClassificarTicketRascunho'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ClassificarTicketRascunho'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ClassificarTicketRascunho'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExecucaoRota'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                description: Classificação ou chamada inválida.
           description: ''
         '401':
           content:
@@ -8532,6 +8820,16 @@ components:
       - nome
       - tem_justificativa_pendente
       - ultimo_login
+    CardRascunhoEntrada:
+      type: object
+      properties:
+        aluno:
+          $ref: '#/components/schemas/AlunoEntrada'
+        versao:
+          type: integer
+      required:
+      - aluno
+      - versao
     Cargo:
       type: object
       properties:
@@ -8574,6 +8872,24 @@ components:
       description: |-
         * `1` - Professor
         * `2` - Tec.Administrativo
+    ClassificacaoEnum:
+      enum:
+      - presente
+      - ausente
+      type: string
+      description: |-
+        * `presente` - presente
+        * `ausente` - ausente
+    ClassificarTicketRascunho:
+      type: object
+      properties:
+        classificacao:
+          nullable: true
+          oneOf:
+          - $ref: '#/components/schemas/ClassificacaoEnum'
+          - $ref: '#/components/schemas/NullEnum'
+      required:
+      - classificacao
     ConcederAutorizacao:
       type: object
       properties:
@@ -9476,6 +9792,16 @@ components:
         chamada_tickets_concluida:
           type: boolean
           title: Chamada de tickets concluída
+        versao_chamada:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+          title: Versão do rascunho da chamada
+        versao_cpf:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+          title: Versão do rascunho de CPF
         entradas_cpf_concluidas:
           type: boolean
           title: Entrada por CPF concluída
@@ -9523,11 +9849,11 @@ components:
     FinalizarChamada:
       type: object
       properties:
-        ausentes:
-          type: array
-          items:
-            type: string
-            format: uuid
+        versao:
+          type: integer
+          minimum: 0
+      required:
+      - versao
     FormaIngressoEnum:
       enum:
       - 1
@@ -11102,6 +11428,53 @@ components:
       - permissoes
       - tem_perfil_aluno
       - updated_at
+    RascunhoChamada:
+      type: object
+      properties:
+        versao:
+          type: integer
+          readOnly: true
+        presentes:
+          type: array
+          items:
+            type: string
+            format: uuid
+          readOnly: true
+        ausentes:
+          type: array
+          items:
+            type: string
+            format: uuid
+          readOnly: true
+        nao_classificados:
+          type: array
+          items:
+            type: string
+            format: uuid
+          readOnly: true
+      required:
+      - ausentes
+      - nao_classificados
+      - presentes
+      - versao
+    RascunhoEntradaCpf:
+      type: object
+      properties:
+        versao:
+          type: integer
+          readOnly: true
+        concluido:
+          type: boolean
+          readOnly: true
+        alunos:
+          type: array
+          items:
+            $ref: '#/components/schemas/AlunoEntrada'
+          readOnly: true
+      required:
+      - alunos
+      - concluido
+      - versao
     RealizarEmprestimo:
       type: object
       properties:
@@ -11184,11 +11557,11 @@ components:
     RegistrarEntradaSemTicket:
       type: object
       properties:
-        cpfs:
-          type: array
-          items:
-            type: string
-            maxLength: 14
+        versao:
+          type: integer
+          minimum: 0
+      required:
+      - versao
     RelatorioAlunoDetalhe:
       type: object
       properties:

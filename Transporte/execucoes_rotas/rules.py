@@ -31,6 +31,19 @@ MENSAGEM_MONITORAMENTO_T30 = (
 MENSAGEM_EMBARQUE_SOMENTE_INICIAR = (
     'O embarque só pode ser iniciado pelo monitoramento da conferência.'
 )
+MENSAGEM_RASCUNHO_CHAMADA_DESATUALIZADO = (
+    'O rascunho da chamada está desatualizado.'
+)
+MENSAGEM_RASCUNHO_CPF_DESATUALIZADO = (
+    'O rascunho de entrada por CPF está desatualizado.'
+)
+MENSAGEM_CHAMADA_JA_CONCLUIDA = (
+    'A chamada desta execução já foi concluída.'
+)
+MENSAGEM_RASCUNHO_CPF_ABERTO = (
+    'Confirme o lote de CPF ou esvazie o rascunho antes de finalizar a conferência.'
+)
+CLASSIFICACOES_RASCUNHO = ('presente', 'ausente')
 
 
 def execucao_elegivel_para_iniciar_monitoramento(execucao) -> bool:
@@ -136,6 +149,13 @@ class ExecucaoRotaRules(ModelInstanceRules):
             )
         return True
 
+    def validar_rascunho_cpf_para_finalizar(self, execucao) -> bool:
+        if execucao.entradas_cpf_concluidas:
+            return True
+        if list(execucao.entradas_cpf_rascunho or []):
+            self.return_exception(MENSAGEM_RASCUNHO_CPF_ABERTO)
+        return True
+
     def validar_execucao_em_embarque(self, execucao) -> bool:
         if execucao.status != StatusExecucaoRota.EM_EMBARQUE:
             self.return_exception('A conferência só opera execuções em embarque.')
@@ -165,10 +185,30 @@ class ExecucaoRotaRules(ModelInstanceRules):
             self.return_exception('Há tickets duplicados na lista de ausentes.')
         return True
 
-    def validar_replay_chamada(self, ausentes, persistidos) -> bool:
-        if set(ausentes) != set(str(codigo) for codigo in persistidos):
+    def validar_versao_chamada(self, versao_esperada, versao_atual) -> bool:
+        if int(versao_esperada) != int(versao_atual):
+            self.return_exception(MENSAGEM_RASCUNHO_CHAMADA_DESATUALIZADO)
+        return True
+
+    def validar_versao_cpf(self, versao_esperada, versao_atual) -> bool:
+        if int(versao_esperada) != int(versao_atual):
+            self.return_exception(MENSAGEM_RASCUNHO_CPF_DESATUALIZADO)
+        return True
+
+    def validar_rascunho_chamada_aberto(self, execucao) -> bool:
+        if execucao.chamada_tickets_concluida:
+            self.return_exception(MENSAGEM_CHAMADA_JA_CONCLUIDA)
+        return True
+
+    def validar_classificacao_rascunho(self, classificacao) -> bool:
+        if classificacao is None or classificacao in CLASSIFICACOES_RASCUNHO:
+            return True
+        self.return_exception('Informe presente, ausente ou nulo.')
+
+    def validar_ticket_reservado_na_chamada(self, ticket) -> bool:
+        if ticket is None:
             self.return_exception(
-                'A chamada desta execução já foi concluída com outra classificação.',
+                'Um dos tickets informados não está reservado nesta execução.',
             )
         return True
 

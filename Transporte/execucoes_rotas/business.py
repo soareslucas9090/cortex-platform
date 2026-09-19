@@ -337,7 +337,56 @@ class ExecucaoRotaBusiness(ModelInstanceBusiness):
         except Exception as e:
             self.relancar_ou_erro_sistema(e, 'Não foi possível iniciar o embarque.', logger)
 
-    def finalizar_chamada(self, ausentes):
+    def classificar_ticket_rascunho(self, execucao_id, codigo, classificacao):
+        try:
+            from Transporte.tickets.models import Ticket
+
+            execucao = self.obter_para_conferencia(
+                execucao_id,
+                exigir_embarque=True,
+                bloquear=True,
+            )
+            execucao.rules.validar_rascunho_chamada_aberto(execucao)
+            execucao.rules.validar_classificacao_rascunho(classificacao)
+            ticket = Ticket().helper.obter_reservado_por_codigo(execucao, codigo)
+            execucao.rules.validar_ticket_reservado_na_chamada(ticket)
+            codigo_str = str(ticket.codigo)
+            mapa = execucao.helper.mapa_chamada_rascunho(execucao)
+            atual = mapa.get(codigo_str)
+            if classificacao is None:
+                if codigo_str not in mapa:
+                    return execucao
+                mapa.pop(codigo_str)
+            else:
+                if atual == classificacao:
+                    return execucao
+                mapa[codigo_str] = classificacao
+            execucao.chamada_rascunho = mapa
+            execucao.versao_chamada = execucao.versao_chamada + 1
+            execucao.save(update_fields=['chamada_rascunho', 'versao_chamada'])
+            return execucao
+        except Exception as e:
+            self.relancar_ou_erro_sistema(
+                e,
+                'Não foi possível classificar o ticket no rascunho da chamada.',
+                logger,
+            )
+
+    def obter_rascunho_chamada(self, execucao_id):
+        try:
+            execucao = self.obter_para_conferencia(
+                execucao_id,
+                consultar_tickets=True,
+            )
+            return execucao.helper.montar_rascunho_chamada(execucao)
+        except Exception as e:
+            self.relancar_ou_erro_sistema(
+                e,
+                'Não foi possível obter o rascunho da chamada.',
+                logger,
+            )
+
+    def finalizar_chamada(self, versao):
         try:
             from Transporte.tickets.choices import StatusTicket
             from Transporte.tickets.models import Ticket
@@ -347,24 +396,19 @@ class ExecucaoRotaBusiness(ModelInstanceBusiness):
                 bloquear=True,
             )
             execucao.rules.validar_execucao_em_embarque(execucao)
-            ausentes = [str(codigo) for codigo in (ausentes or [])]
-            execucao.rules.validar_ausentes_sem_duplicata(ausentes)
+            execucao.rules.validar_versao_chamada(versao, execucao.versao_chamada)
 
             if execucao.chamada_tickets_concluida:
-                execucao.rules.validar_replay_chamada(
-                    ausentes,
-                    execucao.chamada_ausentes_codigos or [],
-                )
                 return execucao
+
+            ausentes = execucao.helper.ausentes_do_rascunho(execucao)
+            execucao.rules.validar_ausentes_sem_duplicata(ausentes)
 
             tickets = list(Ticket().helper.listar_reservados_bloqueados(execucao))
             por_codigo = {str(ticket.codigo): ticket for ticket in tickets}
             for codigo in ausentes:
                 ticket = por_codigo.get(str(codigo))
-                if ticket is None:
-                    raise BusinessRuleException(
-                        'Um dos tickets informados não está reservado nesta execução.',
-                    )
+                execucao.rules.validar_ticket_reservado_na_chamada(ticket)
                 ticket.business.marcar_ausente()
 
             for ticket in tickets:
@@ -403,6 +447,7 @@ class ExecucaoRotaBusiness(ModelInstanceBusiness):
                 return execucao
             execucao.rules.validar_execucao_em_embarque(execucao)
             execucao.rules.validar_chamada_para_finalizar(execucao)
+            execucao.rules.validar_rascunho_cpf_para_finalizar(execucao)
             execucao = execucao.state.atualizar_status(StatusExecucaoRota.EMBARCADO)
             if execucao.embarcado_em is None:
                 execucao.embarcado_em = timezone.now()

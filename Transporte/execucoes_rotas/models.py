@@ -102,6 +102,24 @@ class ExecucaoRota(
         blank=True,
         verbose_name='Conferência finalizada por',
     )
+    versao_chamada = models.PositiveIntegerField(
+        'Versão do rascunho da chamada',
+        default=0,
+    )
+    versao_cpf = models.PositiveIntegerField(
+        'Versão do rascunho de CPF',
+        default=0,
+    )
+    chamada_rascunho = models.JSONField(
+        'Rascunho da chamada',
+        default=dict,
+        blank=True,
+    )
+    entradas_cpf_rascunho = models.JSONField(
+        'Rascunho de CPFs da conferência',
+        default=list,
+        blank=True,
+    )
 
     class Meta:
         verbose_name = 'Execução de rota'

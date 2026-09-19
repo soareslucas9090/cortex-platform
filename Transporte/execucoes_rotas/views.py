@@ -16,6 +16,7 @@ from Transporte.tickets.serializers import TicketConferenciaSerializer
 from .choices import StatusExecucaoRota
 from .models import ExecucaoRota
 from .serializers import (
+    ClassificarTicketRascunhoSerializer,
     CriarExecucaoRotaSerializer,
     DetalheHistoricoConferenciaSerializer,
     DetalheHistoricoRotaSerializer,
@@ -23,6 +24,7 @@ from .serializers import (
     FinalizarChamadaSerializer,
     HistoricoRotaSerializer,
     PercursoHistoricoSerializer,
+    RascunhoChamadaSerializer,
     SerializerVazio,
     ViagemRotaSerializer,
 )
@@ -377,9 +379,68 @@ class ListarReservasConferenciaView(PodeConferirTransporteMixin, BasicGetAPIView
 
 @extend_schema(
     tags=['Transporte · Conferência'],
+    summary='Consultar rascunho da chamada',
+    description=(
+        'Devolve os códigos dos tickets reservados separados em presentes, ausentes e '
+        'não classificados, com a versão do rascunho compartilhado.\n\n'
+        f'{PERMISSAO_CONFERIR}'
+    ),
+    responses={
+        status.HTTP_200_OK: RascunhoChamadaSerializer,
+        status.HTTP_401_UNAUTHORIZED: {'description': 'Não autenticado.'},
+        status.HTTP_403_FORBIDDEN: {'description': 'Sem capacidade conferir.'},
+        status.HTTP_404_NOT_FOUND: {
+            'description': 'Execução de outro dia ou cancelada (fora do escopo da conferência).',
+        },
+    },
+)
+class ConsultarRascunhoChamadaView(PodeConferirTransporteMixin, BasicRetrieveAPIView):
+    serializer_class = RascunhoChamadaSerializer
+    mensagem_sucesso = 'Rascunho da chamada obtido com sucesso.'
+
+    def get_object(self):
+        return ExecucaoRota().business.obter_rascunho_chamada(self.kwargs['pk'])
+
+
+@extend_schema(
+    tags=['Transporte · Conferência'],
+    summary='Classificar ticket no rascunho da chamada',
+    description=(
+        'Grava presente, ausente ou nulo (não classificado) sem aplicar strike. '
+        'A mesma classificação de novo não altera a versão.\n\n'
+        f'{PERMISSAO_CONFERIR}'
+    ),
+    request=ClassificarTicketRascunhoSerializer,
+    responses={
+        status.HTTP_200_OK: ExecucaoRotaSerializer,
+        status.HTTP_400_BAD_REQUEST: {'description': 'Classificação ou chamada inválida.'},
+        status.HTTP_401_UNAUTHORIZED: {'description': 'Não autenticado.'},
+        status.HTTP_403_FORBIDDEN: {'description': 'Sem capacidade conferir.'},
+        status.HTTP_404_NOT_FOUND: {
+            'description': 'Execução de outro dia ou cancelada (fora do escopo da conferência).',
+        },
+    },
+)
+class ClassificarTicketRascunhoView(PodeConferirTransporteMixin, BasicPostAPIView):
+    serializer_class = ClassificarTicketRascunhoSerializer
+    mensagem_sucesso = 'Classificação do rascunho atualizada com sucesso.'
+
+    def do_action_post(self, serializer_data, request, *args, **kwargs):
+        execucao = ExecucaoRota().business.classificar_ticket_rascunho(
+            kwargs['pk'],
+            kwargs['codigo'],
+            serializer_data.get('classificacao'),
+        )
+        return {'dados': ExecucaoRotaSerializer(execucao).data}
+
+
+@extend_schema(
+    tags=['Transporte · Conferência'],
     summary='Finalizar chamada de tickets',
     description=(
-        'Grava ausências (com strike) e embarca os demais tickets reservados.\n\n'
+        'Confirma o rascunho compartilhado se a versão informada coincidir. '
+        'Somente os tickets ausentes no rascunho geram strike; os demais reservados '
+        'embarcam (presente e não classificado).\n\n'
         f'{PERMISSAO_CONFERIR}'
     ),
     request=FinalizarChamadaSerializer,
@@ -402,7 +463,7 @@ class FinalizarChamadaConferenciaView(PodeConferirTransporteMixin, BasicPostAPIV
             kwargs['pk'],
             exigir_embarque=True,
         )
-        execucao = execucao.business.finalizar_chamada(serializer_data.get('ausentes') or [])
+        execucao = execucao.business.finalizar_chamada(serializer_data['versao'])
         return {'dados': ExecucaoRotaSerializer(execucao).data}
 
 

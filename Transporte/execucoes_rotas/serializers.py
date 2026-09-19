@@ -89,6 +89,8 @@ class ExecucaoRotaSerializer(serializers.ModelSerializer):
             'vagas_disponiveis',
             'pode_monitorar',
             'chamada_tickets_concluida',
+            'versao_chamada',
+            'versao_cpf',
             'entradas_cpf_concluidas',
             'monitoramento_iniciado_em',
             'chamada_concluida_em',
@@ -125,11 +127,21 @@ class CriarExecucaoRotaSerializer(serializers.Serializer):
 
 
 class FinalizarChamadaSerializer(serializers.Serializer):
-    ausentes = serializers.ListField(
-        child=serializers.UUIDField(),
-        required=False,
-        default=list,
+    versao = serializers.IntegerField(min_value=0)
+
+
+class ClassificarTicketRascunhoSerializer(serializers.Serializer):
+    classificacao = serializers.ChoiceField(
+        choices=['presente', 'ausente'],
+        allow_null=True,
     )
+
+
+class RascunhoChamadaSerializer(serializers.Serializer):
+    versao = serializers.IntegerField(read_only=True)
+    presentes = serializers.ListField(child=serializers.UUIDField(), read_only=True)
+    ausentes = serializers.ListField(child=serializers.UUIDField(), read_only=True)
+    nao_classificados = serializers.ListField(child=serializers.UUIDField(), read_only=True)
 
 
 class SerializerVazio(serializers.Serializer):

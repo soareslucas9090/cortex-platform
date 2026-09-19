@@ -215,28 +215,35 @@ O fluxo e a medição do tempo estão descritos na seção 11.
   ocupa a menor posição disponível.
 - A capacidade e a promoção usam bloqueio pessimista na execução para proteger a
   última vaga em requisições concorrentes.
-- Na conferência, quem não entra em `ausentes` na chamada fica `EMBARCADO` sem QR
-  (presença por omissão). O conferente é responsável pela lista; o conferente não
-  valida QR. A primeira chamada que conclui grava o conjunto; um segundo envio só
-  é aceito se repetir o mesmo conjunto. Finalizar a conferência **não** altera
+- Na conferência, o rascunho compartilhado marca cada ticket reservado como
+  `presente`, `ausente` ou não classificado. A fonte de verdade da classificação
+  e da versão é o GET do rascunho da chamada (`versao`, `presentes`, `ausentes`,
+  `nao_classificados`). O GET de reservas devolve os tickets da chamada, sem
+  repetir esse estado. Quem está
+  `ausente` no rascunho, no commit, fica `AUSENTE` com strike; `presente` e não
+  classificado ficam `EMBARCADO` sem QR. O conferente não valida QR. Finalizar a
+  chamada exige a `versao_chamada` vista no snapshot; replay só com a mesma
+  versão da chamada (incluir CPF no rascunho não altera esse número). Finalizar a conferência **não** altera
   quem ficou `EM_ESPERA`. Permanecer `EM_ESPERA` é o desfecho de quem não entrou
   no lote: a execução já `EMBARCADO` não promove a fila nem cria status de
   “não contemplado”. Quem entra no lote de CPF na espera fica `CONTEMPLADO`
-  e ganha `EntradaSemTicket` (não vira `EMBARCADO` da chamada). O replay da chamada
-  compara o conjunto gravado nela, não ausências marcadas depois pelo L3. O
-  monitoramento pode iniciar depois do horário de saída no mesmo dia, desde que
-  `now > T-30`.
+  e ganha `EntradaSemTicket` (não vira `EMBARCADO` da chamada). O monitoramento
+  pode iniciar depois do horário de saída no mesmo dia, desde que `now > T-30`.
 - Entrada por CPF revalida aluno ativo, matriculado, vaga, chamada
   concluída e execução em embarque. A consulta é `POST` em
   `entradas-sem-ticket/validar/` com `{ "cpf": "..." }` e não persiste (devolve
-  dados do aluno para o card, inclusive `tem_deficiencia`). Depois do primeiro
+  dados do aluno para o card, inclusive `tem_deficiencia`). O card compartilhado
+  entra no `POST` de `entradas-sem-ticket/rascunho/`. Depois do primeiro
   lote não vazio, `validar` devolve 400: o conjunto já foi concluído e a tela
   não mostra card que não dá para gravar. O `POST` em
-  `entradas-sem-ticket/` recebe `{ "cpfs": [...] }`, revalida o lote e grava
-  numa transação. Replay do mesmo conjunto devolve 200; conjunto diferente após
-  o primeiro lote não vazio devolve 400. Lista vazia devolve 201 sem persistir e
-  não conclui o lote. O lote é opcional: finalizar a conferência sem enviá-lo
-  deixa a espera restante como `EM_ESPERA` (desfecho nessa execução). Quem cancelou o próprio ticket
+  `entradas-sem-ticket/` recebe `{ "versao": ... }` da `versao_cpf`, confirma o rascunho e grava
+  numa transação. Replay da mesma versão de CPF congelada devolve 200. Depois do lote gravado,
+  o GET do rascunho devolve `alunos` vazio e `concluido: true`. Rascunho vazio
+  devolve 201 sem persistir e
+  não conclui o lote. O lote é opcional só com o rascunho vazio: finalizar a
+  conferência com cards de CPF pendentes devolve 400 até confirmar o lote ou
+  esvaziar a lista. Sem rascunho (ou depois do lote gravado), finalizar deixa a
+  espera restante como `EM_ESPERA` (desfecho nessa execução). Quem cancelou o próprio ticket
   pode usar este fluxo se houver vaga. Quem está `AUSENTE` nesta execução também pode: o ticket
   permanece `AUSENTE` e o strike não é desfeito. Quem está `EM_ESPERA` e entra
   no lote fica `CONTEMPLADO` e recebe `EntradaSemTicket`.
@@ -295,7 +302,7 @@ era persistido.
 - L3 marca um ticket `RESERVADO` como `AUSENTE` durante o embarque ou após a
   finalização; a ação cria exatamente um strike e sincroniza `faltas`,
   `is_bloqueado` e, quando aplicável, `quantidade_bloqueios` no aluno. O conferente
-  faz o mesmo em lote ao finalizar a chamada (`ausentes`).
+  faz o mesmo ao finalizar a chamada a partir dos ausentes do rascunho.
 - Strike `ATIVO` conta para o bloqueio; `JUSTIFICADO` deixa de contar.
 - O aluno bloqueado pode enviar **uma** justificativa cobrindo todos os strikes
   ativos (`POST /bloqueios/justificativas/`).
@@ -452,14 +459,23 @@ Base execuções: `/cortex/transporte/execucoes-rotas/`
 - `GET` `execucoes-rotas/historico/`, `historico/percursos/` e
   `historico/{id}/` — histórico da conferência (seção 12)
 - `POST` `execucoes-rotas/<pk>/conferencia/iniciar/` e `.../conferencia/finalizar/`
-  (capacidade `conferir`)
+  (capacidade `conferir`; 400 se o rascunho de CPF ainda tiver cards e o lote
+  não tiver sido confirmado)
 - `GET` `execucoes-rotas/<pk>/conferencia/reservas/`
-  (`aluno.tem_deficiencia`: selo PcD sem o tipo clínico)
+  (`aluno.tem_deficiencia`: selo PcD sem o tipo clínico; sem classificação nem
+  versão do rascunho — isso fica no GET do rascunho da chamada)
+- `GET` `execucoes-rotas/<pk>/conferencia/chamada/rascunho/`
+- `POST` `execucoes-rotas/<pk>/conferencia/reservas/<uuid>/rascunho/`
+  (`{ "classificacao": "presente"|"ausente"|null }`)
 - `POST` `execucoes-rotas/<pk>/conferencia/finalizar-chamada/`
+  (`{ "versao": ... }` = `versao_chamada`)
 - `POST` `execucoes-rotas/<pk>/conferencia/entradas-sem-ticket/validar/`
   (`cpf` no body; sem persistência; devolve o card; 400 se o lote já foi concluído)
+- `GET`/`POST` `execucoes-rotas/<pk>/conferencia/entradas-sem-ticket/rascunho/`
+  (`concluido` e `alunos` vazios no GET após o lote gravado)
+- `POST` `execucoes-rotas/<pk>/conferencia/entradas-sem-ticket/rascunho/remover/`
 - `POST` `execucoes-rotas/<pk>/conferencia/entradas-sem-ticket/`
-  (`{ "cpfs": [...] }`; persiste o lote; replay do mesmo conjunto = 200; lote opcional)
+  (`{ "versao": ... }` = `versao_cpf`; persiste o rascunho; replay da mesma versão = 200; lote opcional)
 - `POST` em `<pk>/reservar/` e `<pk>/fila-espera/entrar/`
 
 Base tickets: `/cortex/transporte/tickets/`

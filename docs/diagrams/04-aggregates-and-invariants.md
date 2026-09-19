@@ -394,22 +394,29 @@ para a data local, enriquecida com a execução correspondente.
     `iniciar` da conferência (abrir/fechar/cancelar não vai para `EM_EMBARQUE`);
     o aluno ainda solicita no instante igual a T-30. Depois de `EMBARCADO` o
     monitoramento não reinicia (replay de iniciar só em `EM_EMBARQUE`).
-    Na chamada, a primeira conclusão grava o conjunto de ausentes; o segundo
-    envio só vale se repetir o mesmo conjunto. Presença por omissão é
-    responsabilidade do conferente (sem QR nesta tela).
+- Na chamada, o rascunho compartilhado classifica cada ticket reservado
+    como `presente`, `ausente` ou não classificado (`null`). O GET do rascunho
+    da chamada devolve os dois grupos explícitos e a versão. A primeira
+    conclusão confirma o rascunho se a versão informada coincidir; o replay só
+    vale com a mesma `versao_chamada` congelada (o rascunho de CPF tem relógio
+    próprio e não invalida o replay da chamada). No commit, só `ausente` gera strike;
+    `presente` e não classificado embarcam (omissão só neste passo, sem QR).
 13. Ao finalizar a conferência (`EMBARCADO`), a espera que não entrou no lote de
     CPF permanece `EM_ESPERA` — esse é o desfecho nessa execução, não um estado
     intermediário à espera de promoção. Grava-se `embarcado_em` e
     `conferencia_finalizada_por` (usuário autenticado); `finalizada_em`
     fica para o fim da viagem (`INICIADA` → `FINALIZADA`). Replay não troca.
-    O lote de CPF é opcional: finalizar sem enviá-lo não reclassifica a espera.
+    O lote de CPF é opcional só com rascunho vazio: rascunho com CPF e lote
+    ainda não confirmado impede finalizar (400). Depois do lote gravado, o
+    JSON residual não bloqueia. Finalizar sem lote não reclassifica a espera.
     `CONTEMPLADO` é gravado no lote de CPF, não neste passo.
 14. Entrada sem ticket usa as vagas restantes após a chamada (`EM_ESPERA` não reserva
-    vaga). O lote `{ "cpfs": [...] }` marca `EM_ESPERA` como `CONTEMPLADO` e cria
-    `EntradaSemTicket`, ou só cria a entrada se não houver ticket. Replay do mesmo
-    conjunto é 200; conjunto diferente após o
-    primeiro lote não vazio é 400. Lista vazia é 201 e não conclui o lote. Depois
-    do lote concluído, `validar` também é 400 (não mostra card que não dá para gravar).
+    vaga). O rascunho de CPFs é compartilhado; o POST do lote informa a `versao_cpf`
+    e grava esse conjunto (`EM_ESPERA` vira `CONTEMPLADO` e cria `EntradaSemTicket`,
+    ou só cria a entrada se não houver ticket). Replay da mesma `versao_cpf` congelada
+    é 200. Rascunho vazio é 201 e não conclui o lote. Depois do lote concluído,
+    o GET do rascunho devolve `alunos` vazio e `concluido: true`; `validar` também
+    é 400 (não mostra card que não dá para gravar).
     Aluno `AUSENTE` pode entrar por CPF; a ausência e o strike permanecem. Três
     strikes ativos não bloqueiam essa entrada.
 15. Depois de `EM_EMBARQUE` a execução não pode ser cancelada; só finaliza a conferência (`EMBARCADO`).

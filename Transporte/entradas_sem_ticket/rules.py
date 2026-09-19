@@ -38,6 +38,11 @@ class EntradaSemTicketRules(ModelInstanceRules):
             )
         return True
 
+    def validar_cpf_ausente_do_rascunho(self, cpf_limpo, rascunho) -> bool:
+        if cpf_limpo in (rascunho or []):
+            self.return_exception('Este CPF já está no rascunho da conferência.')
+        return True
+
     def validar_vaga_disponivel(self, vagas_disponiveis) -> bool:
         if vagas_disponiveis < 1:
             self.return_exception('Não há vagas disponíveis para entrada sem ticket.')
@@ -66,11 +71,4 @@ class EntradaSemTicketRules(ModelInstanceRules):
     def validar_entrada_inexistente(self, existe_entrada) -> bool:
         if existe_entrada:
             self.return_exception('O aluno já possui ticket ou entrada nesta execução.')
-        return True
-
-    def validar_replay_lote(self, cpfs, persistidos) -> bool:
-        if set(cpfs) != set(persistidos):
-            self.return_exception(
-                'A entrada por CPF desta execução já foi concluída com outro conjunto.',
-            )
         return True

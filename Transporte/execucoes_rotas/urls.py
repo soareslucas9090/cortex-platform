@@ -22,6 +22,8 @@ from .views import (
     ListarPercursosHistoricoConferenciaView,
     ListarPercursosHistoricoView,
     ListarReservasConferenciaView,
+    ClassificarTicketRascunhoView,
+    ConsultarRascunhoChamadaView,
 )
 
 urlpatterns = [
@@ -109,6 +111,16 @@ urlpatterns = [
         'execucoes-rotas/<int:pk>/conferencia/reservas/',
         roteador_por_metodo(GET=ListarReservasConferenciaView),
         name='conferencia-reservas',
+    ),
+    path(
+        'execucoes-rotas/<int:pk>/conferencia/chamada/rascunho/',
+        roteador_por_metodo(GET=ConsultarRascunhoChamadaView),
+        name='conferencia-chamada-rascunho',
+    ),
+    path(
+        'execucoes-rotas/<int:pk>/conferencia/reservas/<uuid:codigo>/rascunho/',
+        roteador_por_metodo(POST=ClassificarTicketRascunhoView),
+        name='conferencia-reserva-rascunho',
     ),
     path(
         'execucoes-rotas/<int:pk>/conferencia/finalizar-chamada/',

@@ -1,14 +1,17 @@
 from drf_spectacular.utils import extend_schema
 from rest_framework import status
 
-from AppCore.basics.views.basic_views import BasicPostAPIView
+from AppCore.basics.views.basic_views import BasicPostAPIView, BasicRetrieveAPIView
+from Transporte.execucoes_rotas.serializers import ExecucaoRotaSerializer
 from Transporte.permissoes.access import PodeConferirTransporteMixin
 
 from .models import EntradaSemTicket
 from .serializers import (
     AlunoEntradaSerializer,
+    CardRascunhoEntradaSerializer,
     ElegibilidadeEntradaSerializer,
     EntradaSemTicketSerializer,
+    RascunhoEntradaCpfSerializer,
     RegistrarEntradaSemTicketSerializer,
     ValidarEntradaSemTicketSerializer,
 )
@@ -70,11 +73,97 @@ class ValidarEntradaSemTicketView(PodeConferirTransporteMixin, BasicPostAPIView)
 
 @extend_schema(
     tags=['Transporte · Conferência'],
+    summary='Listar rascunho de entradas por CPF',
+    description=(
+        'Cards compartilhados do rascunho (ainda não persistidos como EntradaSemTicket) '
+        'e a versão. Depois do lote gravado, `alunos` vem vazio e `concluido` é true '
+        'para a tela não tratar o conjunto como pendente.\n\n'
+        f'{PERMISSAO_CONFERIR}'
+    ),
+    responses={
+        status.HTTP_200_OK: RascunhoEntradaCpfSerializer,
+        status.HTTP_400_BAD_REQUEST: {'description': 'Regra de entrada não atendida.'},
+        status.HTTP_401_UNAUTHORIZED: {'description': 'Não autenticado.'},
+        status.HTTP_403_FORBIDDEN: {'description': 'Sem capacidade conferir.'},
+        status.HTTP_404_NOT_FOUND: {'description': 'Aluno ou execução não encontrada.'},
+    },
+)
+class ListarRascunhoEntradaSemTicketView(PodeConferirTransporteMixin, BasicRetrieveAPIView):
+    serializer_class = RascunhoEntradaCpfSerializer
+    mensagem_sucesso = 'Rascunho de entradas sem ticket listado com sucesso.'
+
+    def get_object(self):
+        return EntradaSemTicket().business.listar_rascunho(self.kwargs['pk'])
+
+
+@extend_schema(
+    tags=['Transporte · Conferência'],
+    summary='Adicionar CPF ao rascunho da conferência',
+    description=(
+        'Valida o aluno e inclui o card no rascunho compartilhado, sem gravar o lote.\n\n'
+        f'{REGRA_CPF} {REGRA_AUSENTE_CPF}\n\n'
+        f'{PERMISSAO_CONFERIR}'
+    ),
+    request=ValidarEntradaSemTicketSerializer,
+    responses={
+        status.HTTP_200_OK: CardRascunhoEntradaSerializer,
+        status.HTTP_400_BAD_REQUEST: {'description': 'Regra de entrada não atendida.'},
+        status.HTTP_401_UNAUTHORIZED: {'description': 'Não autenticado.'},
+        status.HTTP_403_FORBIDDEN: {'description': 'Sem capacidade conferir.'},
+        status.HTTP_404_NOT_FOUND: {'description': 'Aluno ou execução não encontrada.'},
+    },
+)
+class AdicionarRascunhoEntradaSemTicketView(PodeConferirTransporteMixin, BasicPostAPIView):
+    serializer_class = ValidarEntradaSemTicketSerializer
+    mensagem_sucesso = 'CPF adicionado ao rascunho da conferência.'
+
+    def do_action_post(self, serializer_data, request, *args, **kwargs):
+        resultado = EntradaSemTicket().business.adicionar_ao_rascunho(
+            kwargs['pk'],
+            serializer_data['cpf'],
+        )
+        return {
+            'dados': {
+                'aluno': AlunoEntradaSerializer(resultado['aluno']).data,
+                'versao': resultado['execucao'].versao_cpf,
+            },
+        }
+
+
+@extend_schema(
+    tags=['Transporte · Conferência'],
+    summary='Remover CPF do rascunho da conferência',
+    description=(
+        'Retira o card do rascunho compartilhado. Se o CPF já não estava, não altera a versão.\n\n'
+        f'{PERMISSAO_CONFERIR}'
+    ),
+    request=ValidarEntradaSemTicketSerializer,
+    responses={
+        status.HTTP_200_OK: ExecucaoRotaSerializer,
+        status.HTTP_400_BAD_REQUEST: {'description': 'Regra de entrada não atendida.'},
+        status.HTTP_401_UNAUTHORIZED: {'description': 'Não autenticado.'},
+        status.HTTP_403_FORBIDDEN: {'description': 'Sem capacidade conferir.'},
+        status.HTTP_404_NOT_FOUND: {'description': 'Aluno ou execução não encontrada.'},
+    },
+)
+class RemoverRascunhoEntradaSemTicketView(PodeConferirTransporteMixin, BasicPostAPIView):
+    serializer_class = ValidarEntradaSemTicketSerializer
+    mensagem_sucesso = 'CPF removido do rascunho da conferência.'
+
+    def do_action_post(self, serializer_data, request, *args, **kwargs):
+        execucao = EntradaSemTicket().business.remover_do_rascunho(
+            kwargs['pk'],
+            serializer_data['cpf'],
+        )
+        return {'dados': ExecucaoRotaSerializer(execucao).data}
+
+
+@extend_schema(
+    tags=['Transporte · Conferência'],
     summary='Registrar entradas sem ticket em lote',
     description=(
-        'Recebe `{ "cpfs": [...] }`, revalida cada CPF e grava o lote numa transação. '
-        'Replay do mesmo conjunto devolve 200. Conjunto diferente após o primeiro lote '
-        'não vazio devolve 400. Lista vazia não conclui o lote (201 sem persistir). '
+        'Confirma o rascunho de CPFs se a versão coincidir. Rascunho vazio devolve 201 '
+        'e não conclui o lote. Replay com a versão congelada devolve 200.\n\n'
         f'{REGRA_CPF} {REGRA_AUSENTE_CPF}\n\n'
         f'{PERMISSAO_CONFERIR}'
     ),
@@ -95,7 +184,7 @@ class RegistrarEntradaSemTicketView(PodeConferirTransporteMixin, BasicPostAPIVie
     def do_action_post(self, serializer_data, request, *args, **kwargs):
         resultado = EntradaSemTicket().business.registrar(
             kwargs['pk'],
-            serializer_data.get('cpfs') or [],
+            serializer_data['versao'],
         )
         replay = resultado['replay']
         return {

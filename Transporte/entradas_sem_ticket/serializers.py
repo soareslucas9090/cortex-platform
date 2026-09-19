@@ -10,11 +10,7 @@ class ValidarEntradaSemTicketSerializer(serializers.Serializer):
 
 
 class RegistrarEntradaSemTicketSerializer(serializers.Serializer):
-    cpfs = serializers.ListField(
-        child=serializers.CharField(max_length=14),
-        required=False,
-        default=list,
-    )
+    versao = serializers.IntegerField(min_value=0)
 
 
 class AlunoEntradaSerializer(serializers.Serializer):
@@ -33,6 +29,17 @@ class AlunoEntradaSerializer(serializers.Serializer):
 class ElegibilidadeEntradaSerializer(serializers.Serializer):
     aluno = AlunoEntradaSerializer()
     elegivel = serializers.BooleanField()
+
+
+class RascunhoEntradaCpfSerializer(serializers.Serializer):
+    versao = serializers.IntegerField(read_only=True)
+    concluido = serializers.BooleanField(read_only=True)
+    alunos = AlunoEntradaSerializer(many=True, read_only=True)
+
+
+class CardRascunhoEntradaSerializer(serializers.Serializer):
+    aluno = AlunoEntradaSerializer()
+    versao = serializers.IntegerField()
 
 
 class EntradaSemTicketSerializer(serializers.ModelSerializer):

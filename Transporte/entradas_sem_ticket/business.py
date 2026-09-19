@@ -74,7 +74,84 @@ class EntradaSemTicketBusiness(ModelInstanceBusiness):
                 logger,
             )
 
-    def registrar(self, execucao_id, cpfs):
+    def adicionar_ao_rascunho(self, execucao_id, cpf):
+        try:
+            execucao = ExecucaoRota().business.obter_para_conferencia(
+                execucao_id,
+                exigir_embarque=True,
+                bloquear=True,
+            )
+            rules = self.object_instance.rules
+            rules.validar_lote_cpf_aberto(execucao)
+            aluno, cpf_limpo = self._resolver_aluno_por_cpf(cpf)
+            self._aplicar_regras_elegibilidade(execucao, aluno)
+            rascunho = list(execucao.entradas_cpf_rascunho or [])
+            rules.validar_cpf_ausente_do_rascunho(cpf_limpo, rascunho)
+            resumo = execucao.business.obter_resumo_vagas()
+            rules.validar_lote_cabe_nas_vagas(len(rascunho) + 1, resumo['vagas_disponiveis'])
+            rascunho.append(cpf_limpo)
+            execucao.entradas_cpf_rascunho = rascunho
+            execucao.versao_cpf = execucao.versao_cpf + 1
+            execucao.save(update_fields=['entradas_cpf_rascunho', 'versao_cpf'])
+            return {'aluno': aluno, 'execucao': execucao}
+        except Exception as e:
+            self.relancar_ou_erro_sistema(
+                e,
+                'Não foi possível adicionar o CPF ao rascunho da conferência.',
+                logger,
+            )
+
+    def remover_do_rascunho(self, execucao_id, cpf):
+        try:
+            execucao = ExecucaoRota().business.obter_para_conferencia(
+                execucao_id,
+                exigir_embarque=True,
+                bloquear=True,
+            )
+            rules = self.object_instance.rules
+            rules.validar_lote_cpf_aberto(execucao)
+            _aluno, cpf_limpo = self._resolver_aluno_por_cpf(cpf)
+            rascunho = list(execucao.entradas_cpf_rascunho or [])
+            if cpf_limpo not in rascunho:
+                return execucao
+            rascunho.remove(cpf_limpo)
+            execucao.entradas_cpf_rascunho = rascunho
+            execucao.versao_cpf = execucao.versao_cpf + 1
+            execucao.save(update_fields=['entradas_cpf_rascunho', 'versao_cpf'])
+            return execucao
+        except Exception as e:
+            self.relancar_ou_erro_sistema(
+                e,
+                'Não foi possível remover o CPF do rascunho da conferência.',
+                logger,
+            )
+
+    def listar_rascunho(self, execucao_id):
+        try:
+            execucao = ExecucaoRota().business.obter_para_conferencia(
+                execucao_id,
+                exigir_embarque=True,
+            )
+            if execucao.entradas_cpf_concluidas:
+                return {
+                    'versao': execucao.versao_cpf,
+                    'concluido': True,
+                    'alunos': [],
+                }
+            cpfs = list(execucao.entradas_cpf_rascunho or [])
+            return {
+                'versao': execucao.versao_cpf,
+                'concluido': False,
+                'alunos': self.object_instance.helper.listar_alunos_por_cpfs(cpfs),
+            }
+        except Exception as e:
+            self.relancar_ou_erro_sistema(
+                e,
+                'Não foi possível listar o rascunho de entradas sem ticket.',
+                logger,
+            )
+
+    def registrar(self, execucao_id, versao):
         try:
             from .models import EntradaSemTicket
 
@@ -86,26 +163,25 @@ class EntradaSemTicketBusiness(ModelInstanceBusiness):
             rules = self.object_instance.rules
             rules.validar_execucao_em_embarque(execucao)
             rules.validar_chamada_concluida(execucao)
+            execucao.rules.validar_versao_cpf(versao, execucao.versao_cpf)
 
-            alunos_resolvidos = []
-            for cpf in cpfs or []:
-                alunos_resolvidos.append(self._resolver_aluno_por_cpf(cpf))
-            cpfs_limpos = [cpf_limpo for _aluno, cpf_limpo in alunos_resolvidos]
-            rules.validar_cpfs_sem_duplicata(cpfs_limpos)
             if execucao.entradas_cpf_concluidas:
-                rules.validar_replay_lote(
-                    cpfs_limpos,
-                    execucao.entradas_cpf_codigos or [],
-                )
                 return {
                     'entradas': self.object_instance.helper.listar_por_cpfs(
                         execucao,
-                        cpfs_limpos,
+                        execucao.entradas_cpf_codigos or [],
                     ),
                     'replay': True,
                 }
-            if not alunos_resolvidos:
+
+            cpfs_limpos = list(execucao.entradas_cpf_rascunho or [])
+            if not cpfs_limpos:
                 return {'entradas': [], 'replay': False}
+
+            alunos_resolvidos = []
+            for cpf_limpo in cpfs_limpos:
+                alunos_resolvidos.append(self._resolver_aluno_por_cpf(cpf_limpo))
+            rules.validar_cpfs_sem_duplicata(cpfs_limpos)
 
             resumo = execucao.business.obter_resumo_vagas()
             rules.validar_lote_cabe_nas_vagas(

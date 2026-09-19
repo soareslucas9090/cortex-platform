@@ -254,3 +254,43 @@ class ExecucaoRotaHelpers(ModelInstanceHelpers):
             if data_valida and data_valida != data_hoje:
                 return queryset.none()
         return queryset
+
+    def mapa_chamada_rascunho(self, execucao):
+        return {
+            str(codigo): estado
+            for codigo, estado in (execucao.chamada_rascunho or {}).items()
+        }
+
+    def montar_rascunho_chamada(self, execucao):
+        from Transporte.tickets.choices import StatusTicket
+        from Transporte.tickets.models import Ticket
+
+        mapa = self.mapa_chamada_rascunho(execucao)
+        presentes = []
+        ausentes = []
+        nao_classificados = []
+        for codigo in Ticket.objects.filter(
+            execucao_rota=execucao,
+            status=StatusTicket.RESERVADO,
+        ).values_list('codigo', flat=True):
+            chave = str(codigo)
+            estado = mapa.get(chave)
+            if estado == 'presente':
+                presentes.append(chave)
+            elif estado == 'ausente':
+                ausentes.append(chave)
+            else:
+                nao_classificados.append(chave)
+        return {
+            'versao': execucao.versao_chamada,
+            'presentes': presentes,
+            'ausentes': ausentes,
+            'nao_classificados': nao_classificados,
+        }
+
+    def ausentes_do_rascunho(self, execucao):
+        return [
+            codigo
+            for codigo, estado in self.mapa_chamada_rascunho(execucao).items()
+            if estado == 'ausente'
+        ]

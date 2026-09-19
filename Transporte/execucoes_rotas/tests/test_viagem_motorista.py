@@ -36,7 +36,7 @@ class ViagemMotoristaAPITestCase(APITestCase):
         self.client.force_authenticate(criar_conferente())
         chamada = reverse('transporte:conferencia-finalizar-chamada', args=[self.execucao.pk])
         conferencia = reverse('transporte:conferencia-finalizar', args=[self.execucao.pk])
-        self.assertEqual(self.client.post(chamada, {'ausentes': []}, format='json').status_code, 200)
+        self.assertEqual(self.client.post(chamada, {'versao': 0}, format='json').status_code, 200)
         self.assertEqual(self.client.post(conferencia, {}).status_code, 200)
         self.execucao.refresh_from_db()
         self.assertEqual(self.execucao.status, StatusExecucaoRota.EMBARCADO)

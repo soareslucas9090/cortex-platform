@@ -33,6 +33,14 @@ class EntradaSemTicketHelpers(ModelInstanceHelpers):
             usuario__cpf=cpf_limpo,
         ).first()
 
+    def listar_alunos_por_cpfs(self, cpfs):
+        alunos = []
+        for cpf_limpo in cpfs or []:
+            aluno = self.obter_aluno_por_cpf(cpf_limpo)
+            if aluno is not None:
+                alunos.append(aluno)
+        return alunos
+
     def obter_ticket_ativo(self, execucao, aluno, bloquear=False):
         from Transporte.tickets.choices import StatusTicket
         from Transporte.tickets.models import Ticket
