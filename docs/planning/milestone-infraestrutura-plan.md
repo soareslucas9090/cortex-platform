@@ -1,10 +1,12 @@
 # Plano da Milestone — Domínio Infraestrutura (v1)
 
+> **Histórico de implementação.** Não usar como backlog. Fonte canônica: [docs/domains/](../domains/) e [docs/project/django-project-tree.md](../project/django-project-tree.md).
+
 ## Objetivo
 
 Implementar o domínio `Infraestrutura` do Cortex/MeuIF, substituindo o Chameco legado no fluxo de **liberação de recursos** (foco em chaves) por operadores autorizados, com autorizações, empréstimos multi-item e permissões por função.
 
-Fonte canônica de regras: [docs/schema/infraestrutura.md](../schema/infraestrutura.md).  
+Fonte canônica de regras para agentes: [docs/domains/infraestrutura.md](../domains/infraestrutura.md). Contexto de produto: [docs/schema/infraestrutura.md](../schema/infraestrutura.md).  
 Padrões de código: [ADR-001](../decisions/ADR-001-modularizacao-por-dominio.md), [ADR-002](../decisions/ADR-002-permissoes-cortex-niveis.md), [guia de implementação](../project/guia-implementacao.md).
 
 ---
@@ -257,7 +259,7 @@ A milestone só fecha quando:
 | Dependência | Uso |
 |-------------|-----|
 | `Identidade.usuarios.Usuario` | Solicitante, responsável, beneficiário |
-| `Identidade.matriculas.Matricula` | Busca/exibição |
+| `Academico.aluno_cursos.AlunoCurso`, `PessoasInstitucionais.servidores.Servidor`, `PessoasInstitucionais.terceirizados.Terceirizado` | Matrícula para busca/exibição (sem app `matriculas`) |
 | `Organizacional.setores.Setor` | `SalaSetor` |
 | `Organizacional.funcoes.Funcao` | Capacidades |
 | `Organizacional.vinculos.SetorVinculo` | Regra automática de chave + compilação de permissões |

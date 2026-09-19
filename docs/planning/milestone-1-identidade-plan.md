@@ -1,5 +1,9 @@
 # Plano da Milestone 1 — Domínio Identidade
 
+> **Histórico de implementação.** Não usar como backlog. Fonte canônica: [docs/domains/](../domains/) e [docs/project/django-project-tree.md](../project/django-project-tree.md).
+
+**Estado real (adendo):** o app `Identidade/matriculas` e o model `Matricula` **não** foram criados. Matrículas são campos em `Servidor`, `Terceirizado` e `AlunoCurso`; unicidade global em `Identidade/usuarios/rules.py`. O texto abaixo descreve o escopo **planejado** em 2026.
+
 ## Objetivo
 
 A Milestone 1 existe para implementar o primeiro domínio real do Cortex: `Identidade`.

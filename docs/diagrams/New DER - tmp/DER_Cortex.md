@@ -1,5 +1,7 @@
 # Diagrama de Entidade-Relacionamento (DER) / Diagrama de Classes - Package Cortex (`pkg Cortex`)
 
+> **ARTEFATO OBSOLETO** — transcrição antiga do DER conceitual. **Não usar** para implementação nem para inferir apps Django. Fontes canônicas: [03-core-erd.md](../03-core-erd.md) e [django-project-tree.md](../../project/django-project-tree.md). Esta pasta não está indexada em `docs/README.md`.
+
 Este documento contém a transcrição completa e detalhada do diagrama conceitual/lógico do sistema **Cortex**, incluindo todas as entidades, seus atributos (com tipos de dados) e os relacionamentos (com cardinalidades e direções).
 
 ---

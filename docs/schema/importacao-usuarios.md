@@ -195,7 +195,21 @@ Campos opcionais, se presentes no arquivo, também são lidos: `cep`, `complemen
 - `usuario_id` deve existir previamente na aba `Usuario`;
 - `setor_id` deve ser resolvido contra os dados seed já existentes no banco;
 - `funcao_id` deve ser resolvido contra os dados seed já existentes no banco;
-- esta aba não deve criar setores nem funções.
+- esta aba não deve criar setores nem funções;
+- a coluna `monitor` pode existir na planilha por compatibilidade com o layout legado, mas **não** grava booleano em `SetorVinculo`. Monitoria é representada pela **função** (`funcao_id` / `Funcao` com papel de monitor). A camada de business da importação **ignora** o valor de `monitor`.
+
+## Fluxo operacional da API (importação definitiva)
+
+Alinhado ao módulo de importação de infraestrutura:
+
+- a importação definitiva (`POST .../importacao/`) enfileira processamento **Celery**;
+- cada execução é registrada em `ImportacaoLote` (`Identidade.usuarios`);
+- apenas **um** lote com status `EM_ANDAMENTO` é permitido por vez;
+- `GET .../importacao/status/` consulta o lote em andamento ou o último;
+- `POST .../importacao/cancelar/` interrompe lote travado em `EM_ANDAMENTO`;
+- `GET .../importacao/historico/` lista lotes anteriores (filtro opcional por `status`, paginação).
+
+Contrato HTTP: `docs/api/importacao-usuarios-openapi.md`.
 
 ## Matrícula
 
@@ -243,7 +257,8 @@ A aba `Funcao` é apenas referência (não é persistida pela importação). Col
 - a importação deve usar transação por linha lógica;
 - falhas em uma linha não devem impedir o processamento das demais;
 - a importação pode permitir sucesso parcial;
-- os dados raízes devem ser resolvidos no banco e nunca criados automaticamente pela rotina de importação.
+- os dados raízes devem ser resolvidos no banco e nunca criados automaticamente pela rotina de importação;
+- o processamento definitivo ocorre em background (Celery), com progresso e resultado consolidados no `ImportacaoLote`.
 
 ## Resultado esperado
 

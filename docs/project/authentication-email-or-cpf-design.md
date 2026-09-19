@@ -1,12 +1,12 @@
-# Design de Autenticação por Email ou CPF
+# Design de Autenticação por E-mail, CPF ou Matrícula
 
 ## Objetivo
 
-Definir o desenho exato da autenticação do Cortex para permitir login usando:
+Definir o desenho exato da autenticação do Cortex para permitir login usando um único campo `login` que aceita **e-mail**, **CPF** ou **matrícula ativa** (implementado em `AppCore.basics.auth.backends.EmailOrCpfBackend`):
 
-- email
+- e-mail
 - CPF
-- ou Matrícula
+- matrícula
 
 com um único endpoint, um único contrato de entrada e compatibilidade com:
 

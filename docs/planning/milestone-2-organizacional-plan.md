@@ -1,5 +1,7 @@
 # Plano da Milestone 2 — Domínio Organizacional
 
+> **Histórico de implementação.** Não usar como backlog. Fonte canônica: [docs/domains/](../domains/) e [docs/project/django-project-tree.md](../project/django-project-tree.md).
+
 ## Objetivo
 
 A Milestone 2 existe para implementar o domínio `Organizacional` do Cortex.

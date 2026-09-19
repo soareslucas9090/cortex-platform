@@ -2,260 +2,227 @@
 
 ## Objetivo
 
-Este documento apresenta uma visão geral do Cortex como produto e como sistema, consolidando:
+Este documento apresenta uma visão geral do Cortex como produto e como sistema **no estado atual**, consolidando:
 
-- o propósito inicial da aplicação;
-- os principais conceitos de domínio já identificados;
+- o propósito da aplicação;
+- os principais conceitos de domínio implementados;
 - a estratégia arquitetural adotada;
-- a direção técnica que guiará a implementação.
+- a organização técnica do backend em produção de desenvolvimento.
 
-Ele deve funcionar como documento de entrada para quem precisa entender rapidamente:
+Ele funciona como documento de entrada para quem precisa entender rapidamente:
 
-- o que o sistema pretende resolver;
-- como ele está sendo organizado;
-- e quais fundamentos técnicos já foram definidos.
+- o que o sistema resolve;
+- como ele está organizado;
+- quais fundamentos técnicos sustentam a API.
 
 ---
 
 ## Visão geral do produto
 
-O Cortex é um sistema backend estruturado para apoiar a modelagem e operação de um contexto institucional/acadêmico, com foco inicial em:
+O Cortex é um backend modular para operação de um contexto institucional e acadêmico, cobrindo:
 
-- identidade de usuários;
-- vínculos organizacionais com setores;
-- perfis institucionais;
-- vínculos acadêmicos.
+- **identidade** de usuários (cadastro, contato, endereço, importação em lote);
+- **estrutura organizacional** (setores, funções, vínculos);
+- **pessoas institucionais** (servidores, cargos, terceirizados, empresas);
+- **perfil acadêmico** (alunos, cursos, matrículas por curso);
+- **infraestrutura** física e operacional (blocos, salas, recursos, empréstimos, autorizações — substituto funcional dos fluxos legados Chameco/Sigec na v1);
+- **transporte universitário** (percursos, rotas, execuções, tickets, strikes, calendário operacional, bloqueios).
 
-Seu núcleo gira em torno de uma entidade central de usuário, sobre a qual diferentes perfis e vínculos são construídos.
-
-O sistema foi pensado para organizar esses dados e comportamentos de forma explícita, modular e coerente com o domínio, evitando que a implementação cresça de forma desordenada desde o início.
+O núcleo permanece a entidade `Usuario`, sobre a qual perfis e vínculos se especializam.
 
 ---
 
 ## Problema que o sistema resolve
 
-Na prática, o sistema precisa representar de forma consistente:
+O sistema representa de forma consistente:
 
-- quem são os usuários;
-- quais perfis eles possuem;
-- como eles se vinculam à instituição;
-- com quais setores eles se relacionam;
-- quais funções exercem nesses setores;
-- como alunos, servidores e terceirizados convivem no mesmo ecossistema.
+- quem são os usuários e como autenticam;
+- quais perfis institucionais e acadêmicos possuem;
+- como se vinculam a setores e funções;
+- como espaços e recursos são emprestados e autorizados;
+- como o transporte universitário reserva vagas, registra faltas e bloqueios.
 
-Isso exige uma modelagem capaz de diferenciar corretamente conceitos que, embora próximos, não são iguais, como por exemplo:
+Conceitos próximos permanecem separados, por exemplo:
 
-- `Cargo` e `Funcao`
-- perfil acadêmico e atuação organizacional
-- identidade base e especializações institucionais
+- `Cargo` (catálogo institucional) e `Funcao` (papel no setor);
+- perfil acadêmico (`Aluno`, `AlunoCurso`) e atuação organizacional (`SetorVinculo`);
+- identidade base (`Usuario`) e especializações em outros domínios.
 
 ---
 
 ## Visão geral do domínio
 
-Até o momento, o sistema foi dividido em quatro domínios principais:
+O sistema está dividido em **seis domínios** de negócio, cada um um módulo agregador na raiz do repositório:
 
 ### `Identidade`
 
-Responsável por:
-
-- `Usuario`
-- `Contato`
-- `Endereco`
-- `Matricula`
+- `Usuario`, `Contato`, `Endereco`
+- `ImportacaoLote` (importação de usuários em `Identidade.usuarios`)
+- **Não** existe app `matriculas`: matrícula é atributo em `Servidor`, `Terceirizado` e `AlunoCurso`
 
 ### `Organizacional`
 
-Responsável por:
-
-- `Setor`
-- `Funcao`
-- `SetorVinculo`
+- `Setor`, `Funcao`, `SetorVinculo`
 
 ### `PessoasInstitucionais`
 
-Responsável por:
-
-- `Servidor`
-- `Cargo`
-- `Terceirizado`
-- `EmpresaInstituicao`
+- `Servidor`, `Cargo`, `Terceirizado`, `EmpresaInstituicao`
+- Não há entidade `Estagiario` no código atual
 
 ### `Academico`
 
-Responsável por:
+- `Aluno`, `Curso`, `AlunoCurso`
 
-- `Aluno`
-- `Curso`
-- `AlunoCurso`
+### `Infraestrutura`
+
+- `Bloco`, `Sala`, `SalaSetor`, `Recurso`, permissões por função/usuário, `Autorizacao`, `Emprestimo`, `ItemEmprestimo`, `ImportacaoLote` (carga de infraestrutura)
+
+### `Transporte`
+
+- Doze apps em `PROJECT_APPS` (percursos, rotas, motoristas, calendário, execuções, tickets, strikes, justificativas, relatórios, permissões, entradas sem ticket, bloqueios)
+
+Mapa detalhado: `02-bounded-contexts.md`. Regras por módulo: `docs/domains/` (incluindo `infraestrutura.md`). Contexto de produto de Infraestrutura: `docs/schema/infraestrutura.md`.
 
 ---
 
-## Conceitos centrais já consolidados
+## Conceitos centrais consolidados
 
 ### `Usuario` como centro da identidade
 
-Todo perfil do sistema parte de `Usuario`.
+`AUTH_USER_MODEL = usuarios.Usuario`. Campos relevantes: `email` e `cpf` (ambos `unique`, nullable), `usuario_coletivo` e pools M2M (`empresas_coletivo`, `cargos_coletivo`, `funcoes_coletivo`, `setores_coletivo`) para contas compartilhadas.
+
+### Autenticação híbrida
+
+Login via `EmailOrCpfBackend` (`AppCore.basics.auth.backends`): identificador `login` como **e-mail**, **CPF** (11 dígitos) ou **matrícula ativa** em `AlunoCurso`, `Servidor` ou `Terceirizado`. Após localizar o usuário, exige CPF cadastrado ou matrícula válida para permitir autenticação.
+
+Rotas de autenticação: `/cortex/auth/`.
 
 ### `Cargo` e `Funcao` são conceitos diferentes
 
-- `Cargo`: posição formal do servidor
-- `Funcao`: papel exercido em um setor
+- **`Cargo`**: catálogo de posição formal; **obrigatório** em `Servidor`; pode ser referenciado **opcionalmente** em `Terceirizado` (`FK` com `SET_NULL`).
+- **`Funcao`**: papel no vínculo com setor (`papel_funcao`, `categoria`, `descricao`, `e_gratificada`, `exige_aluno`, `ativo`).
 
 ### `SetorVinculo` é entidade de negócio
 
-Não é apenas uma tabela associativa entre usuário e setor.
+Relaciona `usuario`, `setor`, `funcao` e `responsavel` — não é apenas tabela associativa.
 
 ### Monitoria é função
 
-O conceito de monitor não deve existir como atributo booleano solto. Ele deve ser representado por uma `Funcao`.
+Monitor é registro em `Funcao`, não atributo booleano em `SetorVinculo`.
 
-### Responsabilidade de setor nasce do vínculo
+### Permissões transversais
 
-Todo setor precisa ter um responsável, e esse responsável precisa ser um servidor vinculado ao setor com uma função.
+Níveis Cortex L1–L3 (ADR-002) compilados em `user.permissoes['cortex']`. Módulos Infraestrutura e Transporte adicionam capacidades próprias (booleanas), independentes da hierarquia L1–L3 onde aplicável.
+
+### Aluno e transporte
+
+`Aluno` mantém `faltas`, `is_bloqueado` e `quantidade_bloqueios`, sincronizados pelo domínio Transporte.
 
 ---
 
 ## Estratégia arquitetural
 
-A estratégia adotada para o Cortex é:
-
 ### 1. Modularização por domínio
 
-O sistema será organizado por contexto de negócio, e não apenas por agrupamento técnico.
+Organização por contexto de negócio (ADR-001), com módulos PascalCase e apps internos em minúsculo.
 
 ### 2. Arquitetura em camadas
 
-Cada domínio deve seguir a arquitetura já utilizada na base do projeto:
-
-- `models.py`
-- `business.py`
-- `rules.py`
-- `helpers.py`
-- `serializers.py`
-- `views.py`
-- `urls.py`
+Por app: `models`, `business`, `rules`, `helpers`, `serializers`, `views`, `urls`.
 
 ### 3. Views leves
 
-As views devem receber a requisição, validar serializer e delegar a lógica à camada de business.
+Validação via serializer; lógica em `business` / `rules`.
 
-### 4. Regras explícitas
+### 4. Base reutilizável em uso
 
-As invariantes do domínio devem ficar principalmente em:
+- `AppCore/` — mixins, auth, storage, convenções
+- `Auth/` — fluxos de autenticação da API
+- `Cortex/` — settings, `PROJECT_APPS`, `urls` raiz, Celery Beat
 
-- `rules.py`
-- `business.py`
+### 5. Geração operacional de transporte
 
-### 5. Base reutilizável
-
-O sistema aproveitará uma base técnica já existente, especialmente por meio do `AppCore`, desde que revisada e ajustada conforme necessário.
-
----
-
-## Estrutura inicial prevista do sistema
-
-O projeto deve evoluir inicialmente com os seguintes apps Django:
-
-- `identidade`
-- `organizacional`
-- `pessoas_institucionais`
-- `academico`
-
-Além disso, o sistema já possui uma base composta por:
-
-- `AppCore/` — infraestrutura reutilizável
-- `Auth/` — autenticação customizável do projeto
-- `Cortex/` — configuração central do Django
+Celery Beat executa `gerar_execucoes_rotas_automaticas_task` a cada 5 minutos (`Cortex/settings.py`), alinhada ao calendário operacional.
 
 ---
 
-## Ordem inicial recomendada de implementação
+## Estrutura do sistema
 
-A ordem de implementação definida até o momento é:
+### Módulos de domínio (apps em `PROJECT_APPS`)
 
-1. `identidade`
-2. `organizacional`
-3. `pessoas_institucionais`
-4. `academico`
+| Módulo | Prefixo HTTP |
+|--------|----------------|
+| `Identidade` | `/cortex/identidade/` |
+| `Organizacional` | `/cortex/organizacional/` |
+| `PessoasInstitucionais` | `/cortex/pessoas-institucionais/` |
+| `Academico` | `/cortex/academico/` |
+| `Infraestrutura` | `/cortex/infraestrutura/` |
+| `Transporte` | `/cortex/transporte/` |
 
-### Motivo
+Além disso: `/cortex/auth/`, `/cortex/admin/`, schema OpenAPI em `/cortex/api/schema/`.
 
-Essa ordem respeita a dependência natural entre os domínios:
+Alguns apps existem em `INSTALLED_APPS` sem `urls` no agregador do domínio (ex.: permissões de Infraestrutura e parte dos apps de Transporte). Ver `02-bounded-contexts.md`.
 
-- primeiro a identidade;
-- depois a estrutura organizacional;
-- depois os perfis institucionais;
-- por fim os vínculos acadêmicos.
+---
+
+## Ordem de implementação (histórico)
+
+A sequência abaixo reflete marcos **já concluídos**, não roadmap futuro:
+
+| Fase | Conteúdo |
+|------|----------|
+| M0–base | `AppCore`, `Auth`, `Cortex`, autenticação e convenções |
+| M1 | Identidade (`usuarios`, `contatos`, `enderecos`) |
+| M2 | Organizacional |
+| M3 | PessoasInstitucionais |
+| M4 | Acadêmico |
+| M5 | Integração e consolidação entre os quatro primeiros domínios |
+| — | Importação de usuários (`ImportacaoLote` em Identidade) |
+| — | Infraestrutura v1 (blocos, salas, recursos, empréstimos, autorizações, importações) |
+| — | Transporte (12 apps, permissões, relatórios, bloqueios, calendário, task Beat) |
+
+Detalhes de planejamento: `docs/planning/master-implementation-plan.md` e milestones M1–M5.
 
 ---
 
 ## Regras importantes já conhecidas
 
-Algumas regras já definidas e importantes para a visão geral do sistema são:
-
-- login por CPF;
-- `Cargo` só existe para `Servidor`;
-- `EmpresaInstituicao` será usada, neste estágio, apenas para `Terceirizado`;
-- todo vínculo com setor exige função;
+- login por e-mail, CPF ou matrícula ativa;
+- `Cargo` obrigatório para `Servidor`; opcional para `Terceirizado`;
+- `EmpresaInstituicao` usada para terceirizados;
+- todo vínculo com setor deve ter função (regra de domínio; model permite `funcao` nullable — validação em camadas superiores);
 - um usuário pode ter múltiplos vínculos com setores;
-- todo setor deve possuir responsável válido;
-- monitoria é tratada no domínio organizacional;
-- aluno monitor deve estar vinculado a setor.
+- monitoria via `Funcao` no Organizacional;
+- aluno monitor deve ter vínculo de setor quando exigido por `Funcao.exige_aluno`;
+- reservas de sala fora do escopo da v1 de Infraestrutura.
 
 ---
 
 ## Documentos que detalham esta visão
 
-Esta visão geral é complementada pelos seguintes documentos:
-
 - `docs/diagrams/02-bounded-contexts.md`
 - `docs/diagrams/03-core-erd.md`
 - `docs/diagrams/04-aggregates-and-invariants.md`
 - `docs/decisions/ADR-001-modularizacao-por-dominio.md`
+- `docs/decisions/ADR-002-permissoes-cortex-niveis.md`
 - `docs/project/django-project-tree.md`
+- `docs/domains/*` (incluindo `docs/domains/infraestrutura.md`)
+- `docs/schema/infraestrutura.md` (contexto de produto de Infraestrutura)
 
 ---
 
-## Próximo passo previsto
+## Próximo passo (manutenção)
 
-O próximo passo planejado do projeto é uma **revisão geral do `AppCore`**, com objetivo de verificar se a base técnica atual está realmente pronta para sustentar a modelagem do Cortex.
-
-Essa revisão deverá observar principalmente:
-
-- modelo base de usuário;
-- autenticação por CPF;
-- mixins de business/helpers/rules/state;
-- views base;
-- permissões;
-- exceptions;
-- paginação;
-- consistência das convenções da base.
+Manter **documentação e código alinhados** após cada mudança estrutural. Tarefas operacionais e revisões pontuais estão em `docs/planning/followup-*` (por exemplo revisão pré-produção e fotos S3).
 
 ---
 
 ## O que este documento não tenta fazer
 
-Este documento não detalha:
-
-- todos os atributos de cada entidade;
-- todas as regras de negócio específicas;
-- todas as rotas da API;
-- detalhes finos de implementação.
-
-Esses pontos pertencem a artefatos mais específicos.
+Não lista todos os atributos, endpoints ou regras finas — isso está em `docs/domains/`, schemas de API e no código.
 
 ---
 
 ## Resumo executivo
 
-O Cortex está sendo estruturado como um backend modular, orientado por domínio, com `Usuario` no centro da identidade e com forte ênfase em vínculos organizacionais, perfis institucionais e vínculos acadêmicos.
-
-A direção arquitetural atual busca:
-
-- clareza de domínio;
-- crescimento incremental;
-- reutilização da base técnica existente;
-- e disciplina na separação entre view, business e regras.
-
-O próximo passo natural é revisar o `AppCore` para garantir que a fundação técnica esteja alinhada com essa visão.
+O Cortex é um backend modular com **seis domínios** implementados, `Usuario` no centro, autenticação híbrida e rotas sob `/cortex/<dominio>/`. Infraestrutura e Transporte estendem o núcleo identidade–organizacional–institucional–acadêmico. A base `AppCore` já está em uso; a evolução contínua prioriza coerência entre código, ADRs e esta documentação estrutural.

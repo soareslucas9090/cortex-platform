@@ -54,7 +54,9 @@ Novos produtos adicionam `permissoes_<modulo>()` em `UsuarioPermissions` e apps 
   superusuário); `motorista` para usuários com perfil Motorista ativo acessarem a
   visão somente de leitura das rotas do dia; `reservar` para aluno ativo,
   matriculado e não bloqueado; `conferir` para L3 ou colaborador (servidor/terceirizado)
-  com função **ou** permissão direta no usuário (OR). Percursos, rotas e análise de
+  com função **ou** permissão direta no usuário (OR); `visualizar_relatorio_alunos` para
+  relatório de alunos no transporte (via `PermissaoFuncaoTransporte` e
+  `PermissaoUsuarioTransporte`, OR entre função e usuário). Percursos, rotas e análise de
   justificativas são L3; o conferente opera apenas as execuções do dia e as filas da
   execução monitorada. L3 não recebe a capacidade operacional de motorista
   automaticamente.

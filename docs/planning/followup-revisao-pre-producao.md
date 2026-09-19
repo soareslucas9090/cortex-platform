@@ -595,23 +595,22 @@ Implemente SOMENTE PREPROD-9 de docs/planning/followup-revisao-pre-producao.md
 
 ### Por quê
 
-`Matricula.matricula` não é unique. Login por matrícula usa `.first()` (`AppCore/basics/auth/backends.py`). Duplicatas escolhem um usuário ao acaso. `criar_usuario` já valida unicidade global; `adicionar_matricula` / importação não necessariamente.
+Não existe app `Identidade/matriculas` nem model `Matricula`. Matrículas vivem em `Servidor`, `Terceirizado` e `AlunoCurso`. Login por matrícula consulta essas fontes (`AppCore/basics/auth/backends.py`); duplicatas globais precisam ser impedidas nas rules e na importação.
 
 ### Arquivos
 
-- `Identidade/matriculas/models.py`
-- `Identidade/matriculas/rules.py` e/ou `Identidade/usuarios/rules.py` (`matricula_nao_duplicada` hoje é por usuário)
-- `Identidade/usuarios/business.py` (`adicionar_matricula`, importação)
-- Migration nova
-- `AppCore/basics/auth/backends.py` (`.get()` em vez de `.first()`, tratando múltiplos como falha de login genérica)
+- `Identidade/usuarios/rules.py` — unicidade global de matrícula (`matricula_nao_duplicada` e equivalentes)
+- `Identidade/usuarios/business.py` — criação/atualização de matrículas nos perfis e importação
+- `PessoasInstitucionais/servidores/`, `terceirizados/`, `Academico/aluno_cursos/` — constraints e models que armazenam o valor
+- `AppCore/basics/auth/backends.py` — login por matrícula sem ambiguidade
 - Testes de matrícula e login por matrícula
 
 ### O que fazer
 
-1. `UniqueConstraint` em `matricula` (valor da string). Antes: data migration que reporta/impede duplicatas existentes (fail a migration se houver duplicata, com mensagem clara).
-2. Rules: unicidade **global**, não só no mesmo usuário.
-3. Backend: se 0 matches → None; se 2+ (não deveria após unique) → None + log, sem vazar qual usuário.
-4. Unificar criação API, `adicionar_matricula` e importação.
+1. Garantir unicidade **global** do valor de matrícula nas três fontes (constraints e/ou rules).
+2. Data migration ou validação pré-deploy que reporta duplicatas existentes antes de aplicar constraints.
+3. Backend: se 0 matches → None; se 2+ → None + log, sem vazar qual usuário.
+4. Unificar criação API, fluxos de matrícula nos perfis e importação.
 
 ### Critério de saída
 
@@ -621,7 +620,7 @@ Implemente SOMENTE PREPROD-9 de docs/planning/followup-revisao-pre-producao.md
 
 ### Testes mínimos desta etapa
 
-- `Identidade/matriculas/tests/test_views.py`: duplicata global 400.
+- Testes em `Identidade/usuarios/` e/ou perfis (`servidores`, `terceirizados`, `aluno_cursos`): duplicata global 400.
 - Login por matrícula existente continua passando.
 
 ### Prompt curto

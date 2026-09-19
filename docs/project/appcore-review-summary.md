@@ -1,5 +1,7 @@
 # Revisão Geral do AppCore — Resumo Executivo
 
+> **Documento histórico.** Registra a revisão da fundação **antes** da implementação dos seis domínios atuais (Identidade, Organizacional, Pessoas Institucionais, Acadêmico, Infraestrutura, Transporte). **Não** use como backlog de implementação; para estrutura atual, consulte [`django-project-tree.md`](django-project-tree.md) e [`docs/domains/`](../domains/). As conclusões sobre o que manter no AppCore continuam válidas; alertas do tipo “não iniciar domínios” já foram superados pelo código.
+
 ## Objetivo
 
 Este documento registra o resumo executivo da revisão inicial do `AppCore` e da base do projeto, com foco em verificar se a fundação atual está preparada para sustentar os domínios do Cortex.

@@ -1,5 +1,11 @@
 # Milestone — Importação em Lote de Infraestrutura
 
+> **Histórico de implementação.** Não usar como backlog. Fonte canônica: [docs/domains/](../domains/) e [docs/project/django-project-tree.md](../project/django-project-tree.md).
+
+## Estado
+
+**Concluída** — app `Infraestrutura.importacoes` registrado em `PROJECT_APPS`.
+
 ## Objetivo
 
 Implementar no Cortex a importação em lote de blocos, salas e recursos via planilha `.ods`, com processamento assíncrono (Celery) e tratamento de fotos de recurso via download de URL, recorte retrato 3:4 e upload ao S3.

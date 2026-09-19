@@ -1,5 +1,7 @@
 # Checklist de Implementação do Cortex
 
+> **Documento histórico de execução.** Registra o avanço das milestones 0–5, Infraestrutura e Transporte. Para a estrutura e o estado **atual** do código, use como fontes canônicas: [`django-project-tree.md`](django-project-tree.md), [`diagrams/02-bounded-contexts.md`](../diagrams/02-bounded-contexts.md) e [`docs/domains/`](../domains/).
+
 ## Objetivo
 
 Este documento organiza a implementação inicial do Cortex em etapas práticas, coerentes com:
@@ -40,7 +42,7 @@ O objetivo é permitir uma execução incremental, previsível e consistente, ev
 
 - [x] Revisar `Cortex/settings.py`
 - [x] Confirmar estratégia de `AUTH_USER_MODEL`
-- [x] Confirmar que o login será por `cpf`
+- [x] Confirmar login híbrido por e-mail, CPF ou matrícula ativa (`AppCore.basics.auth.backends.EmailOrCpfBackend`)
 - [x] Revisar `AppCore` para garantir aderência ao novo domínio
 - [x] Validar que a estrutura de autenticação está pronta para o model real de usuário
 - [x] Revisar convenções de nomenclatura em português
@@ -63,7 +65,7 @@ O objetivo é permitir uma execução incremental, previsível e consistente, ev
 - [x] Criar diretório `Identidade/`
 - [x] Criar `Identidade/__init__.py`
 - [x] Criar `Identidade/urls.py` (agregador do módulo, com `app_name = 'identidade'`)
-- [x] Registrar módulo em `Cortex/urls.py`: `path('identidade/', include('Identidade.urls'))`
+- [x] Registrar módulo em `Cortex/urls.py`: `path('cortex/identidade/', include('Identidade.urls'))`
 
 ## App `Identidade/usuarios/`
 
@@ -96,21 +98,13 @@ O objetivo é permitir uma execução incremental, previsível e consistente, ev
 - [x] Incluir rotas no `Identidade/urls.py`
 - [x] Implementar testes em `tests/`
 
-## App `Identidade/matriculas/`
-
-- [x] Criar estrutura física do app
-- [x] Criar `apps.py` com `name = 'Identidade.matriculas'`
-- [x] Registrar em `PROJECT_APPS`
-- [x] Implementar `models.py` — model `Matricula`
-- [x] Implementar `business.py`, `rules.py`, `choices.py`, `serializers.py`, `views.py`, `urls.py`
-- [x] Incluir rotas no `Identidade/urls.py`
-- [x] Implementar testes em `tests/`
+> **Nota histórica — app `Identidade/matriculas/`:** este app **nunca** existiu no código final. A matrícula é atributo opcional em `AlunoCurso`, `Servidor` e `Terceirizado`, com resolução e elegibilidade de login em helpers de `Identidade.usuarios`. Não criar nem buscar `Identidade.matriculas` no repositório.
 
 ## Integração interna do domínio Identidade
 
-- [x] Validar coerência entre os 4 apps do módulo
+- [x] Validar coerência entre os 3 apps do módulo (`usuarios`, `contatos`, `enderecos`)
 - [x] Validar roteamento agregado em `Identidade/urls.py`
-- [x] Garantir login por CPF integrado com `Auth`
+- [x] Garantir login híbrido (e-mail, CPF ou matrícula) integrado com `Auth`
 - [x] Revisar testes de integração entre apps do domínio
 
 ---
@@ -122,7 +116,7 @@ O objetivo é permitir uma execução incremental, previsível e consistente, ev
 - [x] Criar diretório `Organizacional/`
 - [x] Criar `Organizacional/__init__.py`
 - [x] Criar `Organizacional/urls.py` (agregador do módulo, com `app_name = 'organizacional'`)
-- [x] Registrar módulo em `Cortex/urls.py`: `path('organizacional/', include('Organizacional.urls'))`
+- [x] Registrar módulo em `Cortex/urls.py`: `path('cortex/organizacional/', include('Organizacional.urls'))`
 
 ## App `Organizacional/setores/`
 
@@ -273,7 +267,7 @@ O objetivo é permitir uma execução incremental, previsível e consistente, ev
 
 - [x] Validar regra de responsável de setor usando perfil `Servidor`
 - [x] Validar monitoria com base em `SetorVinculo + Funcao`
-- [x] Garantir login por CPF integrado com `Usuario`
+- [x] Garantir login híbrido integrado com `Usuario`
 - [x] Garantir que aluno monitor seja tratado no domínio correto
 - [x] Evitar duplicação de regras de monitoria entre domínios
 
@@ -282,7 +276,7 @@ O objetivo é permitir uma execução incremental, previsível e consistente, ev
 - [x] Atualizar `docs/diagrams/03-core-erd.md` caso a modelagem tenha mudado
 - [x] Atualizar `docs/diagrams/04-aggregates-and-invariants.md` caso as invariantes tenham mudado
 - [x] Atualizar `docs/decisions/ADR-001-modularizacao-por-dominio.md` se houver mudança arquitetural relevante
-- [x] Atualizar `.github/copilot-instructions.md` quando houver mudança significativa na estrutura do projeto
+- [x] Atualizar [`regras-do-projeto.md`](regras-do-projeto.md) e [`docs/domains/`](../domains/) quando houver mudança significativa na estrutura do projeto (não há `.github/copilot-instructions.md` neste repositório)
 
 ## Revisão estrutural e documental (etapa 5.5)
 
@@ -291,7 +285,7 @@ O objetivo é permitir uma execução incremental, previsível e consistente, ev
 - [x] Revisar `urls.py` agregadores de cada módulo de domínio
 - [x] Atualizar `docs/project/django-project-tree.md`
 - [x] Atualizar `README.md` na raiz do repositório
-- [x] Atualizar `.github/copilot-instructions.md`
+- [x] Atualizar [`regras-do-projeto.md`](regras-do-projeto.md) e domínios em `docs/domains/`
 - [x] Alinhar checklist global e plano mestre com a estrutura real
 
 ## Validação funcional mínima
@@ -311,16 +305,20 @@ O objetivo é permitir uma execução incremental, previsível e consistente, ev
 
 # Itens para decisão antes de aprofundar implementação
 
+Itens já refletidos no código (não reabrir sem motivo):
+
+- [x] **Matrícula:** não é entidade própria; vive nos perfis e em `AlunoCurso` (ver nota histórica acima).
+- [x] **Categoria de servidor:** implementada (`CategoriaServidor` em `PessoasInstitucionais.servidores`).
+- [x] **Seed inicial de catálogos raiz:** via migrations `RunPython` (setores, funções, cargos etc.), não fixtures automáticas deste checklist.
+- [x] **Coexistência de perfis:** o modelo permite múltiplos perfis no mesmo `Usuario` quando as regras de cada domínio permitem (ex.: aluno e servidor).
+
+Ainda em aberto ou parcial:
+
 - [ ] Cardinalidade final de `Contato`
-- [ ] Cardinalidade exata de `Matricula`
-- [ ] Regras de coexistência de perfis no mesmo usuário
-- [ ] Necessidade de datas de início/fim em `SetorVinculo`
-- [ ] Necessidade de histórico de mudança de função
-- [ ] Lista inicial oficial de funções
-- [ ] Lista inicial oficial de cargos
-- [ ] Lista inicial oficial de setores
-- [ ] Necessidade de choices para categoria de servidor
-- [ ] Estratégia de seed inicial
+- [ ] Perfil `Estagiario` (não implementado; fora do código atual)
+- [ ] Necessidade de datas de início/fim em `SetorVinculo` (model atual não possui esses campos)
+- [ ] Necessidade de histórico de mudança de função em vínculo
+- [ ] Módulo de **reservas** de infraestrutura (estado `reservado` existe em recursos; v1 sem app de reservas)
 
 ---
 
@@ -330,11 +328,14 @@ A implementação do Cortex segue uma ordem orientada por domínio, com cada dom
 
 | Milestone | Módulo de domínio        | Apps internos                                                    | Status       |
 | --------- | ------------------------ | ---------------------------------------------------------------- | ------------ |
-| 1         | `Identidade/`            | `usuarios`, `contatos`, `enderecos`, `matriculas`                | Concluído    |
+| 1         | `Identidade/`            | `usuarios`, `contatos`, `enderecos`                              | Concluído    |
 | 2         | `Organizacional/`        | `setores`, `funcoes`, `vinculos`                                 | Concluído    |
 | 3         | `PessoasInstitucionais/` | `cargos`, `servidores`, `empresas_instituicoes`, `terceirizados` | Concluído    |
 | 4         | `Academico/`             | `alunos`, `cursos`, `aluno_cursos`                               | Concluído    |
 | 5         | —                        | Integração, consolidação e validação final                       | Concluído    |
-| Infra     | `Infraestrutura/`        | `blocos`, `salas`, `recursos`, `permissoes`, `autorizacoes`, `emprestimos` | v1 concluída |
+| Infra     | `Infraestrutura/`        | `blocos`, `salas`, `recursos`, `permissoes`, `autorizacoes`, `emprestimos`, `importacoes` | Concluído    |
+| Transporte | `Transporte/`           | `percursos`, `rotas`, `motoristas`, `calendario_operacional`, `execucoes_rotas`, `tickets`, `strikes`, `justificativas`, `relatorios`, `permissoes`, `entradas_sem_ticket`, `bloqueios` | Concluído    |
+
+Rotas HTTP dos domínios usam o prefixo global `/cortex/...` (ex.: `/cortex/identidade/`, `/cortex/transporte/`).
 
 Esse checklist transforma a visão arquitetural já definida em uma sequência prática de execução, reduzindo risco de retrabalho e ajudando a preservar a consistência do domínio desde o início.

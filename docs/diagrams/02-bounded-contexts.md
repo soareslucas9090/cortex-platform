@@ -1,324 +1,433 @@
 # Bounded Contexts / Domínios do Cortex
 
-## Objetivo
+## 1. Objetivo
 
-Este documento define a divisão do Cortex por domínios de negócio, seus respectivos módulos agregadores, as responsabilidades de seus apps internos, entidades centrais, dependências e ordem de implementação.
+Este documento é o **mapa canônico** dos bounded contexts do Cortex **como implementados hoje**: módulos agregadores, apps Django (`PROJECT_APPS`), entidades principais, responsabilidades, regras já codificadas ou documentadas em `docs/domains/`, dependências entre contextos, prefixos HTTP e exceções à regra “um app, um model ORM principal”.
 
-A organização do sistema deve seguir **domínios como módulos agregadores com inicial maiúscula** e **apps internos em minúsculo**, mantendo a regra de que cada app corresponde a um model principal, garantindo coesão e acoplamento baixo.
+Use-o antes de explorar o código em volume (agentes, revisões, novas features).
 
-Exemplos:
-- Domínio/Módulo: `Organizacional`
-- App interno: `Organizacional/setores/`
+Convenção: **domínio** com inicial maiúscula (pasta PascalCase); **app** em minúsculo (`Identidade/usuarios/`).
 
 ---
 
-## Princípios adotados
+## 2. Princípios
 
-1. O sistema deve ser organizado por **domínios de negócio** (módulos agregadores).
-2. Cada módulo de domínio contém **apps internos específicos e finos**.
-3. Em regra, cada app interno representa **um model principal** e suas entidades auxiliares.
-4. A arquitetura de camadas é aplicada no nível de cada app interno:
-   - `models.py`
-   - `business.py`
-   - `rules.py`
-   - `helpers.py`
-   - `serializers.py`
-   - `views.py`
-   - `urls.py`
-5. Views devem permanecer leves, delegando toda lógica de negócio e queries para as camadas apropriadas.
-6. O sistema deve priorizar clareza e consistência do domínio antes de otimizações prematuras.
+1. Organização por **domínios de negócio**, não por camadas técnicas genéricas.
+2. Cada módulo contém **apps internos finos**; em regra, um model principal por app.
+3. Camadas por app: `models`, `business`, `rules`, `helpers`, `serializers`, `views`, `urls`.
+4. **Views leves** — queries e regras em `business` / `rules` / `helpers`.
+5. Novos produtos (ex.: capacidades de permissão) entram como apps no módulo de domínio, conforme ADR-001 e ADR-002.
 
 ---
 
-## Visão geral dos domínios
+## 3. Visão dos seis domínios e da base técnica
 
-O Cortex será inicialmente dividido nos seguintes domínios:
+### Domínios de negócio (bounded contexts)
 
-1. `Identidade`
-2. `Organizacional`
-3. `PessoasInstitucionais`
-4. `Academico`
-5. `Infraestrutura`
-6. `Transporte`
+| # | Módulo | Prefixo HTTP (`Cortex/urls.py`) |
+|---|--------|-----------------------------------|
+| 1 | `Identidade` | `/cortex/identidade/` |
+| 2 | `Organizacional` | `/cortex/organizacional/` |
+| 3 | `PessoasInstitucionais` | `/cortex/pessoas-institucionais/` |
+| 4 | `Academico` | `/cortex/academico/` |
+| 5 | `Infraestrutura` | `/cortex/infraestrutura/` |
+| 6 | `Transporte` | `/cortex/transporte/` |
 
----
+### Base técnica (não são bounded contexts de negócio)
 
-## 1. Domínio: Identidade
+| Componente | Papel |
+|------------|--------|
+| `AppCore/` | Mixins, models base, `EmailOrCpfBackend`, storage, paginação, exceções |
+| `Auth/` | API de autenticação — `/cortex/auth/` |
+| `Cortex/` | `settings`, `PROJECT_APPS`, `urls` raiz, Celery Beat |
 
-### Módulo Agregador
-`Identidade/`
-
-### Apps Django Internos e Entidades:
-- `usuarios` -> Model principal: `Usuario` (autenticação e dados cadastrais básicos)
-- `contatos` -> Model principal: `Contato` (meios de contato como e-mails e telefones)
-- `enderecos` -> Model principal: `Endereco` (dados de residência)
-- `matriculas` -> Model principal: `Matricula` (identificadores institucionais)
-
-### Responsabilidade
-Responsável pelo cadastro base da pessoa no sistema, concentrando os dados centrais de identificação e contato que são compartilhados por diferentes perfis institucionais.
-
-### Observações de domínio
-- `Usuario` (dentivo do app `usuarios`) é a entidade central sobre a qual orbitam os demais perfis.
-- Outros domínios dependem de `Usuario`.
-- Este domínio fornece a base de identidade para servidores, alunos e terceirizados.
-
-### Dependências
-- Não depende de outros domínios centrais do negócio.
+`AUTH_USER_MODEL = 'usuarios.Usuario'` (app `Identidade.usuarios`).
 
 ---
 
-## 2. Domínio: Organizacional
+## 4. Cortes transversais
 
-### Módulo Agregador
-`Organizacional/`
+### Permissões Cortex L1–L3 (ADR-002)
 
-### Apps Django Internos e Entidades:
-- `setores` -> Model principal: `Setor` (unidade física/organizacional)
-- `funcoes` -> Model principal: `Funcao` (papel formal do vínculo - ex: coordenador, monitor)
-- `vinculos` -> Model principal: `SetorVinculo` (vínculo real do usuário com setor e função)
+Compiladas em `user.permissoes['cortex']` via `UsuarioPermissions.permissoes_cortex()`:
 
-### Responsabilidade
-Responsável pela estrutura organizacional da instituição e pelos vínculos dos usuários com setores e funções exercidas.
+| Nível | Papel resumido |
+|-------|----------------|
+| L3 `EDITAR_TUDO` | staff / admin / superuser |
+| L2 `LER_TUDO` | servidor ou terceirizado ativo |
+| L1 `EDITAR_EU` | demais (ex.: aluno) |
 
-### Regras de domínio já definidas
-- Um usuário pode estar vinculado a múltiplos setores.
-- Todo usuário vinculado a um setor deve possuir uma função.
-- Todo setor deve possuir um servidor responsável.
-- O responsável pelo setor exerce uma função no próprio setor.
-- A função `monitor` deve ser representada como registro em `Funcao`, e não como atributo booleano em `SetorVinculo`.
-- `Funcao` deve possuir o atributo `e_gratificada`.
+Mixins AppCore (`IsAuthenticatedMixin`, `IsOwnerOrAdminMixin`, `IsAdminMixin`) e `escopar_queryset_cortex` aplicam escopo nas views.
 
-### Observações de modelagem
-- `SetorVinculo` (no app `vinculos`) não é apenas uma tabela associativa; é uma entidade de negócio em camadas.
-- A responsabilidade do setor deve emergir do vínculo (`responsavel=True` em `SetorVinculo`), e não de um campo direto em `Setor`.
-- A regra de obrigatoriedade de responsável deve ser implementada na camada de negócio/regras.
+### Permissões por módulo (além de L1–L3)
 
-### Dependências
-- Depende de `Identidade` (referencia `Usuario`).
+- **Infraestrutura:** `operar`, `cadastrar`, `autorizar`, `retirada_irrestrita` — por `Funcao` e/ou `Usuario` (`Infraestrutura.permissoes`); **sem rotas HTTP** no agregador (admin + compilação em `permissoes['infraestrutura']`).
+- **Transporte:** capacidades documentadas em ADR-002 e `Transporte.permissoes` — em especial `conferir` e `visualizar_relatorio_alunos` (por função e usuário); app **sem** `urls` no agregador `Transporte/urls.py`.
 
----
+### Matrícula distribuída (sem app `matriculas`)
 
-## 3. Domínio: PessoasInstitucionais
+Matrícula institucional **não** é entidade em Identidade. Campos `matricula` em:
 
-### Módulo Agregador
-`PessoasInstitucionais/` (Planejado)
+- `PessoasInstitucionais.servidores.Servidor`
+- `PessoasInstitucionais.terceirizados.Terceirizado`
+- `Academico.aluno_cursos.AlunoCurso`
 
-### Apps Django Internos e Entidades:
-- `servidores` -> Model principal: `Servidor` (perfil docente ou técnico-administrativo)
-- `cargos` -> Model principal: `Cargo` (posição formal do servidor)
-- `terceirizados` -> Model principal: `Terceirizado` (prestador de serviço externo)
-- `empresas_instituicoes` -> Model principal: `EmpresaInstituicao` (empresa parceira do terceirizado)
+Unicidade e validação cruzada via regras de `Usuario` / perfis. Login por matrícula usa `Usuario.helper.buscar_por_matricula_valida` no `EmailOrCpfBackend`.
 
-### Responsabilidade
-Responsável pelos perfis institucionais formais vinculados ao usuário dentro da organização, incluindo vínculos funcionais e empresariais.
+### `usuario_coletivo`
 
-### Regras de domínio já definidas
-- `Cargo` se aplica apenas a `Servidor`.
-- `Servidor` representa professor ou técnico-administrativo.
-- `EmpresaInstituicao` será usada, por ora, apenas para terceirizados.
+Conta compartilhada (`Usuario.usuario_coletivo`) com pools M2M (empresas, cargos, funções, setores) para escolher responsável em operações como empréstimo.
 
-### Observações de domínio
-- Este domínio não substitui `Usuario`; ele especializa a identidade da pessoa.
-- As regras de lotação e exercício em setor pertencem ao domínio `Organizacional`, mesmo quando relacionadas a servidores.
+### Importações em lote
 
-### Dependências
-- Depende de `Identidade`.
+| Contexto | App | Model |
+|----------|-----|--------|
+| Usuários | `Identidade.usuarios` | `ImportacaoLote` |
+| Infraestrutura | `Infraestrutura.importacoes` | `ImportacaoLote` |
+
+São modelos distintos em apps distintos.
+
+### Celery Beat (Transporte)
+
+`gerar_execucoes_rotas_automaticas_task` — agendada a cada 5 minutos em `Cortex/settings.py` (`CELERY_BEAT_SCHEDULE`).
 
 ---
 
-## 4. Domínio: Academico
+## 5. Domínios em detalhe
 
-### Módulo Agregador
-`Academico/` (Planejado)
+### 5.1 Identidade
 
-### Apps Django Internos e Entidades:
-- `alunos` -> Model principal: `Aluno` (perfil acadêmico da pessoa)
-- `cursos` -> Model principal: `Curso` (curso de graduação/técnico)
-- `aluno_cursos` -> Model principal: `AlunoCurso` (relação M:N entre alunos e cursos)
+| Item | Valor |
+|------|--------|
+| Módulo | `Identidade/` |
+| Prefixo | `/cortex/identidade/` |
+| Apps (`PROJECT_APPS`) | `usuarios`, `contatos`, `enderecos` |
 
-### Responsabilidade
-Responsável pelos perfis acadêmicos e pelos vínculos do aluno com os cursos.
+**Entidades**
 
-### Regras de domínio já definidas
-- Alunos que atuarem como monitores devem possuir vínculo com setor.
-- A monitoria deve ser tratada pelo domínio `Organizacional`, usando `SetorVinculo` + `Funcao`.
+- `Usuario` — identidade e autenticação (`email`, `cpf` unique nullable; `usuario_coletivo`; pools coletivos).
+- `Contato`, `Endereco`.
+- `ImportacaoLote` — carga assíncrona de usuários (no app `usuarios`, não em app separado).
 
-### Observações de domínio
-- O comportamento organizacional do aluno monitor não deve ser modelado como exceção no domínio acadêmico.
-- O domínio acadêmico representa o vínculo do aluno com a formação, não sua função organizacional.
+**Responsabilidade**
 
-### Dependências
-- Depende de `Identidade`.
-- Em situações de monitoria, se relaciona conceitualmente com `Organizacional`.
+Cadastro base da pessoa, contato, endereço e pipeline de importação de usuários. Fornece `AUTH_USER_MODEL`.
 
----
+**Regras / comportamentos relevantes (código)**
 
-## 5. Domínio: Transporte
+- Backend `EmailOrCpfBackend`: e-mail, CPF ou matrícula ativa; elegibilidade exige CPF ou matrícula válida.
+- Permissões Cortex L1–L3 em `UsuarioPermissions`.
+- **Não** existe app `matriculas` em `PROJECT_APPS`.
 
-### Módulo Agregador
-`Transporte/`
+**Dependências**
 
-### Apps Django Internos e Entidades:
-- `percursos` -> Model principal: `Percurso` (apelido, descrição do trajeto, ativo)
-- `rotas` -> Model principal: `Rota` (percurso, horário de saída, dia da semana, quantidade de vagas, ativo)
-- `motoristas` -> Model principal: `Motorista` (perfil associado a usuário para acesso à visão das rotas do dia)
-- `execucoes_rotas` -> Model principal: `ExecucaoRota` (ocorrência datada e estado operacional)
-- `tickets` -> Model principal: `Ticket` (reserva, fila, embarque e ausência)
-- `strikes` -> Model principal: `Strike` (falta associada a ticket ausente)
-- `justificativas` -> Model principal: `Justificativa` (revisão de strike)
+Nenhum domínio de negócio upstream.
 
-### Responsabilidade
-Cadastro de percursos e rotas de ônibus (RF016 e RF017), visão das rotas do dia
-por motoristas ativos (RF013), execuções datadas, tickets, fila de espera,
-embarque, ausências, strikes e justificativas.
+**Apps sem HTTP no agregador**
 
-### Dependências
-- Depende de `Identidade` para os usuários associados aos perfis Motorista.
-- Depende de `Academico` para os alunos titulares dos tickets.
+Nenhum — os três apps incluem rotas via `Identidade/urls.py`.
 
 ---
 
-## Relações entre domínios
+### 5.2 Organizacional
 
-### Identidade
+| Item | Valor |
+|------|--------|
+| Módulo | `Organizacional/` |
+| Prefixo | `/cortex/organizacional/` |
+| Apps | `setores`, `funcoes`, `vinculos` |
 
-Domínio base do sistema.
+**Entidades**
 
-### Organizacional
+- `Setor`
+- `Funcao` — `papel_funcao`, `categoria`, `descricao`, `e_gratificada`, `exige_aluno`, `ativo`
+- `SetorVinculo` — `usuario`, `setor`, `funcao`, `responsavel`
 
-Depende de `Identidade`.
+**Responsabilidade**
 
-### PessoasInstitucionais
+Estrutura de setores, catálogo de funções e vínculos usuário–setor–função, inclusive responsável de setor e monitoria como `Funcao`.
 
-Depende de `Identidade`.
+**Regras já presentes no modelo / domínio**
 
-### Academico
+- Monitoria = registro em `Funcao`, não booleano em vínculo.
+- `SetorVinculo` tratado como entidade de negócio; responsável via `responsavel=True`.
+- Múltiplos vínculos por usuário; função esperada em todo vínculo (validação em business/rules).
 
-Depende de `Identidade`.
+**Dependências**
 
-### Relações conceituais cruzadas
-
-- `Organizacional` pode operar sobre usuários que sejam servidores, terceirizados ou alunos.
-- `Academico` e `PessoasInstitucionais` especializam a identidade do usuário.
-- `Organizacional` modela o exercício funcional em setor, independentemente do perfil institucional da pessoa.
-
----
-
-## Decisões importantes já consolidadas
-
-### Convenção de nomenclatura
-
-- **Domínios**: inicial maiúscula
-- **Apps Django**: minúsculo
-
-### Nome da entidade de vínculo com setor
-
-- Nome adotado: `SetorVinculo`
-- Nome descartado: `SetorLotacao`
-
-### Representação de monitoria
-
-- `monitor` não será atributo booleano em `SetorVinculo`
-- `monitor` será uma `Funcao`
-
-### Obrigatoriedade de função
-
-- Todo vínculo com setor exige uma função
-
-### Gratificação
-
-- `Funcao` deverá possuir o atributo `e_gratificada`
-
-### Cargo
-
-- `Cargo` é exclusivo de `Servidor`
+- `Identidade` (`Usuario`)
 
 ---
 
-## Ordem sugerida de implementação
+### 5.3 PessoasInstitucionais
 
-### 1. Identidade
+| Item | Valor |
+|------|--------|
+| Módulo | `PessoasInstitucionais/` |
+| Prefixo | `/cortex/pessoas-institucionais/` |
+| Apps | `cargos`, `empresas_instituicoes`, `servidores`, `terceirizados` |
 
-Motivo:
+**Entidades**
 
-- Fornece a entidade central `Usuario`
-- Sustenta todos os demais domínios
+- `Cargo` — catálogo
+- `EmpresaInstituicao`
+- `Servidor` — `cargo` obrigatório (`PROTECT`), `matricula`, `categoria`, `ativo`
+- `Terceirizado` — `empresa_instituicao`, `cargo` opcional (`SET_NULL`), `matricula`, datas de vínculo
 
-### 2. Organizacional
+**Responsabilidade**
 
-Motivo:
+Perfis institucionais que especializam `Usuario`. **Implementado** — não há `Estagiario` no código.
 
-- Estrutura setores, funções e vínculos
-- Representa uma parte central do funcionamento institucional
-- Permite modelar responsabilidades e monitoria desde cedo
+**Regras**
 
-### 3. PessoasInstitucionais
+- `Cargo` obrigatório para servidor; mesmo catálogo pode ser referenciado opcionalmente por terceirizado.
+- `EmpresaInstituicao` para terceirizados.
+- Matrículas de servidor/terceirizado participam do login e da unicidade global de matrícula.
 
-Motivo:
+**Dependências**
 
-- Especializa o usuário em servidor e terceirizado
-- Introduz cargo e empresa de terceirização
-
-### 4. Academico
-
-Motivo:
-
-- Depende da identidade do usuário
-- Pode reaproveitar a estrutura organizacional para monitoria
-
----
-
-## Estrutura inicial esperada por app interno
-
-Cada app interno do módulo de domínio deve seguir a convenção arquitetural de camadas do projeto:
-
-- `__init__.py`
-- `apps.py`
-- `models.py`
-- `business.py`
-- `rules.py`
-- `helpers.py`
-- `serializers.py`
-- `views.py`
-- `urls.py`
-
-Arquivos opcionais conforme necessidade:
-- `choices.py`
-- `state.py`
+- `Identidade`
+- Uso de `Cargo` / vínculos organizacionais indireto via `Usuario` e Organizacional
 
 ---
 
-## Próximos artefatos recomendados
+### 5.4 Academico
 
-Após este documento, os próximos artefatos sugeridos são:
+| Item | Valor |
+|------|--------|
+| Módulo | `Academico/` |
+| Prefixo | `/cortex/academico/` |
+| Apps | `cursos`, `alunos`, `aluno_cursos` |
 
-1. `diagrams/03-core-erd.md`
-   - consolidar o DER ajustado aos nomes e regras atuais
+**Entidades**
 
-2. `decisions/ADR-001-modularizacao-por-dominio.md`
-   - registrar formalmente a decisão arquitetural de modularização por domínio
+- `Curso`
+- `Aluno` — perfil acadêmico; `faltas`, `is_bloqueado`, `quantidade_bloqueios` (transporte)
+- `AlunoCurso` — vínculo aluno–curso com `matricula`
 
-3. `project/django-project-tree.md`
-   - definir a árvore inicial do projeto com os apps `identidade`, `organizacional`, `pessoas_institucionais` e `academico`
+**Responsabilidade**
 
-4. `diagrams/04-aggregates-and-invariants.md`
-   - definir agregados e invariantes principais do domínio
+Formação e matrícula por curso. Monitoria organizacional fica em Organizacional (`Funcao` + `SetorVinculo`).
+
+**Regras**
+
+- Aluno monitor: vínculo de setor quando função exige aluno.
+- Campos de bloqueio/faltas sincronizados pelo domínio Transporte.
+
+**Dependências**
+
+- `Identidade`
+- Conceitual com `Organizacional` (monitoria)
+- `Transporte` (tickets, strikes, bloqueios leem/atualizam `Aluno`)
 
 ---
 
-## Resumo executivo
+### 5.5 Infraestrutura
 
-A organização inicial do Cortex será baseada em quatro domínios (Bounded Contexts) implementados como módulos agregadores contendo apps internos finos:
+| Item | Valor |
+|------|--------|
+| Módulo | `Infraestrutura/` |
+| Prefixo | `/cortex/infraestrutura/` |
+| Apps | `blocos`, `salas`, `recursos`, `permissoes`, `autorizacoes`, `emprestimos`, `importacoes` |
 
-- `Identidade` (com sub-apps `usuarios`, `contatos`, `enderecos`, `matriculas`)
-- `Organizacional` (com sub-apps `setores`, `funcoes`, `vinculos`)
-- `PessoasInstitucionais` (com sub-apps `servidores`, `cargos`, `terceirizados`, `empresas_instituicoes`)
-- `Academico` (com sub-apps `alunos`, `cursos`, `aluno_cursos`)
-- `Infraestrutura` (com sub-apps `blocos`, `salas`, `recursos`, `permissoes`, `autorizacoes`, `emprestimos`)
-- `Transporte` (com sub-apps `percursos`, `rotas`, `motoristas`, `execucoes_rotas`, `tickets`, `strikes`, `justificativas`)
+**Entidades principais**
 
-Essa divisão busca:
-- refletir o negócio com mais fidelidade;
-- evitar acoplamento técnico desnecessário através da regra de um app principal por model;
-- permitir crescimento controlado do sistema mantendo views leves e lógica em camadas;
-- manter clareza arquitetural desde o início.
+- `Bloco`
+- `Sala`, `SalaSetor` (associação sala–setor no app `salas`)
+- `Recurso`
+- `PermissaoFuncaoInfraestrutura`, `PermissaoUsuarioInfraestrutura` — flags `operar`, `cadastrar`, `autorizar`, `retirada_irrestrita`
+- `Autorizacao`
+- `Emprestimo`, `ItemEmprestimo`
+- `ImportacaoLote` (importação de dados de infraestrutura)
+
+**Responsabilidade**
+
+Espaços físicos, recursos, autorizações e empréstimos (fluxo v1 que substitui operação legada Chameco/Sigec para este escopo). Detalhe operacional: `docs/domains/infraestrutura.md`; contexto de produto: `docs/schema/infraestrutura.md`.
+
+**Regras / escopo v1**
+
+- Permissões de módulo independentes dos níveis L1–L3 Cortex (ADR-002).
+- **Reservas de sala fora da v1** (não modeladas como produto atual).
+- `usuario_coletivo` impacta escolha de responsável em empréstimo.
+
+**Dependências**
+
+- `Identidade` (`Usuario`, pools coletivos)
+- `Organizacional` (`Setor` via `SalaSetor`; funções para permissões)
+- `PessoasInstitucionais` — regras de retirada usam perfis `Servidor` e `Terceirizado` ativos
+- `Academico` — perfil `Aluno` nas regras de retirada (autorização explícita ou `retirada_irrestrita`)
+
+**Rotas no agregador** (`Infraestrutura/urls.py`)
+
+`blocos`, `salas`, `recursos`, `autorizacoes`, `emprestimos`, `importacoes`.
+
+**Apps sem HTTP no agregador**
+
+- `permissoes` — apenas admin + compilação em `user.permissoes['infraestrutura']`
+
+**Exceções 1-app-1-model**
+
+- `salas`: `Sala` + `SalaSetor`
+- `emprestimos`: `Emprestimo` + `ItemEmprestimo`
+- `permissoes`: dois models de permissão (função e usuário)
+
+---
+
+### 5.6 Transporte
+
+| Item | Valor |
+|------|--------|
+| Módulo | `Transporte/` |
+| Prefixo | `/cortex/transporte/` |
+| Apps (12 em `PROJECT_APPS`) | ver tabela abaixo |
+
+| App | Model / papel principal | HTTP no agregador |
+|-----|-------------------------|-------------------|
+| `percursos` | `Percurso` | sim |
+| `rotas` | `Rota` | sim |
+| `motoristas` | `Motorista` (perfil ligado a `Usuario`) | **não** |
+| `calendario_operacional` | `DiaCalendarioTransporte` | **não** |
+| `execucoes_rotas` | `ExecucaoRota` | sim |
+| `tickets` | `Ticket` | sim |
+| `strikes` | `Strike` | sim |
+| `justificativas` | `Justificativa` | sim |
+| `relatorios` | `RelatorioAlunos` — **objeto de domínio sem tabela ORM**; endpoints HTTP de relatório | sim |
+| `permissoes` | `PermissaoFuncaoTransporte`, `PermissaoUsuarioTransporte` — `conferir`, `visualizar_relatorio_alunos` | **não** |
+| `entradas_sem_ticket` | `EntradaSemTicket` | sim |
+| `bloqueios` | operações sobre `Aluno` bloqueado — **app sem `models.py`** | sim |
+
+**Responsabilidade**
+
+Cadastro de percursos/rotas, calendário operacional, geração de execuções (incl. task Beat), reservas e filas (`Ticket`), faltas (`Strike`), justificativas, entradas sem ticket, bloqueios de alunos, relatórios agregados. Detalhe operacional: `docs/domains/transporte.md` (não duplicar aqui).
+
+**Dependências**
+
+- `Identidade` — motoristas, usuários conferentes, permissões
+- `Academico` — `Aluno` / titular de ticket; campos de bloqueio em `Aluno`
+- `Organizacional` — funções para `PermissaoFuncaoTransporte`
+- `calendario_operacional` — dias que alimentam geração automática de execuções
+
+**Exceções 1-app-1-model**
+
+- `permissoes`: dois models
+- `relatorios`: sem model Django persistido
+- `bloqueios`: lógica HTTP/business sem ORM próprio
+
+---
+
+## 6. Relações entre os seis domínios
+
+```mermaid
+flowchart TB
+  subgraph base [Base técnica]
+    AppCore
+    Auth
+    Cortex
+  end
+
+  Identidade --> Organizacional
+  Identidade --> PessoasInstitucionais
+  Identidade --> Academico
+  Identidade --> Infraestrutura
+  Identidade --> Transporte
+
+  Organizacional --> Infraestrutura
+  Organizacional --> Transporte
+
+  PessoasInstitucionais -.-> Organizacional
+  Academico --> Transporte
+  Academico -.-> Organizacional
+
+  Infraestrutura --> Identidade
+  Infraestrutura --> Organizacional
+
+  Transporte --> Identidade
+  Transporte --> Academico
+  Transporte --> Organizacional
+```
+
+**Resumo textual**
+
+- **Identidade** é upstream de todos os domínios de negócio.
+- **Organizacional** estrutura setores/funções usados por Infraestrutura (salas, permissões) e Transporte (permissões por função).
+- **PessoasInstitucionais** e **Academico** especializam `Usuario`; matrículas alimentam login.
+- **Infraestrutura** consome usuários, setores e permissões compiladas; não depende de Acadêmico para o núcleo v1.
+- **Transporte** consome alunos, usuários, calendário e funções; atualiza estado de bloqueio/faltas em `Aluno`.
+
+---
+
+## 7. Decisões consolidadas
+
+| Tópico | Decisão |
+|--------|---------|
+| Nomenclatura | Domínio PascalCase; app minúsculo |
+| Vínculo setor | Entidade `SetorVinculo` (não `SetorLotacao`) |
+| Monitoria | `Funcao`, não booleano no vínculo |
+| `Funcao` | Inclui `e_gratificada`, `exige_aluno`, `ativo` |
+| `Cargo` | Catálogo com uso **obrigatório** em `Servidor` e **opcional** em `Terceirizado` |
+| Matrícula | Distribuída em perfis; sem app `matriculas` |
+| Modularização | ADR-001 — módulos na raiz, não pasta genérica `APPs/` |
+| Permissões | ADR-002 — L1–L3 + módulos Infraestrutura/Transporte |
+| Estagiário | Não implementado |
+
+---
+
+## 8. Ordem de implementação (histórico concluído)
+
+1. **Base** — `AppCore`, `Auth`, `Cortex`, autenticação (`EmailOrCpfBackend`)
+2. **Identidade** — usuários, contatos, endereços
+3. **Organizacional** — setores, funções, vínculos
+4. **PessoasInstitucionais** — cargos, empresas, servidores, terceirizados
+5. **Academico** — cursos, alunos, aluno_cursos
+6. **M5** — integração entre os quatro primeiros domínios
+7. **Importação de usuários** — `ImportacaoLote` em `Identidade.usuarios`
+8. **Infraestrutura** — blocos, salas, recursos, permissões, autorizações, empréstimos, importações
+9. **Transporte** — 12 apps, Beat, bloqueios, relatórios, entradas sem ticket
+
+Referência de marcos: `docs/planning/milestone-*-plan.md`.
+
+---
+
+## 9. Estrutura interna esperada por app
+
+Cada app interno tende a conter:
+
+- `__init__.py`, `apps.py`
+- `models.py`, `business.py`, `rules.py`, `helpers.py`
+- `serializers.py`, `views.py`, `urls.py` (quando expõe HTTP)
+
+Opcionais: `choices.py`, `state.py`, `access.py`, `permissions.py`, `tasks.py`, `admin.py`.
+
+---
+
+## 10. Artefatos relacionados
+
+| Artefato | Uso |
+|----------|-----|
+| `diagrams/03-core-erd.md` | DER textual |
+| `diagrams/04-aggregates-and-invariants.md` | Agregados e invariantes |
+| `decisions/ADR-001-modularizacao-por-dominio.md` | Modularização |
+| `decisions/ADR-002-permissoes-cortex-niveis.md` | L1–L3 e extensões |
+| `project/django-project-tree.md` | Árvore de pastas e apps |
+| `domains/identidade.md` | Regras Identidade |
+| `domains/organizacional.md` | Regras Organizacional |
+| `domains/pessoas-institucionais.md` | Regras PessoasInstitucionais |
+| `domains/academico.md` | Regras Acadêmico |
+| `domains/transporte.md` | Regras Transporte (detalhe operacional) |
+| `domains/infraestrutura.md` | Regras Infraestrutura (detalhe operacional) |
+| `schema/infraestrutura.md` | Contexto de produto e modelagem Infraestrutura |
+
+---
+
+## 11. Resumo executivo
+
+O Cortex implementa **seis bounded contexts** em módulos PascalCase, listados em `Cortex/settings.py` (`PROJECT_APPS`), roteados sob `/cortex/<dominio>/`, com `Usuario` em `Identidade.usuarios` e autenticação em `/cortex/auth/`.
+
+- **Identidade:** `usuarios`, `contatos`, `enderecos` — importação de usuários em `usuarios`; **sem** `matriculas`.
+- **Organizacional:** `setores`, `funcoes`, `vinculos`.
+- **PessoasInstitucionais:** `cargos`, `empresas_instituicoes`, `servidores`, `terceirizados`.
+- **Academico:** `cursos`, `alunos`, `aluno_cursos`.
+- **Infraestrutura:** `blocos`, `salas`, `recursos`, `permissoes`, `autorizacoes`, `emprestimos`, `importacoes` — permissões sem HTTP agregado; reservas fora da v1.
+- **Transporte:** doze apps — incluindo `motoristas`, `calendario_operacional` e `permissoes` sem rotas no agregador; `relatorios` com HTTP mas sem ORM persistido; `bloqueios` com HTTP sem `models.py`; task Beat a cada 5 min.
+
+`AppCore`, `Auth` e `Cortex` sustentam os domínios sem serem contextos de negócio. Manter este mapa alinhado a `PROJECT_APPS`, `Cortex/urls.py` e `docs/domains/` após cada mudança estrutural.

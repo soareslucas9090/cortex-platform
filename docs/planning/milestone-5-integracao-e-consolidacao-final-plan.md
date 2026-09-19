@@ -1,5 +1,7 @@
 # Plano da Milestone 5 — Integração e Consolidação Final
 
+> **Histórico de implementação.** Não usar como backlog. Fonte canônica: [docs/domains/](../domains/) e [docs/project/django-project-tree.md](../project/django-project-tree.md).
+
 ## Objetivo
 
 A Milestone 5 existe para consolidar a integração final do Cortex, após a implementação dos domínios centrais do sistema.
@@ -169,7 +171,7 @@ Consolidar a coerência estrutural e documental do projeto.
 A estrutura do projeto e a documentação principal devem refletir corretamente a implementação final.
 
 ### Status
-Concluída (14/07/2026) — `settings.py` e `urls.py` revisados; apps e rotas agregadas validados; `django-project-tree.md`, `README.md`, checklist global, plano mestre e `copilot-instructions.md` alinhados com a estrutura real (incluindo domínio `Infraestrutura`).
+Concluída (14/07/2026) — `settings.py` e `urls.py` revisados; apps e rotas agregadas validados; `django-project-tree.md`, `README.md`, checklist global e plano mestre alinhados com a estrutura real (incluindo domínio `Infraestrutura`). A fonte canônica para agentes é `docs/project/regras-do-projeto.md` e `docs/domains/` (não há `.github/copilot-instructions.md` neste repositório).
 
 ---
 

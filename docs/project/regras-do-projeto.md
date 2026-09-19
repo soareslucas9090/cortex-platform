@@ -1,10 +1,10 @@
 # Instruções para AI Coding Agents - Base DRF App
 
-> **Última atualização:** 23 de maio de 2026
+> **Última atualização:** 19 de setembro de 2026
 
 > [!IMPORTANT]
 > **Sincronização com assistentes de codificação:**
-> Este arquivo de regras gerais do projeto (e as diretrizes por domínio em `docs/domains/`) deve ser mantido sincronizado com as configurações de instruções do GitHub Copilot e demais agentes, garantindo consistência no comportamento.
+> Este repositório **não** possui `.github/copilot-instructions.md`. A fonte canônica para agentes é este arquivo (`docs/project/regras-do-projeto.md`) junto com as diretrizes por domínio em `docs/domains/`. Mantenha ambos alinhados ao código quando houver mudança estrutural relevante.
 
 ## Fontes de Verdade
 
@@ -805,8 +805,10 @@ As regras específicas, escolhas de campos (choices), e detalhes de modelagem f�
 
 - 👤 **Identidade**: [identidade.md](../domains/identidade.md) (Controles de Usuário, Autenticação, Contatos, Endereços)
 - 🏢 **Organizacional**: [organizacional.md](../domains/organizacional.md) (Setores, Funções, Vínculos, Tabela Associativa)
-- 💼 **Pessoas Institucionais**: [pessoas-institucionais.md](../domains/pessoas-institucionais.md) (Servidores, Cargos, Terceirizados, Jornada de Trabalho)
+- 💼 **Pessoas Institucionais**: [pessoas-institucionais.md](../domains/pessoas-institucionais.md) (Servidores, Cargos, Terceirizados, Empresas)
 - 🎓 **Acadêmico**: [academico.md](../domains/academico.md) (Alunos, Cursos, Matrículas Acadêmicas)
+- 🏗️ **Infraestrutura**: [infraestrutura.md](../domains/infraestrutura.md) (Blocos, Salas, Recursos, Permissões, Autorizações, Empréstimos, Importações)
+- 🚌 **Transporte**: [transporte.md](../domains/transporte.md) (Percursos, Rotas, Execuções, Tickets, Calendário operacional, Relatórios)
 
 ### Hierarquia de Herança Geral
 
@@ -815,26 +817,33 @@ As regras específicas, escolhas de campos (choices), e detalhes de modelagem f�
                        │
         ┌──────────────┼──────────────┬──────────────┐
         │              │              │              │
-    Servidor      Terceirizado     Aluno       Estagiario
+    Servidor      Terceirizado     Aluno
 ```
+
+> **Estagiario:** previsto em diagramas antigos; **não implementado** no código atual.
 
 ### Modelos e Relacionamentos
 
 | Modelo                 | Status          | App interno                                    | Relacionamentos                                           |
 | ---------------------- | --------------- | ---------------------------------------------- | --------------------------------------------------------- |
-| **Usuario**            | ✅ Implementado | `Identidade/usuarios/`                         | Classe base central (login CPF); 1:N com Contato/Endereco |
+| **Usuario**            | ✅ Implementado | `Identidade/usuarios/`                         | Classe base central; login por e-mail, CPF ou matrícula; 1:N com Contato; 1:1 com Endereco |
 | **Contato**            | ✅ Implementado | `Identidade/contatos/`                         | N:1 com Usuario                                           |
-| **Endereco**           | ✅ Implementado | `Identidade/enderecos/`                        | N:1 com Usuario                                           |
+| **Endereco**           | ✅ Implementado | `Identidade/enderecos/`                        | 1:1 com Usuario (`OneToOneField`)                         |
 | **Setor**              | ✅ Implementado | `Organizacional/setores/`                      | M:N com Usuario via SetorVinculo                          |
 | **Funcao**             | ✅ Implementado | `Organizacional/funcoes/`                      | Entidade independente; usada em SetorVinculo              |
 | **SetorVinculo**       | ✅ Implementado | `Organizacional/vinculos/`                     | N:1 com Usuario, N:1 com Setor, N:1 com Funcao            |
-| **Cargo**              | 🔜 Planejado    | `PessoasInstitucionais/cargos/`                | Entidade independente                                     |
-| **Servidor**           | 🔜 Planejado    | `PessoasInstitucionais/servidores/`            | OneToOne com Usuario, N:1 com Cargo; `matricula` opcional |
-| **EmpresaInstituicao** | 🔜 Planejado    | `PessoasInstitucionais/empresas_instituicoes/` | 1:N com Terceirizado                                      |
-| **Terceirizado**       | 🔜 Planejado    | `PessoasInstitucionais/terceirizados/`         | OneToOne com Usuario, N:1 com EmpresaInstituicao; `matricula` opcional |
-| **Aluno**              | 🔜 Planejado    | `Academico/alunos/`                            | OneToOne com Usuario                                      |
-| **AlunoCurso**         | 🔜 Planejado    | `Academico/aluno_cursos/`                      | N:1 com Aluno e Curso; `matricula` opcional               |
-| **Curso**              | 🔜 Planejado    | `Academico/cursos/`                            | M:N com Aluno via AlunoCurso                              |
+| **Cargo**              | ✅ Implementado | `PessoasInstitucionais/cargos/`                | Entidade independente                                     |
+| **Servidor**           | ✅ Implementado | `PessoasInstitucionais/servidores/`            | OneToOne com Usuario, N:1 com Cargo; `matricula` opcional |
+| **EmpresaInstituicao** | ✅ Implementado | `PessoasInstitucionais/empresas_instituicoes/` | 1:N com Terceirizado                                      |
+| **Terceirizado**       | ✅ Implementado | `PessoasInstitucionais/terceirizados/`         | OneToOne com Usuario, N:1 com EmpresaInstituicao; `matricula` opcional |
+| **Aluno**              | ✅ Implementado | `Academico/alunos/`                            | OneToOne com Usuario                                      |
+| **AlunoCurso**         | ✅ Implementado | `Academico/aluno_cursos/`                      | N:1 com Aluno e Curso; `matricula` opcional               |
+| **Curso**              | ✅ Implementado | `Academico/cursos/`                            | M:N com Aluno via AlunoCurso                              |
+| **Bloco / Sala / Recurso** | ✅ Implementado | `Infraestrutura/blocos`, `salas`, `recursos` | Cadastro físico e recursos                                |
+| **Autorizacao / Emprestimo** | ✅ Implementado | `Infraestrutura/autorizacoes`, `emprestimos` | Fluxos de uso e empréstimo                                |
+| **ImportacaoLote**     | ✅ Implementado | `Identidade/usuarios/` e `Infraestrutura/importacoes/` | Dois models homônimos, um por contexto de carga |
+| **Percurso / Rota / ExecucaoRota** | ✅ Implementado | `Transporte/percursos`, `rotas`, `execucoes_rotas` | Operação de transporte                          |
+| **Ticket / Strike / Justificativa** | ✅ Implementado | `Transporte/tickets`, `strikes`, `justificativas` | Embarque, penalidades e ausências              |
 
 ### Módulos de Domínio e Milestones
 
@@ -865,14 +874,30 @@ A ordem de criação respeita as dependências entre domínios. Apps dentro do m
 12. `Academico/cursos/` — Model: `Curso` (sem dependências externas)
 13. `Academico/aluno_cursos/` — Model: `AlunoCurso` (depende de `alunos`, `cursos`; `matricula` no vínculo)
 
-**Módulo Infraestrutura** (Milestone Infraestrutura v1 — concluído):
+**Módulo Infraestrutura** (concluído):
 
-15. `Infraestrutura/blocos/` — Model: `Bloco`
-16. `Infraestrutura/salas/` — Models: `Sala`, `SalaSetor`
-17. `Infraestrutura/recursos/` — Model: `Recurso`
-18. `Infraestrutura/permissoes/` — Models: `PermissaoFuncaoInfraestrutura`, `PermissaoUsuarioInfraestrutura` (sem rotas HTTP)
-19. `Infraestrutura/autorizacoes/` — Model: `Autorizacao`
-20. `Infraestrutura/emprestimos/` — Models de empréstimo multi-item
+14. `Infraestrutura/blocos/` — Model: `Bloco`
+15. `Infraestrutura/salas/` — Models: `Sala`, `SalaSetor`
+16. `Infraestrutura/recursos/` — Model: `Recurso`
+17. `Infraestrutura/permissoes/` — Models: `PermissaoFuncaoInfraestrutura`, `PermissaoUsuarioInfraestrutura` (sem rotas HTTP)
+18. `Infraestrutura/autorizacoes/` — Model: `Autorizacao`
+19. `Infraestrutura/emprestimos/` — Models de empréstimo multi-item
+20. `Infraestrutura/importacoes/` — Model: `ImportacaoLote` e rotinas de importação
+
+**Módulo [Transporte](../domains/transporte.md)** (concluído):
+
+21. `Transporte/percursos/` — Model: `Percurso`
+22. `Transporte/rotas/` — Model: `Rota`
+23. `Transporte/motoristas/` — Model: `Motorista` (sem rotas HTTP; API operacional em `rotas/` e `execucoes_rotas/`)
+24. `Transporte/calendario_operacional/` — Calendário e exceções (sem rotas HTTP)
+25. `Transporte/execucoes_rotas/` — Model: `ExecucaoRota`
+26. `Transporte/tickets/` — Model: `Ticket`
+27. `Transporte/strikes/` — Model: `Strike`
+28. `Transporte/justificativas/` — Model: `Justificativa`
+29. `Transporte/relatorios/` — Relatórios e dashboard
+30. `Transporte/permissoes/` — Models de permissão de Transporte (sem rotas HTTP)
+31. `Transporte/entradas_sem_ticket/` — Model: `EntradaSemTicket`
+32. `Transporte/bloqueios/` — Consulta de bloqueios e justificativas
 
 ---
 
@@ -891,6 +916,7 @@ Exemplos de módulos de domínio:
 - `PessoasInstitucionais/`
 - `Academico/`
 - `Infraestrutura/`
+- `Transporte/`
 
 ### Regra preferencial de modelagem física
 
@@ -955,7 +981,7 @@ usuarios/
 - Mesmo que um módulo de domínio tenha apenas um app inicialmente, ele deve ser estruturado de forma a permitir crescimento futuro.
 - A organização física deve seguir a linguagem do domínio do projeto.
 
-**Produtos futuros (ex.: Sigec):** cada produto é um módulo na raiz (`Sigec/`), com `urls.py` agregador e apps internos por subdomínio (`Sigec/contratos/`, `Sigec/processos/`). Permissões do produto via `permissoes_sigec()` em `UsuarioPermissions`.
+**Novos produtos ou contextos de negócio:** crie um **novo módulo na raiz do repositório**, no mesmo padrão de `Infraestrutura/` e `Transporte/` (diretório PascalCase, `urls.py` agregador, apps internos por model principal, registro em `PROJECT_APPS` e `path('cortex/<nome>/', include('Modulo.urls'))` em `Cortex/urls.py`). O fluxo legado Sigec/Chameco de espaço físico já está coberto por **Infraestrutura** — **não** recrie pasta `Sigec/` nem um agregador genérico `APPs/`.
 
 ### Convenção de nomenclatura no `apps.py`
 

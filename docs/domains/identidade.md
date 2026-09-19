@@ -192,7 +192,7 @@ class Usuario(AbstractBaseUser, BasicModel):
     REQUIRED_FIELDS = ['nome']
 
     # campos...
-    cpf = models.CharField('CPF', max_length=11, unique=True)
+    cpf = models.CharField('CPF', max_length=11, unique=True, null=True, blank=True)
     nome = models.CharField('Nome', max_length=255)
     # ...
 ```

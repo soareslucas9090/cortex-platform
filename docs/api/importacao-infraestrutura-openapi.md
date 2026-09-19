@@ -1,6 +1,8 @@
 # API — Importação em Lote de Infraestrutura
 
-## GET /infraestrutura/importacao/modelo/
+Prefixo base: `/cortex/infraestrutura/`.
+
+## GET /cortex/infraestrutura/importacao/modelo/
 
 Retorna o arquivo modelo da planilha de importação.
 
@@ -9,7 +11,7 @@ Retorna o arquivo modelo da planilha de importação.
 - 200: arquivo retornado
 - 403: sem permissão (`cadastrar`)
 
-## POST /infraestrutura/importacao/pre-visualizar/
+## POST /cortex/infraestrutura/importacao/pre-visualizar/
 
 Recebe arquivo da planilha e retorna validação sem persistência.
 
@@ -27,7 +29,7 @@ Recebe arquivo da planilha e retorna validação sem persistência.
 - atualização estimada
 - lista de erros por linha
 
-## POST /infraestrutura/importacao/
+## POST /cortex/infraestrutura/importacao/
 
 Inicia o processo assíncrono de importação e persiste os dados do arquivo em background (Celery).
 
@@ -42,7 +44,7 @@ Inicia o processo assíncrono de importação e persiste os dados do arquivo em 
 - 400: Já existe uma importação em andamento ou arquivo inválido
 - 403: sem permissão (`cadastrar`)
 
-## GET /infraestrutura/importacao/status/
+## GET /cortex/infraestrutura/importacao/status/
 
 Consulta o status da importação atual ou da última realizada.
 
@@ -52,7 +54,7 @@ Consulta o status da importação atual ou da última realizada.
 - 404: Nenhuma importação encontrada
 - 403: sem permissão (`cadastrar`)
 
-## POST /infraestrutura/importacao/cancelar/
+## POST /cortex/infraestrutura/importacao/cancelar/
 
 Cancela uma importação que tenha ficado travada em `EM_ANDAMENTO`. Ela será atualizada para o status de `ERRO` com a mensagem de que foi cancelada manualmente.
 
@@ -66,7 +68,7 @@ Nenhum corpo obrigatório.
 - 400: Não há importação em andamento para cancelar.
 - 403: sem permissão (`cadastrar`)
 
-## GET /infraestrutura/importacao/historico/
+## GET /cortex/infraestrutura/importacao/historico/
 
 Retorna a lista paginada do histórico de importações.
 

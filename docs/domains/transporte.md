@@ -548,8 +548,7 @@ anteriores e impede no banco uma finalização sem início ou com horário anter
 
 `Transporte.execucoes_rotas.tests.test_viagem_motorista` cobre a liberação pela
 conferência, duração persistida, permissões, reenvios, estados inválidos e viagens
-que atravessam a meia-noite. O frontend testa a retomada da contagem, a duração
-final e a formatação acima de 24 horas em `rotas-do-dia.qa.test.ts`.
+que atravessam a meia-noite. Testes de UI do frontend, se existirem, ficam **fora deste repositório** (cliente MeuIF).
 
 ### 12. Histórico de rotas executadas
 
@@ -597,8 +596,8 @@ um relatório parcial. Dados e filtros são escapados antes de compor o HTML.
 
 #### Endpoints
 
-Contrato: [OpenAPI do histórico](../api/historico-rotas-openapi.yaml)
-(motorista **e** conferente). O schema completo da API está em `schema.yaml`.
+Contrato: schema OpenAPI gerado pelo projeto (`GET /cortex/api/schema/` via drf-spectacular)
+e `schema.yaml` na raiz do repositório; detalhes de filtros e payloads nesta seção 12.
 O `GET /cortex/transporte/execucoes-rotas/{id}/` **não** é histórico nem
 detalhe da conferência do dia: é o detalhe genérico (aluno/L3).
 
@@ -617,7 +616,7 @@ Detalhes de uma viagem não finalizada ou inexistente retornam 404.
 
 #### Como testar (motorista)
 
-1. Publicar frontend e backend atualizados.
+1. Publicar backend atualizado (frontend MeuIF em repositório separado).
 2. Acessar com motorista ativo ou administrador. Conferir o menu **Histórico de rotas**.
 3. Finalizar a conferência e iniciar uma rota. Ela ainda não deve aparecer no histórico.
 4. Finalizar a rota. Abrir o histórico e conferir duração e contagens em **Detalhes**.
@@ -663,6 +662,5 @@ A migração `0004_conferencia_finalizada_por` adiciona a FK opcional.
    só reduzem o conjunto.
 7. Acessar sem `conferir` (aluno, motorista só operar, L2, anônimo): 403 ou 401.
 
-Testes automatizados: `Transporte.execucoes_rotas.tests.test_historico_motorista`,
-`Transporte.execucoes_rotas.tests.test_historico`
-e `src/lib/transporte/historico-rotas.qa.test.ts` (incluído em `npm run test:qa`).
+Testes automatizados neste repositório: `Transporte.execucoes_rotas.tests.test_historico_motorista`
+e `Transporte.execucoes_rotas.tests.test_historico`.

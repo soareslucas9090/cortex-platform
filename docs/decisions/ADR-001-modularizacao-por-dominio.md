@@ -1,6 +1,6 @@
 # ADR-001 — Modularização por Domínio
 
-- **Status:** Aceito
+- **Status:** Aceito (aditado)
 - **Data:** 2026-05-17
 
 ## Contexto
@@ -265,3 +265,25 @@ Essa ordem foi escolhida porque:
 ## Resumo
 
 Fica decidido que o Cortex será modularizado por domínio de negócio, usando apps Django separados e coesos, de forma a refletir melhor a linguagem do negócio, reduzir acoplamento e sustentar o crescimento do sistema com clareza arquitetural.
+
+---
+
+## Evolução posterior (adendo)
+
+- **Data:** 2026-09-19
+
+O texto acima (incluindo a decisão de 2026-05-17) permanece válido como registro histórico. O mapa **atual** de bounded contexts e apps está em `docs/diagrams/02-bounded-contexts.md` e em `docs/project/django-project-tree.md`.
+
+### Matrículas
+
+O app `Identidade/matriculas` e o model `Matricula` **não foram implementados**. Identificadores de matrícula são atributos em `PessoasInstitucionais.servidores.Servidor`, `PessoasInstitucionais.terceirizados.Terceirizado` e `Academico.aluno_cursos.AlunoCurso` (unicidade global tratada em `Identidade.usuarios`).
+
+### Novos bounded contexts implementados
+
+Além dos quatro domínios iniciais, o código registra em `PROJECT_APPS`:
+
+**Infraestrutura** — `blocos`, `salas`, `recursos`, `permissoes`, `autorizacoes`, `emprestimos`, `importacoes`.
+
+**Transporte** — `percursos`, `rotas`, `motoristas`, `calendario_operacional`, `execucoes_rotas`, `tickets`, `strikes`, `justificativas`, `relatorios`, `permissoes`.
+
+A decisão de modularização por domínio permanece; novos produtos continuam como módulos agregadores na raiz do repositório, com apps internos finos.

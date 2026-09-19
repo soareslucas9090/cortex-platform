@@ -1,5 +1,7 @@
 # Follow-up — Revisão de fotos S3 (recursos + AppCore)
 
+> **Histórico concluído.** Etapas FOTO-S3-1 a FOTO-S3-14 concluídas em agosto/2026. Documento preservado para rastreio; não usar como backlog.
+
 Plano **rastreável e reutilizável** para corrigir os 9 achados da revisão de código da branch `feat/imagens-recursos` contra a `main`.
 
 Cada etapa é independente o bastante para ser feita **sozinha**, em outro dia, em outro computador, numa conversa nova com a IA.

@@ -1,5 +1,7 @@
 # AppCore — Riscos arquiteturais e prioridades de refatoração
 
+> **Documento histórico.** Prioridades listadas aqui datam da revisão pré-domínios. Os domínios já estão implementados; riscos como “iniciar domínios antes de consolidar o usuário” foram mitigados na base atual. Use [`appcore-what-to-keep.md`](appcore-what-to-keep.md) para padrões a preservar e [`django-project-tree.md`](django-project-tree.md) para o estado do projeto.
+
 ## Objetivo
 
 Este documento consolida os principais riscos arquiteturais identificados na revisão inicial do `AppCore`, bem como a lista priorizada de refatorações recomendadas antes do início efetivo dos apps de domínio do Cortex.

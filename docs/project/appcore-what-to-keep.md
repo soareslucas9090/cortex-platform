@@ -1,5 +1,7 @@
 # AppCore — O que manter sem grandes mudanças
 
+> **Contexto:** escrito na revisão inicial da fundação (antes dos domínios atuais). As recomendações de **o que manter** seguem válidas; não trate este arquivo como lista de pendências — os módulos de domínio já existem no repositório.
+
 ## Objetivo
 
 Este documento registra os componentes do `AppCore` e da base atual que podem ser mantidos sem necessidade de reformulação estrutural imediata.

@@ -10,6 +10,10 @@ cinco minutos. Essa tarefa cria as execuções das rotas do dia e, a partir das
 19h, também do dia seguinte, de acordo com o dia da semana e com as exceções do
 calendário operacional.
 
+## Compose de produção (`docker/docker-compose-production.yml`)
+
+O arquivo de produção define apenas os serviços **web** (Gunicorn) e **worker** (Celery), além de PostgreSQL e Redis. **Não há serviço `beat` no compose** — em produção o Celery Beat precisa ser executado em processo ou serviço separado (systemd, Kubernetes, PaaS etc.), com o mesmo código e variáveis do Worker. Este documento não altera o compose; apenas registra o fato.
+
 ## Arquitetura esperada
 
 O ambiente de produção deve possuir, no mínimo, os seguintes processos:

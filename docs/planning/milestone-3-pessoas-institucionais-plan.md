@@ -1,5 +1,7 @@
 # Plano da Milestone 3 — Domínio PessoasInstitucionais
 
+> **Histórico de implementação.** Não usar como backlog. Fonte canônica: [docs/domains/](../domains/) e [docs/project/django-project-tree.md](../project/django-project-tree.md).
+
 ## Objetivo
 
 A Milestone 3 existe para implementar o domínio `PessoasInstitucionais` do Cortex.

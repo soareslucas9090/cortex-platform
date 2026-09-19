@@ -1,65 +1,74 @@
 # Debugando com Docker
 
+O Compose de desenvolvimento está em **`docker/docker-compose.yml`** (não na raiz do repositório). Suba a partir da pasta `docker/`:
+
+```bash
+cd docker
+docker compose up
+```
+
 ## Debug Remoto no VS Code (usando `debugpy`)
 
-Para debugar usando breakpoints visuais na interface do VS Code:
+O serviço **web** já inicia com `debugpy` na porta **5678** e o **worker** na **5679** — não é necessário alterar o compose para depuração local.
 
-1. **Instale temporariamente o `debugpy` e configure a execução**:
-   No `docker-compose.yml`, ajuste o `command` do serviço `web` para executar através do `debugpy` e adicione a porta `5678`:
+Trecho atual (referência):
 
-   ```yaml
-     web:
-       ...
-       command: python -m debugpy --listen 0.0.0.0:5678 manage.py runserver 0.0.0.0:8000 --nothreading --noreload
-       ports:
-         - '8000:8000'
-         - '5678:5678'
-   ```
+```yaml
+  web:
+    command: >
+      sh -c "python manage.py migrate && python -m debugpy --listen 0.0.0.0:5678 manage.py runserver 0.0.0.0:8000 --nothreading"
+    ports:
+      - '8000:8000'
+      - '5678:5678'
 
-   Exponha a porta de depuração do Celery (`5679`) e altere o `command` para rodar sob o `debugpy`, utilizando nosso comando customizado de worker:
+  worker:
+    command: python -m debugpy --listen 0.0.0.0:5679 manage.py celery_worker -- --pool=prefork --concurrency=${CELERY_CONCURRENCY:-4}
+    ports:
+      - '5679:5679'
+```
 
-   ```yaml
-     worker:
-       ...
-       ports:
-         - '5679:5679'
-       command: python -m debugpy --listen 0.0.0.0:5679 manage.py celery_worker -- --pool=prefork --concurrency=${CELERY_CONCURRENCY:-4}
-   ```
+### Configuração no `.vscode/launch.json`
 
-2. **Adicione a configuração no seu `.vscode/launch.json`**:
-   ```json
-   {
-     "name": "Django Docker",
-     "type": "debugpy",
-     "request": "attach",
-     "connect": {
-       "host": "localhost",
-       "port": 5678
-     },
-     "pathMappings": [
-       {
-         "localRoot": "${workspaceFolder}",
-         "remoteRoot": "/app"
-       }
-     ],
-     "django": true
-   },
-   {
-     "name": "Celery Docker",
-     "type": "debugpy",
-     "request": "attach",
-     "connect": {
-       "host": "localhost",
-       "port": 5679
-     },
-     "pathMappings": [
-       {
-         "localRoot": "${workspaceFolder}",
-         "remoteRoot": "/app"
-       }
-     ],
-     "django": false,
-     "subProcess": true
-   }
-   ```
-3. Suba o Docker Compose (`docker compose up`) e inicie a depuração no VS Code selecionando a configuração **"Django: Docker Attach"** e/ou **"Celery Docker"**.
+Adicione (ou alinhe) as configurações de attach:
+
+```json
+{
+  "name": "Django Docker",
+  "type": "debugpy",
+  "request": "attach",
+  "connect": {
+    "host": "localhost",
+    "port": 5678
+  },
+  "pathMappings": [
+    {
+      "localRoot": "${workspaceFolder}",
+      "remoteRoot": "/app"
+    }
+  ],
+  "django": true
+},
+{
+  "name": "Celery Docker",
+  "type": "debugpy",
+  "request": "attach",
+  "connect": {
+    "host": "localhost",
+    "port": 5679
+  },
+  "pathMappings": [
+    {
+      "localRoot": "${workspaceFolder}",
+      "remoteRoot": "/app"
+    }
+  ],
+  "django": false,
+  "subProcess": true
+}
+```
+
+### Passos
+
+1. Suba o Compose (`docker compose up` em `docker/`).
+2. No VS Code, inicie a depuração com **"Django Docker"** (API) e/ou **"Celery Docker"** (tarefas assíncronas).
+3. Coloque breakpoints no código montado em `/app` no container.

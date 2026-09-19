@@ -4,15 +4,15 @@ Este arquivo contém as regras, modelos e convenções específicas para o domí
 
 ## Visão Geral do Domínio
 
-O domínio `PessoasInstitucionais` gerencia os diferentes tipos de colaboradores da instituição, como servidores públicos e funcionários terceirizados, bem como cargos e empresas parceiras.
+O domínio `PessoasInstitucionais` gerencia colaboradores institucionais (**servidores** e **terceirizados**), além dos catálogos **cargo** e **empresa/instituição**.
 
 ### Modelos e Relacionamentos
 
-- **Cargo**: Cargos públicos ou posições estruturadas na instituição. Os dados raízes/seeds para os cargos encontram-se em [docs/seeds/documentação DER - cortex.md](../seeds/documentação DER - cortex.md).
-- **Servidor**: Colaborador efetivo ou comissionado. Possui relação de herança 1:1 com `Usuario`, depende de um `Cargo` e pode ter `matricula` (identificador institucional para login e consultas; unicidade global no sistema).
-- **EmpresaInstituicao**: Empresas parceiras ou prestadoras de serviço à instituição. Os dados raízes/seeds para as empresas/instituições encontram-se em [docs/seeds/documentação DER - cortex.md](../seeds/documentação DER - cortex.md).
-- **Terceirizado**: Colaborador contratado por intermédio de uma empresa parceira. Possui relação de herança 1:1 com `Usuario`, depende de `EmpresaInstituicao` e pode ter `matricula` (identificador institucional para login e consultas; unicidade global no sistema).
-- **Estagiario**: Colaborador em regime de estágio (planejado na hierarquia de herança).
+- **Cargo**: cargos públicos ou posições estruturadas. Seeds: [documentação DER - cortex](../seeds/documentação%20DER%20-%20cortex.md).
+- **Servidor**: herança 1:1 com `Usuario`; **cargo obrigatório**; categoria docente ou técnico-administrativo; **matrícula opcional** com unicidade global quando preenchida.
+- **EmpresaInstituicao**: empresas parceiras. Seeds no mesmo DER.
+- **Terceirizado**: herança 1:1 com `Usuario`; **empresa obrigatória**; **cargo opcional**; datas de vínculo; matrícula opcional única global.
+- **Estagiario**: **não implementado** — apenas planejado na hierarquia de produto. **Não** criar app, model ou endpoints de estagiário sem marco explícito; agentes não devem implementar sozinhos.
 
 ### Estrutura de Apps
 
@@ -20,34 +20,106 @@ O domínio `PessoasInstitucionais` gerencia os diferentes tipos de colaboradores
 PessoasInstitucionais/
 ├── __init__.py
 ├── urls.py
-├── cargos/                  # App Django do model Cargo
-├── servidores/              # App Django do model Servidor
-├── empresas_instituicoes/   # App Django do model EmpresaInstituicao
-└── terceirizados/           # App Django do model Terceirizado
+├── cargos/                  # Cargo
+├── servidores/              # Servidor
+├── empresas_instituicoes/   # EmpresaInstituicao
+└── terceirizados/           # Terceirizado
 ```
+
+(Não existe app `estagiarios/`.)
+
+---
+
+## Prefixo HTTP
+
+**`/cortex/pessoas-institucionais/`**
 
 ---
 
 ## Regras Específicas do Domínio
 
-### 1. Herança de Usuários para Servidores e Terceirizados
-- Usamos **OneToOneField com primary_key=True** para herança física de models estendendo `Usuario`.
-- Isso evita herança de tabelas do Django (multi-table inheritance nativa) que gera performance ruim em queries complexas.
+### Herança com `Usuario`
 
-#### Modelagem de `Servidor`
-```python
-class Servidor(BasicModel):
-    usuario = models.OneToOneField(
-        Usuario,
-        on_delete=models.CASCADE,
-        related_name='servidor',
-        primary_key=True,
-    )
-    # campos específicos do servidor...
-```
+**OneToOneField com `primary_key=True`** (herança física), evitando multi-table inheritance nativa do Django.
 
-### 2. Choices e Parâmetros
-- **Jornada de Trabalho Servidor**:
-  - `20` (20 horas semanais)
-  - `40` (40 horas semanais)
-  - `0` (Dedicação Exclusiva)
+### Servidor
+
+| Campo | Regra |
+| ----- | ----- |
+| `cargo` | FK **obrigatória** (`PROTECT`) |
+| `categoria` | `IntegerChoices`: `DOCENTE = 1`, `TECNICO_ADMINISTRATIVO = 2` |
+| `matricula` | Opcional; constraint de **unicidade global** quando não nula |
+| `ativo` | Default `True` |
+
+Não há campo de jornada de trabalho no model atual — **não documentar nem inventar** horas semanais/dedicção exclusiva neste domínio.
+
+### Terceirizado
+
+| Campo | Regra |
+| ----- | ----- |
+| `empresa_instituicao` | FK **obrigatória** |
+| `cargo` | FK **opcional** (`SET_NULL`) |
+| `data_inicio`, `data_fim` | Opcionais; `data_fim` nula = vínculo em aberto |
+| `matricula` | Opcional; unicidade global quando preenchida |
+| `ativo` | Default `True` |
+
+Matrícula em servidores/terceirizados e em `AlunoCurso` alimenta login por matrícula em Identidade (ver [identidade.md](identidade.md)).
+
+---
+
+## Permissões HTTP (ADR-002)
+
+| Recurso | Leitura | Escrita |
+| ------- | ------- | ------- |
+| **Cargos** | Autenticado (catálogo) | L3 |
+| **Empresas** | Autenticado (catálogo); L1 recebe lista vazia na matriz de escopo de negócio onde aplicável | L3 |
+| **Servidores**, **Terceirizados** | `IsOwnerOrAdminMixin`: L2+ todos; L1 só o próprio | L3 |
+
+---
+
+## Endpoints principais
+
+Paths relativos a `/cortex/pessoas-institucionais/`.
+
+### Cargos
+
+| Método | Path |
+| ------ | ---- |
+| GET, POST | `cargos/` |
+| GET, PATCH | `cargos/{pk}/` |
+| POST | `cargos/{pk}/desativar/`, `cargos/{pk}/reativar/` |
+
+### Empresas
+
+| Método | Path |
+| ------ | ---- |
+| GET, POST | `empresas/` |
+| GET, PATCH | `empresas/{pk}/` |
+| POST | `empresas/{pk}/desativar/`, `empresas/{pk}/reativar/` |
+
+### Servidores
+
+| Método | Path |
+| ------ | ---- |
+| GET, POST | `servidores/` |
+| GET, PATCH | `servidores/{pk}/` |
+| POST | `servidores/{pk}/desativar/`, `servidores/{pk}/reativar/` |
+
+(`pk` do servidor = `usuario_id`.)
+
+### Terceirizados
+
+| Método | Path |
+| ------ | ---- |
+| GET, POST | `terceirizados/` |
+| GET, PATCH | `terceirizados/{pk}/` |
+| POST | `terceirizados/{pk}/desativar/`, `terceirizados/{pk}/reativar/` |
+
+---
+
+## O que NÃO fazer
+
+- **Não** implementar **Estagiario** sem demanda de produto e app dedicado.
+- **Não** adicionar jornada de trabalho ou campos legados ausentes do `Servidor` atual.
+- **Não** inventar paths fora dos `urls.py` das apps.
+- **Não** duplicar regras de matrícula/CPF — delegar a Identidade.

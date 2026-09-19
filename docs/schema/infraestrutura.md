@@ -81,9 +81,9 @@ Capacidades finas vêm de duas fontes (união OR na compilação `permissoes_inf
 - Só quem tem capacidade `autorizar` concede ou revoga.
 - Complementam o acesso automático por perfil (servidor/terceirizado), vínculo setorial ou função.
 
-## Estrutura planejada
+## Estrutura atual
 
-O domínio agregador será `Infraestrutura/`, seguindo a ADR de modularização do Cortex:
+O domínio agregador é `Infraestrutura/`, registrado em `PROJECT_APPS` e roteado em `/cortex/infraestrutura/`:
 
 - `blocos`: `Bloco`;
 - `salas`: `Sala` e `SalaSetor`;
@@ -91,9 +91,10 @@ O domínio agregador será `Infraestrutura/`, seguindo a ADR de modularização 
 - `emprestimos`: `Emprestimo` e `ItemEmprestimo`;
 - `autorizacoes`: autorizações por sala ou recurso;
 - `permissoes`: capacidades de Infraestrutura por função e por usuário;
-- `reservas`: **entrega futura** (bloqueios futuros; não implementar na v1).
+- `importacoes`: importação em lote de blocos/salas/recursos (`ImportacaoLote`, Celery);
+- `reservas`: **fora da v1** (bloqueios futuros; não implementado).
 
-Não será criado outro módulo chamado `Sigec`.
+Não existe módulo `Sigec` no código; o nome de produto é Infraestrutura.
 
 ## Relações principais
 

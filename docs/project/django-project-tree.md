@@ -228,6 +228,8 @@ Exemplo atual:
 ```python name=cortex-urls-pattern.py
 urlpatterns = [
     path('cortex/api/schema/', SpectacularAPIView.as_view(), name='schema'),
+    path('cortex/api/schema/swagger/', SpectacularSwaggerView.as_view(url_name='schema'), name='swagger-ui'),
+    path('cortex/api/schema/redoc/', SpectacularRedocView.as_view(url_name='schema'), name='redoc'),
     path('cortex/admin/', admin.site.urls),
     path('cortex/auth/', include('Auth.urls')),
     path('cortex/identidade/', include('Identidade.urls')),
@@ -235,6 +237,7 @@ urlpatterns = [
     path('cortex/pessoas-institucionais/', include('PessoasInstitucionais.urls')),
     path('cortex/academico/', include('Academico.urls')),
     path('cortex/infraestrutura/', include('Infraestrutura.urls')),
+    path('cortex/transporte/', include('Transporte.urls')),
 ]
 ```
 
@@ -284,10 +287,27 @@ PROJECT_APPS = [
     'Infraestrutura.autorizacoes',
     'Infraestrutura.emprestimos',
     'Infraestrutura.importacoes',
+    'Transporte.percursos',
+    'Transporte.rotas',
+    'Transporte.motoristas',
+    'Transporte.calendario_operacional',
+    'Transporte.execucoes_rotas',
+    'Transporte.tickets',
+    'Transporte.strikes',
+    'Transporte.justificativas',
+    'Transporte.relatorios',
+    'Transporte.permissoes',
+    'Transporte.entradas_sem_ticket',
+    'Transporte.bloqueios',
 ]
 ```
 
-Apps internos sem rotas HTTP próprias (suporte a regras e permissões) permanecem em `PROJECT_APPS`, mas não entram no `urls.py` agregador do domínio — exemplo: `Infraestrutura.permissoes`.
+Apps internos sem rotas HTTP próprias permanecem em `PROJECT_APPS`, mas não entram no `urls.py` agregador do domínio:
+
+- `Infraestrutura.permissoes` — capacidades por função e por usuário
+- `Transporte.permissoes` — capacidades de Transporte por função e por usuário
+- `Transporte.motoristas` — perfil `Motorista`; endpoints operacionais expostos via `rotas/` e `execucoes_rotas/`
+- `Transporte.calendario_operacional` — exceções e dias operacionais consumidos por regras e tarefas Celery
 
 ---
 
@@ -375,7 +395,7 @@ Infraestrutura/
 - `blocos/` → model principal `Bloco`
 - `salas/` → models `Sala` e `SalaSetor`
 - `recursos/` → model principal `Recurso`
-- `permissoes/` → model `PermissaoFuncaoInfraestrutura` (capacidades por função; sem rotas HTTP)
+- `permissoes/` → models `PermissaoFuncaoInfraestrutura` e `PermissaoUsuarioInfraestrutura` (sem rotas HTTP)
 - `autorizacoes/` → model principal `Autorizacao`
 - `emprestimos/` → models de empréstimo multi-item
 - `importacoes/` → model `ImportacaoLote` e rotinas de importação em lote (blocos, salas, recursos)
@@ -398,6 +418,7 @@ Transporte/
 ├── percursos/
 ├── rotas/
 ├── motoristas/
+├── calendario_operacional/
 ├── execucoes_rotas/
 ├── tickets/
 ├── entradas_sem_ticket/
@@ -412,12 +433,13 @@ Transporte/
 
 - `percursos/` → model principal `Percurso`
 - `rotas/` → model principal `Rota`
-- `motoristas/` → model principal `Motorista`
+- `motoristas/` → model principal `Motorista` (sem rotas HTTP; visão operacional via `rotas/` e `execucoes_rotas/`)
+- `calendario_operacional/` → calendário operacional e exceções (sem rotas HTTP)
 - `execucoes_rotas/` → model principal `ExecucaoRota`
 - `tickets/` → model principal `Ticket`; tickets em espera formam a fila
 - `entradas_sem_ticket/` → model principal `EntradaSemTicket`
 - `permissoes/` → models `PermissaoFuncaoTransporte` e `PermissaoUsuarioTransporte`
-  (capacidade `conferir` em OR; sem rotas HTTP)
+  (capacidades `conferir` e `visualizar_relatorio_alunos` em OR; sem rotas HTTP)
 - `strikes/` → model principal `Strike`
 - `justificativas/` → model principal `Justificativa`
 - `bloqueios/` → consulta de alunos bloqueados e envio de justificativa

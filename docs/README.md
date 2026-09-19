@@ -10,7 +10,7 @@ Contém registros de decisões arquiteturais (ADRs - Architecture Decision Recor
 - [ADR-002: Permissões Cortex por Nível (L1–L3)](decisions/ADR-002-permissoes-cortex-niveis.md)
 
 ### 📊 Diagrams
-Diagramas e visões gerais do sistema e produto.
+Diagramas e visões gerais do sistema e produto. Os documentos **00–04** descrevem o sistema **implementado** (seis domínios de negócio: Identidade, Organizacional, Pessoas Institucionais, Acadêmico, Infraestrutura e Transporte).
 - [00: README](diagrams/00-readme.md)
 - [01: Product and System Overview](diagrams/01-product-and-system-overview.md)
 - [02: Bounded Contexts](diagrams/02-bounded-contexts.md)
@@ -18,8 +18,8 @@ Diagramas e visões gerais do sistema e produto.
 - [04: Aggregates and Invariants](diagrams/04-aggregates-and-invariants.md)
 
 ### 🗺️ Planning
-Documentos de planejamento de implementação e marcos.
-- [Master Implementation Plan](planning/master-implementation-plan.md)
+Documentos de planejamento de implementação e marcos. Os planos de milestone e o master plan são **histórico de execução** — não usar como backlog; a estrutura atual está em [django-project-tree](project/django-project-tree.md) e [domains](domains/).
+- [Master Implementation Plan](planning/master-implementation-plan.md) — visão macro histórica + ordem original M0–M5; execução ampliada (Infraestrutura, importações, Transporte) já refletida no código
 - [Milestone 1: Identidade Plan](planning/milestone-1-identidade-plan.md)
 - [Milestone 2: Organizacional Plan](planning/milestone-2-organizacional-plan.md)
 - [Milestone 3: Pessoas Institucionais Plan](planning/milestone-3-pessoas-institucionais-plan.md)
@@ -47,6 +47,7 @@ Modelagens de dados, mapeamentos e regras de carga.
 ### 🌱 Seeds e Inicialização
 Dados de sementes (seeds) e informações de carga inicial do banco.
 - [Documentação DER - Cortex Seeds](seeds/documentação%20DER%20-%20cortex.md)
+- [Modelo de importação de usuários (referência)](seeds/import/modelo-importacao-usuarios.md)
 
 ### 📁 Project
 Documentos gerais do projeto, checklists, revisões, regras de arquitetura e guias de desenvolvimento.
@@ -58,7 +59,7 @@ Documentos gerais do projeto, checklists, revisões, regras de arquitetura e gui
 - [AppCore Review Summary](project/appcore-review-summary.md)
 - [AppCore Risks and Refactoring Priorities](project/appcore-risks-and-refactoring-priorities.md)
 - [AppCore What To Keep](project/appcore-what-to-keep.md)
-- [Authentication Email or CPF Design](project/authentication-email-or-cpf-design.md)
+- [Design de autenticação (e-mail, CPF ou matrícula)](project/authentication-email-or-cpf-design.md)
 - [Django Project Tree](project/django-project-tree.md)
 - [Implementation Checklist](project/implementation-checklist.md)
 - [Test Users and Seed Scenarios](project/test-users-and-seed-scenarios.md)
@@ -70,5 +71,6 @@ Diretrizes e regras específicas por domínio de negócio.
 - [Organizacional](domains/organizacional.md)
 - [Pessoas Institucionais](domains/pessoas-institucionais.md)
 - [Acadêmico](domains/academico.md)
+- [Infraestrutura](domains/infraestrutura.md)
 - [Transporte](domains/transporte.md)
 - [Histórico de rotas executadas](domains/transporte.md#12-histórico-de-rotas-executadas)

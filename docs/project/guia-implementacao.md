@@ -252,7 +252,11 @@ class Servidor(BasicModel):
         primary_key=True,
         verbose_name='Usuário',
     )
-    jornada = models.IntegerField('Jornada', choices=JornadaTrabalho.choices)
+    cargo = models.ForeignKey(
+        'cargos.Cargo',
+        on_delete=models.PROTECT,
+        verbose_name='Cargo',
+    )
 
     class Meta:
         verbose_name = 'Servidor'

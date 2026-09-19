@@ -17,12 +17,13 @@ Este documento não substitui o diagrama visual, mas funciona como sua traduçã
 
 ## Escopo atual
 
-O núcleo inicial do domínio do Cortex está organizado nestes contextos principais:
+O núcleo do domínio do Cortex está organizado nestes contextos principais:
 
 - `Identidade`
 - `Organizacional`
 - `PessoasInstitucionais`
 - `Academico`
+- `Infraestrutura`
 - `Transporte`
 
 O DER textual abaixo descreve as entidades centrais e seus relacionamentos.
@@ -51,10 +52,15 @@ Todo perfil institucional ou acadêmico parte de um `Usuario`.
 ### Atributos principais
 
 - `id`
-- `cpf`
+- `email` (único, opcional)
+- `cpf` (único, opcional)
 - `nome`
-- `foto`
-- `deficiencia`
+- `foto` (URL externa)
+- `foto_secundaria` (chave S3, upload próprio)
+- `deficiencia` (choices, opcional)
+- `colaborador_externo`
+- `usuario_coletivo`
+- `empresas_coletivo`, `cargos_coletivo`, `funcoes_coletivo`, `setores_coletivo` (pools M2M do coletivo)
 - `ativo`
 - `password`
 - `ultimo_login`
@@ -63,9 +69,12 @@ Todo perfil institucional ou acadêmico parte de um `Usuario`.
 
 ### Observações
 
-- O login do sistema será baseado em `cpf`
-- `Usuario` é a base para perfis como `Servidor`, `Terceirizado` e `Aluno`
+- Login na API aceita **e-mail**, **CPF** ou **matrícula** ativa (`EmailOrCpfBackend` + resolução de matrícula no helper de usuário)
+- `USERNAME_FIELD` permanece `cpf` para o Django admin e fluxos internos que usam `ModelBackend`
+- `usuario_coletivo` autentica a sessão (ex.: guarita); o responsável operacional é escolhido no pool — conta coletiva **não** pode ser solicitante nem responsável de empréstimo em Infraestrutura
+- `Usuario` é a base para perfis como `Servidor`, `Terceirizado`, `Aluno` e `Motorista`
 - Outros domínios não devem duplicar dados centrais de identificação
+- `ImportacaoLote` (app `Identidade.usuarios`) registra importações em massa de usuários, com no máximo um lote `EM_ANDAMENTO` por vez
 
 ---
 
@@ -87,11 +96,8 @@ Representa meios de contato associados a um usuário.
 
 ### Relacionamento
 
+- `Contato` possui FK N:1 para `Usuario` (`related_name='contatos'`)
 - um `Usuario` pode possuir zero ou muitos `Contato`
-
-### Observações
-
-A cardinalidade final pode ser revista na implementação se fizer mais sentido consolidar isso em relação 1:1, mas no DER atual o entendimento é de multiplicidade.
 
 ---
 
@@ -105,7 +111,7 @@ Representa o endereço associado ao usuário.
 
 - `id`
 - `usuario`
-- `endereco`
+- `logradouro`
 - `bairro`
 - `cep`
 - `complemento`
@@ -117,7 +123,8 @@ Representa o endereço associado ao usuário.
 
 ### Relacionamento
 
-- um `Usuario` pode possuir zero ou um `Endereco`
+- `Endereco` possui `OneToOneField` com `Usuario` (`related_name='endereco'`)
+- um `Usuario` possui zero ou um `Endereco`
 
 ---
 
@@ -155,8 +162,10 @@ Representa a função exercida por um usuário dentro de um setor.
 ### Atributos principais
 
 - `papel_funcao`
+- `categoria`
 - `descricao`
 - `e_gratificada`
+- `exige_aluno`
 - `ativo`
 - `created_at`
 - `updated_at`
@@ -166,6 +175,8 @@ Representa a função exercida por um usuário dentro de um setor.
 - `Funcao` não é a mesma coisa que `Cargo`
 - `Funcao` representa papel exercido em contexto organizacional
 - `monitor` deve ser modelado como uma função
+- `exige_aluno` restringe o vínculo a usuários com perfil `Aluno` ativo
+- `categoria` classifica o papel no catálogo (choices em `CategoriaFuncao`)
 - a função pode indicar papéis como diretor, coordenador, chefe, monitor etc.
 
 ---
@@ -228,7 +239,7 @@ Representa o cargo formal do servidor na instituição.
 
 ### Observações
 
-- `Cargo` é exclusivo de `Servidor`
+- `Cargo` é obrigatório para `Servidor` e opcional para `Terceirizado` (FK nullable)
 - exemplos: professor, técnico administrativo e cargos correlatos formais
 
 ---
@@ -294,6 +305,8 @@ Perfil institucional de terceirizado vinculado a um `Usuario`.
 
 - `usuario`
 - `empresa_instituicao`
+- `cargo` (opcional)
+- `data_inicio`, `data_fim` (opcionais)
 - `matricula`
 - `ativo`
 - `created_at`
@@ -318,7 +331,12 @@ Perfil acadêmico vinculado a um `Usuario`.
 
 - `usuario`
 - `ira`
+- `situacao`
+- `forma_ingresso`
 - `ativo`
+- `faltas` (strikes ativos no transporte)
+- `is_bloqueado` (bloqueio por três ou mais faltas ativas)
+- `quantidade_bloqueios` (histórico de bloqueios)
 - `created_at`
 - `updated_at`
 
@@ -404,15 +422,32 @@ Representa o vínculo entre aluno e curso.
 - `Aluno` 1:N `AlunoCurso`
 - `Curso` 1:N `AlunoCurso`
 
+## Relações de infraestrutura
+
+- `Bloco` 1:N `Sala`
+- `Sala` 1:N `SalaSetor` N:1 `Setor`
+- `Sala` 0..N `Recurso` (obrigatório para tipo chave)
+- `Usuario` 1:N `Emprestimo` (como `solicitante` e como `responsavel`)
+- `Emprestimo` 1:N `ItemEmprestimo` N:1 `Recurso`
+- `Usuario` 1:N `Autorizacao` (beneficiário, concedente, revogador)
+- `Sala` ou `Recurso` 1:N `Autorizacao` (alvo XOR)
+- `Funcao` 1:0..1 `PermissaoFuncaoInfraestrutura`
+- `Usuario` 1:0..1 `PermissaoUsuarioInfraestrutura`
+
 ## Relações de transporte
 
 - `Percurso` 1:N `Rota`
 - `Rota` 1:N `ExecucaoRota`
+- `DiaCalendarioTransporte` (data única) orienta geração automática de execuções
 - `ExecucaoRota` 1:N `Ticket`
 - `Aluno` 1:N `Ticket`
 - `Ticket` 0..1:1 `Strike`
 - `Aluno` 1:N `Justificativa`
 - `Justificativa` N:M `Strike` (`strikes_cobertos`)
+- `ExecucaoRota` 1:N `EntradaSemTicket`
+- `Funcao` 1:0..1 `PermissaoFuncaoTransporte`
+- `Usuario` 1:0..1 `PermissaoUsuarioTransporte`
+- Bloqueio de transporte: estado em `Aluno` (`is_bloqueado`, `faltas`), sem entidade `Bloqueio` em `models.py`
 
 ---
 
@@ -443,9 +478,10 @@ Essa responsabilidade deve ser representada por um `SetorVinculo` cujo usuário 
 
 O conceito de monitor deve ser representado em `Funcao`, e não como atributo booleano em vínculo.
 
-## 6.7 Cargo é exclusivo de servidor
+## 6.7 Cargo no perfil institucional
 
-Terceirizados não possuem `Cargo`.
+- todo `Servidor` deve possuir `Cargo`
+- `Terceirizado` pode possuir `Cargo` opcional (FK nullable)
 
 ---
 
@@ -461,26 +497,41 @@ Terceirizados não possuem `Cargo`.
 - `Organizacional.funcoes` -> Model: `Funcao`
 - `Organizacional.vinculos` -> Model: `SetorVinculo`
 
-## Módulo: `PessoasInstitucionais/` (Planejado)
+## Módulo: `PessoasInstitucionais/`
 - `PessoasInstitucionais.cargos` -> Model: `Cargo`
 - `PessoasInstitucionais.servidores` -> Model: `Servidor`
 - `PessoasInstitucionais.empresas_instituicoes` -> Model: `EmpresaInstituicao`
 - `PessoasInstitucionais.terceirizados` -> Model: `Terceirizado`
 
-## Módulo: `Academico/` (Planejado)
+## Módulo: `Academico/`
 - `Academico.alunos` -> Model: `Aluno`
 - `Academico.cursos` -> Model: `Curso`
 - `Academico.aluno_cursos` -> Model: `AlunoCurso`
+
+## Módulo: `Infraestrutura/`
+
+- `Infraestrutura.blocos` -> Model: `Bloco`
+- `Infraestrutura.salas` -> Models: `Sala`, `SalaSetor`
+- `Infraestrutura.recursos` -> Model: `Recurso`
+- `Infraestrutura.autorizacoes` -> Model: `Autorizacao`
+- `Infraestrutura.emprestimos` -> Models: `Emprestimo`, `ItemEmprestimo`
+- `Infraestrutura.permissoes` -> Models: `PermissaoFuncaoInfraestrutura`, `PermissaoUsuarioInfraestrutura`
+- `Infraestrutura.importacoes` -> Model: `ImportacaoLote`
 
 ## Módulo: `Transporte/`
 
 - `Transporte.percursos` -> Model: `Percurso`
 - `Transporte.rotas` -> Model: `Rota`
 - `Transporte.motoristas` -> Model: `Motorista`
+- `Transporte.calendario_operacional` -> Model: `DiaCalendarioTransporte`
 - `Transporte.execucoes_rotas` -> Model: `ExecucaoRota`
 - `Transporte.tickets` -> Model: `Ticket`
 - `Transporte.strikes` -> Model: `Strike`
 - `Transporte.justificativas` -> Model: `Justificativa`
+- `Transporte.entradas_sem_ticket` -> Model: `EntradaSemTicket`
+- `Transporte.permissoes` -> Models: `PermissaoFuncaoTransporte`, `PermissaoUsuarioTransporte`
+- `Transporte.relatorios` -> objeto de domínio `RelatorioAlunos` (sem tabela própria)
+- `Transporte.bloqueios` -> API de leitura do estado de bloqueio em `Aluno` (sem `models.py`)
 
 ---
 
@@ -515,9 +566,68 @@ A garantia de que todo setor possui responsável deve ser tratada como regra de 
 
 ---
 
-# 9. Domínio Transporte
+# 9. Domínio Infraestrutura
 
-## 9.1 Percurso
+Controle de espaços físicos, recursos, autorizações, empréstimos e devoluções. **Reservas** pertencem ao domínio, mas ficam fora da v1 (sem app `reservas` em `PROJECT_APPS`).
+
+## 9.1 Bloco
+
+Unidade física de agrupamento de salas.
+
+- `nome`
+- `ativo`
+
+## 9.2 Sala e SalaSetor
+
+`Sala` pertence a um `Bloco` (unicidade `bloco` + `nome`). `SalaSetor` associa `Sala` a `Setor` (unicidade `sala` + `setor`) e habilita retirada automática de **chaves** da sala para solicitantes com vínculo ativo no setor.
+
+## 9.3 Recurso
+
+Item emprestável com código de negócio único (`codigo`, distinto da PK).
+
+- `tipo`: `chave`, `midia`, `material_didatico`
+- `sala` (obrigatória para chave; opcional para demais tipos)
+- `descricao`, `foto` (opcional), `em_avaria`, `ativo`
+- estado derivado exibido: avaria → emprestado → reservado → disponível (`reservado` só quando reservas existirem)
+
+## 9.4 Autorizacao
+
+Concessão explícita de acesso a sala ou recurso.
+
+- alvo **XOR**: exatamente um de `sala` ou `recurso`
+- `beneficiario`, `concedente`
+- `data_inicio`, `data_fim` (nula = permanente)
+- `revogado_em`, `revogador`, `observacao`
+- autorização por sala vale para todos os recursos da sala, inclusive cadastrados depois
+
+## 9.5 Emprestimo e ItemEmprestimo
+
+- `Emprestimo`: `solicitante`, `responsavel`, `retirada_em`, `observacao`; encerrado quando todos os itens têm `devolvido_em`
+- `ItemEmprestimo`: `recurso`, `devolvido_em`; no máximo **um item aberto por recurso** (constraint parcial)
+- devolução parcial permitida; troca de titular devolve e abre novo empréstimo sem vínculo entre registros
+- empréstimos abertos há mais de 24h são sinalizados na UI (`atrasado`)
+
+### Regras automáticas de retirada (complementam autorização)
+
+- **Servidor** ativo: qualquer recurso
+- **Terceirizado** ativo: qualquer **chave**; mídia/material didático exigem `Autorizacao` ou `retirada_irrestrita`
+- solicitante com vínculo ativo em setor ligado à sala via `SalaSetor`: chaves da sala
+- demais perfis (incluindo alunos): `Autorizacao` vigente ou `retirada_irrestrita`
+- `usuario_coletivo` não é solicitante nem responsável; em conta coletiva o responsável vem do pool M2M
+
+### Permissões do módulo (OR entre função e usuário)
+
+Capacidades: `operar`, `cadastrar`, `autorizar`, `retirada_irrestrita` em `PermissaoFuncaoInfraestrutura` (1:1 com `Funcao`) e `PermissaoUsuarioInfraestrutura` (1:1 com `Usuario`), compiladas em `permissoes_infraestrutura()`.
+
+## 9.6 ImportacaoLote (Infraestrutura)
+
+Importação em massa de blocos/salas/recursos; no máximo um lote `EM_ANDAMENTO` por vez (constraint em `Infraestrutura.importacoes`).
+
+---
+
+# 10. Domínio Transporte
+
+## 10.1 Percurso
 
 Trajeto nomeado do ônibus universitário.
 
@@ -528,7 +638,7 @@ Trajeto nomeado do ônibus universitário.
 - `descricao`
 - `ativo`
 
-## 9.2 Rota
+## 10.2 Rota
 
 Agendamento de um ônibus em um percurso, em um dia e horário.
 
@@ -552,7 +662,7 @@ Agendamento de um ônibus em um percurso, em um dia e horário.
 - Não desativar percurso com rotas ativas
 - Unicidade de `percurso` + `dia_semana` + `horario_saida`
 
-## 9.3 Motorista
+## 10.3 Motorista
 
 Perfil operacional associado 1:1 a `Usuario`.
 
@@ -572,7 +682,11 @@ Perfil operacional associado 1:1 a `Usuario`.
 - A exclusão física do `Usuario` é protegida enquanto existir um `Motorista`
 - O acesso operacional exige simultaneamente `Usuario.ativo` e `Motorista.ativo`
 
-## 9.4 ExecucaoRota
+## 10.4 DiaCalendarioTransporte
+
+Calendário operacional por data (`data` única): `descricao`, `tipo`, `ativo`. Tipos operacionais permitem geração de execuções em dias que não seriam úteis só pelo dia da semana (fins de semana/feriados configurados). A task `gerar_execucoes_rotas_automaticas_task` roda via Celery Beat a cada **5 minutos** e consulta o calendário ao materializar `ExecucaoRota`.
+
+## 10.5 ExecucaoRota
 
 Ocorrência de uma rota em uma data e horário congelados.
 
@@ -586,49 +700,59 @@ Ocorrência de uma rota em uma data e horário congelados.
 Rotas distintas do mesmo percurso podem possuir execuções no mesmo dia quando
 seus horários forem diferentes.
 
-## 9.5 Ticket
+## 10.6 Ticket
 
 Vínculo entre `Aluno` e `ExecucaoRota`, identificado externamente por UUID.
 
-- estados: reservado, em espera, cancelado, embarcado e ausente;
+- estados: reservado, em espera, cancelado, embarcado, ausente e contemplado (`StatusTicket.CONTEMPLADO` — aluno em espera contemplado por entrada sem ticket);
 - no máximo um ticket não cancelado por aluno e execução;
 - `posicao_reserva` persiste a posição ocupada ou histórica; posições de reservas
   ativas são únicas por execução;
 - tickets em espera formam a fila, sem entidades `Fila` ou `FilaEspera` separadas.
 
-## 9.6 Strike, bloqueio e justificativa
+## 10.7 Strike, bloqueio e justificativa
 
 - `Aluno` possui `faltas` (strikes ativos no ciclo), `is_bloqueado` (três ou mais
   faltas ativas) e `quantidade_bloqueios` (histórico de vezes em bloqueio);
 - `Strike` possui relação 1:1 com o ticket ausente;
 - `Justificativa` pertence ao aluno e cobre N strikes ativos via M2M `strikes_cobertos`;
 - justificativa aprovada marca os strikes cobertos como `JUSTIFICADO` e ressincroniza
-  `faltas` e `is_bloqueado`; `quantidade_bloqueios` não é zerada.
+  `faltas` e `is_bloqueado`; `quantidade_bloqueios` não é zerada;
+- o app `Transporte.bloqueios` expõe consulta do bloqueio; não há model `Bloqueio` separado.
+
+## 10.8 EntradaSemTicket
+
+Walk-in na execução após a chamada; vinculada a `ExecucaoRota` e ao aluno (ou CPF). Regras de lote de CPF e coexistência com tickets estão em `ExecucaoRotaAggregate` (documento 04).
+
+## 10.9 Permissões de transporte
+
+`PermissaoFuncaoTransporte` e `PermissaoUsuarioTransporte` (1:1 com `Funcao` e `Usuario`) concedem `conferir` e `visualizar_relatorio_alunos`, combinadas por OR na compilação de permissões do módulo.
 
 ---
 
-# 10. Pontos que podem evoluir depois
+# 11. Pontos que podem evoluir depois
 
-Os itens abaixo podem ser refinados em artefatos posteriores ou na modelagem detalhada:
+Os itens abaixo permanecem abertos ou fora do escopo atual:
 
-- cardinalidade final de `Contato`
-- necessidade de datas de início/fim em `SetorVinculo`
-- necessidade de histórico explícito de função em setor
-- detalhamento da categoria do servidor
+- perfil `Estagiario` (não implementado em `PROJECT_APPS`)
+- datas de início/fim em `SetorVinculo` (não existem no model atual; terceirizado já possui `data_inicio`/`data_fim`)
+- histórico explícito de função em setor
 - regras adicionais para aluno monitor
-- notificações, perfis de motorista e conferente; entrada sem ticket pertence a `ExecucaoRota`
+- **reservas** de infraestrutura (bloqueios futuros de recurso/sala)
+- notificações automáticas além da sinalização UI de empréstimo atrasado
 
 ---
 
-# 11. Resumo executivo
+# 12. Resumo executivo
 
 O núcleo do Cortex parte de `Usuario` como centro da identidade, e organiza o restante do sistema em torno de:
 
 - estrutura organizacional (`Setor`, `Funcao`, `SetorVinculo`)
 - perfis institucionais (`Servidor`, `Terceirizado`, `Cargo`, `EmpresaInstituicao`)
 - perfis acadêmicos (`Aluno`, `Curso`, `AlunoCurso`)
-- transporte universitário (`Percurso`, `Rota`, `Motorista`, `ExecucaoRota`, `Ticket`,
-  `EntradaSemTicket`, `Strike`, `Justificativa`)
+- infraestrutura física (`Bloco`, `Sala`, `Recurso`, `Emprestimo`, `Autorizacao`, permissões do módulo)
+- transporte universitário (`Percurso`, `Rota`, `DiaCalendarioTransporte`, `Motorista`, `ExecucaoRota`, `Ticket`,
+  `EntradaSemTicket`, `Strike`, `Justificativa`, permissões de transporte)
 
 As decisões mais importantes consolidadas neste ERD textual são:
 

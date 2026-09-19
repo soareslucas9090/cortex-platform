@@ -1,5 +1,7 @@
 # Usuários de Teste e Cenários de Seed do Cortex
 
+> **Cenários sugeridos para testes manuais e massa de exemplo** — não são fixtures automáticas carregadas ao subir o projeto. Catálogos raiz (setores, funções, cargos etc.) vêm de **migrations com `RunPython`**, conforme cada app.
+
 ## Objetivo
 
 Este documento define usuários de teste, cenários iniciais de seed e situações de negócio mínimas para validar a modelagem central do Cortex.
@@ -37,7 +39,7 @@ Sugestão de seed inicial mínima:
 - `DIAP`
 - `CODIS`
 - `CCTI`
-- `NAPNE/FLO`
+- `NAPNE` (sigla usada na migration inicial de setores; não confundir com `NAPNE/FLO`)
 
 ### Objetivo
 

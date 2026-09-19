@@ -1,5 +1,7 @@
 # Plano Mestre de Implementação do Cortex
 
+> **Plano mestre histórico.** A execução dos marcos M0–M5, do domínio Infraestrutura, das importações em lote (usuários e infraestrutura) e do domínio Transporte está **concluída no código**. Não use este documento como backlog nem como lista de apps a criar. Fonte canônica da estrutura atual: `docs/project/django-project-tree.md` e `docs/domains/`.
+
 ## Objetivo
 
 Este documento organiza a implementação do Cortex em milestones coerentes com a arquitetura atual do projeto.
@@ -99,7 +101,11 @@ Apps internos previstos:
 - `usuarios/`
 - `contatos/`
 - `enderecos/`
-- `matriculas/`
+- `matriculas/` *(previsto na ADR inicial; **não implementado** — ver adendo abaixo)*
+
+### Resultado real (Identidade)
+
+Apps em `PROJECT_APPS`: `usuarios`, `contatos`, `enderecos` — **sem** app `matriculas`. Matrícula como valor está em `Servidor`, `Terceirizado` e `AlunoCurso`.
 
 ## Ordem interna recomendada
 
@@ -380,11 +386,29 @@ Módulo:
 
 Apps internos:
 
-- `blocos/`, `salas/`, `recursos/`, `permissoes/`, `autorizacoes/`, `emprestimos/`
+- `blocos/`, `salas/`, `recursos/`, `permissoes/`, `autorizacoes/`, `emprestimos/`, `importacoes/`
 
 ## Observação
 
-Esta milestone evolui em paralelo à consolidação final (Milestone 5). O domínio está registrado em `PROJECT_APPS`, roteado em `/cortex/infraestrutura/` e documentado em `docs/planning/milestone-infraestrutura-plan.md`.
+Esta milestone evolui em paralelo à consolidação final (Milestone 5). O domínio está registrado em `PROJECT_APPS`, roteado em `/cortex/infraestrutura/` e documentado em `docs/planning/milestone-infraestrutura-plan.md` e `docs/domains/infraestrutura.md`.
+
+---
+
+# Milestone Transporte — Domínio Transporte
+
+## Estado
+
+**Concluída** (implementação no repositório)
+
+## Objetivo
+
+Módulo de transporte escolar: percursos, rotas, motoristas, execuções, tickets, strikes, justificativas, relatórios e permissões específicas do produto.
+
+## Documentação canônica
+
+- `docs/domains/transporte.md`
+- Apps em `PROJECT_APPS` sob `Transporte/` (ver `django-project-tree.md`)
+- Roteamento agregador: `/cortex/transporte/`
 
 ## Resultado esperado
 
@@ -400,6 +424,10 @@ Fluxo de liberação de recursos (chaves) substituindo o Chameco legado, com mat
 4. PessoasInstitucionais
 5. Acadêmico
 6. Integração e consolidação final
+7. Infraestrutura (v1)
+8. Importação em lote de usuários
+9. Importação em lote de infraestrutura
+10. Transporte
 
 ---
 
@@ -437,7 +465,7 @@ Este plano mestre deve ser usado junto com:
 
 - `docs/project/implementation-checklist.md`
 - `docs/project/django-project-tree.md`
-- `.github/copilot-instructions.md`
+- `docs/project/regras-do-projeto.md` e `docs/domains/` (não há `.github/copilot-instructions.md` neste repositório)
 - diagramas e ADRs do projeto
 - planos operacionais específicos de cada milestone, quando necessários
 
@@ -455,12 +483,14 @@ Este plano mestre deve ser usado junto com:
 
 O Cortex deve evoluir por milestones orientadas por domínio, mantendo a implementação real organizada em apps internos finos.
 
-A estrutura atual recomendada é:
+A estrutura **implementada** no repositório é:
 
-- `Identidade/` com apps como `usuarios`, `contatos`, `enderecos`, `matriculas`
-- `Organizacional/` com apps como `setores`, `funcoes`, `vinculos`
-- `PessoasInstitucionais/` com apps específicos para perfis institucionais
-- `Academico/` com apps específicos para perfis acadêmicos
-- `Infraestrutura/` com apps para espaço físico, recursos, autorizações e empréstimos
+- `Identidade/` — `usuarios`, `contatos`, `enderecos` (sem app `matriculas`)
+- `Organizacional/` — `setores`, `funcoes`, `vinculos`
+- `PessoasInstitucionais/` — perfis institucionais (`servidores`, `cargos`, `terceirizados`, `empresas_instituicoes`)
+- `Academico/` — `alunos`, `cursos`, `aluno_cursos`
+- `Infraestrutura/` — espaço físico, recursos, autorizações, empréstimos e `importacoes`
+- `Transporte/` — percursos, rotas, execuções, tickets e demais apps do módulo
+- Importações em lote documentadas em `docs/api/` e `docs/schema/`
 
-Esse plano substitui a visão anterior em que cada domínio era tratado como um único app principal, e passa a refletir a arquitetura atual do projeto.
+Esse plano substitui a visão anterior em que cada domínio era tratado como um único app principal. Para detalhes atualizados, use `django-project-tree.md` e os arquivos em `docs/domains/`.
