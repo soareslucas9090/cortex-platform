@@ -8,7 +8,10 @@ from AppCore.core.business.business import ModelInstanceBusiness
 from AppCore.core.exceptions.exceptions import BusinessRuleException, NotFoundException
 
 from .choices import STATUS_POS_CONFERENCIA, StatusExecucaoRota
-from .constantes import HORARIO_ABERTURA_SOLICITACOES
+from .constantes import (
+    HORARIO_ABERTURA_SOLICITACOES,
+    MENSAGEM_SEGUNDA_CHAMADA_PULADA,
+)
 from .rules import MENSAGEM_EXECUCAO_DUPLICADA
 
 logger = logging.getLogger(__name__)
@@ -337,7 +340,72 @@ class ExecucaoRotaBusiness(ModelInstanceBusiness):
         except Exception as e:
             self.relancar_ou_erro_sistema(e, 'Não foi possível iniciar o embarque.', logger)
 
-    def finalizar_chamada(self, ausentes):
+    def fechar_primeira_chamada(self):
+        try:
+            from Transporte.tickets.choices import StatusTicket
+
+            execucao = self.obter_por_id(
+                self.object_instance.pk,
+                bloquear=True,
+            )
+            if execucao.primeira_chamada_concluida:
+                return execucao, execucao.segunda_chamada_pulada
+            execucao.rules.validar_fechar_primeira_chamada(execucao)
+            agora = timezone.now()
+            execucao.primeira_chamada_concluida = True
+            execucao.primeira_chamada_concluida_em = agora
+            segunda_pulada = not execucao.tickets.filter(
+                status=StatusTicket.RESERVADO,
+            ).exists()
+            if segunda_pulada:
+                execucao.segunda_chamada_pulada = True
+                execucao.chamada_tickets_concluida = True
+                execucao.chamada_concluida_em = agora
+            execucao.save(
+                update_fields=[
+                    'primeira_chamada_concluida',
+                    'primeira_chamada_concluida_em',
+                    'segunda_chamada_pulada',
+                    'chamada_tickets_concluida',
+                    'chamada_concluida_em',
+                ],
+            )
+            return execucao, segunda_pulada
+        except Exception as e:
+            self.relancar_ou_erro_sistema(
+                e,
+                'Não foi possível encerrar a primeira chamada.',
+                logger,
+            )
+
+    def fechar_segunda_chamada(self):
+        try:
+            execucao = self.obter_por_id(
+                self.object_instance.pk,
+                bloquear=True,
+            )
+            if execucao.segunda_chamada_pulada:
+                raise BusinessRuleException(
+                    'A segunda chamada foi dispensada nesta execução.',
+                )
+            if execucao.chamada_tickets_concluida:
+                return execucao
+            execucao.rules.validar_fechar_segunda_chamada(execucao)
+            agora = timezone.now()
+            execucao.chamada_tickets_concluida = True
+            execucao.chamada_concluida_em = agora
+            execucao.save(
+                update_fields=['chamada_tickets_concluida', 'chamada_concluida_em'],
+            )
+            return execucao
+        except Exception as e:
+            self.relancar_ou_erro_sistema(
+                e,
+                'Não foi possível encerrar a segunda chamada.',
+                logger,
+            )
+
+    def marcar_restantes_faltaram(self):
         try:
             from Transporte.tickets.choices import StatusTicket
             from Transporte.tickets.models import Ticket
@@ -346,52 +414,56 @@ class ExecucaoRotaBusiness(ModelInstanceBusiness):
                 self.object_instance.pk,
                 bloquear=True,
             )
-            execucao.rules.validar_execucao_em_embarque(execucao)
-            ausentes = [str(codigo) for codigo in (ausentes or [])]
-            execucao.rules.validar_ausentes_sem_duplicata(ausentes)
-
-            if execucao.chamada_tickets_concluida:
-                execucao.rules.validar_replay_chamada(
-                    ausentes,
-                    execucao.chamada_ausentes_codigos or [],
-                )
-                return execucao
-
-            tickets = list(Ticket().helper.listar_reservados_bloqueados(execucao))
-            por_codigo = {str(ticket.codigo): ticket for ticket in tickets}
-            for codigo in ausentes:
-                ticket = por_codigo.get(str(codigo))
-                if ticket is None:
-                    raise BusinessRuleException(
-                        'Um dos tickets informados não está reservado nesta execução.',
-                    )
-                ticket.business.marcar_ausente()
-
-            for ticket in tickets:
-                ticket.refresh_from_db()
-                if ticket.status != StatusTicket.RESERVADO:
-                    continue
-                ticket.embarcado_em = timezone.now()
-                ticket.state.atualizar_status(StatusTicket.EMBARCADO)
-
-            agora = timezone.now()
-            execucao.chamada_tickets_concluida = True
-            execucao.chamada_concluida_em = agora
-            execucao.chamada_ausentes_codigos = ausentes
-            execucao.save(
-                update_fields=[
-                    'chamada_tickets_concluida',
-                    'chamada_concluida_em',
-                    'chamada_ausentes_codigos',
-                ],
+            execucao.rules.validar_fase_segunda(execucao)
+            tickets = list(
+                Ticket.objects.select_for_update().filter(
+                    execucao_rota=execucao,
+                    status=StatusTicket.RESERVADO,
+                ),
             )
+            agora = timezone.now()
+            for ticket in tickets:
+                ticket.ausente_em = agora
+                ticket.state.atualizar_status(StatusTicket.AUSENTE)
             return execucao
         except Exception as e:
             self.relancar_ou_erro_sistema(
                 e,
-                'Não foi possível finalizar a chamada dos tickets.',
+                'Não foi possível marcar os reservados restantes como ausentes.',
                 logger,
             )
+
+    def montar_snapshot_poll_conferencia(self, cpf=None):
+        try:
+            from Transporte.tickets.models import Ticket
+
+            execucao = self.object_instance
+            tickets = Ticket().business.listar_reservas_conferencia(execucao, cpf)
+            return {
+                'execucao': execucao,
+                'tickets': tickets,
+                'totais': execucao.helper.contar_totais_conferencia(),
+                'fase_conferencia': execucao.helper.obter_fase_conferencia(),
+                'segunda_chamada_pulada': execucao.segunda_chamada_pulada,
+                'mensagem_segunda_chamada_pulada': (
+                    MENSAGEM_SEGUNDA_CHAMADA_PULADA
+                    if execucao.segunda_chamada_pulada
+                    else ''
+                ),
+            }
+        except Exception as e:
+            self.relancar_ou_erro_sistema(
+                e,
+                'Não foi possível montar o snapshot da conferência.',
+                logger,
+            )
+
+    def _criar_strikes_ausentes_pendentes(self, execucao):
+        from Transporte.strikes.models import Strike
+        from Transporte.tickets.choices import StatusTicket
+
+        for ticket in execucao.tickets.filter(status=StatusTicket.AUSENTE):
+            Strike().business.criar_para_ticket(ticket)
 
     def finalizar_conferencia(self, usuario):
         try:
@@ -401,13 +473,25 @@ class ExecucaoRotaBusiness(ModelInstanceBusiness):
             )
             if execucao.status in STATUS_POS_CONFERENCIA:
                 return execucao
-            execucao.rules.validar_execucao_em_embarque(execucao)
+            execucao.rules.validar_fase_cpf(execucao)
+            execucao.rules.validar_sem_reservados_pendentes(execucao)
             execucao.rules.validar_chamada_para_finalizar(execucao)
+            self._criar_strikes_ausentes_pendentes(execucao)
+            agora = timezone.now()
+            execucao.entradas_cpf_concluidas = True
+            execucao.entradas_cpf_concluidas_em = agora
             execucao = execucao.state.atualizar_status(StatusExecucaoRota.EMBARCADO)
             if execucao.embarcado_em is None:
-                execucao.embarcado_em = timezone.now()
+                execucao.embarcado_em = agora
                 execucao.conferencia_finalizada_por = usuario
-                execucao.save(update_fields=['embarcado_em', 'conferencia_finalizada_por'])
+                execucao.save(
+                    update_fields=[
+                        'embarcado_em',
+                        'conferencia_finalizada_por',
+                        'entradas_cpf_concluidas',
+                        'entradas_cpf_concluidas_em',
+                    ],
+                )
             return execucao
         except Exception as e:
             self.relancar_ou_erro_sistema(e, 'Não foi possível finalizar a conferência.', logger)

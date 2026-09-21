@@ -75,6 +75,13 @@ class ExecucaoRotaSerializer(serializers.ModelSerializer):
     vagas_ocupadas = serializers.SerializerMethodField()
     vagas_disponiveis = serializers.SerializerMethodField()
     pode_monitorar = serializers.SerializerMethodField()
+    fase_conferencia = serializers.SerializerMethodField()
+    pode_fechar_primeira = serializers.SerializerMethodField()
+    pode_fechar_segunda = serializers.SerializerMethodField()
+    pode_restantes_faltaram = serializers.SerializerMethodField()
+    pode_registrar_cpf = serializers.SerializerMethodField()
+    pode_finalizar = serializers.SerializerMethodField()
+    mensagem_segunda_chamada_pulada = serializers.SerializerMethodField()
 
     class Meta:
         model = ExecucaoRota
@@ -88,6 +95,16 @@ class ExecucaoRotaSerializer(serializers.ModelSerializer):
             'vagas_ocupadas',
             'vagas_disponiveis',
             'pode_monitorar',
+            'primeira_chamada_concluida',
+            'primeira_chamada_concluida_em',
+            'segunda_chamada_pulada',
+            'fase_conferencia',
+            'pode_fechar_primeira',
+            'pode_fechar_segunda',
+            'pode_restantes_faltaram',
+            'pode_registrar_cpf',
+            'pode_finalizar',
+            'mensagem_segunda_chamada_pulada',
             'chamada_tickets_concluida',
             'entradas_cpf_concluidas',
             'monitoramento_iniciado_em',
@@ -111,6 +128,38 @@ class ExecucaoRotaSerializer(serializers.ModelSerializer):
     def get_pode_monitorar(self, obj):
         return obj.business.pode_monitorar()
 
+    @extend_schema_field(OpenApiTypes.STR)
+    def get_fase_conferencia(self, obj):
+        return obj.helper.obter_fase_conferencia()
+
+    @extend_schema_field(OpenApiTypes.BOOL)
+    def get_pode_fechar_primeira(self, obj) -> bool:
+        return obj.helper.obter_fase_conferencia() == 'primeira'
+
+    @extend_schema_field(OpenApiTypes.BOOL)
+    def get_pode_fechar_segunda(self, obj) -> bool:
+        return obj.helper.obter_fase_conferencia() == 'segunda'
+
+    @extend_schema_field(OpenApiTypes.BOOL)
+    def get_pode_restantes_faltaram(self, obj) -> bool:
+        return obj.helper.obter_fase_conferencia() == 'segunda'
+
+    @extend_schema_field(OpenApiTypes.BOOL)
+    def get_pode_registrar_cpf(self, obj) -> bool:
+        return obj.helper.obter_fase_conferencia() == 'cpf'
+
+    @extend_schema_field(OpenApiTypes.BOOL)
+    def get_pode_finalizar(self, obj) -> bool:
+        return obj.helper.obter_fase_conferencia() == 'cpf'
+
+    @extend_schema_field(OpenApiTypes.STR)
+    def get_mensagem_segunda_chamada_pulada(self, obj) -> str:
+        from .constantes import MENSAGEM_SEGUNDA_CHAMADA_PULADA
+
+        if obj.segunda_chamada_pulada:
+            return MENSAGEM_SEGUNDA_CHAMADA_PULADA
+        return ''
+
     def _obter_resumo_vagas(self, obj):
         if not hasattr(self, '_resumo_vagas_por_execucao'):
             self._resumo_vagas_por_execucao = {}
@@ -124,12 +173,38 @@ class CriarExecucaoRotaSerializer(serializers.Serializer):
     data_execucao = serializers.DateField()
 
 
-class FinalizarChamadaSerializer(serializers.Serializer):
-    ausentes = serializers.ListField(
-        child=serializers.UUIDField(),
-        required=False,
-        default=list,
-    )
+class TotaisConferenciaSerializer(serializers.Serializer):
+    reservado = serializers.IntegerField()
+    embarcado = serializers.IntegerField()
+    ausente = serializers.IntegerField()
+
+
+class ConferenciaPollSerializer(serializers.Serializer):
+    execucao = serializers.SerializerMethodField()
+    tickets = serializers.SerializerMethodField()
+    totais = serializers.SerializerMethodField()
+
+    @extend_schema_field(ExecucaoRotaSerializer)
+    def get_execucao(self, obj):
+        return ExecucaoRotaSerializer(
+            obj['execucao'],
+            context=self.context,
+        ).data
+
+    @extend_schema_field(TotaisConferenciaSerializer)
+    def get_totais(self, obj):
+        return obj['totais']
+
+    @extend_schema_field(OpenApiTypes.OBJECT)
+    def get_tickets(self, obj):
+        from Transporte.tickets.serializers import TicketConferenciaSerializer
+
+        fase = obj['fase_conferencia']
+        return TicketConferenciaSerializer(
+            obj['tickets'],
+            many=True,
+            context={**self.context, 'fase_conferencia': fase},
+        ).data
 
 
 class SerializerVazio(serializers.Serializer):

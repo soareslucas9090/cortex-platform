@@ -10,11 +10,7 @@ class ValidarEntradaSemTicketSerializer(serializers.Serializer):
 
 
 class RegistrarEntradaSemTicketSerializer(serializers.Serializer):
-    cpfs = serializers.ListField(
-        child=serializers.CharField(max_length=14),
-        required=False,
-        default=list,
-    )
+    cpf = serializers.CharField(max_length=14)
 
 
 class AlunoEntradaSerializer(serializers.Serializer):
@@ -49,3 +45,21 @@ class EntradaSemTicketSerializer(serializers.ModelSerializer):
             'data_hora_entrada',
             'created_at',
         ]
+
+
+class ResultadoRegistroEntradaSerializer(serializers.Serializer):
+    entrada = EntradaSemTicketSerializer(allow_null=True)
+    ticket = serializers.SerializerMethodField()
+    replay = serializers.BooleanField()
+
+    @extend_schema_field(OpenApiTypes.OBJECT)
+    def get_ticket(self, obj):
+        ticket = obj.get('ticket')
+        if ticket is None:
+            return None
+        from Transporte.tickets.serializers import TicketConferenciaSerializer
+
+        return TicketConferenciaSerializer(
+            ticket,
+            context=self.context,
+        ).data

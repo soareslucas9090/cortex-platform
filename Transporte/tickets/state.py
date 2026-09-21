@@ -29,11 +29,16 @@ class TicketCanceladoState(TicketState):
 
 
 class TicketEmbarcadoState(TicketState):
-    pass
+    transicoes_permitidas = frozenset({
+        StatusTicket.RESERVADO,
+    })
 
 
 class TicketAusenteState(TicketState):
-    pass
+    transicoes_permitidas = frozenset({
+        StatusTicket.RESERVADO,
+        StatusTicket.EMBARCADO,
+    })
 
 
 class TicketContempladoState(TicketState):

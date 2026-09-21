@@ -17,10 +17,11 @@ ticket, ausências, strikes e justificativas.
   chave primária do perfil e usa `PROTECT`, impedindo a exclusão física do usuário
   enquanto o vínculo existir. O campo `ativo` controla a disponibilidade do perfil.
 - **ExecucaoRota**: ocorrência datada de uma rota. Congela `data_hora_saida` e
-  `quantidade_vagas`. `chamada_tickets_concluida` e os timestamps
-  `monitoramento_iniciado_em`, `chamada_concluida_em` e `embarcado_em` registram
-  o andamento da conferência. `finalizada_em` fica para o fim da viagem
-  (`EMBARCADO` → `INICIADA` → `FINALIZADA`).
+  `quantidade_vagas`. `primeira_chamada_concluida`, `segunda_chamada_pulada`,
+  `chamada_tickets_concluida` e os timestamps `monitoramento_iniciado_em`,
+  `primeira_chamada_concluida_em`, `chamada_concluida_em`, `entradas_cpf_concluidas_em`
+  e `embarcado_em` registram o andamento da conferência colaborativa.
+  `finalizada_em` fica para o fim da viagem (`EMBARCADO` → `INICIADA` → `FINALIZADA`).
 - **DiaCalendarioTransporte**: exceção global por data que informa se o
   transporte opera fora da regra semanal padrão. Dias letivos e reposições
   liberam a operação; feriados, pontos facultativos, suspensões, recessos e
@@ -215,34 +216,29 @@ O fluxo e a medição do tempo estão descritos na seção 11.
   ocupa a menor posição disponível.
 - A capacidade e a promoção usam bloqueio pessimista na execução para proteger a
   última vaga em requisições concorrentes.
-- Na conferência, quem não entra em `ausentes` na chamada fica `EMBARCADO` sem QR
-  (presença por omissão). O conferente é responsável pela lista; o conferente não
-  valida QR. A primeira chamada que conclui grava o conjunto; um segundo envio só
-  é aceito se repetir o mesmo conjunto. Finalizar a conferência **não** altera
-  quem ficou `EM_ESPERA`. Permanecer `EM_ESPERA` é o desfecho de quem não entrou
-  no lote: a execução já `EMBARCADO` não promove a fila nem cria status de
-  “não contemplado”. Quem entra no lote de CPF na espera fica `CONTEMPLADO`
-  e ganha `EntradaSemTicket` (não vira `EMBARCADO` da chamada). O replay da chamada
-  compara o conjunto gravado nela, não ausências marcadas depois pelo L3. O
-  monitoramento pode iniciar depois do horário de saída no mesmo dia, desde que
-  `now > T-30`.
-- Entrada por CPF revalida aluno ativo, matriculado, vaga, chamada
-  concluída e execução em embarque. A consulta é `POST` em
-  `entradas-sem-ticket/validar/` com `{ "cpf": "..." }` e não persiste (devolve
-  dados do aluno para o card, inclusive `tem_deficiencia`). Depois do primeiro
-  lote não vazio, `validar` devolve 400: o conjunto já foi concluído e a tela
-  não mostra card que não dá para gravar. O `POST` em
-  `entradas-sem-ticket/` recebe `{ "cpfs": [...] }`, revalida o lote e grava
-  numa transação. Replay do mesmo conjunto devolve 200; conjunto diferente após
-  o primeiro lote não vazio devolve 400. Lista vazia devolve 201 sem persistir e
-  não conclui o lote. O lote é opcional: finalizar a conferência sem enviá-lo
-  deixa a espera restante como `EM_ESPERA` (desfecho nessa execução). Quem cancelou o próprio ticket
-  pode usar este fluxo se houver vaga. Quem está `AUSENTE` nesta execução também pode: o ticket
-  permanece `AUSENTE` e o strike não é desfeito. Quem está `EM_ESPERA` e entra
-  no lote fica `CONTEMPLADO` e recebe `EntradaSemTicket`.
-  Três strikes ativos não impedem o walk-in (incluindo o strike desta
-  ausência). `EM_ESPERA` e `CONTEMPLADO` não ocupam vaga pela chamada; o walk-in
-  ocupa via `EntradaSemTicket`. Total embarcado = `EMBARCADO` + `EntradaSemTicket`.
+- A conferência é **colaborativa e incremental**: vários conferentes marcam um ticket
+  por vez; o MeuIF sincroniza com `GET .../conferencia/reservas/` (poll ~2s), sem
+  WebSocket. **1ª chamada:** só `RESERVADO` ⇄ `EMBARCADO` (embarcar / desfazer
+  presença); encerramento explícito em `fechar-primeira-chamada/` (replay 200).
+  Se não restar `RESERVADO`, a 2ª é dispensada (`segunda_chamada_pulada`) e a fase
+  CPF abre na hora. **2ª chamada:** presença, ausência, desfazer ausência e
+  `restantes-faltaram/` (só quem ainda está `RESERVADO`); `fechar-segunda-chamada/`
+  exige zero `RESERVADO`. Strikes de ausência na 2ª só ao **finalizar** a conferência
+  (quem permanece `AUSENTE`). **CPF:** um CPF por `POST` com `{ "cpf": "..." }`,
+  após `chamada_tickets_concluida`; a API não bloqueia por lotação. Quem está
+  `AUSENTE` e passa no CPF vai para `EMBARCADO` sem `EntradaSemTicket` e sem strike
+  imediato. Quem está `EM_ESPERA` fica `CONTEMPLADO` + `EntradaSemTicket`. Replay do
+  mesmo CPF devolve 200. `entradas_cpf_concluidas` só no `finalizar/` da conferência.
+  Finalizar a conferência **não** altera quem ficou `EM_ESPERA`. O L3 em
+  `marcar-ausente/` durante `EM_EMBARQUE` recebe 400 (usar os POSTs da conferência);
+  fora do embarque, strike na hora. O monitoramento pode iniciar depois da saída no
+  mesmo dia, desde que `now > T-30`.
+- Entrada por CPF revalida aluno ativo, matriculado e fase CPF aberta (`chamada`
+  encerrada, conferência ainda não `EMBARCADO`). `POST .../validar/` com
+  `{ "cpf": "..." }` não persiste. Fora da fase CPF, `validar` e o `POST` de registro
+  retornam 400. Três strikes ativos não impedem o walk-in. Enquanto existir
+  `RESERVADO`, ocupação = `RESERVADO` + `EMBARCADO`; depois = `EMBARCADO` +
+  `EntradaSemTicket` (ausente que embarcou via CPF conta só como presente).
 
 ### 6. Posição dos tickets e apresentação PcD
 
@@ -342,9 +338,10 @@ também exige setor e função ativos.
 - `status`: `Bloqueado` quando `is_bloqueado=true`; demais categorias seguem o
   contexto da aba (`Presente`, `Ausente`, `Sem ticket`, etc.).
 
-Quem faltou à chamada e depois entrou sem ticket permanece nos dois registros
-de origem: conta em `ausentes` e em `sem_ticket`. Cancelados e espera pendente
-não entram em `sem_ticket`. O dashboard e o resumo por horário somam registros
+Quem estava `AUSENTE` na chamada e embarcou pelo CPF passa a `EMBARCADO` e conta
+somente em `presentes`, não em `ausentes` nem em `sem_ticket`. Quem da espera
+entrou por CPF (`CONTEMPLADO` + `EntradaSemTicket`) conta em `sem_ticket`.
+Cancelados e espera pendente não entram em `sem_ticket`. O dashboard e o resumo por horário somam registros
 (como `presentes` soma tickets); a aba Detalhes lista alunos distintos com
 pelo menos um registro na categoria.
 
@@ -453,13 +450,16 @@ Base execuções: `/cortex/transporte/execucoes-rotas/`
   `historico/{id}/` — histórico da conferência (seção 12)
 - `POST` `execucoes-rotas/<pk>/conferencia/iniciar/` e `.../conferencia/finalizar/`
   (capacidade `conferir`)
-- `GET` `execucoes-rotas/<pk>/conferencia/reservas/`
-  (`aluno.tem_deficiencia`: selo PcD sem o tipo clínico)
-- `POST` `execucoes-rotas/<pk>/conferencia/finalizar-chamada/`
+- `GET` `execucoes-rotas/<pk>/conferencia/reservas/` — snapshot de poll (`execucao`,
+  `tickets`, `totais`; sem paginação; `aluno.tem_deficiencia` para selo PcD)
+- `POST` `.../conferencia/fechar-primeira-chamada/` e `.../fechar-segunda-chamada/`
+- `POST` `.../conferencia/restantes-faltaram/`
+- `POST` `.../conferencia/tickets/<uuid>/embarcar/`, `.../desfazer-presenca/`,
+  `.../ausentar/` e `.../desfazer-ausencia/`
 - `POST` `execucoes-rotas/<pk>/conferencia/entradas-sem-ticket/validar/`
-  (`cpf` no body; sem persistência; devolve o card; 400 se o lote já foi concluído)
+  (`{ "cpf": "..." }`; sem persistência; 400 fora da fase CPF)
 - `POST` `execucoes-rotas/<pk>/conferencia/entradas-sem-ticket/`
-  (`{ "cpfs": [...] }`; persiste o lote; replay do mesmo conjunto = 200; lote opcional)
+  (`{ "cpf": "..." }`; um CPF por vez; replay do mesmo CPF = 200)
 - `POST` em `<pk>/reservar/` e `<pk>/fila-espera/entrar/`
 
 Base tickets: `/cortex/transporte/tickets/`

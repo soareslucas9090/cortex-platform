@@ -41,6 +41,19 @@ class ExecucaoRota(
         choices=StatusExecucaoRota.choices,
         default=StatusExecucaoRota.ABERTA,
     )
+    primeira_chamada_concluida = models.BooleanField(
+        'Primeira chamada concluída',
+        default=False,
+    )
+    primeira_chamada_concluida_em = models.DateTimeField(
+        'Primeira chamada concluída em',
+        null=True,
+        blank=True,
+    )
+    segunda_chamada_pulada = models.BooleanField(
+        'Segunda chamada pulada',
+        default=False,
+    )
     chamada_tickets_concluida = models.BooleanField(
         'Chamada de tickets concluída',
         default=False,

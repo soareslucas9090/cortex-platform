@@ -34,9 +34,12 @@ class ViagemMotoristaAPITestCase(APITestCase):
         self.execucao.status = StatusExecucaoRota.EM_EMBARQUE
         self.execucao.save()
         self.client.force_authenticate(criar_conferente())
-        chamada = reverse('transporte:conferencia-finalizar-chamada', args=[self.execucao.pk])
+        self.execucao.primeira_chamada_concluida = True
+        self.execucao.segunda_chamada_pulada = True
+        self.execucao.chamada_tickets_concluida = True
+        self.execucao.chamada_concluida_em = timezone.now()
+        self.execucao.save()
         conferencia = reverse('transporte:conferencia-finalizar', args=[self.execucao.pk])
-        self.assertEqual(self.client.post(chamada, {'ausentes': []}, format='json').status_code, 200)
         self.assertEqual(self.client.post(conferencia, {}).status_code, 200)
         self.execucao.refresh_from_db()
         self.assertEqual(self.execucao.status, StatusExecucaoRota.EMBARCADO)

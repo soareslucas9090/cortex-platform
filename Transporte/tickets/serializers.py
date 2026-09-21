@@ -82,10 +82,18 @@ class TicketSerializer(serializers.ModelSerializer):
         return obj.business.gerar_codigo_qr()
 
 
+class AcoesTicketConferenciaSerializer(serializers.Serializer):
+    embarcar = serializers.BooleanField()
+    desfazer_presenca = serializers.BooleanField()
+    ausentar = serializers.BooleanField()
+    desfazer_ausencia = serializers.BooleanField()
+
+
 class TicketConferenciaSerializer(serializers.ModelSerializer):
     aluno = AlunoConferenciaSerializer(read_only=True)
     status_display = serializers.CharField(source='get_status_display', read_only=True)
     posicao = serializers.SerializerMethodField()
+    acoes = serializers.SerializerMethodField()
 
     class Meta:
         model = Ticket
@@ -95,6 +103,7 @@ class TicketConferenciaSerializer(serializers.ModelSerializer):
             'status',
             'status_display',
             'posicao',
+            'acoes',
             'reservado_em',
             'entrou_em_espera_em',
             'embarcado_em',
@@ -110,6 +119,26 @@ class TicketConferenciaSerializer(serializers.ModelSerializer):
                 obj.business.obter_posicoes_da_execucao(obj.execucao_rota)
             )
         return self._posicoes_por_execucao[obj.execucao_rota_id].get(obj.pk)
+
+    @extend_schema_field(AcoesTicketConferenciaSerializer)
+    def get_acoes(self, obj):
+        fase = self.context.get('fase_conferencia')
+        status = obj.status
+        acoes = {
+            'embarcar': False,
+            'desfazer_presenca': False,
+            'ausentar': False,
+            'desfazer_ausencia': False,
+        }
+        if fase == 'primeira':
+            acoes['embarcar'] = status == StatusTicket.RESERVADO
+            acoes['desfazer_presenca'] = status == StatusTicket.EMBARCADO
+        elif fase == 'segunda':
+            acoes['embarcar'] = status == StatusTicket.RESERVADO
+            acoes['desfazer_presenca'] = status == StatusTicket.EMBARCADO
+            acoes['ausentar'] = status == StatusTicket.RESERVADO
+            acoes['desfazer_ausencia'] = status == StatusTicket.AUSENTE
+        return acoes
 
 
 class SerializerVazio(serializers.Serializer):

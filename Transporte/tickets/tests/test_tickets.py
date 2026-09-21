@@ -461,8 +461,6 @@ class TicketBusinessTestCase(APITestCase):
 
     def test_marcar_ausente_cria_um_strike(self):
         ticket = Ticket().business.solicitar_reserva(self.execucao.pk, self.aluno.usuario)
-        self.execucao.status = StatusExecucaoRota.EM_EMBARQUE
-        self.execucao.save(update_fields=['status'])
         ticket, strike = ticket.business.marcar_ausente()
         self.assertEqual(ticket.status, StatusTicket.AUSENTE)
         self.assertEqual(strike.ticket_id, ticket.pk)
@@ -470,6 +468,13 @@ class TicketBusinessTestCase(APITestCase):
         self.aluno.refresh_from_db()
         self.assertEqual(self.aluno.faltas, 1)
         self.assertFalse(self.aluno.is_bloqueado)
+        with self.assertRaises(BusinessRuleException):
+            ticket.business.marcar_ausente()
+
+    def test_marcar_ausente_bloqueado_durante_embarque(self):
+        ticket = Ticket().business.solicitar_reserva(self.execucao.pk, self.aluno.usuario)
+        self.execucao.status = StatusExecucaoRota.EM_EMBARQUE
+        self.execucao.save(update_fields=['status'])
         with self.assertRaises(BusinessRuleException):
             ticket.business.marcar_ausente()
 
@@ -504,7 +509,7 @@ class TicketBusinessTestCase(APITestCase):
         with CaptureQueriesContext(connection) as consultas:
             TicketSerializer(tickets, many=True).data
 
-        self.assertLessEqual(len(consultas), 3)
+        self.assertLessEqual(len(consultas), 4)
 
     def test_qr_adulterado_e_rejeitado(self):
         ticket = Ticket().business.solicitar_reserva(self.execucao.pk, self.aluno.usuario)

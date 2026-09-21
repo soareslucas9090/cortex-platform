@@ -5882,28 +5882,16 @@ paths:
     post:
       operationId: transporte_execucoes_rotas_conferencia_entradas_sem_ticket_create
       description: |-
-        Recebe `{ "cpfs": [...] }`, revalida cada CPF e grava o lote numa transação. Replay do mesmo conjunto devolve 200. Conjunto diferente após o primeiro lote não vazio devolve 400. Lista vazia não conclui o lote (201 sem persistir). Inclui aluno por CPF nas vagas restantes após a chamada de tickets. Quem está EM_ESPERA e for informado no lote fica CONTEMPLADO e recebe EntradaSemTicket. Quem não for informado permanece EM_ESPERA após finalizar a conferência: esse é o desfecho nessa execução, sem promoção posterior. Quem está AUSENTE nesta execução pode entrar se houver vaga; três strikes ativos não impedem o walk-in. O ticket permanece AUSENTE e o strike não é desfeito.
+        Recebe `{ "cpf": "..." }` e persiste um registro por vez. Replay do mesmo aluno devolve 200. Registra um CPF por vez após o encerramento da chamada de tickets. Quem está EM_ESPERA fica CONTEMPLADO e recebe EntradaSemTicket. Quem não for registrado permanece EM_ESPERA após finalizar a conferência. Quem está AUSENTE e entra por CPF passa a EMBARCADO sem EntradaSemTicket e sem strike até a finalização da conferência.
 
         **Permissões:** capacidade transporte.conferir. Lê e opera execuções do dia e, após iniciar o monitoramento, a chamada de tickets e a entrada por CPF dessa execução. Não amplia cadastro nem recursos globais do módulo.
-      summary: Registrar entradas sem ticket em lote
+      summary: Registrar entrada por CPF
       parameters:
       - in: path
         name: id
         schema:
           type: integer
         required: true
-      - name: page
-        required: false
-        in: query
-        description: Um número de página dentro do conjunto de resultados paginado.
-        schema:
-          type: integer
-      - name: paginacao
-        required: false
-        in: query
-        description: Número de resultados a serem retornados por página.
-        schema:
-          type: integer
       tags:
       - Transporte · Conferência
       requestBody:
@@ -5917,6 +5905,7 @@ paths:
           multipart/form-data:
             schema:
               $ref: '#/components/schemas/RegistrarEntradaSemTicket'
+        required: true
       security:
       - jwtAuth: []
       responses:
@@ -5924,13 +5913,13 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/PaginatedEntradaSemTicketList'
+                $ref: '#/components/schemas/ResultadoRegistroEntrada'
           description: ''
         '201':
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/PaginatedEntradaSemTicketList'
+                $ref: '#/components/schemas/ResultadoRegistroEntrada'
           description: ''
         '400':
           content:
@@ -5960,7 +5949,7 @@ paths:
     post:
       operationId: transporte_execucoes_rotas_conferencia_entradas_sem_ticket_validar_create
       description: |-
-        Consulta as regras de elegibilidade sem persistir e devolve os dados do aluno para o card. Depois do primeiro lote não vazio, devolve 400: o conjunto já foi concluído e a tela não deve mostrar card que não dá para gravar. O POST em entradas-sem-ticket/ revalida o lote e grava. Inclui aluno por CPF nas vagas restantes após a chamada de tickets. Quem está EM_ESPERA e for informado no lote fica CONTEMPLADO e recebe EntradaSemTicket. Quem não for informado permanece EM_ESPERA após finalizar a conferência: esse é o desfecho nessa execução, sem promoção posterior. Quem está AUSENTE nesta execução pode entrar se houver vaga; três strikes ativos não impedem o walk-in. O ticket permanece AUSENTE e o strike não é desfeito.
+        Consulta as regras de elegibilidade sem persistir e devolve os dados do aluno para o card. Disponível somente na fase de CPF, antes de finalizar a conferência. Registra um CPF por vez após o encerramento da chamada de tickets. Quem está EM_ESPERA fica CONTEMPLADO e recebe EntradaSemTicket. Quem não for registrado permanece EM_ESPERA após finalizar a conferência. Quem está AUSENTE e entra por CPF passa a EMBARCADO sem EntradaSemTicket e sem strike até a finalização da conferência.
 
         **Permissões:** capacidade transporte.conferir. Lê e opera execuções do dia e, após iniciar o monitoramento, a chamada de tickets e a entrada por CPF dessa execução. Não amplia cadastro nem recursos globais do módulo.
       summary: Validar CPF para entrada sem ticket
@@ -6017,11 +6006,54 @@ paths:
               schema:
                 description: Aluno ou execução não encontrada.
           description: ''
+  /cortex/transporte/execucoes-rotas/{id}/conferencia/fechar-primeira-chamada/:
+    post:
+      operationId: transporte_execucoes_rotas_conferencia_fechar_primeira_chamada_create
+      summary: Encerrar primeira chamada
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - Transporte · Conferência
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+  /cortex/transporte/execucoes-rotas/{id}/conferencia/fechar-segunda-chamada/:
+    post:
+      operationId: transporte_execucoes_rotas_conferencia_fechar_segunda_chamada_create
+      summary: Encerrar segunda chamada
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - Transporte · Conferência
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExecucaoRota'
+          description: ''
   /cortex/transporte/execucoes-rotas/{id}/conferencia/finalizar/:
     post:
       operationId: transporte_execucoes_rotas_conferencia_finalizar_create
       description: |-
-        Encerra a conferência em EMBARCADO. Este endpoint não altera tickets. Quem não entrou no lote de CPF permanece EM_ESPERA: esse é o desfecho nessa execução (sem promoção da fila nem status de não contemplado). CONTEMPLADO e EntradaSemTicket são gravados no lote de CPF, não aqui. Ausentes não mudam. Não grava finalizada_em (fim da viagem do motorista). A primeira finalização grava embarcado_em e conferencia_finalizada_por (usuário autenticado); replay não troca.
+        Encerra a fase de CPF e a conferência em EMBARCADO. Cria strikes para quem permanece AUSENTE. Quem não entrou por CPF permanece EM_ESPERA. Não grava finalizada_em (fim da viagem do motorista). A primeira finalização grava embarcado_em e conferencia_finalizada_por; replay não troca.
 
         **Permissões:** capacidade transporte.conferir. Lê e opera execuções do dia e, após iniciar o monitoramento, a chamada de tickets e a entrada por CPF dessa execução. Não amplia cadastro nem recursos globais do módulo.
       summary: Finalizar conferência
@@ -6047,67 +6079,6 @@ paths:
             application/json:
               schema:
                 description: Chamada pendente ou transição inválida.
-          description: ''
-        '401':
-          content:
-            application/json:
-              schema:
-                description: Não autenticado.
-          description: ''
-        '403':
-          content:
-            application/json:
-              schema:
-                description: Sem capacidade conferir.
-          description: ''
-        '404':
-          content:
-            application/json:
-              schema:
-                description: Execução de outro dia ou cancelada (fora do escopo da
-                  conferência).
-          description: ''
-  /cortex/transporte/execucoes-rotas/{id}/conferencia/finalizar-chamada/:
-    post:
-      operationId: transporte_execucoes_rotas_conferencia_finalizar_chamada_create
-      description: |-
-        Grava ausências (com strike) e embarca os demais tickets reservados.
-
-        **Permissões:** capacidade transporte.conferir. Lê e opera execuções do dia e, após iniciar o monitoramento, a chamada de tickets e a entrada por CPF dessa execução. Não amplia cadastro nem recursos globais do módulo.
-      summary: Finalizar chamada de tickets
-      parameters:
-      - in: path
-        name: id
-        schema:
-          type: integer
-        required: true
-      tags:
-      - Transporte · Conferência
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/FinalizarChamada'
-          application/x-www-form-urlencoded:
-            schema:
-              $ref: '#/components/schemas/FinalizarChamada'
-          multipart/form-data:
-            schema:
-              $ref: '#/components/schemas/FinalizarChamada'
-      security:
-      - jwtAuth: []
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ExecucaoRota'
-          description: ''
-        '400':
-          content:
-            application/json:
-              schema:
-                description: Chamada inválida.
           description: ''
         '401':
           content:
@@ -6181,12 +6152,12 @@ paths:
           description: ''
   /cortex/transporte/execucoes-rotas/{id}/conferencia/reservas/:
     get:
-      operationId: transporte_execucoes_rotas_conferencia_reservas_list
+      operationId: transporte_execucoes_rotas_conferencia_reservas_retrieve
       description: |-
-        Lista os tickets da execução monitorada. O filtro cpf apenas reduz o conjunto. Em `aluno.tem_deficiencia` o front recebe se há deficiência cadastrada (sem o tipo clínico).
+        Retorna execução, tickets e totais para atualização periódica (ex.: a cada 2s). Sem paginação. O filtro cpf apenas reduz o conjunto. Em `aluno.tem_deficiencia` o front recebe se há deficiência cadastrada (sem o tipo clínico).
 
         **Permissões:** capacidade transporte.conferir. Lê e opera execuções do dia e, após iniciar o monitoramento, a chamada de tickets e a entrada por CPF dessa execução. Não amplia cadastro nem recursos globais do módulo.
-      summary: Listar tickets da chamada
+      summary: Snapshot da conferência (poll)
       parameters:
       - in: query
         name: cpf
@@ -6198,17 +6169,6 @@ paths:
         schema:
           type: integer
         required: true
-      - name: page
-        required: false
-        in: query
-        description: Um número de página dentro do conjunto de resultados paginado.
-        schema:
-          type: integer
-      - in: query
-        name: paginacao
-        schema:
-          type: integer
-        description: Tamanho da página (1–100, padrão 10).
       tags:
       - Transporte · Conferência
       security:
@@ -6218,7 +6178,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/PaginatedTicketConferenciaList'
+                $ref: '#/components/schemas/ConferenciaPoll'
           description: ''
         '401':
           content:
@@ -6238,6 +6198,139 @@ paths:
               schema:
                 description: Execução de outro dia ou cancelada (fora do escopo da
                   conferência).
+          description: ''
+  /cortex/transporte/execucoes-rotas/{id}/conferencia/restantes-faltaram/:
+    post:
+      operationId: transporte_execucoes_rotas_conferencia_restantes_faltaram_create
+      summary: Marcar reservados restantes como ausentes
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - Transporte · Conferência
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExecucaoRota'
+          description: ''
+  /cortex/transporte/execucoes-rotas/{id}/conferencia/tickets/{codigo}/ausentar/:
+    post:
+      operationId: transporte_execucoes_rotas_conferencia_tickets_ausentar_create
+      summary: Marcar ausência do ticket
+      parameters:
+      - in: path
+        name: codigo
+        schema:
+          type: string
+          format: uuid
+        required: true
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - Transporte · Conferência
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+  /cortex/transporte/execucoes-rotas/{id}/conferencia/tickets/{codigo}/desfazer-ausencia/:
+    post:
+      operationId: transporte_execucoes_rotas_conferencia_tickets_desfazer_ausencia_create
+      summary: Desfazer ausência do ticket
+      parameters:
+      - in: path
+        name: codigo
+        schema:
+          type: string
+          format: uuid
+        required: true
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - Transporte · Conferência
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+  /cortex/transporte/execucoes-rotas/{id}/conferencia/tickets/{codigo}/desfazer-presenca/:
+    post:
+      operationId: transporte_execucoes_rotas_conferencia_tickets_desfazer_presenca_create
+      summary: Desfazer presença do ticket
+      parameters:
+      - in: path
+        name: codigo
+        schema:
+          type: string
+          format: uuid
+        required: true
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - Transporte · Conferência
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+  /cortex/transporte/execucoes-rotas/{id}/conferencia/tickets/{codigo}/embarcar/:
+    post:
+      operationId: transporte_execucoes_rotas_conferencia_tickets_embarcar_create
+      summary: Marcar presença do ticket
+      parameters:
+      - in: path
+        name: codigo
+        schema:
+          type: string
+          format: uuid
+        required: true
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - Transporte · Conferência
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
           description: ''
   /cortex/transporte/execucoes-rotas/{id}/fechar-reservas/:
     post:
@@ -8144,32 +8237,6 @@ components:
       - usuario_cpf
       - usuario_id
       - usuario_nome
-    AlunoConferencia:
-      type: object
-      properties:
-        id:
-          type: integer
-          readOnly: true
-        nome:
-          type: string
-          readOnly: true
-        foto:
-          type: string
-          format: uri
-          readOnly: true
-          nullable: true
-        cpf:
-          type: string
-          readOnly: true
-        tem_deficiencia:
-          type: boolean
-          readOnly: true
-      required:
-      - cpf
-      - foto
-      - id
-      - nome
-      - tem_deficiencia
     AlunoCurso:
       type: object
       properties:
@@ -8598,6 +8665,25 @@ components:
       required:
       - beneficiario_id
       - data_inicio
+    ConferenciaPoll:
+      type: object
+      properties:
+        execucao:
+          allOf:
+          - $ref: '#/components/schemas/ExecucaoRota'
+          readOnly: true
+        tickets:
+          type: object
+          additionalProperties: {}
+          readOnly: true
+        totais:
+          allOf:
+          - $ref: '#/components/schemas/TotaisConferencia'
+          readOnly: true
+      required:
+      - execucao
+      - tickets
+      - totais
     ConferenteHistorico:
       type: object
       properties:
@@ -9473,6 +9559,37 @@ components:
         pode_monitorar:
           type: boolean
           readOnly: true
+        primeira_chamada_concluida:
+          type: boolean
+          title: Primeira chamada concluída
+        primeira_chamada_concluida_em:
+          type: string
+          format: date-time
+          nullable: true
+          title: Primeira chamada concluída em
+        segunda_chamada_pulada:
+          type: boolean
+        fase_conferencia:
+          type: string
+          readOnly: true
+        pode_fechar_primeira:
+          type: boolean
+          readOnly: true
+        pode_fechar_segunda:
+          type: boolean
+          readOnly: true
+        pode_restantes_faltaram:
+          type: boolean
+          readOnly: true
+        pode_registrar_cpf:
+          type: boolean
+          readOnly: true
+        pode_finalizar:
+          type: boolean
+          readOnly: true
+        mensagem_segunda_chamada_pulada:
+          type: string
+          readOnly: true
         chamada_tickets_concluida:
           type: boolean
           title: Chamada de tickets concluída
@@ -9512,22 +9629,21 @@ components:
       - created_at
       - data_execucao
       - data_hora_saida
+      - fase_conferencia
       - id
+      - mensagem_segunda_chamada_pulada
+      - pode_fechar_primeira
+      - pode_fechar_segunda
+      - pode_finalizar
       - pode_monitorar
+      - pode_registrar_cpf
+      - pode_restantes_faltaram
       - quantidade_vagas
       - rota
       - status_display
       - vagas_disponiveis
       - vagas_ocupadas
       - viagem
-    FinalizarChamada:
-      type: object
-      properties:
-        ausentes:
-          type: array
-          items:
-            type: string
-            format: uuid
     FormaIngressoEnum:
       enum:
       - 1
@@ -10191,29 +10307,6 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/EmprestimoUsuarioResumo'
-    PaginatedEntradaSemTicketList:
-      type: object
-      required:
-      - count
-      - results
-      properties:
-        count:
-          type: integer
-          example: 123
-        next:
-          type: string
-          nullable: true
-          format: uri
-          example: http://api.example.org/accounts/?page=4
-        previous:
-          type: string
-          nullable: true
-          format: uri
-          example: http://api.example.org/accounts/?page=2
-        results:
-          type: array
-          items:
-            $ref: '#/components/schemas/EntradaSemTicket'
     PaginatedExecucaoRotaList:
       type: object
       required:
@@ -10605,29 +10698,6 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Terceirizado'
-    PaginatedTicketConferenciaList:
-      type: object
-      required:
-      - count
-      - results
-      properties:
-        count:
-          type: integer
-          example: 123
-        next:
-          type: string
-          nullable: true
-          format: uri
-          example: http://api.example.org/accounts/?page=4
-        previous:
-          type: string
-          nullable: true
-          format: uri
-          example: http://api.example.org/accounts/?page=2
-        results:
-          type: array
-          items:
-            $ref: '#/components/schemas/TicketConferencia'
     PaginatedTicketList:
       type: object
       required:
@@ -11184,11 +11254,11 @@ components:
     RegistrarEntradaSemTicket:
       type: object
       properties:
-        cpfs:
-          type: array
-          items:
-            type: string
-            maxLength: 14
+        cpf:
+          type: string
+          maxLength: 14
+      required:
+      - cpf
     RelatorioAlunoDetalhe:
       type: object
       properties:
@@ -11363,6 +11433,23 @@ components:
       required:
       - ticket
       - ticket_promovido
+    ResultadoRegistroEntrada:
+      type: object
+      properties:
+        entrada:
+          allOf:
+          - $ref: '#/components/schemas/EntradaSemTicket'
+          nullable: true
+        ticket:
+          type: object
+          additionalProperties: {}
+          readOnly: true
+        replay:
+          type: boolean
+      required:
+      - entrada
+      - replay
+      - ticket
     ResultadoValidacaoQr:
       type: object
       properties:
@@ -12064,52 +12151,6 @@ components:
       - posicao_fila
       - status
       - status_display
-    TicketConferencia:
-      type: object
-      properties:
-        codigo:
-          type: string
-          format: uuid
-          readOnly: true
-          title: Código público
-        aluno:
-          allOf:
-          - $ref: '#/components/schemas/AlunoConferencia'
-          readOnly: true
-        status:
-          allOf:
-          - $ref: '#/components/schemas/StatusTicketEnum'
-          minimum: -2147483648
-          maximum: 2147483647
-        status_display:
-          type: string
-          readOnly: true
-        posicao:
-          allOf:
-          - $ref: '#/components/schemas/PosicaoTicket'
-          readOnly: true
-        reservado_em:
-          type: string
-          format: date-time
-          nullable: true
-        entrou_em_espera_em:
-          type: string
-          format: date-time
-          nullable: true
-        embarcado_em:
-          type: string
-          format: date-time
-          nullable: true
-        ausente_em:
-          type: string
-          format: date-time
-          nullable: true
-      required:
-      - aluno
-      - codigo
-      - posicao
-      - status
-      - status_display
     TipoRecursoEnum:
       enum:
       - chave
@@ -12139,6 +12180,19 @@ components:
           writeOnly: true
       required:
       - token
+    TotaisConferencia:
+      type: object
+      properties:
+        reservado:
+          type: integer
+        embarcado:
+          type: integer
+        ausente:
+          type: integer
+      required:
+      - ausente
+      - embarcado
+      - reservado
     TrocarTitular:
       type: object
       properties:
