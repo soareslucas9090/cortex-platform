@@ -7,6 +7,11 @@ from AppCore.core.rules.rules import ModelInstanceRules
 from Transporte.rotas.choices import DiaSemana
 
 from .choices import STATUS_POS_CONFERENCIA, StatusExecucaoRota
+from .constantes import (
+    MENSAGEM_CONFERENCIA_JA_ENCERRADA,
+    MENSAGEM_FASE_CPF_INDISPONIVEL,
+    MENSAGEM_RESERVADOS_PENDENTES,
+)
 
 DIAS_SEMANA_PYTHON = {
     0: DiaSemana.SEGUNDA,
@@ -134,6 +139,42 @@ class ExecucaoRotaRules(ModelInstanceRules):
             self.return_exception(
                 'Conclua a chamada dos tickets antes de finalizar a conferência.'
             )
+        return True
+
+    def validar_sem_reservados_pendentes(self, execucao) -> bool:
+        if execucao.helper.existe_reservado_pendente():
+            self.return_exception(MENSAGEM_RESERVADOS_PENDENTES)
+        return True
+
+    def validar_fase_primeira(self, execucao) -> bool:
+        self.validar_execucao_em_embarque(execucao)
+        if execucao.primeira_chamada_concluida:
+            self.return_exception('A primeira chamada desta execução já foi encerrada.')
+        return True
+
+    def validar_fase_segunda(self, execucao) -> bool:
+        self.validar_execucao_em_embarque(execucao)
+        if not execucao.primeira_chamada_concluida:
+            self.return_exception('Encerre a primeira chamada antes desta ação.')
+        if execucao.chamada_tickets_concluida or execucao.segunda_chamada_pulada:
+            self.return_exception('A segunda chamada desta execução já foi encerrada.')
+        return True
+
+    def validar_fase_cpf(self, execucao) -> bool:
+        self.validar_execucao_em_embarque(execucao)
+        if not execucao.chamada_tickets_concluida:
+            self.return_exception(MENSAGEM_FASE_CPF_INDISPONIVEL)
+        if execucao.status in STATUS_POS_CONFERENCIA:
+            self.return_exception(MENSAGEM_CONFERENCIA_JA_ENCERRADA)
+        return True
+
+    def validar_fechar_primeira_chamada(self, execucao) -> bool:
+        self.validar_fase_primeira(execucao)
+        return True
+
+    def validar_fechar_segunda_chamada(self, execucao) -> bool:
+        self.validar_fase_segunda(execucao)
+        self.validar_sem_reservados_pendentes(execucao)
         return True
 
     def validar_execucao_em_embarque(self, execucao) -> bool:

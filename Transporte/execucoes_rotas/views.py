@@ -4,28 +4,31 @@ from rest_framework import status
 
 from AppCore.basics.mixins.mixins import IsAdminMixin, IsAuthenticatedMixin
 from AppCore.basics.pagination.pagination import PaginacaoCustomizada
+from AppCore.basics.decorators.decorators import handle_exceptions
 from AppCore.basics.views.basic_views import (
     BasicGetAPIView,
     BasicPostAPIView,
     BasicRetrieveAPIView,
 )
+from rest_framework.response import Response
 from Transporte.permissoes.access import PodeConferirTransporteMixin, PodeOperarRotaMixin
 from Transporte.tickets.models import Ticket
 from Transporte.tickets.serializers import TicketConferenciaSerializer
 
-from .choices import StatusExecucaoRota
+from .choices import STATUS_POS_CONFERENCIA, StatusExecucaoRota
 from .models import ExecucaoRota
 from .serializers import (
+    ConferenciaPollSerializer,
     CriarExecucaoRotaSerializer,
     DetalheHistoricoConferenciaSerializer,
     DetalheHistoricoRotaSerializer,
     ExecucaoRotaSerializer,
-    FinalizarChamadaSerializer,
     HistoricoRotaSerializer,
     PercursoHistoricoSerializer,
     SerializerVazio,
     ViagemRotaSerializer,
 )
+from Transporte.tickets.serializers import TicketConferenciaSerializer
 
 PERMISSAO_LISTAGEM = (
     '**Permissões:** Autenticado. L3 (EDITAR_TUDO) vê todas as execuções; '
@@ -234,13 +237,10 @@ class IniciarEmbarqueExecucaoRotaView(PodeConferirTransporteMixin, BasicPostAPIV
     tags=['Transporte · Conferência'],
     summary='Finalizar conferência',
     description=(
-        'Encerra a conferência em EMBARCADO. Este endpoint não altera tickets. '
-        'Quem não entrou no lote de CPF permanece EM_ESPERA: esse é o desfecho nessa execução '
-        '(sem promoção da fila nem status de não contemplado). '
-        'CONTEMPLADO e EntradaSemTicket são gravados no lote de CPF, não aqui. '
-        'Ausentes não mudam. Não grava finalizada_em (fim da viagem do motorista). '
-        'A primeira finalização grava embarcado_em e conferencia_finalizada_por '
-        '(usuário autenticado); replay não troca.\n\n'
+        'Encerra a fase de CPF e a conferência em EMBARCADO. Cria strikes para quem '
+        'permanece AUSENTE. Quem não entrou por CPF permanece EM_ESPERA. '
+        'Não grava finalizada_em (fim da viagem do motorista). '
+        'A primeira finalização grava embarcado_em e conferencia_finalizada_por; replay não troca.\n\n'
         f'{PERMISSAO_CONFERIR}'
     ),
     request=SerializerVazio,
@@ -328,9 +328,10 @@ class ListarExecucoesConferenciaView(PodeConferirTransporteMixin, BasicGetAPIVie
 
 @extend_schema(
     tags=['Transporte · Conferência'],
-    summary='Listar tickets da chamada',
+    summary='Snapshot da conferência (poll)',
     description=(
-        'Lista os tickets da execução monitorada. O filtro cpf apenas reduz o conjunto. '
+        'Retorna execução, tickets e totais para atualização periódica (ex.: a cada 2s). '
+        'Sem paginação. O filtro cpf apenas reduz o conjunto. '
         f'{INDICATIVO_DEFICIENCIA}\n\n'
         f'{PERMISSAO_CONFERIR}'
     ),
@@ -342,16 +343,9 @@ class ListarExecucoesConferenciaView(PodeConferirTransporteMixin, BasicGetAPIVie
             required=False,
             description='Filtra por CPF. Apenas reduz o conjunto já autorizado.',
         ),
-        OpenApiParameter(
-            'paginacao',
-            OpenApiTypes.INT,
-            OpenApiParameter.QUERY,
-            required=False,
-            description='Tamanho da página (1–100, padrão 10).',
-        ),
     ],
     responses={
-        status.HTTP_200_OK: TicketConferenciaSerializer(many=True),
+        status.HTTP_200_OK: ConferenciaPollSerializer,
         status.HTTP_401_UNAUTHORIZED: {'description': 'Não autenticado.'},
         status.HTTP_403_FORBIDDEN: {'description': 'Sem capacidade conferir.'},
         status.HTTP_404_NOT_FOUND: {
@@ -360,50 +354,161 @@ class ListarExecucoesConferenciaView(PodeConferirTransporteMixin, BasicGetAPIVie
     },
 )
 class ListarReservasConferenciaView(PodeConferirTransporteMixin, BasicGetAPIView):
-    serializer_class = TicketConferenciaSerializer
-    pagination_class = PaginacaoCustomizada
-    mensagem_sucesso = 'Tickets da conferência listados com sucesso.'
+    serializer_class = ConferenciaPollSerializer
+    pagination_class = None
+    mensagem_sucesso = 'Snapshot da conferência obtido com sucesso.'
 
-    def get_queryset(self):
+    @handle_exceptions
+    def get(self, request, *args, **kwargs):
         execucao = ExecucaoRota().business.obter_para_conferencia(
-            self.kwargs['pk'],
+            kwargs['pk'],
             consultar_tickets=True,
         )
-        return Ticket().business.listar_reservas_conferencia(
-            execucao,
-            self.request.query_params.get('cpf'),
+        snapshot = execucao.business.montar_snapshot_poll_conferencia(
+            request.query_params.get('cpf'),
         )
+        dados = ConferenciaPollSerializer(
+            snapshot,
+            context={'request': request},
+        ).data
+        return Response(
+            {
+                'status': 'success',
+                'mensagem': self.mensagem_sucesso,
+                'dados': dados,
+            },
+            status=status.HTTP_200_OK,
+        )
+
+
+class _AcaoTicketConferenciaView(PodeConferirTransporteMixin, BasicPostAPIView):
+    serializer_class = SerializerVazio
+    acao_business = None
+    mensagem_sucesso = ''
+
+    def do_action_post(self, serializer_data, request, *args, **kwargs):
+        metodo = getattr(Ticket().business, self.acao_business)
+        execucao, ticket = metodo(kwargs['pk'], kwargs['codigo'])
+        fase = execucao.helper.obter_fase_conferencia()
+        return {
+            'dados': {
+                'execucao': ExecucaoRotaSerializer(execucao, context={'request': request}).data,
+                'ticket': TicketConferenciaSerializer(
+                    ticket,
+                    context={'request': request, 'fase_conferencia': fase},
+                ).data,
+            },
+        }
 
 
 @extend_schema(
     tags=['Transporte · Conferência'],
-    summary='Finalizar chamada de tickets',
-    description=(
-        'Grava ausências (com strike) e embarca os demais tickets reservados.\n\n'
-        f'{PERMISSAO_CONFERIR}'
-    ),
-    request=FinalizarChamadaSerializer,
-    responses={
-        status.HTTP_200_OK: ExecucaoRotaSerializer,
-        status.HTTP_400_BAD_REQUEST: {'description': 'Chamada inválida.'},
-        status.HTTP_401_UNAUTHORIZED: {'description': 'Não autenticado.'},
-        status.HTTP_403_FORBIDDEN: {'description': 'Sem capacidade conferir.'},
-        status.HTTP_404_NOT_FOUND: {
-            'description': 'Execução de outro dia ou cancelada (fora do escopo da conferência).',
-        },
-    },
+    summary='Marcar presença do ticket',
+    request=SerializerVazio,
+    responses={status.HTTP_200_OK: OpenApiTypes.OBJECT},
 )
-class FinalizarChamadaConferenciaView(PodeConferirTransporteMixin, BasicPostAPIView):
-    serializer_class = FinalizarChamadaSerializer
-    mensagem_sucesso = 'Chamada de tickets concluída com sucesso.'
+class EmbarcarTicketConferenciaView(_AcaoTicketConferenciaView):
+    acao_business = 'conferir_embarcar'
+    mensagem_sucesso = 'Presença registrada com sucesso.'
+
+
+@extend_schema(
+    tags=['Transporte · Conferência'],
+    summary='Desfazer presença do ticket',
+    request=SerializerVazio,
+    responses={status.HTTP_200_OK: OpenApiTypes.OBJECT},
+)
+class DesfazerPresencaTicketConferenciaView(_AcaoTicketConferenciaView):
+    acao_business = 'conferir_desfazer_presenca'
+    mensagem_sucesso = 'Presença desfeita com sucesso.'
+
+
+@extend_schema(
+    tags=['Transporte · Conferência'],
+    summary='Marcar ausência do ticket',
+    request=SerializerVazio,
+    responses={status.HTTP_200_OK: OpenApiTypes.OBJECT},
+)
+class AusentarTicketConferenciaView(_AcaoTicketConferenciaView):
+    acao_business = 'conferir_ausentar'
+    mensagem_sucesso = 'Ausência registrada com sucesso.'
+
+
+@extend_schema(
+    tags=['Transporte · Conferência'],
+    summary='Desfazer ausência do ticket',
+    request=SerializerVazio,
+    responses={status.HTTP_200_OK: OpenApiTypes.OBJECT},
+)
+class DesfazerAusenciaTicketConferenciaView(_AcaoTicketConferenciaView):
+    acao_business = 'conferir_desfazer_ausencia'
+    mensagem_sucesso = 'Ausência desfeita com sucesso.'
+
+
+@extend_schema(
+    tags=['Transporte · Conferência'],
+    summary='Marcar reservados restantes como ausentes',
+    request=SerializerVazio,
+    responses={status.HTTP_200_OK: ExecucaoRotaSerializer},
+)
+class RestantesFaltaramConferenciaView(PodeConferirTransporteMixin, BasicPostAPIView):
+    serializer_class = SerializerVazio
+    mensagem_sucesso = 'Reservados restantes marcados como ausentes.'
 
     def do_action_post(self, serializer_data, request, *args, **kwargs):
         execucao = ExecucaoRota().business.obter_para_conferencia(
             kwargs['pk'],
             exigir_embarque=True,
         )
-        execucao = execucao.business.finalizar_chamada(serializer_data.get('ausentes') or [])
-        return {'dados': ExecucaoRotaSerializer(execucao).data}
+        execucao = execucao.business.marcar_restantes_faltaram()
+        return {'dados': ExecucaoRotaSerializer(execucao, context={'request': request}).data}
+
+
+@extend_schema(
+    tags=['Transporte · Conferência'],
+    summary='Encerrar primeira chamada',
+    request=SerializerVazio,
+    responses={status.HTTP_200_OK: OpenApiTypes.OBJECT},
+)
+class FecharPrimeiraChamadaConferenciaView(PodeConferirTransporteMixin, BasicPostAPIView):
+    serializer_class = SerializerVazio
+    mensagem_sucesso = 'Primeira chamada encerrada com sucesso.'
+
+    def do_action_post(self, serializer_data, request, *args, **kwargs):
+        execucao = ExecucaoRota().business.obter_para_conferencia(kwargs['pk'])
+        if (
+            execucao.status in STATUS_POS_CONFERENCIA
+            or not execucao.primeira_chamada_concluida
+        ):
+            execucao.rules.validar_execucao_em_embarque(execucao)
+        execucao, segunda_pulada = execucao.business.fechar_primeira_chamada()
+        return {
+            'dados': {
+                'execucao': ExecucaoRotaSerializer(execucao, context={'request': request}).data,
+                'segunda_chamada_pulada': segunda_pulada,
+            },
+        }
+
+
+@extend_schema(
+    tags=['Transporte · Conferência'],
+    summary='Encerrar segunda chamada',
+    request=SerializerVazio,
+    responses={status.HTTP_200_OK: ExecucaoRotaSerializer},
+)
+class FecharSegundaChamadaConferenciaView(PodeConferirTransporteMixin, BasicPostAPIView):
+    serializer_class = SerializerVazio
+    mensagem_sucesso = 'Segunda chamada encerrada com sucesso.'
+
+    def do_action_post(self, serializer_data, request, *args, **kwargs):
+        execucao = ExecucaoRota().business.obter_para_conferencia(kwargs['pk'])
+        if execucao.status in STATUS_POS_CONFERENCIA:
+            if not execucao.chamada_tickets_concluida:
+                execucao.rules.validar_execucao_em_embarque(execucao)
+        elif not execucao.chamada_tickets_concluida:
+            execucao.rules.validar_execucao_em_embarque(execucao)
+        execucao = execucao.business.fechar_segunda_chamada()
+        return {'dados': ExecucaoRotaSerializer(execucao, context={'request': request}).data}
 
 
 PERMISSAO_HISTORICO = (

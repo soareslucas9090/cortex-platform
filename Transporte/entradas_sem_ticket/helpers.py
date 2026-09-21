@@ -16,6 +16,14 @@ class EntradaSemTicketHelpers(ModelInstanceHelpers):
             aluno=aluno,
         ).exists()
 
+    def obter_entrada_por_aluno(self, execucao, aluno):
+        from .models import EntradaSemTicket
+
+        return EntradaSemTicket.objects.filter(
+            execucao_rota=execucao,
+            aluno=aluno,
+        ).select_related('aluno', 'aluno__usuario').first()
+
     def listar_por_cpfs(self, execucao, cpfs):
         from .models import EntradaSemTicket
 

@@ -647,20 +647,14 @@ class PermissaoDocumentacao:
                             'QR Code permanece L3.'
                         ),
                         (
-                            'A chamada envia só ausentes (omitir = presença, com strike). '
-                            'Finalizar a conferência não altera tickets: a espera que não entrou '
-                            'no lote permanece EM_ESPERA (desfecho nessa execução, sem promoção). '
-                            'CONTEMPLADO nasce no POST de entradas-sem-ticket/, não no finalizar. '
-                            'POST em entradas-sem-ticket/validar/ consulta sem gravar e devolve o card '
-                            '(depois do lote concluído devolve 400). '
-                            'O POST em entradas-sem-ticket/ recebe cpfs em lote e persiste '
-                            '(replay do mesmo conjunto devolve 200). '
-                            'O lote de CPF é opcional. '
-                            'Quem está EM_ESPERA e entra no lote fica CONTEMPLADO e recebe EntradaSemTicket; '
-                            'quem cancelou o ticket pode usar se houver vaga. '
-                            'Quem está AUSENTE nesta execução pode entrar nas mesmas condições; '
-                            'o ticket permanece AUSENTE e o strike não é desfeito. '
-                            'Três strikes ativos não bloqueiam a entrada por CPF.'
+                            'A conferência é colaborativa: marcação incremental por ticket '
+                            '(embarcar, desfazer presença, ausentar, desfazer ausência), '
+                            'fechar 1ª/2ª chamada e restantes-faltaram; GET reservas devolve '
+                            'snapshot para poll (~2s). Strikes de ausência na 2ª só ao finalizar. '
+                            'Finalizar a conferência não altera quem ficou EM_ESPERA. '
+                            'CPF: um por POST {cpf}; validar consulta sem gravar (400 fora da fase CPF). '
+                            'EM_ESPERA → CONTEMPLADO + EntradaSemTicket; AUSENTE → EMBARCADO sem entrada. '
+                            'Três strikes ativos não bloqueiam walk-in. L3 marcar-ausente em EM_EMBARQUE: 400.'
                         ),
                         (
                             'Reserva, entrada e saída da fila e cancelamento pelo aluno funcionam '

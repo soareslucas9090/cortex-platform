@@ -135,12 +135,9 @@ class TicketRules(ModelInstanceRules):
             'Somente um ticket reservado pode ser marcado como ausente.',
         )
         status_execucao = self.object_instance.execucao_rota.status
-        if status_execucao not in (
-            StatusExecucaoRota.EM_EMBARQUE,
-            StatusExecucaoRota.EMBARCADO,
-        ):
+        if status_execucao == StatusExecucaoRota.EM_EMBARQUE:
             self.return_exception(
-                'A ausência só pode ser registrada durante o embarque ou após a conferência.'
+                'Durante o embarque, registre ausências pela conferência de tickets.'
             )
         return True
 

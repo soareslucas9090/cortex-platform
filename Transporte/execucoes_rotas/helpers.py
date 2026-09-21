@@ -209,23 +209,63 @@ class ExecucaoRotaHelpers(ModelInstanceHelpers):
         ).select_related('rota', 'rota__percurso')
         return queryset
 
+    def existe_reservado_pendente(self):
+        from Transporte.tickets.choices import StatusTicket
+
+        return self.object_instance.tickets.filter(status=StatusTicket.RESERVADO).exists()
+
+    def obter_fase_conferencia(self):
+        from .choices import STATUS_POS_CONFERENCIA
+
+        execucao = self.object_instance
+        if execucao.status in STATUS_POS_CONFERENCIA:
+            return 'encerrada'
+        if execucao.status != StatusExecucaoRota.EM_EMBARQUE:
+            return None
+        if not execucao.primeira_chamada_concluida:
+            return 'primeira'
+        if execucao.chamada_tickets_concluida:
+            return 'cpf'
+        return 'segunda'
+
+    def contar_totais_conferencia(self):
+        from Transporte.tickets.choices import StatusTicket
+
+        execucao = self.object_instance
+        agregados = execucao.tickets.filter(
+            status__in=(
+                StatusTicket.RESERVADO,
+                StatusTicket.EMBARCADO,
+                StatusTicket.AUSENTE,
+            ),
+        ).aggregate(
+            reservado=Count('pk', filter=Q(status=StatusTicket.RESERVADO)),
+            embarcado=Count('pk', filter=Q(status=StatusTicket.EMBARCADO)),
+            ausente=Count('pk', filter=Q(status=StatusTicket.AUSENTE)),
+        )
+        return {
+            'reservado': agregados['reservado'] or 0,
+            'embarcado': agregados['embarcado'] or 0,
+            'ausente': agregados['ausente'] or 0,
+        }
+
     def contar_vagas_ocupadas(self):
         from Transporte.tickets.choices import StatusTicket
 
         execucao = self.object_instance
-        if execucao.chamada_tickets_concluida:
-            ocupadas = execucao.tickets.filter(status=StatusTicket.EMBARCADO).count()
-            ocupadas += execucao.entradas_sem_ticket.count()
-            return ocupadas
-        return execucao.tickets.filter(
-            status__in=(StatusTicket.RESERVADO, StatusTicket.EMBARCADO),
-        ).count()
+        if self.existe_reservado_pendente():
+            return execucao.tickets.filter(
+                status__in=(StatusTicket.RESERVADO, StatusTicket.EMBARCADO),
+            ).count()
+        ocupadas = execucao.tickets.filter(status=StatusTicket.EMBARCADO).count()
+        ocupadas += execucao.entradas_sem_ticket.count()
+        return ocupadas
 
     def ocupacao_da_listagem(self):
         execucao = self.object_instance
         if not hasattr(execucao, 'tickets_solicitados'):
             return self.contar_vagas_ocupadas()
-        if execucao.chamada_tickets_concluida:
+        if not self.existe_reservado_pendente():
             return (
                 getattr(execucao, 'tickets_embarcados', 0)
                 + getattr(execucao, 'entradas_sem_ticket_count', 0)

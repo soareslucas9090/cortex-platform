@@ -413,24 +413,20 @@ para a data local, enriquecida com a execução correspondente.
     `iniciar` da conferência (abrir/fechar/cancelar não vai para `EM_EMBARQUE`);
     o aluno ainda solicita no instante igual a T-30. Depois de `EMBARCADO` o
     monitoramento não reinicia (replay de iniciar só em `EM_EMBARQUE`).
-    Na chamada, a primeira conclusão grava o conjunto de ausentes; o segundo
-    envio só vale se repetir o mesmo conjunto. Presença por omissão é
-    responsabilidade do conferente (sem QR nesta tela).
-13. Ao finalizar a conferência (`EMBARCADO`), a espera que não entrou no lote de
-    CPF permanece `EM_ESPERA` — esse é o desfecho nessa execução, não um estado
-    intermediário à espera de promoção. Grava-se `embarcado_em` e
-    `conferencia_finalizada_por` (usuário autenticado); `finalizada_em`
-    fica para o fim da viagem (`INICIADA` → `FINALIZADA`). Replay não troca.
-    O lote de CPF é opcional: finalizar sem enviá-lo não reclassifica a espera.
-    `CONTEMPLADO` é gravado no lote de CPF, não neste passo.
-14. Entrada sem ticket usa as vagas restantes após a chamada (`EM_ESPERA` não reserva
-    vaga). O lote `{ "cpfs": [...] }` marca `EM_ESPERA` como `CONTEMPLADO` e cria
-    `EntradaSemTicket`, ou só cria a entrada se não houver ticket. Replay do mesmo
-    conjunto é 200; conjunto diferente após o
-    primeiro lote não vazio é 400. Lista vazia é 201 e não conclui o lote. Depois
-    do lote concluído, `validar` também é 400 (não mostra card que não dá para gravar).
-    Aluno `AUSENTE` pode entrar por CPF; a ausência e o strike permanecem. Três
-    strikes ativos não bloqueiam essa entrada.
+    A chamada é incremental (1ª e 2ª com POSTs por ticket e fechamento explícito);
+    strikes de ausência na conferência só ao finalizar (`AUSENTE` remanescente).
+    Vários conferentes podem marcar; a última escrita prevalece por ticket.
+13. Ao finalizar a conferência (`EMBARCADO`), a espera que não entrou por CPF
+    permanece `EM_ESPERA` — desfecho nessa execução. Grava-se `embarcado_em`,
+    `conferencia_finalizada_por` e `entradas_cpf_concluidas`; `finalizada_em`
+    fica para o fim da viagem (`INICIADA` → `FINALIZADA`). Replay não troca
+    conferente nem timestamps. Finalizar sem CPF ainda aplica strikes pendentes.
+14. Entrada sem ticket é um CPF por vez após `chamada_tickets_concluida`, sem
+    bloqueio por lotação. `EM_ESPERA` → `CONTEMPLADO` + `EntradaSemTicket`;
+    `AUSENTE` → `EMBARCADO` sem entrada nem strike imediato. Replay do mesmo CPF
+    é 200. Fora da fase CPF, `validar` e registro retornam 400. Três strikes
+    ativos não bloqueiam walk-in. Relatório: ausente que embarcou via CPF conta
+    só como presente.
 15. Depois de `EM_EMBARQUE` a execução não pode ser cancelada; só finaliza a conferência (`EMBARCADO`).
 16. Conferência por ID no dia: `CANCELADA` não existe nesse escopo;
     `EMBARCADO`, `INICIADA` e `FINALIZADA` permanecem para consulta da execução

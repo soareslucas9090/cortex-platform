@@ -31,16 +31,12 @@ class EntradaSemTicketRules(ModelInstanceRules):
             )
         return True
 
-    def validar_lote_cpf_aberto(self, execucao) -> bool:
-        if execucao.entradas_cpf_concluidas:
-            self.return_exception(
-                'A entrada por CPF desta execução já foi concluída.',
-            )
-        return True
+    def validar_fase_cpf_aberta(self, execucao) -> bool:
+        from Transporte.execucoes_rotas.constantes import MENSAGEM_CONFERENCIA_JA_ENCERRADA
 
-    def validar_vaga_disponivel(self, vagas_disponiveis) -> bool:
-        if vagas_disponiveis < 1:
-            self.return_exception('Não há vagas disponíveis para entrada sem ticket.')
+        self.validar_chamada_concluida(execucao)
+        if execucao.entradas_cpf_concluidas:
+            self.return_exception(MENSAGEM_CONFERENCIA_JA_ENCERRADA)
         return True
 
     def validar_cpfs_sem_duplicata(self, cpfs) -> bool:

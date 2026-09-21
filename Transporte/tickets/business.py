@@ -325,3 +325,117 @@ class TicketBusiness(ModelInstanceBusiness):
                 'Não foi possível listar os tickets da conferência.',
                 logger,
             )
+
+    def _obter_execucao_e_ticket_conferencia(self, execucao_id, codigo_ticket):
+        from Transporte.execucoes_rotas.models import ExecucaoRota
+
+        from .models import Ticket
+
+        execucao = ExecucaoRota.objects.select_for_update().get(pk=execucao_id)
+        ticket = Ticket.objects.select_for_update().select_related(
+            'execucao_rota',
+            'aluno__usuario',
+        ).get(codigo=codigo_ticket, execucao_rota_id=execucao_id)
+        return execucao, ticket
+
+    def conferir_embarcar(self, execucao_id, codigo_ticket):
+        try:
+            execucao, ticket = self._obter_execucao_e_ticket_conferencia(
+                execucao_id,
+                codigo_ticket,
+            )
+            fase = execucao.helper.obter_fase_conferencia()
+            if fase not in ('primeira', 'segunda'):
+                raise BusinessRuleException(
+                    'A presença só pode ser registrada durante a primeira ou a segunda chamada.',
+                )
+            if fase == 'primeira':
+                execucao.rules.validar_fase_primeira(execucao)
+            else:
+                execucao.rules.validar_fase_segunda(execucao)
+            ticket.rules.validar_status(
+                StatusTicket.RESERVADO,
+                'Somente um ticket reservado pode ser marcado como presente.',
+            )
+            if ticket.status == StatusTicket.EMBARCADO:
+                return execucao, ticket
+            ticket.embarcado_em = timezone.now()
+            ticket.state.atualizar_status(StatusTicket.EMBARCADO)
+            return execucao, ticket
+        except Exception as e:
+            self.relancar_ou_erro_sistema(
+                e,
+                'Não foi possível registrar a presença do ticket.',
+                logger,
+            )
+
+    def conferir_desfazer_presenca(self, execucao_id, codigo_ticket):
+        try:
+            execucao, ticket = self._obter_execucao_e_ticket_conferencia(
+                execucao_id,
+                codigo_ticket,
+            )
+            fase = execucao.helper.obter_fase_conferencia()
+            if fase not in ('primeira', 'segunda'):
+                raise BusinessRuleException(
+                    'Não é possível desfazer a presença nesta fase da conferência.',
+                )
+            if fase == 'primeira':
+                execucao.rules.validar_fase_primeira(execucao)
+            else:
+                execucao.rules.validar_fase_segunda(execucao)
+            ticket.rules.validar_status(
+                StatusTicket.EMBARCADO,
+                'Somente um ticket embarcado pode ter a presença desfeita.',
+            )
+            ticket.embarcado_em = None
+            ticket.state.atualizar_status(StatusTicket.RESERVADO)
+            return execucao, ticket
+        except Exception as e:
+            self.relancar_ou_erro_sistema(
+                e,
+                'Não foi possível desfazer a presença do ticket.',
+                logger,
+            )
+
+    def conferir_ausentar(self, execucao_id, codigo_ticket):
+        try:
+            execucao, ticket = self._obter_execucao_e_ticket_conferencia(
+                execucao_id,
+                codigo_ticket,
+            )
+            execucao.rules.validar_fase_segunda(execucao)
+            ticket.rules.validar_status(
+                StatusTicket.RESERVADO,
+                'Somente um ticket reservado pode ser marcado como ausente.',
+            )
+            ticket.ausente_em = timezone.now()
+            ticket.state.atualizar_status(StatusTicket.AUSENTE)
+            return execucao, ticket
+        except Exception as e:
+            self.relancar_ou_erro_sistema(
+                e,
+                'Não foi possível registrar a ausência do ticket.',
+                logger,
+            )
+
+    def conferir_desfazer_ausencia(self, execucao_id, codigo_ticket):
+        try:
+            execucao, ticket = self._obter_execucao_e_ticket_conferencia(
+                execucao_id,
+                codigo_ticket,
+            )
+            execucao.rules.validar_fase_segunda(execucao)
+            ticket.rules.validar_status(
+                StatusTicket.AUSENTE,
+                'Somente um ticket ausente pode ter a ausência desfeita.',
+            )
+            ticket.ausente_em = None
+            ticket.state.atualizar_status(StatusTicket.RESERVADO)
+            return execucao, ticket
+        except Exception as e:
+            self.relancar_ou_erro_sistema(
+                e,
+                'Não foi possível desfazer a ausência do ticket.',
+                logger,
+            )
