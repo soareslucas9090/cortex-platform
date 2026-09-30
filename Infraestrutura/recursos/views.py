@@ -38,7 +38,7 @@ from .serializers import (
     ''',
     parameters=[
         OpenApiParameter('ativo', OpenApiTypes.BOOL, OpenApiParameter.QUERY, required=False),
-        OpenApiParameter('codigo', OpenApiTypes.STR, OpenApiParameter.QUERY, required=False),
+        OpenApiParameter('descricao', OpenApiTypes.STR, OpenApiParameter.QUERY, required=False),
         OpenApiParameter('tipo', OpenApiTypes.STR, OpenApiParameter.QUERY, required=False),
         OpenApiParameter('sala_id', OpenApiTypes.INT, OpenApiParameter.QUERY, required=False),
         OpenApiParameter('paginacao', OpenApiTypes.INT, OpenApiParameter.QUERY, required=False),
@@ -56,9 +56,9 @@ class ListarRecursosView(IsAuthenticatedMixin, BasicGetAPIView):
         ativo = self.request.query_params.get('ativo')
         if ativo is not None and ativo.lower() in ('true', 'false'):
             qs = qs.filter(ativo=ativo.lower() == 'true')
-        codigo = self.request.query_params.get('codigo')
-        if codigo:
-            qs = qs.filter(codigo__unaccent__icontains=codigo)
+        descricao = self.request.query_params.get('descricao')
+        if descricao:
+            qs = qs.filter(descricao__unaccent__icontains=descricao)
         tipo = self.request.query_params.get('tipo')
         if tipo and tipo in TipoRecurso.values:
             qs = qs.filter(tipo=tipo)
