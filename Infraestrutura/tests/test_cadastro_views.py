@@ -118,6 +118,35 @@ class CadastroRecursosValidacaoTest(APITestCase):
         self.assertIsNone(resposta.data['dados']['sala'])
         self.assertIsNone(resposta.data['dados']['foto'])
 
+    def test_lista_recursos_busca_por_codigo_ou_nome_da_sala(self):
+        recurso = Recurso.objects.create(
+            codigo='CHV-LAB-001',
+            tipo=TipoRecurso.CHAVE,
+            sala=self.sala,
+        )
+        outro = Recurso.objects.create(
+            codigo='CHV-OUTRO-001',
+            tipo=TipoRecurso.CHAVE,
+            sala=Sala.objects.create(bloco=self.bloco, nome='Auditório'),
+        )
+
+        por_sala = self.client.get(self.url_recursos, {'busca': 'sala 10'})
+        self.assertEqual(por_sala.status_code, status.HTTP_200_OK)
+        ids_por_sala = {item['id'] for item in por_sala.data['dados']}
+        self.assertIn(recurso.pk, ids_por_sala)
+        self.assertNotIn(outro.pk, ids_por_sala)
+
+        por_codigo = self.client.get(self.url_recursos, {'busca': 'lab-001'})
+        self.assertEqual(por_codigo.status_code, status.HTTP_200_OK)
+        ids_por_codigo = {item['id'] for item in por_codigo.data['dados']}
+        self.assertIn(recurso.pk, ids_por_codigo)
+
+        por_bloco = self.client.get(self.url_recursos, {'busca': 'bloco teste'})
+        self.assertEqual(por_bloco.status_code, status.HTTP_200_OK)
+        ids_por_bloco = {item['id'] for item in por_bloco.data['dados']}
+        self.assertIn(recurso.pk, ids_por_bloco)
+        self.assertEqual(por_bloco.data['dados'][0]['sala']['bloco']['nome'], 'Bloco Teste')
+
     def test_nao_desativa_recurso_com_emprestimo_em_aberto(self):
         solicitante = criar_usuario('44444444444', nome='Solicitante Emp')
         operador = conceder_capacidade_operar(criar_usuario('55555555555', nome='Operador Emp'))

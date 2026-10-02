@@ -55,13 +55,18 @@ class EmprestimoRules(ModelInstanceRules):
             self.return_exception('Um ou mais recursos informados não foram encontrados.')
         return True
 
-    def validar_recurso_disponivel(self, recurso) -> bool:
+    def validar_recurso_disponivel(self, recurso, possui_emprestimo_aberto: bool) -> bool:
         if not recurso.ativo:
             self.return_exception(f'O recurso {recurso.codigo} está inativo.')
         if recurso.em_avaria:
             self.return_exception(f'O recurso {recurso.codigo} está em avaria.')
-        if self.object_instance.helper.recurso_esta_emprestado(recurso):
-            self.return_exception(f'O recurso {recurso.codigo} já possui empréstimo em aberto.')
+        if possui_emprestimo_aberto:
+            identificacao = recurso.codigo
+            if recurso.sala_id:
+                identificacao = f'{recurso.sala.nome} / {recurso.sala.bloco.nome}'
+            self.return_exception(
+                f'O recurso {identificacao} já possui empréstimo em aberto.',
+            )
         return True
 
     def validar_elegibilidade_solicitante_para_recurso(self, solicitante, recurso) -> bool:

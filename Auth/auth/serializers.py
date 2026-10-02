@@ -59,6 +59,7 @@ class LoginSerializer(BaseHybridLoginSerializer):
             'tem_perfil_aluno': hasattr(user, 'aluno') and user.aluno is not None,
             'eh_admin_frontend': user.is_staff,
             'usuario_coletivo': user.usuario_coletivo,
+            'tipo_conta_coletiva': user.tipo_conta_coletiva,
             'permissoes': user.permissoes,
         }
 
@@ -108,6 +109,11 @@ class LoginResponseSerializer(serializers.Serializer):
         help_text='Indica se o usuário tem acesso administrativo no frontend.')
     usuario_coletivo = serializers.BooleanField(
         help_text='Indica se a conta autenticada é usuário coletivo (ex.: guarita).')
+    tipo_conta_coletiva = serializers.CharField(
+        required=False,
+        allow_null=True,
+        help_text='Finalidade da conta coletiva (ex.: guarita).',
+    )
     permissoes = serializers.JSONField(
         help_text='Dicionário de permissões por módulo (ex: {"cortex": "EDITAR_EU"}).'
     )

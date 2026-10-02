@@ -140,6 +140,7 @@ class EmprestimoHelpers(ModelInstanceHelpers):
         responsavel_id=None,
         recurso_id=None,
         tipo_recurso=None,
+        atrasado=None,
     ):
         """L2 (`operar`): consulta ampla. L1: apenas empréstimos ativos próprios."""
         from .models import Emprestimo, ItemEmprestimo
@@ -166,6 +167,8 @@ class EmprestimoHelpers(ModelInstanceHelpers):
             qs = qs.filter(itens__recurso_id=recurso_id).distinct()
         if tipo_recurso is not None:
             qs = qs.filter(itens__recurso__tipo=tipo_recurso).distinct()
+        if atrasado is not None:
+            qs = self._filtrar_por_atrasado(qs, atrasado)
 
         # Abertos primeiro; dentro de cada grupo, mais recentes primeiro.
         itens_abertos = ItemEmprestimo.objects.filter(
@@ -196,6 +199,19 @@ class EmprestimoHelpers(ModelInstanceHelpers):
         if ativo:
             return qs.filter(Exists(itens_abertos))
         return qs.exclude(Exists(itens_abertos))
+
+    def _filtrar_por_atrasado(self, qs, atrasado: bool):
+        """Filtra pela mesma condição usada na propriedade calculada ``atrasado``."""
+        from .models import ItemEmprestimo
+
+        limite = timezone.now() - timedelta(hours=HORAS_ALERTA_ATRASO)
+        itens_abertos = ItemEmprestimo.objects.filter(
+            emprestimo_id=OuterRef('pk'),
+            devolvido_em__isnull=True,
+        )
+        if atrasado:
+            return qs.filter(Exists(itens_abertos), retirada_em__lt=limite)
+        return qs.exclude(Exists(itens_abertos), retirada_em__lt=limite)
 
     def _esta_ativo_por_pk(self, emprestimo_id: int) -> bool:
         from .models import ItemEmprestimo

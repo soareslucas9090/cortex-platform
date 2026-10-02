@@ -13,6 +13,13 @@ logger = logging.getLogger(__name__)
 
 class EmprestimoBusiness(ModelInstanceBusiness):
 
+    def listar_para_usuario(self, usuario, **filtros):
+        """Lista empréstimos dentro do escopo de consulta do usuário autenticado."""
+        try:
+            return self.object_instance.helper.listar_para_usuario(usuario, **filtros)
+        except Exception as e:
+            self.relancar_ou_erro_sistema(e, 'Não foi possível listar os empréstimos.', logger)
+
     def verificar_consulta(self, usuario):
         """Valida se o usuário autenticado pode consultar o empréstimo."""
         try:
@@ -45,13 +52,19 @@ class EmprestimoBusiness(ModelInstanceBusiness):
             recursos = list(
                 Recurso.objects.select_for_update(of=('self',))
                 .filter(pk__in=recurso_ids)
-                .select_related('sala'),
+                .select_related('sala', 'sala__bloco'),
             )
             self.object_instance.rules.validar_recursos_informados(recurso_ids, recursos)
             self.object_instance.rules.validar_solicitante_ativo(solicitante_id)
             solicitante = Usuario.objects.get(pk=solicitante_id)
             for recurso in recursos:
-                self.object_instance.rules.validar_recurso_disponivel(recurso)
+                possui_emprestimo_aberto = self.object_instance.helper.recurso_esta_emprestado(
+                    recurso,
+                )
+                self.object_instance.rules.validar_recurso_disponivel(
+                    recurso,
+                    possui_emprestimo_aberto=possui_emprestimo_aberto,
+                )
                 self.object_instance.rules.validar_elegibilidade_solicitante_para_recurso(
                     solicitante,
                     recurso,

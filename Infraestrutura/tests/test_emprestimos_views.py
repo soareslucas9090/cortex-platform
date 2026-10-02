@@ -1,6 +1,7 @@
 import datetime
 
 from django.urls import reverse
+from django.utils import timezone
 
 from rest_framework import status
 from rest_framework.test import APITestCase
@@ -65,11 +66,26 @@ class EmprestimosViewsTest(APITestCase):
         self.assertEqual(resposta.status_code, status.HTTP_403_FORBIDDEN)
 
     def test_operador_lista_solicitantes_elegiveis_por_recurso(self):
+        self.solicitante.foto = 'https://sistema-externo.example/fotos/solicitante.jpg'
+        self.solicitante.foto_secundaria = (
+            f'Cortex/usuarios/fotos/{self.solicitante.pk}/avatar.jpg'
+        )
+        self.solicitante.save(update_fields=['foto', 'foto_secundaria'])
         self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token_operador}')
         resposta = self.client.get(self.url_solicitantes, {'recurso_id': self.chave.pk})
         self.assertEqual(resposta.status_code, status.HTTP_200_OK)
         ids = [item['id'] for item in resposta.data['dados']]
         self.assertIn(self.solicitante.pk, ids)
+        item = next(item for item in resposta.data['dados'] if item['id'] == self.solicitante.pk)
+        url_foto_secundaria = reverse(
+            'identidade:usuario-foto-secundaria',
+            kwargs={'pk': self.solicitante.pk},
+        )
+        self.assertEqual(item['foto'], self.solicitante.foto)
+        self.assertEqual(
+            item['foto_secundaria'],
+            f'http://testserver{url_foto_secundaria}?v=avatar',
+        )
 
     def test_solicitantes_elegiveis_exclui_usuario_sem_acesso(self):
         sem_acesso = criar_usuario('25252525252', nome='Sem Acesso')
@@ -181,6 +197,38 @@ class EmprestimosViewsTest(APITestCase):
         url_devolver = reverse('infraestrutura:emprestimo-devolver', kwargs={'pk': emprestimo_id})
         resposta = self.client.post(url_devolver, {'item_ids': [item_id]})
         self.assertEqual(resposta.status_code, status.HTTP_200_OK)
+
+    def test_operador_filtra_atrasados_antes_da_paginacao(self):
+        emprestimo_id = self._criar_emprestimo_ativo()
+        Emprestimo.objects.filter(pk=emprestimo_id).update(
+            retirada_em=timezone.now() - datetime.timedelta(hours=25),
+        )
+
+        resposta = self.client.get(self.url_lista, {
+            'ativo': 'true',
+            'atrasado': 'true',
+            'paginacao': 1,
+        })
+
+        self.assertEqual(resposta.status_code, status.HTTP_200_OK)
+        self.assertEqual(resposta.data['count'], 1)
+        self.assertEqual(resposta.data['dados'][0]['id'], emprestimo_id)
+
+        Emprestimo.objects.filter(pk=emprestimo_id).update(retirada_em=timezone.now())
+        resposta = self.client.get(self.url_lista, {
+            'ativo': 'true',
+            'atrasado': 'true',
+            'paginacao': 1,
+        })
+        self.assertEqual(resposta.data['count'], 0)
+
+        resposta = self.client.get(self.url_lista, {
+            'ativo': 'true',
+            'atrasado': 'false',
+            'paginacao': 1,
+        })
+        self.assertEqual(resposta.data['count'], 1)
+        self.assertEqual(resposta.data['dados'][0]['id'], emprestimo_id)
 
     def test_l1_detalhe_emprestimo_ativo_proprio(self):
         emprestimo_id = self._criar_emprestimo_ativo()

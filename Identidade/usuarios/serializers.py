@@ -3,7 +3,7 @@ import re
 from rest_framework import serializers
 from drf_spectacular.utils import extend_schema_field
 
-from .models import Usuario
+from .models import TipoContaColetiva, Usuario
 
 
 class UsuarioServidorSerializer(serializers.Serializer):
@@ -143,7 +143,8 @@ class UsuarioSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'cpf', 'nome', 'email', 'ativo', 'is_admin',
             'foto', 'foto_secundaria', 'deficiencia', 'colaborador_externo',
-            'usuario_coletivo', 'empresas_coletivo_ids', 'cargos_coletivo_ids',
+            'usuario_coletivo', 'tipo_conta_coletiva',
+            'empresas_coletivo_ids', 'cargos_coletivo_ids',
             'funcoes_coletivo_ids', 'setores_coletivo_ids',
             'tem_perfil_aluno', 'created_at',
             'servidor', 'terceirizado', 'vinculos',
@@ -198,6 +199,13 @@ class CriarUsuarioSerializer(serializers.Serializer):
         default=False,
         help_text='Conta compartilhada (ex.: guarita) para operação coletiva.',
     )
+    tipo_conta_coletiva = serializers.ChoiceField(
+        choices=TipoContaColetiva.choices,
+        required=False,
+        allow_null=True,
+        default=None,
+        help_text='Finalidade da conta coletiva.',
+    )
 
     def validate(self, attrs):
         cpf = attrs.get('cpf')
@@ -206,6 +214,10 @@ class CriarUsuarioSerializer(serializers.Serializer):
             raise serializers.ValidationError(
                 'A senha é obrigatória quando o CPF não é informado.'
             )
+        if attrs.get('tipo_conta_coletiva') and not attrs.get('usuario_coletivo'):
+            raise serializers.ValidationError({
+                'tipo_conta_coletiva': 'O tipo só pode ser definido para uma conta coletiva.'
+            })
         return attrs
 
     def validate_deficiencia(self, value):
@@ -311,6 +323,10 @@ class UsuarioColetivoItemSerializer(serializers.Serializer):
 class UsuarioColetivoSerializer(serializers.Serializer):
     usuario_id = serializers.IntegerField()
     usuario_coletivo = serializers.BooleanField()
+    tipo_conta_coletiva = serializers.ChoiceField(
+        choices=TipoContaColetiva.choices,
+        allow_null=True,
+    )
     empresas = UsuarioColetivoItemSerializer(many=True)
     cargos = UsuarioColetivoItemSerializer(many=True)
     funcoes = UsuarioColetivoItemSerializer(many=True)

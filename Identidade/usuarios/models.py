@@ -50,6 +50,10 @@ class TipoDeficiencia(models.TextChoices):
     DEFICIENCIA_FISICA = 'deficiencia_fisica', 'Deficiência Física'
 
 
+class TipoContaColetiva(models.TextChoices):
+    GUARITA = 'guarita', 'Guarita'
+
+
 class Usuario(ModelHelperMixin, ModelBusinessMixin, ModelRulesMixin, UserModelPermissionMixin, AbstractBaseAppUser):
     from .business import UsuarioBusiness
     from .helpers import UsuarioHelpers
@@ -107,6 +111,14 @@ class Usuario(ModelHelperMixin, ModelBusinessMixin, ModelRulesMixin, UserModelPe
             'deve ser escolhido entre os usuários do pool associado.'
         ),
     )
+    tipo_conta_coletiva = models.CharField(
+        'Tipo de conta coletiva',
+        max_length=30,
+        choices=TipoContaColetiva.choices,
+        null=True,
+        blank=True,
+        help_text='Finalidade da conta compartilhada. Ex.: guarita.',
+    )
     empresas_coletivo = models.ManyToManyField(
         'empresas_instituicoes.EmpresaInstituicao',
         blank=True,
@@ -140,6 +152,8 @@ class Usuario(ModelHelperMixin, ModelBusinessMixin, ModelRulesMixin, UserModelPe
     def save(self, *args, **kwargs):
         if self.cpf == '':
             self.cpf = None
+        if not self.usuario_coletivo:
+            self.tipo_conta_coletiva = None
 
         super().save(*args, **kwargs)
 

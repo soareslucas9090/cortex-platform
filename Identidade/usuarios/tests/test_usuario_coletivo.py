@@ -4,7 +4,8 @@ from rest_framework import status
 from rest_framework.test import APITestCase
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from Identidade.usuarios.models import Usuario
+from Auth.auth.serializers import LoginSerializer, ProjectMeSerializer
+from Identidade.usuarios.models import TipoContaColetiva, Usuario
 from Organizacional.funcoes.models import Funcao
 from Organizacional.setores.models import Setor
 from PessoasInstitucionais.cargos.models import Cargo
@@ -54,6 +55,39 @@ class UsuarioColetivoViewsTest(APITestCase):
         usuario = Usuario.objects.get(cpf='40000000004')
         self.assertTrue(usuario.usuario_coletivo)
         self.assertEqual(usuario.empresas_coletivo.count(), 0)
+
+    def test_criar_usuario_coletivo_com_tipo_guarita(self):
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token_admin}')
+        resposta = self.client.post(reverse('identidade:usuario-list'), {
+            'cpf': '40000000005',
+            'nome': 'Conta de acesso compartilhado',
+            'usuario_coletivo': True,
+            'tipo_conta_coletiva': TipoContaColetiva.GUARITA,
+        })
+        self.assertEqual(resposta.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(
+            resposta.data['dados']['tipo_conta_coletiva'],
+            TipoContaColetiva.GUARITA,
+        )
+
+    def test_rejeita_tipo_coletivo_em_conta_comum(self):
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token_admin}')
+        resposta = self.client.post(reverse('identidade:usuario-list'), {
+            'cpf': '40000000006',
+            'nome': 'Conta comum',
+            'tipo_conta_coletiva': TipoContaColetiva.GUARITA,
+        })
+        self.assertEqual(resposta.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_login_e_me_expoem_tipo_da_conta_coletiva(self):
+        self.conta.tipo_conta_coletiva = TipoContaColetiva.GUARITA
+        self.conta.save(update_fields=['tipo_conta_coletiva'])
+
+        payload_login = LoginSerializer().get_extra_payload(self.conta)
+        payload_me = ProjectMeSerializer(self.conta).data
+
+        self.assertEqual(payload_login['tipo_conta_coletiva'], TipoContaColetiva.GUARITA)
+        self.assertEqual(payload_me['tipo_conta_coletiva'], TipoContaColetiva.GUARITA)
 
     def test_criar_usuario_coletivo_sem_cpf_com_senha(self):
         self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token_admin}')
@@ -154,7 +188,10 @@ class UsuarioColetivoViewsTest(APITestCase):
 
     def test_desativar_flag_limpa_pool(self):
         self.conta.setores_coletivo.add(self.setor)
+        self.conta.tipo_conta_coletiva = TipoContaColetiva.GUARITA
+        self.conta.save(update_fields=['tipo_conta_coletiva'])
         self.conta.business.definir_flag_coletivo(False)
         self.conta.refresh_from_db()
         self.assertFalse(self.conta.usuario_coletivo)
+        self.assertIsNone(self.conta.tipo_conta_coletiva)
         self.assertEqual(self.conta.setores_coletivo.count(), 0)

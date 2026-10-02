@@ -218,6 +218,7 @@ class CriarUsuarioView(IsAdminMixin, BasicPostAPIView):
             deficiencia=serializer_data.get('deficiencia', ''),
             colaborador_externo=serializer_data.get('colaborador_externo', False),
             usuario_coletivo=serializer_data.get('usuario_coletivo', False),
+            tipo_conta_coletiva=serializer_data.get('tipo_conta_coletiva'),
         )
         return {
             'mensagem': self.mensagem_sucesso,

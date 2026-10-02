@@ -121,7 +121,11 @@ class UsuarioBusiness(ModelInstanceBusiness):
         """Ativa/desativa a conta coletiva. Ao desativar, limpa o pool."""
         try:
             self.object_instance.usuario_coletivo = usuario_coletivo
-            self.object_instance.save(update_fields=['usuario_coletivo'])
+            if not usuario_coletivo:
+                self.object_instance.tipo_conta_coletiva = None
+            self.object_instance.save(
+                update_fields=['usuario_coletivo', 'tipo_conta_coletiva']
+            )
             if not usuario_coletivo:
                 self.object_instance.empresas_coletivo.clear()
                 self.object_instance.cargos_coletivo.clear()

@@ -8,6 +8,13 @@ logger = logging.getLogger(__name__)
 
 class RecursoBusiness(ModelInstanceBusiness):
 
+    def listar_recursos(self, **filtros):
+        """Lista recursos conforme os filtros válidos informados pela API."""
+        try:
+            return self.object_instance.helper.listar_com_filtros(**filtros)
+        except Exception as e:
+            self.relancar_ou_erro_sistema(e, 'Não foi possível listar os recursos.', logger)
+
     def criar_recurso(
         self,
         codigo: str,

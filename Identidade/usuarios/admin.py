@@ -59,6 +59,7 @@ class UsuarioAdmin(DjangoUserAdmin, CortexModelAdmin):
         'ativo',
         'colaborador_externo',
         'usuario_coletivo',
+        'tipo_conta_coletiva',
         'is_admin',
         'is_staff',
         'is_superuser',
@@ -69,6 +70,7 @@ class UsuarioAdmin(DjangoUserAdmin, CortexModelAdmin):
         'ativo',
         'colaborador_externo',
         'usuario_coletivo',
+        'tipo_conta_coletiva',
         'is_admin',
         'is_staff',
         'is_superuser',
@@ -86,7 +88,7 @@ class UsuarioAdmin(DjangoUserAdmin, CortexModelAdmin):
 
     fieldsets = (
         (None, {'fields': ('cpf', 'password')}),
-        ('Dados pessoais', {'fields': ('nome', 'email', 'foto', 'foto_secundaria', 'deficiencia', 'colaborador_externo', 'usuario_coletivo')}),
+        ('Dados pessoais', {'fields': ('nome', 'email', 'foto', 'foto_secundaria', 'deficiencia', 'colaborador_externo', 'usuario_coletivo', 'tipo_conta_coletiva')}),
         (
             'Pool do usuário coletivo',
             {
@@ -125,6 +127,7 @@ class UsuarioAdmin(DjangoUserAdmin, CortexModelAdmin):
                     'ativo',
                     'colaborador_externo',
                     'usuario_coletivo',
+                    'tipo_conta_coletiva',
                     'is_admin',
                     'is_staff',
                     'is_superuser',
@@ -161,6 +164,7 @@ class UsuarioAdmin(DjangoUserAdmin, CortexModelAdmin):
                 'ativo': obj.ativo,
                 'colaborador_externo': obj.colaborador_externo,
                 'usuario_coletivo': obj.usuario_coletivo,
+                'tipo_conta_coletiva': obj.tipo_conta_coletiva,
                 'is_admin': obj.is_admin,
                 'is_staff': obj.is_staff,
                 'is_superuser': obj.is_superuser,
@@ -197,6 +201,10 @@ class UsuarioAdmin(DjangoUserAdmin, CortexModelAdmin):
 
     def save_formset(self, request, form, formset, change):
         if formset.model is Endereco:
+            # Inicializa new_objects/changed_objects/deleted_objects usados pelo
+            # Django Admin para construir a mensagem de auditoria, sem persistir
+            # o endereço fora da camada Business.
+            formset.save(commit=False)
             self._salvar_endereco_inline(form, formset)
             return
 
