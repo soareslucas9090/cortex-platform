@@ -1,6 +1,8 @@
 from drf_spectacular.utils import extend_schema_serializer
 from rest_framework import serializers
 
+from Identidade.usuarios.constantes import ANEXO_FOTO_SECUNDARIA
+
 from .models import Emprestimo, ItemEmprestimo
 
 
@@ -9,6 +11,15 @@ class UsuarioResumoSerializer(serializers.Serializer):
     id = serializers.IntegerField()
     nome = serializers.CharField()
     cpf = serializers.CharField()
+    foto = serializers.URLField(allow_null=True, allow_blank=True)
+    foto_secundaria = serializers.SerializerMethodField()
+
+    def get_foto_secundaria(self, obj) -> str | None:
+        return ANEXO_FOTO_SECUNDARIA.url_proxy(
+            obj.pk,
+            obj.foto_secundaria,
+            self.context.get('request'),
+        )
 
 
 @extend_schema_serializer(component_name='EmprestimoRecursoResumo')

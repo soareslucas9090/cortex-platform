@@ -1,4 +1,5 @@
 from django.apps import apps
+from django.db.models import Q
 
 from AppCore.core.helpers.helpers import ModelInstanceHelpers
 
@@ -6,6 +7,37 @@ from .choices import EstadoRecurso
 
 
 class RecursoHelpers(ModelInstanceHelpers):
+
+    def listar_com_filtros(
+        self,
+        *,
+        ativo=None,
+        codigo=None,
+        busca=None,
+        tipo=None,
+        sala_id=None,
+    ):
+        """Lista recursos aplicando filtros opcionais sobre o catálogo autenticado."""
+        from .models import Recurso
+
+        qs = Recurso.objects.select_related('sala', 'sala__bloco').all()
+        if ativo is not None:
+            qs = qs.filter(ativo=ativo)
+        if codigo:
+            qs = qs.filter(codigo__unaccent__icontains=codigo)
+        if busca:
+            qs = qs.filter(
+                Q(codigo__unaccent__icontains=busca)
+                | Q(descricao__unaccent__icontains=busca)
+                | Q(sala__nome__unaccent__icontains=busca)
+                | Q(sala__bloco__nome__unaccent__icontains=busca),
+            )
+
+        if tipo:
+            qs = qs.filter(tipo=tipo)
+        if sala_id is not None:
+            qs = qs.filter(sala_id=sala_id)
+        return qs
 
     def obter_estado_derivado(self) -> str:
         """
@@ -59,4 +91,4 @@ class RecursoHelpers(ModelInstanceHelpers):
     def obter_por_pk_com_sala(self, pk: int):
         """Retorna o recurso com sala pré-carregada para serialização."""
         from .models import Recurso
-        return Recurso.objects.select_related('sala').get(pk=pk)
+        return Recurso.objects.select_related('sala', 'sala__bloco').get(pk=pk)

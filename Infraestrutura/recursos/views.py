@@ -35,15 +35,28 @@ from .serializers import (
     Retorna a lista paginada de recursos físicos.
 
     **Permissões:** Qualquer usuário autenticado. Escrita exige capacidade `cadastrar`.
+
+    **Segurança:** Os query params apenas reduzem o conjunto de resultados e nunca
+    expandem o acesso além do permitido pela autenticação.
     ''',
     parameters=[
         OpenApiParameter('ativo', OpenApiTypes.BOOL, OpenApiParameter.QUERY, required=False),
-        OpenApiParameter('descricao', OpenApiTypes.STR, OpenApiParameter.QUERY, required=False),
+        OpenApiParameter(
+            'busca',
+            OpenApiTypes.STR,
+            OpenApiParameter.QUERY,
+            required=False,
+            description='Busca pelo código do recurso, descrição, nome da sala ou nome do bloco.',
+        ),
+        OpenApiParameter('codigo', OpenApiTypes.STR, OpenApiParameter.QUERY, required=False),
         OpenApiParameter('tipo', OpenApiTypes.STR, OpenApiParameter.QUERY, required=False),
         OpenApiParameter('sala_id', OpenApiTypes.INT, OpenApiParameter.QUERY, required=False),
         OpenApiParameter('paginacao', OpenApiTypes.INT, OpenApiParameter.QUERY, required=False),
     ],
-    responses={status.HTTP_200_OK: RecursoSerializer(many=True)},
+    responses={
+        status.HTTP_200_OK: RecursoSerializer(many=True),
+        status.HTTP_401_UNAUTHORIZED: {'description': 'Não autenticado.'},
+    },
 )
 class ListarRecursosView(IsAuthenticatedMixin, BasicGetAPIView):
     """GET /cortex/infraestrutura/recursos/"""
@@ -52,20 +65,26 @@ class ListarRecursosView(IsAuthenticatedMixin, BasicGetAPIView):
     mensagem_sucesso = 'Recursos listados com sucesso.'
 
     def get_queryset(self):
-        qs = Recurso.objects.select_related('sala').all()
+        filtros = {}
         ativo = self.request.query_params.get('ativo')
         if ativo is not None and ativo.lower() in ('true', 'false'):
-            qs = qs.filter(ativo=ativo.lower() == 'true')
+            filtros['ativo'] = ativo.lower() == 'true'
+        codigo = self.request.query_params.get('codigo')
+        if codigo:
+            filtros['codigo'] = codigo
+        busca = self.request.query_params.get('busca')
+        if busca:
+            filtros['busca'] = busca
         descricao = self.request.query_params.get('descricao')
         if descricao:
-            qs = qs.filter(descricao__unaccent__icontains=descricao)
+            filtros['descricao'] = descricao
         tipo = self.request.query_params.get('tipo')
         if tipo and tipo in TipoRecurso.values:
-            qs = qs.filter(tipo=tipo)
+            filtros['tipo'] = tipo
         sala_id = self.request.query_params.get('sala_id')
         if sala_id and sala_id.isdigit():
-            qs = qs.filter(sala_id=sala_id)
-        return qs
+            filtros['sala_id'] = int(sala_id)
+        return Recurso().business.listar_recursos(**filtros)
 
 
 @extend_schema(
@@ -106,7 +125,7 @@ class CriarRecursoView(PodeCadastrarInfraestruturaMixin, BasicPostAPIView):
 )
 class DetalheRecursoView(IsAuthenticatedMixin, BasicRetrieveAPIView):
     """GET /cortex/infraestrutura/recursos/<pk>/"""
-    queryset = Recurso.objects.select_related('sala').all()
+    queryset = Recurso.objects.select_related('sala', 'sala__bloco').all()
     serializer_class = RecursoSerializer
     mensagem_sucesso = 'Recurso obtido com sucesso.'
 
@@ -120,7 +139,7 @@ class DetalheRecursoView(IsAuthenticatedMixin, BasicRetrieveAPIView):
 )
 class AtualizarRecursoView(PodeCadastrarInfraestruturaMixin, BasicPatchAPIView):
     """PATCH /cortex/infraestrutura/recursos/<pk>/"""
-    queryset = Recurso.objects.select_related('sala').all()
+    queryset = Recurso.objects.select_related('sala', 'sala__bloco').all()
     serializer_class = AtualizarRecursoSerializer
     mensagem_sucesso = 'Recurso atualizado com sucesso.'
 
@@ -241,7 +260,7 @@ class ObterFotoRecursoView(AllowAnyMixin, BasicRetrieveAPIView):
 )
 class EnviarFotoRecursoView(PodeCadastrarInfraestruturaMixin, BasicPostAPIView):
     """POST /cortex/infraestrutura/recursos/{pk}/foto/"""
-    queryset = Recurso.objects.select_related('sala').all()
+    queryset = Recurso.objects.select_related('sala', 'sala__bloco').all()
     parser_classes = (MultiPartParser,)
     serializer_class = EnviarFotoRecursoSerializer
     mensagem_sucesso = 'Foto do recurso atualizada com sucesso.'

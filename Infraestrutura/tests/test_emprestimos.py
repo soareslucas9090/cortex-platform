@@ -1,7 +1,7 @@
 import datetime
 
-from django.test import TestCase
 from django.utils import timezone
+from rest_framework.test import APITestCase
 
 from AppCore.core.exceptions.exceptions import BusinessRuleException
 from Identidade.usuarios.models import Usuario
@@ -36,7 +36,7 @@ def conceder_capacidade_operar(usuario):
     return usuario
 
 
-class EmprestimoElegibilidadeTest(TestCase):
+class EmprestimoElegibilidadeTest(APITestCase):
 
     def setUp(self):
         self.operador = conceder_capacidade_operar(criar_usuario('15151515151', nome='Operador'))
@@ -235,7 +235,7 @@ class EmprestimoElegibilidadeTest(TestCase):
         self.assertEqual(emprestimo.solicitante, aluno_user)
 
 
-class EmprestimoOperacoesTest(TestCase):
+class EmprestimoOperacoesTest(APITestCase):
 
     def setUp(self):
         self.operador = conceder_capacidade_operar(criar_usuario('20202020202', nome='Operador Op'))
@@ -270,6 +270,34 @@ class EmprestimoOperacoesTest(TestCase):
                 conta_autenticada=self.operador,
                 recurso_ids=[self.chave1.pk],
             )
+        self.assertIn('empréstimo em aberto', str(ctx.exception).lower())
+        self.assertNotIn(self.chave1.codigo, str(ctx.exception))
+        self.assertIn(self.sala.nome, str(ctx.exception))
+        self.assertIn(self.bloco.nome, str(ctx.exception))
+
+    def test_recurso_sem_sala_usa_codigo_na_mensagem_de_emprestimo_aberto(self):
+        recurso_sem_sala = Recurso.objects.create(
+            codigo='MID-SEM-SALA',
+            tipo=TipoRecurso.MIDIA,
+        )
+        emprestimo_aberto = Emprestimo.objects.create(
+            solicitante=self.solicitante,
+            responsavel=self.operador,
+            retirada_em=timezone.now(),
+        )
+        ItemEmprestimo.objects.create(
+            emprestimo=emprestimo_aberto,
+            recurso=recurso_sem_sala,
+        )
+
+        with self.assertRaises(BusinessRuleException) as ctx:
+            Emprestimo().business.realizar_emprestimo(
+                solicitante_id=self.solicitante.pk,
+                conta_autenticada=self.operador,
+                recurso_ids=[recurso_sem_sala.pk],
+            )
+
+        self.assertIn(recurso_sem_sala.codigo, str(ctx.exception))
         self.assertIn('empréstimo em aberto', str(ctx.exception).lower())
 
     def test_rejeita_recurso_ids_duplicados(self):
@@ -341,7 +369,7 @@ class EmprestimoOperacoesTest(TestCase):
         self.assertTrue(emprestimo.atrasado)
 
 
-class EmprestimoListagemOrdenacaoTest(TestCase):
+class EmprestimoListagemOrdenacaoTest(APITestCase):
 
     def setUp(self):
         self.operador = conceder_capacidade_operar(criar_usuario('35353535353', nome='Operador Ord'))
@@ -400,7 +428,7 @@ class EmprestimoListagemOrdenacaoTest(TestCase):
         self.assertEqual(ids[2], fechado_recente.pk)
 
 
-class EmprestimoUsuarioColetivoTest(TestCase):
+class EmprestimoUsuarioColetivoTest(APITestCase):
 
     def setUp(self):
         self.guardinha = criar_usuario('32323232323', nome='Seu Zé Unit')

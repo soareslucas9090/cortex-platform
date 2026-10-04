@@ -9,6 +9,14 @@ from .models import Recurso
 class SalaResumoSerializer(serializers.Serializer):
     id = serializers.IntegerField()
     nome = serializers.CharField()
+    bloco = serializers.SerializerMethodField()
+
+    @extend_schema_field(serializers.DictField())
+    def get_bloco(self, obj):
+        return {
+            'id': obj.bloco_id,
+            'nome': obj.bloco.nome,
+        }
 
 
 class RecursoSerializer(serializers.ModelSerializer):

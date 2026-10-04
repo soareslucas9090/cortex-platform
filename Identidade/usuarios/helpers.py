@@ -72,6 +72,7 @@ class UsuarioHelpers(ModelInstanceHelpers):
         return {
             'usuario_id': usuario.pk,
             'usuario_coletivo': usuario.usuario_coletivo,
+            'tipo_conta_coletiva': usuario.tipo_conta_coletiva,
             'empresas': [
                 {'id': e.pk, 'nome': e.nome}
                 for e in usuario.empresas_coletivo.order_by('nome')

@@ -176,6 +176,10 @@ class ListarResponsaveisElegiveisView(PodeOperarInfraestruturaMixin, BasicGetAPI
     depois os **fechados** (mais recentes primeiro).
 
     **Permissões:** Usuário autenticado (escopo conforme capacidade `operar`).
+
+    **Segurança:** Os query params apenas reduzem o conjunto já autorizado e nunca
+    expandem o acesso. `atrasado=true` retorna ativos há mais de 24 horas;
+    `atrasado=false` retorna os demais empréstimos.
     ''',
     parameters=[
         OpenApiParameter('ativo', OpenApiTypes.BOOL, OpenApiParameter.QUERY, required=False),
@@ -183,9 +187,22 @@ class ListarResponsaveisElegiveisView(PodeOperarInfraestruturaMixin, BasicGetAPI
         OpenApiParameter('responsavel_id', OpenApiTypes.INT, OpenApiParameter.QUERY, required=False),
         OpenApiParameter('recurso_id', OpenApiTypes.INT, OpenApiParameter.QUERY, required=False),
         OpenApiParameter('tipo_recurso', OpenApiTypes.STR, OpenApiParameter.QUERY, required=False),
+        OpenApiParameter(
+            'atrasado',
+            OpenApiTypes.BOOL,
+            OpenApiParameter.QUERY,
+            required=False,
+            description=(
+                'Filtra empréstimos atrasados (ativos há mais de 24 horas). '
+                'Use false para retornar os que não estão atrasados.'
+            ),
+        ),
         OpenApiParameter('paginacao', OpenApiTypes.INT, OpenApiParameter.QUERY, required=False),
     ],
-    responses={status.HTTP_200_OK: EmprestimoSerializer(many=True)},
+    responses={
+        status.HTTP_200_OK: EmprestimoSerializer(many=True),
+        status.HTTP_401_UNAUTHORIZED: {'description': 'Não autenticado.'},
+    },
 )
 class ListarEmprestimosView(IsAuthenticatedMixin, BasicGetAPIView):
     """GET /cortex/infraestrutura/emprestimos/"""
@@ -217,7 +234,11 @@ class ListarEmprestimosView(IsAuthenticatedMixin, BasicGetAPIView):
         if tipo_recurso:
             kwargs['tipo_recurso'] = tipo_recurso
 
-        return Emprestimo().helper.listar_para_usuario(self.request.user, **kwargs)
+        atrasado = params.get('atrasado')
+        if atrasado is not None and atrasado.lower() in ('true', 'false'):
+            kwargs['atrasado'] = atrasado.lower() == 'true'
+
+        return Emprestimo().business.listar_para_usuario(self.request.user, **kwargs)
 
 
 @extend_schema(
