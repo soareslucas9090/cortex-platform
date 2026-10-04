@@ -3218,7 +3218,7 @@ paths:
         schema:
           type: boolean
       - in: query
-        name: codigo
+        name: descricao
         schema:
           type: string
       - name: page
