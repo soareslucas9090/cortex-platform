@@ -2672,13 +2672,22 @@ paths:
         (L1): apenas empréstimos ativos do próprio solicitante.\n\n    Ordenação padrão:
         empréstimos **abertos** primeiro (mais recentes primeiro),\n    depois os
         **fechados** (mais recentes primeiro).\n\n    **Permissões:** Usuário autenticado
-        (escopo conforme capacidade `operar`).\n    "
+        (escopo conforme capacidade `operar`).\n\n    **Segurança:** Os query params
+        apenas reduzem o conjunto já autorizado e nunca\n    expandem o acesso. `atrasado=true`
+        retorna ativos há mais de 24 horas;\n    `atrasado=false` retorna os demais
+        empréstimos.\n    "
       summary: Listar empréstimos
       parameters:
       - in: query
         name: ativo
         schema:
           type: boolean
+      - in: query
+        name: atrasado
+        schema:
+          type: boolean
+        description: Filtra empréstimos atrasados (ativos há mais de 24 horas). Use
+          false para retornar os que não estão atrasados.
       - name: page
         required: false
         in: query
@@ -2715,6 +2724,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/PaginatedEmprestimoList'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                description: Não autenticado.
           description: ''
     post:
       operationId: infraestrutura_emprestimos_create
@@ -3210,13 +3225,21 @@ paths:
     get:
       operationId: infraestrutura_recursos_list
       description: "\n    Retorna a lista paginada de recursos físicos.\n\n    **Permissões:**
-        Qualquer usuário autenticado. Escrita exige capacidade `cadastrar`.\n    "
+        Qualquer usuário autenticado. Escrita exige capacidade `cadastrar`.\n\n    **Segurança:**
+        Os query params apenas reduzem o conjunto de resultados e nunca\n    expandem
+        o acesso além do permitido pela autenticação.\n    "
       summary: Listar recursos
       parameters:
       - in: query
         name: ativo
         schema:
           type: boolean
+      - in: query
+        name: busca
+        schema:
+          type: string
+        description: Busca pelo código do recurso, descrição, nome da sala ou nome
+          do bloco.
       - in: query
         name: codigo
         schema:
@@ -3249,6 +3272,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/PaginatedRecursoList'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                description: Não autenticado.
           description: ''
     post:
       operationId: infraestrutura_recursos_create
@@ -9041,6 +9070,15 @@ components:
           type: boolean
           default: false
           description: 'Conta compartilhada (ex.: guarita) para operação coletiva.'
+        tipo_conta_coletiva:
+          nullable: true
+          description: |-
+            Finalidade da conta coletiva.
+
+            * `guarita` - Guarita
+          oneOf:
+          - $ref: '#/components/schemas/TipoContaColetivaEnum'
+          - $ref: '#/components/schemas/NullEnum'
       required:
       - nome
     CriarVinculo:
@@ -9411,8 +9449,18 @@ components:
           type: string
         cpf:
           type: string
+        foto:
+          type: string
+          format: uri
+          nullable: true
+        foto_secundaria:
+          type: string
+          nullable: true
+          readOnly: true
       required:
       - cpf
+      - foto
+      - foto_secundaria
       - id
       - nome
     EncerrarAlunoCurso:
@@ -10041,6 +10089,10 @@ components:
         usuario_coletivo:
           type: boolean
           description: 'Indica se a conta autenticada é usuário coletivo (ex.: guarita).'
+        tipo_conta_coletiva:
+          type: string
+          nullable: true
+          description: 'Finalidade da conta coletiva (ex.: guarita).'
         permissoes:
           description: 'Dicionário de permissões por módulo (ex: {"cortex": "EDITAR_EU"}).'
       required:
@@ -11141,6 +11193,17 @@ components:
           title: Usuário coletivo
           description: 'Conta compartilhada (ex.: guarita). No empréstimo, o responsável
             deve ser escolhido entre os usuários do pool associado.'
+        tipo_conta_coletiva:
+          nullable: true
+          title: Tipo de conta coletiva
+          description: |-
+            Finalidade da conta compartilhada. Ex.: guarita.
+
+            * `guarita` - Guarita
+          oneOf:
+          - $ref: '#/components/schemas/TipoContaColetivaEnum'
+          - $ref: '#/components/schemas/BlankEnum'
+          - $ref: '#/components/schemas/NullEnum'
         empresas_coletivo:
           type: array
           items:
@@ -11248,7 +11311,12 @@ components:
           type: integer
         nome:
           type: string
+        bloco:
+          type: object
+          additionalProperties: {}
+          readOnly: true
       required:
+      - bloco
       - id
       - nome
     RegistrarEntradaSemTicket:
@@ -12151,6 +12219,11 @@ components:
       - posicao_fila
       - status
       - status_display
+    TipoContaColetivaEnum:
+      enum:
+      - guarita
+      type: string
+      description: '* `guarita` - Guarita'
     TipoRecursoEnum:
       enum:
       - chave
@@ -12256,6 +12329,17 @@ components:
           title: Usuário coletivo
           description: 'Conta compartilhada (ex.: guarita). No empréstimo, o responsável
             deve ser escolhido entre os usuários do pool associado.'
+        tipo_conta_coletiva:
+          nullable: true
+          title: Tipo de conta coletiva
+          description: |-
+            Finalidade da conta compartilhada. Ex.: guarita.
+
+            * `guarita` - Guarita
+          oneOf:
+          - $ref: '#/components/schemas/TipoContaColetivaEnum'
+          - $ref: '#/components/schemas/BlankEnum'
+          - $ref: '#/components/schemas/NullEnum'
         empresas_coletivo_ids:
           type: array
           items:
@@ -12321,6 +12405,11 @@ components:
           type: integer
         usuario_coletivo:
           type: boolean
+        tipo_conta_coletiva:
+          nullable: true
+          oneOf:
+          - $ref: '#/components/schemas/TipoContaColetivaEnum'
+          - $ref: '#/components/schemas/NullEnum'
         empresas:
           type: array
           items:
@@ -12342,6 +12431,7 @@ components:
       - empresas
       - funcoes
       - setores
+      - tipo_conta_coletiva
       - usuario_coletivo
       - usuario_id
     UsuarioColetivoItem:
