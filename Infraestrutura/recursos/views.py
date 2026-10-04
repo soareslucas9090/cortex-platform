@@ -46,7 +46,7 @@ from .serializers import (
             OpenApiTypes.STR,
             OpenApiParameter.QUERY,
             required=False,
-            description='Busca pelo código do recurso, nome da sala ou nome do bloco.',
+            description='Busca pelo código do recurso, descrição, nome da sala ou nome do bloco.',
         ),
         OpenApiParameter('codigo', OpenApiTypes.STR, OpenApiParameter.QUERY, required=False),
         OpenApiParameter('tipo', OpenApiTypes.STR, OpenApiParameter.QUERY, required=False),
@@ -75,6 +75,9 @@ class ListarRecursosView(IsAuthenticatedMixin, BasicGetAPIView):
         busca = self.request.query_params.get('busca')
         if busca:
             filtros['busca'] = busca
+        descricao = self.request.query_params.get('descricao')
+        if descricao:
+            filtros['descricao'] = descricao
         tipo = self.request.query_params.get('tipo')
         if tipo and tipo in TipoRecurso.values:
             filtros['tipo'] = tipo

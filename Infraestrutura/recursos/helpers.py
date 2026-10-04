@@ -28,9 +28,11 @@ class RecursoHelpers(ModelInstanceHelpers):
         if busca:
             qs = qs.filter(
                 Q(codigo__unaccent__icontains=busca)
+                | Q(descricao__unaccent__icontains=busca)
                 | Q(sala__nome__unaccent__icontains=busca)
                 | Q(sala__bloco__nome__unaccent__icontains=busca),
             )
+
         if tipo:
             qs = qs.filter(tipo=tipo)
         if sala_id is not None:

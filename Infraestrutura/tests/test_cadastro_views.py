@@ -147,6 +147,44 @@ class CadastroRecursosValidacaoTest(APITestCase):
         self.assertIn(recurso.pk, ids_por_bloco)
         self.assertEqual(por_bloco.data['dados'][0]['sala']['bloco']['nome'], 'Bloco Teste')
 
+    def test_listar_busca_filtra_por_descricao_parcial(self):
+        Recurso.objects.create(
+            codigo='MID-DESC-A',
+            tipo=TipoRecurso.MIDIA,
+            descricao='Projetor da sala 101',
+        )
+        Recurso.objects.create(
+            codigo='MID-DESC-B',
+            tipo=TipoRecurso.MIDIA,
+            descricao='Caixa de som portátil',
+        )
+        resposta = self.client.get(
+            self.url_recursos,
+            {'busca': 'projetor', 'paginacao': 100},
+        )
+        self.assertEqual(resposta.status_code, status.HTTP_200_OK)
+        codigos = [item['codigo'] for item in resposta.data['dados']]
+        self.assertEqual(codigos, ['MID-DESC-A'])
+
+    def test_listar_filtra_por_codigo_parcial(self):
+        Recurso.objects.create(
+            codigo='MID-COD-UNICO',
+            tipo=TipoRecurso.MIDIA,
+            descricao='Item alfa',
+        )
+        Recurso.objects.create(
+            codigo='MID-OUTRO',
+            tipo=TipoRecurso.MIDIA,
+            descricao='Item beta',
+        )
+        resposta = self.client.get(
+            self.url_recursos,
+            {'codigo': 'COD-UNICO', 'paginacao': 100},
+        )
+        self.assertEqual(resposta.status_code, status.HTTP_200_OK)
+        codigos = [item['codigo'] for item in resposta.data['dados']]
+        self.assertEqual(codigos, ['MID-COD-UNICO'])
+
     def test_nao_desativa_recurso_com_emprestimo_em_aberto(self):
         solicitante = criar_usuario('44444444444', nome='Solicitante Emp')
         operador = conceder_capacidade_operar(criar_usuario('55555555555', nome='Operador Emp'))
