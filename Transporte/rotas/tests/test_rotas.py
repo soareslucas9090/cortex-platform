@@ -264,7 +264,7 @@ class RotasAPITestCase(APITestCase):
 
     def test_listar_aceita_ordering_seguro(self):
         mais_antiga = self.rota
-        mais_recente = criar_rota(criar_percurso(apelido='Mais recente'))
+        mais_recente = criar_rota(criar_percurso(apelido='Rota recente'))
         resposta = self.client.get(
             self.url_list,
             {'ordering': 'id', 'busca': 'Rota'},
