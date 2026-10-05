@@ -7564,10 +7564,10 @@ paths:
       description: "\n    Lista as rotas cadastradas, com filtros e paginação.\n\n
         \   **Permissões:** L3 (EDITAR_TUDO) — perfil TI / administradores.\n\n    **Paginação:**
         query param `paginacao` (padrão 10, máximo 100).\n\n    **Filtros:** os query
-        params apenas reduzem o conjunto de resultados.\n    \n    **Ordenação:**
-        por padrão, as rotas são retornadas por `-created_at,-id`.\n    O parâmetro
-        `ordering` aceita somente `created_at` e `id`, com prefixo\n    opcional `-`
-        para ordem decrescente. Valores inválidos usam a ordenação padrão.\n    "
+        params apenas reduzem o conjunto de resultados.\n\n    **Ordenação:** por
+        padrão, as rotas são retornadas por `-created_at,-id`.\n    O parâmetro `ordering`
+        aceita somente `created_at` e `id`, com prefixo\n    opcional `-` para ordem
+        decrescente. Valores inválidos usam a ordenação padrão.\n    "
       summary: Listar rotas
       parameters:
       - in: query
