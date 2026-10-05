@@ -73,6 +73,10 @@ Transporte/
 ### 2. Campos de Rota
 
 - `percurso`: FK obrigatória (`PROTECT`) para `Percurso` ativo.
+- `horario_abertura_solicitacoes`: horário local de abertura (`hh:mm` ou `hh:mm:ss`); padrão `19:00`.
+- O dia da abertura é derivado automaticamente: se o horário de abertura for posterior ao horário de saída, ocorre no dia anterior; caso contrário, ocorre no mesmo dia.
+- A abertura não pode ultrapassar o instante de 30 minutos antes da saída, inclusive em viagens após a meia-noite. PATCH revalida a combinação completa.
+- A edição da abertura vale para execuções abertas existentes, sem apagar tickets. Horário de saída e capacidade da execução continuam congelados.
 - `horario_saida`: horário de partida no formato `hh:mm` (também aceita `hh:mm:ss` na entrada).
 - `dia_semana`: `segunda`, `terca`, `quarta`, `quinta`, `sexta`, `sabado`, `domingo`.
 - `quantidade_vagas`: inteiro ≥ 1.
@@ -132,12 +136,12 @@ O fluxo e a medição do tempo estão descritos na seção 11.
 ### 4. Execuções de rotas e calendário operacional
 
 - O Celery Beat reconcilia a cada cinco minutos, todos os dias, as rotas ativas
-  da data atual que pertencem a percursos ativos. A partir das 19h, também
-  reconcilia as rotas do dia seguinte. O calendário operacional de cada data
+  de hoje e amanhã que pertencem a percursos ativos, somente a partir da
+  abertura configurada em cada rota. O calendário operacional de cada data
   decide se ela permite criação automática.
-- A geração antecipada do dia seguinte começa às 19h e inclui o instante exato
+- A geração começa na abertura individual da rota e inclui o instante exato
   de 30 minutos antes da saída (`now <= data_hora_saida - 30 min`). Uma rota
-  criada depois das 19h entra na próxima reconciliação somente se ainda estiver
+  criada depois da sua abertura entra na próxima reconciliação somente se ainda estiver
   dentro desse prazo.
 - Sem exceção cadastrada, segunda a sexta são operacionais e fins de semana
   não são. Uma exceção ativa prevalece sobre essa regra semanal.
@@ -163,7 +167,7 @@ O fluxo e a medição do tempo estão descritos na seção 11.
   `EMBARCADO = 6`, `INICIADA = 7` (sem remapeamento de valores antigos).
 - Reservas e entradas na fila exigem estado `ABERTA`.
 - Para alunos, execuções disponíveis são exibidas somente em datas operacionais,
-  das 19h do dia anterior até exatamente 30 minutos antes da saída. Isso
+  da abertura configurada na rota até exatamente 30 minutos antes da saída. Isso
   inclui sábados letivos e de reposição configurados no calendário.
 - Conferente e L3 iniciam o monitoramento (`EM_EMBARQUE`) somente pelo
   `iniciar` da conferência, depois de 30 minutos antes da saída
@@ -207,7 +211,7 @@ O fluxo e a medição do tempo estão descritos na seção 11.
 - Com vaga, a solicitação cria `RESERVADO`; sem vaga, a reserva falha e o aluno
   precisa entrar explicitamente na fila.
 - Reserva, entrada na fila, cancelamento e saída da fila funcionam somente em
-  datas operacionais, entre as 19h do dia anterior à execução e exatamente 30
+  datas operacionais, entre a abertura configurada na rota e exatamente 30
   minutos antes da saída. O instante exato do limite ainda é permitido; depois
   dele, todas essas ações são bloqueadas.
 - Cancelar uma reserva promove o primeiro ticket da fila na mesma transação.
@@ -664,3 +668,29 @@ A migração `0004_conferencia_finalizada_por` adiciona a FK opcional.
 
 Testes automatizados neste repositório: `Transporte.execucoes_rotas.tests.test_historico_motorista`
 e `Transporte.execucoes_rotas.tests.test_historico`.
+
+### 13. Cadastro da abertura personalizada
+
+Exemplo de criação ou edição para abrir às 06h no mesmo dia:
+
+```json
+{
+  "horario_abertura_solicitacoes": "06:00",
+}
+```
+
+Para abrir às 20h do dia anterior, informe `20:00` e `1`. Os campos são
+opcionais na criação para manter compatibilidade com clientes existentes:
+omitidos, usam `19:00` e `1`. No PATCH, campos omitidos permanecem como estão.
+O GET de rotas e a rota aninhada nas execuções/tickets expõem ambos os campos.
+A API retorna o horário de abertura em `HH:MM:SS`, preservando os segundos.
+Todos os horários usam `America/Fortaleza`.
+
+A migração `rotas.0003_abertura_solicitacoes_personalizada` preenche rotas
+e seus históricos com o padrão anterior (19h do dia anterior). Execute
+`python manage.py migrate` antes de disponibilizar o código atualizado.
+
+O Beat mantém o intervalo de cinco minutos: execuções automáticas aparecem
+no primeiro processamento após sua abertura, sujeito à fila do worker.
+Execuções criadas manualmente antes da abertura permanecem invisíveis ao aluno
+e não aceitam reservas antes do instante configurado. L3 mantém a consulta ampla.
