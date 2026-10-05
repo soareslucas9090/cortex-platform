@@ -19,6 +19,7 @@ class RotaBusiness(ModelInstanceBusiness):
         percurso_id=None,
         dia_semana=None,
         busca=None,
+        ordering=None,
     ):
         """Lista as rotas administrativas com filtros opcionais."""
         try:
@@ -27,6 +28,7 @@ class RotaBusiness(ModelInstanceBusiness):
                 percurso_id=percurso_id,
                 dia_semana=dia_semana,
                 busca=busca,
+                ordering=ordering,
             )
         except Exception as e:
             self.relancar_ou_erro_sistema(e, 'Não foi possível listar as rotas.', logger)
@@ -53,6 +55,7 @@ class RotaBusiness(ModelInstanceBusiness):
         horario_saida,
         dia_semana: str,
         quantidade_vagas: int,
+        horario_abertura_solicitacoes,
         **kwargs,
     ):
         """Cria uma nova rota vinculada a um percurso."""
@@ -62,12 +65,16 @@ class RotaBusiness(ModelInstanceBusiness):
             rules.validar_percurso_ativo(percurso_id)
             rules.validar_dia_semana(dia_semana)
             rules.validar_quantidade_vagas(quantidade_vagas)
+            rules.validar_abertura_solicitacoes(
+                horario_saida, horario_abertura_solicitacoes,
+            )
             rules.validar_rota_unica(percurso_id, dia_semana, horario_saida)
             rota = Rota.objects.create(
                 percurso_id=percurso_id,
                 horario_saida=horario_saida,
                 dia_semana=dia_semana,
                 quantidade_vagas=quantidade_vagas,
+                horario_abertura_solicitacoes=horario_abertura_solicitacoes,
                 **kwargs,
             )
             return self.object_instance.helper.obter_com_percurso(rota.pk)
@@ -84,7 +91,10 @@ class RotaBusiness(ModelInstanceBusiness):
             dia_semana = dados.get('dia_semana', rota.dia_semana)
             horario_saida = dados.get('horario_saida', rota.horario_saida)
             quantidade_vagas = dados.get('quantidade_vagas', rota.quantidade_vagas)
-
+            rota.rules.validar_abertura_solicitacoes(
+                horario_saida,
+                dados.get('horario_abertura_solicitacoes', rota.horario_abertura_solicitacoes),
+            )
             if 'percurso_id' in dados:
                 rota.rules.validar_percurso_ativo(percurso_id)
             if 'dia_semana' in dados:

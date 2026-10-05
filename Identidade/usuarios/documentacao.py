@@ -658,7 +658,7 @@ class PermissaoDocumentacao:
                         ),
                         (
                             'Reserva, entrada e saída da fila e cancelamento pelo aluno funcionam '
-                            'somente em datas operacionais, das 19h do dia anterior à execução até '
+                            'somente em datas operacionais, da abertura configurada pelo administrador na rota até '
                             'exatamente 30 minutos antes da saída.'
                         ),
                         (

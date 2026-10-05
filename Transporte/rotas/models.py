@@ -24,6 +24,9 @@ class Rota(ModelHelperMixin, ModelBusinessMixin, ModelRulesMixin, BasicModel):
         verbose_name='Percurso',
     )
     horario_saida = models.TimeField('Horário de saída')
+    horario_abertura_solicitacoes = models.TimeField(
+        'Horário de abertura das solicitações',
+    )
     dia_semana = models.CharField(
         'Dia da semana',
         max_length=10,

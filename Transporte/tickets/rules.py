@@ -1,11 +1,11 @@
 from datetime import timedelta
 
-from django.utils.timezone import localtime, now
+from django.utils.timezone import now
 
 from Academico.alunos.choices import SituacaoAluno
 from AppCore.core.rules.rules import ModelInstanceRules
-from Transporte.execucoes_rotas.constantes import HORARIO_ABERTURA_SOLICITACOES
 from Transporte.execucoes_rotas.choices import StatusExecucaoRota
+from Transporte.rotas.horarios import calcular_abertura_solicitacoes
 
 from .choices import StatusTicket
 
@@ -48,16 +48,16 @@ class TicketRules(ModelInstanceRules):
             )
 
         agora = now()
-        saida_local = localtime(execucao.data_hora_saida)
-        abertura = saida_local.replace(
-            hour=HORARIO_ABERTURA_SOLICITACOES.hour,
-            minute=HORARIO_ABERTURA_SOLICITACOES.minute,
-            second=0,
-            microsecond=0,
-        ) - timedelta(days=1)
+        abertura = calcular_abertura_solicitacoes(
+            execucao.data_execucao,
+            execucao.rota.horario_abertura_solicitacoes,
+            execucao.rota.horario_saida,
+        )
         limite = execucao.data_hora_saida - timedelta(minutes=30)
         if agora < abertura:
-            self.return_exception('As solicitações abrem às 19h do dia anterior à execução.')
+            self.return_exception(
+                f'As solicitações abrem em {abertura:%d/%m/%Y às %H:%M:%S}.'
+            )
         if agora > limite:
             self.return_exception(
                 'O prazo para reservar ou entrar na fila termina 30 minutos antes da saída.'
@@ -101,17 +101,15 @@ class TicketRules(ModelInstanceRules):
             )
 
         agora = now()
-        saida_local = localtime(execucao.data_hora_saida)
-        abertura = saida_local.replace(
-            hour=HORARIO_ABERTURA_SOLICITACOES.hour,
-            minute=HORARIO_ABERTURA_SOLICITACOES.minute,
-            second=0,
-            microsecond=0,
-        ) - timedelta(days=1)
+        abertura = calcular_abertura_solicitacoes(
+            execucao.data_execucao,
+            execucao.rota.horario_abertura_solicitacoes,
+            execucao.rota.horario_saida,
+        )
         limite = execucao.data_hora_saida - timedelta(minutes=30)
         if agora < abertura:
             self.return_exception(
-                'Cancelamentos e saída da fila abrem às 19h do dia anterior à execução.'
+                f'Cancelamentos e saída da fila abrem em {abertura:%d/%m/%Y às %H:%M:%S}.'
             )
         if agora > limite:
             self.return_exception(

@@ -1,4 +1,4 @@
-from datetime import time, timedelta
+from datetime import date, datetime, time, timedelta
 
 from django.urls import reverse
 from django.utils import timezone
@@ -42,6 +42,9 @@ def criar_rota(horario_saida, *, dia_semana=None, ativo=True, percurso_ativo=Tru
     return Rota.objects.create(
         percurso=percurso,
         horario_saida=horario_saida,
+        horario_abertura_solicitacoes=(
+            (datetime.combine(date.today(), horario_saida) - timedelta(hours=1)).time()
+        ),
         dia_semana=dia_semana or dia_semana_da_data(timezone.localdate()),
         quantidade_vagas=84,
         ativo=ativo,

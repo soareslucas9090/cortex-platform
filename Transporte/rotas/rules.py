@@ -1,6 +1,11 @@
+from datetime import date, datetime, time, timedelta
+
+from django.utils import timezone
+
 from AppCore.core.rules.rules import ModelInstanceRules
 
 from .choices import DiaSemana
+from .horarios import calcular_abertura_solicitacoes
 
 MENSAGEM_ROTA_DUPLICADA = (
     'Já existe uma rota com este percurso, dia da semana e horário de saída.'
@@ -8,6 +13,18 @@ MENSAGEM_ROTA_DUPLICADA = (
 
 
 class RotaRules(ModelInstanceRules):
+
+    def validar_abertura_solicitacoes(self, horario_saida, horario_abertura):
+        if not isinstance(horario_abertura, time) or horario_abertura.tzinfo is not None:
+            self.return_exception('Informe um horário de abertura válido, sem fuso horário.')
+        data_referencia = date(2026, 1, 2)
+        abertura = calcular_abertura_solicitacoes(
+            data_referencia, horario_abertura, horario_saida,
+        )
+        saida = timezone.make_aware(datetime.combine(data_referencia, horario_saida))
+        if abertura > saida - timedelta(minutes=30):
+            self.return_exception('A abertura deve ocorrer até 30 minutos antes da saída.')
+        return True
 
     def validar_percurso_ativo(self, percurso_id: int) -> bool:
         """Valida que o percurso existe e está ativo."""

@@ -32,8 +32,8 @@ from Transporte.tickets.serializers import TicketConferenciaSerializer
 
 PERMISSAO_LISTAGEM = (
     '**Permissões:** Autenticado. L3 (EDITAR_TUDO) vê todas as execuções; '
-    'demais usuários veem somente execuções abertas, em data operacional, das '
-    '19h do dia anterior à viagem até exatamente 30 minutos antes da saída.'
+    'demais usuários veem somente execuções abertas, em data operacional, da '
+    'abertura configurada na rota até exatamente 30 minutos antes da saída.'
 )
 
 
