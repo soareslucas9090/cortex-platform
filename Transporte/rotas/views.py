@@ -79,6 +79,10 @@ class ListarRotasDoDiaView(IsAuthenticatedMixin, BasicGetAPIView):
     **Paginação:** query param `paginacao` (padrão 10, máximo 100).
 
     **Filtros:** os query params apenas reduzem o conjunto de resultados.
+
+    **Ordenação:** por padrão, as rotas são retornadas por `-created_at,-id`.
+    O parâmetro `ordering` aceita somente `created_at` e `id`, com prefixo
+    opcional `-` para ordem decrescente. Valores inválidos usam a ordenação padrão.
     ''',
     parameters=[
         OpenApiParameter('ativo', OpenApiTypes.BOOL, OpenApiParameter.QUERY, required=False, description='Filtra por status: true = Ativo, false = Inativo. Omitir para todos.'),
@@ -86,6 +90,17 @@ class ListarRotasDoDiaView(IsAuthenticatedMixin, BasicGetAPIView):
         OpenApiParameter('dia_semana', OpenApiTypes.STR, OpenApiParameter.QUERY, required=False, description='Filtra pelo dia da semana (segunda, terca, quarta, quinta, sexta, sabado, domingo). Valores inválidos são ignorados.'),
         OpenApiParameter('busca', OpenApiTypes.STR, OpenApiParameter.QUERY, required=False, description='Filtra por parte do apelido do percurso (ignora acentos e maiúsculas).'),
         OpenApiParameter('paginacao', OpenApiTypes.INT, OpenApiParameter.QUERY, required=False, description='Tamanho da página (1–100, padrão 10).'),
+        OpenApiParameter(
+            'ordering',
+            OpenApiTypes.STR,
+            OpenApiParameter.QUERY,
+            required=False,
+            description=(
+                'Ordenação separada por vírgulas. Campos permitidos: '
+                '`created_at` e `id`; prefixe com `-` para ordem decrescente. '
+                'Padrão: `-created_at,-id`.'
+            ),
+        ),
     ],
     responses={
         status.HTTP_200_OK: RotaSerializer(many=True),
@@ -105,6 +120,7 @@ class ListarRotasView(IsAdminMixin, BasicGetAPIView):
             percurso_id=self.request.query_params.get('percurso_id'),
             dia_semana=self.request.query_params.get('dia_semana'),
             busca=self.request.query_params.get('busca'),
+            ordering=self.request.query_params.get('ordering'),
         )
 
 

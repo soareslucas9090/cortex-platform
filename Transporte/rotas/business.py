@@ -19,6 +19,7 @@ class RotaBusiness(ModelInstanceBusiness):
         percurso_id=None,
         dia_semana=None,
         busca=None,
+        ordering=None,
     ):
         """Lista as rotas administrativas com filtros opcionais."""
         try:
@@ -27,6 +28,7 @@ class RotaBusiness(ModelInstanceBusiness):
                 percurso_id=percurso_id,
                 dia_semana=dia_semana,
                 busca=busca,
+                ordering=ordering,
             )
         except Exception as e:
             self.relancar_ou_erro_sistema(e, 'Não foi possível listar as rotas.', logger)

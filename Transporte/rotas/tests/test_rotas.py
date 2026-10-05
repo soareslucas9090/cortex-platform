@@ -1,4 +1,4 @@
-from datetime import time
+from datetime import datetime, time
 
 from django.urls import reverse
 from rest_framework import status
@@ -210,6 +210,7 @@ class RotasAPITestCase(APITestCase):
             'ativo': 'true',
             'percurso_id': str(self.percurso.pk),
             'dia_semana': DiaSemana.SEGUNDA,
+            'ordering': '-created_at,-id',
         })
         self.assertEqual(resposta.status_code, status.HTTP_200_OK)
         self.assertEqual(len(resposta.data['dados']), 1)
@@ -222,12 +223,63 @@ class RotasAPITestCase(APITestCase):
         apelidos = [item['percurso']['apelido'] for item in resposta.data['dados']]
         self.assertEqual(apelidos, ['Rota Pontões'])
 
-    def test_listar_ordena_por_calendario(self):
-        criar_rota(self.percurso, horario_saida=time(6, 0), dia_semana=DiaSemana.DOMINGO)
+    def test_listar_ordena_por_data_de_cadastro_decrescente(self):
+        mais_recente = criar_rota(
+            criar_percurso(apelido='Mais recente'),
+            horario_saida=time(6, 0),
+            dia_semana=DiaSemana.DOMINGO,
+        )
         resposta = self.client.get(self.url_list)
         self.assertEqual(resposta.status_code, status.HTTP_200_OK)
-        dias = [item['dia_semana'] for item in resposta.data['dados']]
-        self.assertEqual(dias, [DiaSemana.SEGUNDA, DiaSemana.DOMINGO])
+        self.assertEqual(resposta.data['dados'][0]['id'], mais_recente.pk)
+
+    def test_listar_paginado_prioriza_rotas_mais_recentes(self):
+        rotas = [
+            criar_rota(
+                criar_percurso(apelido=f'Rota {indice}'),
+                horario_saida=time(6, indice),
+            )
+            for indice in range(1, 4)
+        ]
+        resposta = self.client.get(self.url_list, {'paginacao': 2, 'page': 1})
+        self.assertEqual(resposta.status_code, status.HTTP_200_OK)
+        self.assertEqual(
+            [item['id'] for item in resposta.data['dados']],
+            [rotas[-1].pk, rotas[-2].pk],
+        )
+        self.assertIsNotNone(resposta.data['next'])
+
+    def test_listar_desempata_por_id_quando_created_at_igual(self):
+        instante = datetime(2026, 1, 1, 12, 0)
+        primeira = criar_rota(criar_percurso(apelido='Primeira'))
+        segunda = criar_rota(criar_percurso(apelido='Segunda'))
+        Rota.objects.filter(pk__in=(primeira.pk, segunda.pk)).update(created_at=instante)
+
+        resposta = self.client.get(self.url_list)
+        self.assertEqual(resposta.status_code, status.HTTP_200_OK)
+        self.assertEqual(
+            [item['id'] for item in resposta.data['dados'][:2]],
+            [segunda.pk, primeira.pk],
+        )
+
+    def test_listar_aceita_ordering_seguro(self):
+        mais_antiga = self.rota
+        mais_recente = criar_rota(criar_percurso(apelido='Mais recente'))
+        resposta = self.client.get(
+            self.url_list,
+            {'ordering': 'id', 'busca': 'Rota'},
+        )
+        self.assertEqual(resposta.status_code, status.HTTP_200_OK)
+        self.assertLess(
+            [item['id'] for item in resposta.data['dados']].index(mais_antiga.pk),
+            [item['id'] for item in resposta.data['dados']].index(mais_recente.pk),
+        )
+
+    def test_listar_ordering_invalido_usa_padrao(self):
+        mais_recente = criar_rota(criar_percurso(apelido='Mais recente'))
+        resposta = self.client.get(self.url_list, {'ordering': 'percurso__apelido'})
+        self.assertEqual(resposta.status_code, status.HTTP_200_OK)
+        self.assertEqual(resposta.data['dados'][0]['id'], mais_recente.pk)
 
     def test_listar_dia_semana_invalido_e_ignorado(self):
         resposta = self.client.get(self.url_list, {'dia_semana': 'xyz'})
