@@ -74,8 +74,8 @@ class DetalharTicketView(IsAuthenticatedMixin, BasicRetrieveAPIView):
     tags=['Transporte · Tickets'],
     summary='Reservar ticket',
     description=(
-        'Reserva uma vaga disponível, em data operacional, das 19h do dia anterior '
-        f'à execução até exatamente 30 minutos antes da saída.\n\n{PERMISSAO_ALUNO}'
+        'Reserva uma vaga disponível, em data operacional, a partir da abertura configurada '
+        f'na rota até exatamente 30 minutos antes da saída.\n\n{PERMISSAO_ALUNO}'
     ),
     request=SerializerVazio,
     responses={
@@ -98,7 +98,7 @@ class ReservarTicketView(IsAuthenticatedMixin, BasicPostAPIView):
     summary='Entrar na fila de espera',
     description=(
         'Entra explicitamente na fila quando a execução está lotada, em data '
-        'operacional, das 19h do dia anterior até exatamente 30 minutos antes da '
+        'operacional, da abertura configurada na rota até exatamente 30 minutos antes da '
         f'saída.\n\n{PERMISSAO_ALUNO}'
     ),
     request=SerializerVazio,
@@ -121,7 +121,7 @@ class EntrarFilaEsperaView(IsAuthenticatedMixin, BasicPostAPIView):
     tags=['Transporte · Tickets'],
     summary='Cancelar ticket reservado',
     description=(
-        'Cancela uma reserva, em data operacional, das 19h do dia anterior até '
+        'Cancela uma reserva, em data operacional, da abertura configurada na rota até '
         f'exatamente 30 minutos antes da saída.\n\n{PERMISSAO_ALUNO}'
     ),
     request=SerializerVazio,
@@ -151,8 +151,8 @@ class CancelarTicketView(IsAuthenticatedMixin, BasicPostAPIView):
     tags=['Transporte · Tickets'],
     summary='Sair da fila de espera',
     description=(
-        'Remove o próprio ticket da fila, em data operacional, das 19h do dia '
-        f'anterior até exatamente 30 minutos antes da saída.\n\n{PERMISSAO_ALUNO}'
+        'Remove o próprio ticket da fila, em data operacional, da abertura configurada '
+        f'na rota até exatamente 30 minutos antes da saída.\n\n{PERMISSAO_ALUNO}'
     ),
     request=SerializerVazio,
     responses={
