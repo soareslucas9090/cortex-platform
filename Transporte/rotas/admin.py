@@ -8,7 +8,10 @@ from .models import Rota
 
 @admin.register(Rota)
 class RotaAdmin(AtivoModelAdmin):
-    list_display = ('percurso', 'dia_semana', 'horario_saida', 'quantidade_vagas', 'ativo', 'created_at')
+    list_display = (
+        'percurso', 'dia_semana', 'horario_saida', 'horario_abertura_solicitacoes',
+        'quantidade_vagas', 'ativo', 'created_at',
+    )
     list_filter = ('ativo', 'dia_semana', 'percurso')
     search_fields = ('percurso__apelido',)
 
@@ -29,6 +32,7 @@ class RotaAdmin(AtivoModelAdmin):
                     horario_saida=obj.horario_saida,
                     dia_semana=obj.dia_semana,
                     quantidade_vagas=obj.quantidade_vagas,
+                    horario_abertura_solicitacoes=obj.horario_abertura_solicitacoes,
                     ativo=obj.ativo,
                 )
             )

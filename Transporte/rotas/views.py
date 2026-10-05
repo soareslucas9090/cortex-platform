@@ -113,6 +113,10 @@ class ListarRotasView(IsAdminMixin, BasicGetAPIView):
     summary='Criar rota',
     description=f'''
     Cadastra uma nova rota vinculada a um percurso.
+    Configure horario_abertura_solicitacoes. Se o horário de abertura for posterior
+    ao horário de saída, a abertura ocorrerá no dia anterior; caso contrário,
+    ocorrerá no mesmo dia. O horário de abertura é obrigatório.
+    A abertura deve ocorrer até 30 minutos antes da saída, no fuso America/Fortaleza.
 
     {PERMISSAO_TI}
     ''',
@@ -165,7 +169,9 @@ class DetalharRotaView(IsAdminMixin, BasicRetrieveAPIView):
     tags=['Transporte · Rotas'],
     summary='Atualizar rota',
     description=f'''
-    Atualiza parcialmente uma rota.
+    Atualiza parcialmente uma rota. A abertura é revalidada com o horário de saída.
+    Alterações de abertura valem também para execuções abertas existentes,
+    preservando os tickets já emitidos.
 
     {PERMISSAO_TI}
     ''',

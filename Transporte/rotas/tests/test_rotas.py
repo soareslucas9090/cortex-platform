@@ -45,6 +45,7 @@ def criar_rota(percurso, horario_saida=None, dia_semana=DiaSemana.SEGUNDA, quant
     return Rota.objects.create(
         percurso=percurso,
         horario_saida=horario_saida or time(7, 0),
+        horario_abertura_solicitacoes=time(6, 0),
         dia_semana=dia_semana,
         quantidade_vagas=quantidade_vagas,
     )
