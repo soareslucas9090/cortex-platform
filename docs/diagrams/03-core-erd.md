@@ -17,7 +17,7 @@ Este documento não substitui o diagrama visual, mas funciona como sua traduçã
 
 ## Escopo atual
 
-O núcleo do domínio do Cortex está organizado nestes contextos principais:
+O núcleo **persistido hoje** do Cortex está organizado nestes **seis** contextos implementados:
 
 - `Identidade`
 - `Organizacional`
@@ -26,7 +26,7 @@ O núcleo do domínio do Cortex está organizado nestes contextos principais:
 - `Infraestrutura`
 - `Transporte`
 
-O DER textual abaixo descreve as entidades centrais e seus relacionamentos.
+A seção **11** documenta o domínio **AcessoCampus** (**PLANEJADO** — models ainda **não** existem no código). O DER textual abaixo descreve entidades centrais e relacionamentos dos seis contextos implementados, mais a modelagem planejada onde indicado.
 
 ---
 
@@ -366,6 +366,10 @@ Representa um curso institucional.
 - `created_at`
 - `updated_at`
 
+### Atributo planejado (pré-requisito AcessoCampus)
+
+- **`nivel_ensino`** — **PLANEJADO**, ainda **não** no model `Curso` no código. `IntegerChoices` **`NivelEnsino`**: `ENSINO_MEDIO=1`, `TECNICO=2`, `SUPERIOR=3`, `POS_GRADUACAO=4`. Elegibilidade EM em AcessoCampus exige `ENSINO_MEDIO`; **proibido** inferir EM pelo nome do curso.
+
 ---
 
 ## 4.3 AlunoCurso
@@ -381,6 +385,7 @@ Representa o vínculo entre aluno e curso.
 - `curso`
 - `matricula`
 - `ano_conclusao`
+- `ativo` (implementado em `Academico.aluno_cursos`)
 - `created_at`
 - `updated_at`
 
@@ -448,6 +453,20 @@ Representa o vínculo entre aluno e curso.
 - `Funcao` 1:0..1 `PermissaoFuncaoTransporte`
 - `Usuario` 1:0..1 `PermissaoUsuarioTransporte`
 - Bloqueio de transporte: estado em `Aluno` (`is_bloqueado`, `faltas`), sem entidade `Bloqueio` em `models.py`
+
+## Relações AcessoCampus (**PLANEJADO** — ver seção 11)
+
+- `Aluno` 1:N `SolicitacaoAcesso`
+- `AlunoCurso` 1:N `SolicitacaoAcesso` (vínculo referenciado na solicitação)
+- `SolicitacaoAcesso` 1:N `ProgramacaoAcesso`
+- `SolicitacaoAcesso` 1:N `EventoAcesso` (após aprovação)
+- `ProgramacaoAcesso` 1:N `EventoAcesso`
+- `EventoAcesso` 0..1:1 `RegistroAcesso`
+- `EventoAcesso` 0..1:0..1 `EventoAcesso` (`evento_relacionado`, saída com retorno)
+- `Usuario` 1:N `SolicitacaoAcesso` (`analisada_por`, `cancelada_por`)
+- `Usuario` 1:N `RegistroAcesso` (`registrado_por` — pessoa física)
+- `Funcao` 1:0..1 `PermissaoFuncaoAcessoCampus`
+- `Usuario` 1:0..1 `PermissaoUsuarioAcessoCampus`
 
 ---
 
@@ -532,6 +551,16 @@ O conceito de monitor deve ser representado em `Funcao`, e não como atributo bo
 - `Transporte.permissoes` -> Models: `PermissaoFuncaoTransporte`, `PermissaoUsuarioTransporte`
 - `Transporte.relatorios` -> objeto de domínio `RelatorioAlunos` (sem tabela própria)
 - `Transporte.bloqueios` -> API de leitura do estado de bloqueio em `Aluno` (sem `models.py`)
+
+## Módulo: `AcessoCampus/` (**PLANEJADO** — ainda **não** em `PROJECT_APPS`)
+
+- `AcessoCampus.solicitacoes` -> Model: `SolicitacaoAcesso`
+- `AcessoCampus.programacoes` -> Model: `ProgramacaoAcesso`
+- `AcessoCampus.eventos` -> Model: `EventoAcesso`
+- `AcessoCampus.registros` -> Model: `RegistroAcesso`
+- `AcessoCampus.permissoes` -> Models: `PermissaoFuncaoAcessoCampus`, `PermissaoUsuarioAcessoCampus` (sem rotas HTTP no agregador)
+
+DER e dicionário: `docs/schema/acesso-campus.md`.
 
 ---
 
@@ -730,7 +759,37 @@ Walk-in na execução após a chamada; vinculada a `ExecucaoRota` e ao aluno (ou
 
 ---
 
-# 11. Pontos que podem evoluir depois
+# 11. Domínio AcessoCampus (**PLANEJADO**)
+
+> Models **não** existem no repositório. Especificação canônica: `docs/domains/acesso-campus.md`, `docs/schema/acesso-campus.md`, ADR-003.
+
+Circulação e autorizações de alunos de Ensino Médio na portaria. Timezone operacional: **America/Fortaleza**. Auditoria de análise: **`analisada_por`**, **`analisada_em`** (nunca `analizada_`).
+
+## 11.1 SolicitacaoAcesso
+
+Raiz do fluxo; estados `PENDENTE`, `APROVADA`, `REJEITADA`, `CANCELADA`. Snapshots imutáveis na criação (`aluno_nome`, `curso_nome`, `matricula`). **Autorização operacional = status `APROVADA`** — sem entidade `Autorizacao` separada.
+
+## 11.2 ProgramacaoAcesso
+
+1..N por solicitação; tipos pontual, período, recorrente, saída com retorno, etc. Editável apenas enquanto solicitação `PENDENTE`.
+
+## 11.3 EventoAcesso
+
+Materializados atomicamente na aprovação; `exige_confirmacao` **congelado** por evento. `SituacaoConfirmacao` (**derivada**, não persistida) a partir de registro e flag.
+
+## 11.4 RegistroAcesso
+
+0..1 por evento (`OneToOne`); quatro resultados operacionais na portaria. `registrado_por`: `Usuario` pessoa física.
+
+## 11.5 Permissões do módulo
+
+Quatro capacidades booleanas OR função/usuário; app `permissoes` **sem** HTTP no agregador.
+
+**Não modelar:** entidade `Campus`; duplicata de `Aluno`/`Usuario`; vínculo com Transporte ou `Infraestrutura.autorizacoes`.
+
+---
+
+# 12. Pontos que podem evoluir depois
 
 Os itens abaixo permanecem abertos ou fora do escopo atual:
 
@@ -740,12 +799,13 @@ Os itens abaixo permanecem abertos ou fora do escopo atual:
 - regras adicionais para aluno monitor
 - **reservas** de infraestrutura (bloqueios futuros de recurso/sala)
 - notificações automáticas além da sinalização UI de empréstimo atrasado
+- **responsável legal** no fluxo AcessoCampus (fora do MVP documentado; validação LGPD antes de produção ampla com menores EM)
 
 ---
 
-# 12. Resumo executivo
+# 13. Resumo executivo
 
-O núcleo do Cortex parte de `Usuario` como centro da identidade, e organiza o restante do sistema em torno de:
+O núcleo **já persistido** do Cortex parte de `Usuario` como centro da identidade, e organiza o restante do sistema em torno de:
 
 - estrutura organizacional (`Setor`, `Funcao`, `SetorVinculo`)
 - perfis institucionais (`Servidor`, `Terceirizado`, `Cargo`, `EmpresaInstituicao`)
@@ -753,6 +813,8 @@ O núcleo do Cortex parte de `Usuario` como centro da identidade, e organiza o r
 - infraestrutura física (`Bloco`, `Sala`, `Recurso`, `Emprestimo`, `Autorizacao`, permissões do módulo)
 - transporte universitário (`Percurso`, `Rota`, `DiaCalendarioTransporte`, `Motorista`, `ExecucaoRota`, `Ticket`,
   `EntradaSemTicket`, `Strike`, `Justificativa`, permissões de transporte)
+
+**AcessoCampus** (solicitações, programações, eventos, registros) está **planejado** (seção 11) e **não** compõe o núcleo ORM implementado hoje.
 
 As decisões mais importantes consolidadas neste ERD textual são:
 

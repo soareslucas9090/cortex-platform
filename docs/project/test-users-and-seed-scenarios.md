@@ -511,6 +511,32 @@ Futuras expansões recomendadas:
 
 ---
 
+# 9. Cenários PLANEJADOS — AcessoCampus
+
+> **Status:** PLANEJADO — o módulo **AcessoCampus** **não** está em `PROJECT_APPS`; **não** há seeds/fixtures automáticas deste fluxo no projeto hoje. Use esta seção como guia **futuro** após AC.1+ do [milestone AcessoCampus](../planning/milestone-acesso-campus.md).
+
+## 9.1 Personas sugeridas (massa de teste futura)
+
+| Persona | Objetivo |
+|---------|----------|
+| Aluno EM matriculado | `Aluno` ativo, `SituacaoAluno.MATRICULADO`, `AlunoCurso.ativo` em curso com **`nivel_ensino=ENSINO_MEDIO`** (quando AC.1 existir) — deve **solicitar** |
+| Aluno de curso superior | Mesmo perfil ativo, curso com `nivel_ensino=SUPERIOR` — **não** deve criar solicitação (400) |
+| Gestor EM | `SetorVinculo` com função **COORDENADOR** ou **DIRETOR**; `PermissaoFuncaoAcessoCampus` com `analisar_solicitacoes` e `visualizar_historico` |
+| Vigilante / guarita | Conta **`usuario_coletivo`** na sessão; permissão só `operar_portaria`; **`registrado_por`** = pessoa física escolhida do pool (espelho Infraestrutura) |
+| L3 (`EDITAR_TUDO`) | Todas as capacidades `acesso_campus` na compilação planejada |
+| Servidor L2 sem flag do módulo | `LER_TUDO` Cortex, **sem** capacidade AcessoCampus — endpoints do módulo devem retornar **403** |
+
+## 9.2 Casos de negócio a cobrir (testes/seeds manuais futuros)
+
+- Programação **pontual** (entrada tardia, saída antecipada), **período**, **recorrência** (com `data_fim` e `dias_semana`), **saída com retorno**, **ausência integral**
+- Transições: aprovar, rejeitar, cancelar pendente (aluno), cancelar aprovada (gestão)
+- **`confirmacao`**: `PENDENTE` / `NAO_EXIGIDA` / `RECEBIDA` conforme `exige_confirmacao` e presença de registro
+- Portaria: quatro resultados `ResultadoRegistroAcesso` (`REALIZADO`, `DIVERGENCIA`, `NAO_COMPARECEU`, `IMPEDIDO`); replay idempotente; conta coletiva não persiste como `registrado_por`
+
+Referência: `docs/domains/acesso-campus.md`, pacote de testes AC.10 no milestone.
+
+---
+
 # Resumo executivo
 
 A massa inicial do Cortex deve ser pequena, mas suficiente para validar as regras mais importantes do domínio.

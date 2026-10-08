@@ -26,7 +26,8 @@ O Cortex é um backend modular para operação de um contexto institucional e ac
 - **pessoas institucionais** (servidores, cargos, terceirizados, empresas);
 - **perfil acadêmico** (alunos, cursos, matrículas por curso);
 - **infraestrutura** física e operacional (blocos, salas, recursos, empréstimos, autorizações — substituto funcional dos fluxos legados Chameco/Sigec na v1);
-- **transporte universitário** (percursos, rotas, execuções, tickets, strikes, calendário operacional, bloqueios).
+- **transporte universitário** (percursos, rotas, execuções, tickets, strikes, calendário operacional, bloqueios);
+- **circulação e portaria para Ensino Médio** (**planejado** — bounded context **AcessoCampus**: solicitações, análise gerencial, eventos operacionais e registro na guarita; ver ADR-003 e `docs/domains/acesso-campus.md`).
 
 O núcleo permanece a entidade `Usuario`, sobre a qual perfis e vínculos se especializam.
 
@@ -52,7 +53,7 @@ Conceitos próximos permanecem separados, por exemplo:
 
 ## Visão geral do domínio
 
-O sistema está dividido em **seis domínios** de negócio, cada um um módulo agregador na raiz do repositório:
+O sistema está dividido em **seis domínios implementados** de negócio, cada um um módulo agregador na raiz do repositório, mais o bounded context **planejado** `AcessoCampus`:
 
 ### `Identidade`
 
@@ -80,6 +81,13 @@ O sistema está dividido em **seis domínios** de negócio, cada um um módulo a
 ### `Transporte`
 
 - Doze apps em `PROJECT_APPS` (percursos, rotas, motoristas, calendário, execuções, tickets, strikes, justificativas, relatórios, permissões, entradas sem ticket, bloqueios)
+
+### `AcessoCampus` (**PLANEJADO** — ainda **não** em `PROJECT_APPS` nem em `Cortex/urls.py`)
+
+- Módulo agregador futuro `AcessoCampus/`; prefixo HTTP planejado **`/cortex/acesso-campus/`**; `app_name` **`acesso_campus`**.
+- Apps internos planejados: `solicitacoes`, `programacoes`, `eventos`, `registros`, `permissoes` (este **sem** rotas HTTP no agregador).
+- Elegibilidade EM via **`Curso.nivel_ensino`** (entrega prévia AC.1 do [milestone AcessoCampus](../planning/milestone-acesso-campus.md)).
+- Contrato e DER: `docs/domains/acesso-campus.md`, `docs/schema/acesso-campus.md`, `docs/api/acesso-campus.md`.
 
 Mapa detalhado: `02-bounded-contexts.md`. Regras por módulo: `docs/domains/` (incluindo `infraestrutura.md`). Contexto de produto de Infraestrutura: `docs/schema/infraestrutura.md`.
 
@@ -112,7 +120,7 @@ Monitor é registro em `Funcao`, não atributo booleano em `SetorVinculo`.
 
 ### Permissões transversais
 
-Níveis Cortex L1–L3 (ADR-002) compilados em `user.permissoes['cortex']`. Módulos Infraestrutura e Transporte adicionam capacidades próprias (booleanas), independentes da hierarquia L1–L3 onde aplicável.
+Níveis Cortex L1–L3 (ADR-002) compilados em `user.permissoes['cortex']`. Módulos Infraestrutura e Transporte adicionam capacidades próprias (booleanas), independentes da hierarquia L1–L3 onde aplicável. **Planejado:** módulo **AcessoCampus** com chave `acesso_campus` e capacidades `solicitar`, `analisar_solicitacoes`, `operar_portaria`, `visualizar_historico` (OR função/usuário; L3 todas — hooks `permissoes_acesso_campus()` / `documentacao_acesso_campus()` ainda **não** no código).
 
 ### Aluno e transporte
 
@@ -163,6 +171,8 @@ Além disso: `/cortex/auth/`, `/cortex/admin/`, schema OpenAPI em `/cortex/api/s
 
 Alguns apps existem em `INSTALLED_APPS` sem `urls` no agregador do domínio (ex.: permissões de Infraestrutura e parte dos apps de Transporte). Ver `02-bounded-contexts.md`.
 
+**Planejado (não implementado):** prefixo **`/cortex/acesso-campus/`** para o módulo **AcessoCampus** — incluir em `Cortex/urls.py` somente após implementação (milestone AC.2+).
+
 ---
 
 ## Ordem de implementação (histórico)
@@ -180,8 +190,9 @@ A sequência abaixo reflete marcos **já concluídos**, não roadmap futuro:
 | — | Importação de usuários (`ImportacaoLote` em Identidade) |
 | — | Infraestrutura v1 (blocos, salas, recursos, empréstimos, autorizações, importações) |
 | — | Transporte (12 apps, permissões, relatórios, bloqueios, calendário, task Beat) |
+| *futuro* | **AcessoCampus** — backlog [milestone-acesso-campus.md](../planning/milestone-acesso-campus.md) (AC.0–AC.12); **não** concluído |
 
-Detalhes de planejamento: `docs/planning/master-implementation-plan.md` e milestones M1–M5.
+Detalhes de planejamento: `docs/planning/master-implementation-plan.md` e milestones M1–M5. Backlog do sétimo domínio: `docs/planning/milestone-acesso-campus.md`.
 
 ---
 
@@ -205,6 +216,8 @@ Detalhes de planejamento: `docs/planning/master-implementation-plan.md` e milest
 - `docs/diagrams/04-aggregates-and-invariants.md`
 - `docs/decisions/ADR-001-modularizacao-por-dominio.md`
 - `docs/decisions/ADR-002-permissoes-cortex-niveis.md`
+- `docs/decisions/ADR-003-acesso-campus.md`
+- `docs/domains/acesso-campus.md`
 - `docs/project/django-project-tree.md`
 - `docs/domains/*` (incluindo `docs/domains/infraestrutura.md`)
 - `docs/schema/infraestrutura.md` (contexto de produto de Infraestrutura)
@@ -225,4 +238,4 @@ Não lista todos os atributos, endpoints ou regras finas — isso está em `docs
 
 ## Resumo executivo
 
-O Cortex é um backend modular com **seis domínios** implementados, `Usuario` no centro, autenticação híbrida e rotas sob `/cortex/<dominio>/`. Infraestrutura e Transporte estendem o núcleo identidade–organizacional–institucional–acadêmico. A base `AppCore` já está em uso; a evolução contínua prioriza coerência entre código, ADRs e esta documentação estrutural.
+O Cortex é um backend modular com **seis domínios** implementados e um sétimo (**AcessoCampus**) **planejado**, `Usuario` no centro, autenticação híbrida e rotas sob `/cortex/<dominio>/` para os módulos já registrados em `PROJECT_APPS`. Infraestrutura e Transporte estendem o núcleo identidade–organizacional–institucional–acadêmico; circulação/portaria EM ficará em **AcessoCampus** quando implementado. A base `AppCore` já está em uso; a evolução contínua prioriza coerência entre código, ADRs e esta documentação estrutural.

@@ -287,3 +287,7 @@ Além dos quatro domínios iniciais, o código registra em `PROJECT_APPS`:
 **Transporte** — `percursos`, `rotas`, `motoristas`, `calendario_operacional`, `execucoes_rotas`, `tickets`, `strikes`, `justificativas`, `relatorios`, `permissoes`.
 
 A decisão de modularização por domínio permanece; novos produtos continuam como módulos agregadores na raiz do repositório, com apps internos finos.
+
+### Próximo bounded context planejado (AcessoCampus)
+
+O sétimo contexto **AcessoCampus** (circulação/portaria EM) está **documentado e aceito para implementação futura** (ADR-003), mas **ainda não** consta em `PROJECT_APPS` nem possui código Django neste repositório. Mapa de fronteiras: `docs/diagrams/02-bounded-contexts.md` (seção 5.7). **Não** confundir com os contextos **já implementados** Infraestrutura e Transporte — AcessoCampus **não** reutiliza `Infraestrutura.autorizacoes` nem Transporte.

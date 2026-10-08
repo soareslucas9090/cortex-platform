@@ -448,6 +448,38 @@ Transporte/
 
 ---
 
+## PLANEJADO — `AcessoCampus/`
+
+> **Não** existe pasta `AcessoCampus/` no repositório hoje. **Não** consta em `PROJECT_APPS` nem no exemplo de `urlpatterns` abaixo. Estrutura **futura** conforme ADR-003 e [milestone AcessoCampus](../planning/milestone-acesso-campus.md).
+
+Prefixo HTTP planejado: **`/cortex/acesso-campus/`** (`app_name` **`acesso_campus`**). Quando implementado, incluir em `Cortex/urls.py`:
+
+```python
+path('cortex/acesso-campus/', include('AcessoCampus.urls')),
+```
+
+#### Estrutura futura (referência)
+
+```text name=acesso-campus-module-tree-planned.txt
+AcessoCampus/
+├── __init__.py
+├── urls.py                    # app_name = 'acesso_campus'
+├── solicitacoes/              # SolicitacaoAcesso
+├── programacoes/              # ProgramacaoAcesso
+├── eventos/                   # EventoAcesso
+├── registros/                 # RegistroAcesso
+└── permissoes/                # PermissaoFuncaoAcessoCampus, PermissaoUsuarioAcessoCampus
+```
+
+#### Responsabilidades (planejadas)
+
+- `solicitacoes/`, `programacoes/`, `eventos/`, `registros/` — fluxo HTTP conforme `docs/api/acesso-campus.md`
+- `permissoes/` — capacidades `solicitar`, `analisar_solicitacoes`, `operar_portaria`, `visualizar_historico` (**sem rotas HTTP** no agregador)
+
+Registro futuro em `PROJECT_APPS` (ordem sugerida): `AcessoCampus.solicitacoes`, `programacoes`, `eventos`, `registros`, `permissoes`.
+
+---
+
 ## Resumo
 
 O Cortex atualmente adota:
@@ -458,5 +490,7 @@ O Cortex atualmente adota:
 - arquitetura em camadas;
 - roteamento global por domínio;
 - registro de apps no `settings.py` por app interno.
+
+O sétimo módulo **AcessoCampus** está **documentado como planejado** (seção acima) e **não** faz parte da árvore física atual.
 
 Essa estrutura substitui a visão anterior em que cada domínio era tratado como um único app principal.

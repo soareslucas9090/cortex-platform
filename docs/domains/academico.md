@@ -12,7 +12,16 @@ O domínio `Academico` gerencia **alunos**, **cursos** e **vínculos aluno–cur
 
 - **Aluno**: herança 1:1 com `Usuario`; situação e forma de ingresso; campos de transporte (somente leitura de regra de escrita — ver abaixo).
 - **Curso**: catálogo de cursos ofertados.
-- **AlunoCurso**: associação aluno ↔ curso; **`matricula` opcional com unicidade global** quando preenchida.
+- **AlunoCurso**: associação aluno ↔ curso; **`matricula` opcional com unicidade global** quando preenchida; campo **`ativo`** no vínculo.
+
+### Atributo planejado em `Curso` (pré-requisito AcessoCampus)
+
+**`nivel_ensino`** — **PLANEJADO**, ainda **não** no model no código. `IntegerChoices` **`NivelEnsino`**: `ENSINO_MEDIO=1`, `TECNICO=2`, `SUPERIOR=3`, `POS_GRADUACAO=4`. Entrega prevista na etapa AC.1 do [milestone AcessoCampus](../planning/milestone-acesso-campus.md). Elegibilidade de solicitação na portaria EM usará `nivel_ensino=ENSINO_MEDIO` — **proibido** inferir ensino médio pelo **nome** do curso.
+
+### Fronteira com AcessoCampus (**planejado**)
+
+- **Academico** define catálogo e elegibilidade acadêmica (nível de ensino do curso, matrícula, situação do aluno, `AlunoCurso.ativo`).
+- **AcessoCampus** possuirá solicitações, programações, eventos materializados e registros de portaria — **não** colocar models de circulação/portaria no Academico.
 
 ### Estrutura de Apps
 
@@ -124,3 +133,5 @@ Paths relativos a `/cortex/academico/`.
 - **Não** alterar `faltas` / `is_bloqueado` / `quantidade_bloqueios` em business de Aluno sem coordenar com Transporte.
 - **Não** inventar endpoints fora dos `urls.py` existentes.
 - **Não** tratar choices como strings na API persistida sem alinhar aos inteiros do model.
+- **Não** inferir Ensino Médio pelo nome do curso — usar **`nivel_ensino`** quando implementado.
+- **Não** implementar fluxo de circulação/portaria (solicitação, eventos, registro na guarita) no Academico — bounded context **AcessoCampus** ([domains/acesso-campus.md](acesso-campus.md), ADR-003).

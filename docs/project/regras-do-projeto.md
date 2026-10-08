@@ -981,7 +981,7 @@ usuarios/
 - Mesmo que um módulo de domínio tenha apenas um app inicialmente, ele deve ser estruturado de forma a permitir crescimento futuro.
 - A organização física deve seguir a linguagem do domínio do projeto.
 
-**Novos produtos ou contextos de negócio:** crie um **novo módulo na raiz do repositório**, no mesmo padrão de `Infraestrutura/` e `Transporte/` (diretório PascalCase, `urls.py` agregador, apps internos por model principal, registro em `PROJECT_APPS` e `path('cortex/<nome>/', include('Modulo.urls'))` em `Cortex/urls.py`). O fluxo legado Sigec/Chameco de espaço físico já está coberto por **Infraestrutura** — **não** recrie pasta `Sigec/` nem um agregador genérico `APPs/`.
+**Novos produtos ou contextos de negócio:** crie um **novo módulo na raiz do repositório**, no mesmo padrão de `Infraestrutura/` e `Transporte/` (diretório PascalCase, `urls.py` agregador, apps internos por model principal, registro em `PROJECT_APPS` e `path('cortex/<nome>/', include('Modulo.urls'))` em `Cortex/urls.py`). O fluxo legado Sigec/Chameco de espaço físico já está coberto por **Infraestrutura** — **não** recrie pasta `Sigec/` nem um agregador genérico `APPs/`. O bounded context **AcessoCampus** (circulação/portaria de alunos do Ensino Médio) está **documentado e planejado** (ADR-003, `docs/domains/acesso-campus.md`) — implementar como módulo `AcessoCampus/` na raiz, **não** como app de `Academico` nem reuso de `Infraestrutura.autorizacoes` ou Transporte.
 
 ### Convenção de nomenclatura no `apps.py`
 

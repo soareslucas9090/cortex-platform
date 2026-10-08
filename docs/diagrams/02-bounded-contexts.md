@@ -2,7 +2,7 @@
 
 ## 1. Objetivo
 
-Este documento é o **mapa canônico** dos bounded contexts do Cortex **como implementados hoje**: módulos agregadores, apps Django (`PROJECT_APPS`), entidades principais, responsabilidades, regras já codificadas ou documentadas em `docs/domains/`, dependências entre contextos, prefixos HTTP e exceções à regra “um app, um model ORM principal”.
+Este documento é o **mapa canônico** dos bounded contexts do Cortex: **seis domínios implementados hoje** (módulos agregadores, apps Django em `PROJECT_APPS`) e uma seção explícita do sétimo contexto **AcessoCampus** (**PLANEJADO**, ainda fora de `PROJECT_APPS` e de `Cortex/urls.py`). Cobre entidades principais, responsabilidades, regras codificadas ou documentadas em `docs/domains/`, dependências, prefixos HTTP e exceções à regra “um app, um model ORM principal”.
 
 Use-o antes de explorar o código em volume (agentes, revisões, novas features).
 
@@ -20,18 +20,19 @@ Convenção: **domínio** com inicial maiúscula (pasta PascalCase); **app** em 
 
 ---
 
-## 3. Visão dos seis domínios e da base técnica
+## 3. Visão dos domínios e da base técnica
 
 ### Domínios de negócio (bounded contexts)
 
-| # | Módulo | Prefixo HTTP (`Cortex/urls.py`) |
-|---|--------|-----------------------------------|
-| 1 | `Identidade` | `/cortex/identidade/` |
-| 2 | `Organizacional` | `/cortex/organizacional/` |
-| 3 | `PessoasInstitucionais` | `/cortex/pessoas-institucionais/` |
-| 4 | `Academico` | `/cortex/academico/` |
-| 5 | `Infraestrutura` | `/cortex/infraestrutura/` |
-| 6 | `Transporte` | `/cortex/transporte/` |
+| # | Módulo | Prefixo HTTP (`Cortex/urls.py`) | Status |
+|---|--------|-----------------------------------|--------|
+| 1 | `Identidade` | `/cortex/identidade/` | implementado |
+| 2 | `Organizacional` | `/cortex/organizacional/` | implementado |
+| 3 | `PessoasInstitucionais` | `/cortex/pessoas-institucionais/` | implementado |
+| 4 | `Academico` | `/cortex/academico/` | implementado |
+| 5 | `Infraestrutura` | `/cortex/infraestrutura/` | implementado |
+| 6 | `Transporte` | `/cortex/transporte/` | implementado |
+| 7 | `AcessoCampus` | `/cortex/acesso-campus/` (**planejado**) | **PLANEJADO** — ainda **sem** include em `Cortex/urls.py` |
 
 ### Base técnica (não são bounded contexts de negócio)
 
@@ -63,6 +64,7 @@ Mixins AppCore (`IsAuthenticatedMixin`, `IsOwnerOrAdminMixin`, `IsAdminMixin`) e
 
 - **Infraestrutura:** `operar`, `cadastrar`, `autorizar`, `retirada_irrestrita` — por `Funcao` e/ou `Usuario` (`Infraestrutura.permissoes`); **sem rotas HTTP** no agregador (admin + compilação em `permissoes['infraestrutura']`).
 - **Transporte:** capacidades documentadas em ADR-002 e `Transporte.permissoes` — em especial `conferir` e `visualizar_relatorio_alunos` (por função e usuário); app **sem** `urls` no agregador `Transporte/urls.py`.
+- **AcessoCampus (planejado):** `solicitar`, `analisar_solicitacoes`, `operar_portaria`, `visualizar_historico` — por `Funcao` e/ou `Usuario` em `AcessoCampus.permissoes` (**sem rotas HTTP** no agregador quando existir); compilação futura em `permissoes['acesso_campus']`; L3 recebe todas as capacidades na implementação planejada.
 
 ### Matrícula distribuída (sem app `matriculas`)
 
@@ -315,7 +317,49 @@ Cadastro de percursos/rotas, calendário operacional, geração de execuções (
 
 ---
 
-## 6. Relações entre os seis domínios
+### 5.7 AcessoCampus (**PLANEJADO**)
+
+| Item | Valor |
+|------|--------|
+| Status | **PLANEJADO** — módulo **não** existe no código; **não** consta em `PROJECT_APPS` |
+| Módulo | `AcessoCampus/` (futuro) |
+| Prefixo HTTP | `/cortex/acesso-campus/` (futuro) |
+| `app_name` | `acesso_campus` |
+| Apps internos (planejados) | `solicitacoes`, `programacoes`, `eventos`, `registros`, `permissoes` |
+
+**Entidades principais (planejadas)**
+
+- `SolicitacaoAcesso` — workflow e auditoria (`analisada_por`, `analisada_em`, `cancelada_por`, `cancelada_em`; snapshots na criação).
+- `ProgramacaoAcesso` — intenção editável enquanto `PENDENTE`.
+- `EventoAcesso` — ocorrências materializadas na aprovação; `exige_confirmacao` congelado por evento.
+- `RegistroAcesso` — 0..1 por evento; `registrado_por` sempre pessoa física (nunca `usuario_coletivo`).
+- `PermissaoFuncaoAcessoCampus`, `PermissaoUsuarioAcessoCampus` — quatro capacidades booleanas (OR).
+
+**Responsabilidade**
+
+Circulação e autorizações de alunos de **Ensino Médio** na portaria: solicitação → análise (decisão única) → eventos do dia → registro operacional. **Autorização = solicitação `APROVADA`** — sem model `Autorizacao` separado; **sem** entidade `Campus`.
+
+**Dependências (consumir, não duplicar)**
+
+- **Academico** — `Aluno`, `AlunoCurso`, `Curso` (+ **`Curso.nivel_ensino`** — pré-requisito AC.1).
+- **Identidade** — `Usuario` (analista, cancelador, `registrado_por`).
+- **Organizacional** — `Funcao`, `SetorVinculo` (compilação OR de permissões).
+
+**Não** depende de Transporte, `Infraestrutura.autorizacoes` nem Sigec.
+
+**Rotas no agregador (quando implementado)**
+
+`solicitacoes/`, `analise/solicitacoes/`, `portaria/eventos/`, `historico/` — contrato em `docs/api/acesso-campus.md`.
+
+**Apps sem HTTP no agregador (planejado)**
+
+- `permissoes` — admin + compilação em `user.permissoes['acesso_campus']`
+
+Detalhe funcional: `docs/domains/acesso-campus.md`. ADR: `docs/decisions/ADR-003-acesso-campus.md`.
+
+---
+
+## 6. Relações entre os domínios implementados e AcessoCampus (planejado)
 
 ```mermaid
 flowchart TB
@@ -344,6 +388,10 @@ flowchart TB
   Transporte --> Identidade
   Transporte --> Academico
   Transporte --> Organizacional
+
+  Identidade --> AcessoCampusPlanejado[AcessoCampus planejado]
+  Academico --> AcessoCampusPlanejado
+  Organizacional --> AcessoCampusPlanejado
 ```
 
 **Resumo textual**
@@ -353,6 +401,7 @@ flowchart TB
 - **PessoasInstitucionais** e **Academico** especializam `Usuario`; matrículas alimentam login.
 - **Infraestrutura** consome usuários, setores e permissões compiladas; não depende de Acadêmico para o núcleo v1.
 - **Transporte** consome alunos, usuários, calendário e funções; atualiza estado de bloqueio/faltas em `Aluno`.
+- **AcessoCampus (planejado)** consumirá Identidade, Acadêmico e Organizacional; **não** há ciclo implementado com Transporte ou autorizações de Infraestrutura.
 
 ---
 
@@ -369,10 +418,13 @@ flowchart TB
 | Modularização | ADR-001 — módulos na raiz, não pasta genérica `APPs/` |
 | Permissões | ADR-002 — L1–L3 + módulos Infraestrutura/Transporte |
 | Estagiário | Não implementado |
+| AcessoCampus | Módulo agregador **planejado** na raiz (ADR-003) — **não** app dentro de `Academico` |
+| Campus | **Não** modelar entidade `Campus` na v1 de AcessoCampus |
+| Autorização EM | Aprovação de `SolicitacaoAcesso` **é** a autorização — sem model `Autorizacao` dedicado |
 
 ---
 
-## 8. Ordem de implementação (histórico concluído)
+## 8. Ordem de implementação (histórico concluído e backlog)
 
 1. **Base** — `AppCore`, `Auth`, `Cortex`, autenticação (`EmailOrCpfBackend`)
 2. **Identidade** — usuários, contatos, endereços
@@ -383,8 +435,9 @@ flowchart TB
 7. **Importação de usuários** — `ImportacaoLote` em `Identidade.usuarios`
 8. **Infraestrutura** — blocos, salas, recursos, permissões, autorizações, empréstimos, importações
 9. **Transporte** — 12 apps, Beat, bloqueios, relatórios, entradas sem ticket
+10. **AcessoCampus (planejado)** — backlog `docs/planning/milestone-acesso-campus.md` (AC.0–AC.12); **não** iniciado no código
 
-Referência de marcos: `docs/planning/milestone-*-plan.md`.
+Referência de marcos: `docs/planning/milestone-*-plan.md`; AcessoCampus: `docs/planning/milestone-acesso-campus.md`.
 
 ---
 
@@ -408,6 +461,12 @@ Opcionais: `choices.py`, `state.py`, `access.py`, `permissions.py`, `tasks.py`, 
 | `diagrams/04-aggregates-and-invariants.md` | Agregados e invariantes |
 | `decisions/ADR-001-modularizacao-por-dominio.md` | Modularização |
 | `decisions/ADR-002-permissoes-cortex-niveis.md` | L1–L3 e extensões |
+| `decisions/ADR-003-acesso-campus.md` | Bounded context AcessoCampus (planejado) |
+| `domains/acesso-campus.md` | Especificação funcional AcessoCampus |
+| `schema/acesso-campus.md` | DER planejado |
+| `api/acesso-campus.md` | Contrato HTTP planejado |
+| `planning/milestone-acesso-campus.md` | Backlog AC.0–AC.12 |
+| `project/implantacao-acesso-campus.md` | Rollout planejado |
 | `project/django-project-tree.md` | Árvore de pastas e apps |
 | `domains/identidade.md` | Regras Identidade |
 | `domains/organizacional.md` | Regras Organizacional |
@@ -421,7 +480,7 @@ Opcionais: `choices.py`, `state.py`, `access.py`, `permissions.py`, `tasks.py`, 
 
 ## 11. Resumo executivo
 
-O Cortex implementa **seis bounded contexts** em módulos PascalCase, listados em `Cortex/settings.py` (`PROJECT_APPS`), roteados sob `/cortex/<dominio>/`, com `Usuario` em `Identidade.usuarios` e autenticação em `/cortex/auth/`.
+O Cortex implementa **seis bounded contexts** em módulos PascalCase, listados em `Cortex/settings.py` (`PROJECT_APPS`), roteados sob `/cortex/<dominio>/`, com `Usuario` em `Identidade.usuarios` e autenticação em `/cortex/auth/`. Um sétimo contexto, **AcessoCampus**, está **documentado e planejado** (ADR-003) mas **ainda não** registrado em `PROJECT_APPS` nem roteado.
 
 - **Identidade:** `usuarios`, `contatos`, `enderecos` — importação de usuários em `usuarios`; **sem** `matriculas`.
 - **Organizacional:** `setores`, `funcoes`, `vinculos`.
@@ -430,4 +489,6 @@ O Cortex implementa **seis bounded contexts** em módulos PascalCase, listados e
 - **Infraestrutura:** `blocos`, `salas`, `recursos`, `permissoes`, `autorizacoes`, `emprestimos`, `importacoes` — permissões sem HTTP agregado; reservas fora da v1.
 - **Transporte:** doze apps — incluindo `motoristas`, `calendario_operacional` e `permissoes` sem rotas no agregador; `relatorios` com HTTP mas sem ORM persistido; `bloqueios` com HTTP sem `models.py`; task Beat a cada 5 min.
 
-`AppCore`, `Auth` e `Cortex` sustentam os domínios sem serem contextos de negócio. Manter este mapa alinhado a `PROJECT_APPS`, `Cortex/urls.py` e `docs/domains/` após cada mudança estrutural.
+- **AcessoCampus (planejado):** `solicitacoes`, `programacoes`, `eventos`, `registros`, `permissoes` — prefixo futuro `/cortex/acesso-campus/`; ver seção 5.7.
+
+`AppCore`, `Auth` e `Cortex` sustentam os domínios sem serem contextos de negócio. Manter este mapa alinhado a `PROJECT_APPS`, `Cortex/urls.py` e `docs/domains/` após cada mudança estrutural; ao implementar AcessoCampus, atualizar tabela da seção 3 e remover marcação PLANEJADO apenas quando o código existir.
