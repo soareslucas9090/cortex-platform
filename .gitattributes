@@ -1,2 +1,7 @@
 # Auto detect text files and perform LF normalization
 * text=auto
+docker/**/*.sh text eol=lf
+docker/**/*.conf text eol=lf
+docker/**/*.template text eol=lf
+docker/Dockerfile text eol=lf
+docker/entrypoint.sh text eol=lf

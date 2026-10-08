@@ -1,0 +1,28 @@
+server {
+    listen 80;
+    server_name ${CORTEX_DOMAIN};
+    client_max_body_size 50m;
+
+    location /.well-known/acme-challenge/ {
+        root /var/www/certbot;
+    }
+
+    location = /cortex/auth/token_jwt/ {
+        limit_req zone=cortex_login burst=30 nodelay;
+        include /etc/nginx/proxy_params.conf;
+    }
+
+    location = /cortex/auth/token_jwt/refresh/ {
+        limit_req zone=cortex_login burst=40 nodelay;
+        include /etc/nginx/proxy_params.conf;
+    }
+
+    location /cortex/admin/login/ {
+        limit_req zone=cortex_login burst=30 nodelay;
+        include /etc/nginx/proxy_params.conf;
+    }
+
+    location / {
+        include /etc/nginx/proxy_params.conf;
+    }
+}

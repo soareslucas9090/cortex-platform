@@ -3,8 +3,11 @@ from django.contrib import admin
 from django.urls import include, path
 from drf_spectacular.views import SpectacularAPIView, SpectacularRedocView, SpectacularSwaggerView
 
+from Cortex.health import health
+
 
 urlpatterns = [
+    path('cortex/health/', health, name='health'),
     path('cortex/api/schema/', SpectacularAPIView.as_view(), name='schema'),
     path('cortex/api/schema/swagger/', SpectacularSwaggerView.as_view(url_name='schema'), name='swagger-ui'),
     path('cortex/api/schema/redoc/', SpectacularRedocView.as_view(url_name='schema'), name='redoc'),

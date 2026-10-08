@@ -12,7 +12,7 @@ calendário operacional.
 
 ## Compose de produção (`docker/docker-compose-production.yml`)
 
-O arquivo de produção define apenas os serviços **web** (Gunicorn) e **worker** (Celery), além de PostgreSQL e Redis. **Não há serviço `beat` no compose** — em produção o Celery Beat precisa ser executado em processo ou serviço separado (systemd, Kubernetes, PaaS etc.), com o mesmo código e variáveis do Worker. Este documento não altera o compose; apenas registra o fato.
+O `docker/docker-compose-production.yml` inclui o serviço **`beat`** com exatamente uma instância, executando `celery -A Cortex beat`. O passo a passo operacional (subida, TLS, backup, atualização) está em [deploy-vps.md](deploy-vps.md).
 
 ## Arquitetura esperada
 
@@ -84,9 +84,9 @@ agendamento já está declarado em `Cortex/settings.py` por meio de
 `CELERY_BEAT_SCHEDULE`; não é necessário cadastrar expressões de cron em outro
 lugar.
 
-Em Docker, systemd, Kubernetes ou plataformas PaaS, configure um serviço
-dedicado apenas para esse comando. Não use o comando do Worker no mesmo
-processo do Beat.
+No compose de produção Docker, o serviço **beat** dedicado já existe; não
+coloque o Beat no mesmo processo do Worker. Em systemd, Kubernetes ou outras
+plataformas, configure um serviço separado apenas para esse comando.
 
 ## Implantação
 

@@ -56,6 +56,7 @@ Documentos gerais do projeto, checklists, revisões, regras de arquitetura e gui
 - [Guia: Revisão de Código](project/guia-revisao-de-codigo.md)
 - [Guia: Corrigir Testes](project/guia-corrigir-testes.md)
 - [Configuração do Celery Beat](project/configuracao-celery-beat.md)
+- [Deploy em VPS (Docker)](project/deploy-vps.md)
 - [AppCore Review Summary](project/appcore-review-summary.md)
 - [AppCore Risks and Refactoring Priorities](project/appcore-risks-and-refactoring-priorities.md)
 - [AppCore What To Keep](project/appcore-what-to-keep.md)

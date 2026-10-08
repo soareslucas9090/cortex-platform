@@ -7,6 +7,14 @@ cd docker
 docker compose up
 ```
 
+O arquivo de ambiente de desenvolvimento é `docker/.env.docker` (copie de `docker/.env.docker.example`). A subida correta usa o repositório inteiro como contexto de build (pasta pai `..`):
+
+```bash
+cd docker
+cp .env.docker.example .env.docker
+docker compose --env-file .env.docker up --build
+```
+
 ## Debug Remoto no VS Code (usando `debugpy`)
 
 O serviço **web** já inicia com `debugpy` na porta **5678** e o **worker** na **5679** — não é necessário alterar o compose para depuração local.
