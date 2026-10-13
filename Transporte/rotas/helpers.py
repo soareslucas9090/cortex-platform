@@ -29,10 +29,24 @@ class RotaHelpers(ModelInstanceHelpers):
         busca=None,
         ordering=None,
     ):
+        def _normalizar_ordenacao(ordering):
+            """Aceita somente campos explícitos para evitar ordenação arbitrária."""
+            if not ordering:
+                return ORDENACAO_ROTAS_PADRAO
+
+            campos = tuple(campo.strip() for campo in str(ordering).split(','))
+            if not campos or any(
+                not campo
+                or campo.lstrip('-') not in CAMPOS_ORDENACAO_ROTAS
+                for campo in campos
+            ):
+                return ORDENACAO_ROTAS_PADRAO
+            return campos
+
         """Retorna rotas para a gestão, aplicando apenas filtros válidos."""
         from .models import Rota
 
-        ordenacao = self._normalizar_ordenacao(ordering)
+        ordenacao = _normalizar_ordenacao(ordering)
         queryset = Rota.objects.select_related('percurso').order_by(*ordenacao)
 
         if ativo is not None and str(ativo).lower() in ('true', 'false'):
@@ -48,21 +62,6 @@ class RotaHelpers(ModelInstanceHelpers):
             queryset = queryset.filter(Q(percurso__apelido__unaccent__icontains=busca))
 
         return queryset
-
-    @staticmethod
-    def _normalizar_ordenacao(ordering):
-        """Aceita somente campos explícitos para evitar ordenação arbitrária."""
-        if not ordering:
-            return ORDENACAO_ROTAS_PADRAO
-
-        campos = tuple(campo.strip() for campo in str(ordering).split(','))
-        if not campos or any(
-            not campo
-            or campo.lstrip('-') not in CAMPOS_ORDENACAO_ROTAS
-            for campo in campos
-        ):
-            return ORDENACAO_ROTAS_PADRAO
-        return campos
 
     def obter_com_percurso(self, rota_id):
         """Obtém uma rota com o percurso carregado para serialização."""
