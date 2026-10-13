@@ -6,13 +6,15 @@ recebe e processa essas tarefas.
 
 No domínio de Transporte, o Beat envia a tarefa
 `Transporte.execucoes_rotas.tasks.gerar_execucoes_rotas_automaticas_task` a cada
-cinco minutos. Essa tarefa cria as execuções das rotas do dia e, a partir das
-19h, também do dia seguinte, de acordo com o dia da semana e com as exceções do
-calendário operacional.
+cinco minutos. Essa tarefa cria as execuções das rotas de hoje e de amanhã
+cuja abertura configurada já ocorreu. Cada rota define o horário e se a abertura
+ocorre no mesmo dia ou no dia anterior à viagem, respeitando o calendário operacional.
 
 ## Compose de produção (`docker/docker-compose-production.yml`)
 
-O arquivo de produção define apenas os serviços **web** (Gunicorn) e **worker** (Celery), além de PostgreSQL e Redis. **Não há serviço `beat` no compose** — em produção o Celery Beat precisa ser executado em processo ou serviço separado (systemd, Kubernetes, PaaS etc.), com o mesmo código e variáveis do Worker. Este documento não altera o compose; apenas registra o fato.
+O arquivo de produção define os serviços **web** (Gunicorn), **worker** (Celery) e
+**beat** (Celery Beat), além de PostgreSQL e Redis. O Beat usa o mesmo código e
+as mesmas variáveis do Worker.
 
 ## Arquitetura esperada
 
@@ -28,6 +30,18 @@ O ambiente de produção deve possuir, no mínimo, os seguintes processos:
 
 O Worker e o Beat devem apontar para o mesmo código, banco de dados e Redis da
 aplicação Web.
+
+Se o projeto estiver sendo executado localmente com Docker, o serviço `beat`
+precisa estar iniciado junto com o `worker`:
+
+```bash
+cp docker/.env.docker.example docker/.env.docker
+docker compose -f docker/docker-compose.yml up -d db redis web worker beat
+docker compose -f docker/docker-compose.yml logs -f beat worker
+```
+
+O arquivo `.env.docker` é local e não deve ser versionado. Se já existir um
+arquivo com esse nome, não o sobrescreva.
 
 > O Beat deve possuir apenas uma instância ativa. Duas instâncias podem enviar a
 > mesma tarefa periódica simultaneamente.
@@ -110,13 +124,17 @@ Depois do processamento, o Worker deve registrar a conclusão da tarefa. A
 mensagem informa a data, quantas execuções foram criadas, quantas já existiam,
 quantas estavam fora do prazo e se o dia era operacional.
 
+A tarefa automática cria a execução com status **Reservas abertas**. Ela não
+inicia automaticamente o monitoramento, o embarque ou a rota: essas etapas
+dependem da conferência e do motorista, pelas rotas próprias da operação.
+
 ## Validar a regra de geração
 
 A ausência de novas execuções nem sempre representa erro. A tarefa somente cria
 uma execução quando todas estas condições são atendidas:
 
 - a data é operacional segundo o calendário de Transporte;
-- a data é hoje ou, a partir das 19h, o dia seguinte;
+- a data é hoje ou amanhã e o instante de abertura configurado na rota já chegou;
 - a rota está ativa;
 - o percurso da rota está ativo;
 - o dia da semana da rota corresponde à data processada;
@@ -163,8 +181,9 @@ Para interromper temporariamente os disparos automáticos, pare o processo do
 Beat. Não é necessário parar o Worker, pois ele pode continuar processando
 outras tarefas assíncronas do sistema.
 
-Ao reativar o Beat, ele volta a reconciliar o dia corrente e, depois das 19h,
-também o dia seguinte, a cada cinco minutos.
+Ao reativar o Beat, ele volta a reconciliar hoje e amanhã a cada cinco minutos,
+considerando a abertura individual de cada rota. A criação automática pode ocorrer
+no primeiro disparo após o horário configurado, acrescida da espera do worker.
 Rotas cujo limite de 30 minutos já passou não são criadas retroativamente.
 
 ## Referências

@@ -10,6 +10,11 @@ from .models import Rota
 
 HORARIOS_ENTRADA = ['%H:%M', '%H:%M:%S']
 HORARIO_SAIDA_HELP = 'Horário no formato hh:mm (ex.: 07:00). Também aceita hh:mm:ss.'
+HORARIO_ABERTURA_HELP = (
+    'Horário local de abertura (hh:mm ou hh:mm:ss). '
+    'Se for posterior ao horário de saída, a abertura será no dia anterior; '
+    'caso contrário, será no mesmo dia.'
+)
 
 
 class PercursoResumoSerializer(serializers.ModelSerializer):
@@ -22,6 +27,7 @@ class RotaSerializer(serializers.ModelSerializer):
     percurso = PercursoResumoSerializer(read_only=True)
     dia_semana_display = serializers.CharField(source='get_dia_semana_display', read_only=True)
     horario_saida = serializers.TimeField(format='%H:%M', read_only=True)
+    horario_abertura_solicitacoes = serializers.TimeField(read_only=True)
 
     class Meta:
         model = Rota
@@ -29,6 +35,7 @@ class RotaSerializer(serializers.ModelSerializer):
             'id',
             'percurso',
             'horario_saida',
+            'horario_abertura_solicitacoes',
             'dia_semana',
             'dia_semana_display',
             'quantidade_vagas',
@@ -128,6 +135,10 @@ class RotaDoDiaSerializer(serializers.ModelSerializer):
 
 
 class CriarRotaSerializer(serializers.Serializer):
+    horario_abertura_solicitacoes = serializers.TimeField(
+        input_formats=HORARIOS_ENTRADA,
+        help_text=HORARIO_ABERTURA_HELP,
+    )
     percurso_id = serializers.IntegerField()
     horario_saida = serializers.TimeField(
         input_formats=HORARIOS_ENTRADA,
@@ -139,6 +150,9 @@ class CriarRotaSerializer(serializers.Serializer):
 
 
 class AtualizarRotaSerializer(serializers.Serializer):
+    horario_abertura_solicitacoes = serializers.TimeField(
+        input_formats=HORARIOS_ENTRADA, required=False, help_text=HORARIO_ABERTURA_HELP,
+    )
     percurso_id = serializers.IntegerField(required=False)
     horario_saida = serializers.TimeField(
         input_formats=HORARIOS_ENTRADA,

@@ -30,6 +30,7 @@ class ExecucaoRotaTestCase(APITestCase):
         self.rota = Rota.objects.create(
             percurso=self.percurso,
             horario_saida=time(7, 0),
+            horario_abertura_solicitacoes=time(6, 0),
             dia_semana=DIAS_POR_WEEKDAY[self.data.weekday()],
             quantidade_vagas=20,
         )
@@ -60,6 +61,7 @@ class ExecucaoRotaTestCase(APITestCase):
         outra_rota = Rota.objects.create(
             percurso=self.percurso,
             horario_saida=time(12, 0),
+            horario_abertura_solicitacoes=time(11, 0),
             dia_semana=self.rota.dia_semana,
             quantidade_vagas=20,
         )

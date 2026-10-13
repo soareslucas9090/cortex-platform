@@ -8,10 +8,7 @@ from AppCore.core.business.business import ModelInstanceBusiness
 from AppCore.core.exceptions.exceptions import BusinessRuleException, NotFoundException
 
 from .choices import STATUS_POS_CONFERENCIA, StatusExecucaoRota
-from .constantes import (
-    HORARIO_ABERTURA_SOLICITACOES,
-    MENSAGEM_SEGUNDA_CHAMADA_PULADA,
-)
+from .constantes import MENSAGEM_SEGUNDA_CHAMADA_PULADA
 from .rules import MENSAGEM_EXECUCAO_DUPLICADA
 
 logger = logging.getLogger(__name__)
@@ -27,15 +24,17 @@ class ExecucaoRotaBusiness(ModelInstanceBusiness):
 
             instante = instante or timezone.now()
             instante_local = timezone.localtime(instante)
-            datas_execucao = [instante_local.date()]
-            horario_local = instante_local.time().replace(tzinfo=None)
-            if horario_local >= HORARIO_ABERTURA_SOLICITACOES:
-                datas_execucao.append(instante_local.date() + timedelta(days=1))
+            datas_execucao = [instante_local.date(), instante_local.date() + timedelta(days=1)]
 
             calendario = DiaCalendarioTransporte()
             rules = self.object_instance.rules
             resultados = []
             for data_execucao in datas_execucao:
+                rotas = self.object_instance.helper.listar_rotas_para_geracao_automatica(
+                    data_execucao, instante=instante,
+                )
+                if data_execucao != instante_local.date() and not rotas.exists():
+                    continue
                 resultado = {
                     'data_execucao': data_execucao.isoformat(),
                     'criadas': 0,
@@ -59,9 +58,6 @@ class ExecucaoRotaBusiness(ModelInstanceBusiness):
                     continue
                 resultado['dia_operacional'] = True
 
-                rotas = self.object_instance.helper.listar_rotas_para_geracao_automatica(
-                    data_execucao,
-                )
                 for rota in rotas:
                     data_hora_saida = timezone.make_aware(
                         datetime.combine(data_execucao, rota.horario_saida),
@@ -197,10 +193,7 @@ class ExecucaoRotaBusiness(ModelInstanceBusiness):
 
             instante = timezone.now()
             instante_local = timezone.localtime(instante)
-            datas_consulta = [instante_local.date()]
-            horario_local = instante_local.time().replace(tzinfo=None)
-            if horario_local >= HORARIO_ABERTURA_SOLICITACOES:
-                datas_consulta.append(instante_local.date() + timedelta(days=1))
+            datas_consulta = [instante_local.date(), instante_local.date() + timedelta(days=1)]
 
             calendario = DiaCalendarioTransporte()
             datas_operacionais = []

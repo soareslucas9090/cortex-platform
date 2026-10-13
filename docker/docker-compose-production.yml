@@ -66,6 +66,25 @@ services:
       redis:
         condition: service_healthy
 
+  beat:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    container_name: cortex_beat
+    command: celery -A Cortex beat -l INFO
+    env_file:
+      - .env.docker
+    environment:
+      DJANGO_DEBUG: "False"
+      DATABASE_HOST: db
+      CELERY_BROKER_URL: redis://redis:6379/0
+      CELERY_RESULT_BACKEND: redis://redis:6379/0
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
 volumes:
   postgres_data:
   redis_data:

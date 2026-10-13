@@ -230,10 +230,10 @@ Use Docker quando quiser rodar o worker Celery com `prefork`, já que esse pool 
 
 ```bash
 # 1. Criar o arquivo de ambiente para o cenário Docker
-copy .env.docker.example .env.docker
+cp docker/.env.docker.example docker/.env.docker
 
-# 2. Subir API, PostgreSQL, Redis e worker
-docker compose up --build
+# 2. Subir API, PostgreSQL, Redis, worker e Celery Beat
+docker compose -f docker/docker-compose.yml up --build
 ```
 
 Serviços disponíveis:
@@ -241,12 +241,22 @@ Serviços disponíveis:
 - API Django: `http://localhost:8000`
 - PostgreSQL: `localhost:5432`
 - Redis: `localhost:6379`
+- Swagger: `http://localhost:8000/cortex/api/schema/swagger/`
 
-O worker sobe usando um comando customizado do Django que adiciona suporte a autoreload, já configurado no `docker-compose.yml`:
+O worker sobe usando um comando customizado do Django que adiciona suporte a autoreload, já configurado no `docker/docker-compose.yml`:
 
 ```bash
 python manage.py celery_worker -- --pool=prefork --concurrency=4
 ```
+
+O serviço `beat` dispara a geração automática de execuções a cada cinco minutos:
+
+```bash
+docker compose -f docker/docker-compose.yml logs -f beat worker
+```
+
+A tarefa cria execuções com status **Reservas abertas**. O embarque e o início
+da rota continuam sendo etapas manuais da conferência e do motorista.
 
 Para ajustar o número de processos, altere `CELERY_CONCURRENCY` no arquivo `.env.docker`.
 

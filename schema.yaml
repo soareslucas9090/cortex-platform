@@ -5685,7 +5685,7 @@ paths:
       description: |-
         Lista as ocorrências das rotas. Os filtros apenas reduzem o escopo já permitido ao usuário e não liberam execuções fora dele.
 
-        **Permissões:** Autenticado. L3 (EDITAR_TUDO) vê todas as execuções; demais usuários veem somente execuções abertas, em data operacional, das 19h do dia anterior à viagem até exatamente 30 minutos antes da saída.
+        **Permissões:** Autenticado. L3 (EDITAR_TUDO) vê todas as execuções; demais usuários veem somente execuções abertas, em data operacional, da abertura configurada na rota até exatamente 30 minutos antes da saída.
       summary: Listar execuções de rotas
       parameters:
       - in: query
@@ -5778,7 +5778,7 @@ paths:
       description: |-
         Retorna uma execução de rota.
 
-        **Permissões:** Autenticado. L3 (EDITAR_TUDO) vê todas as execuções; demais usuários veem somente execuções abertas, em data operacional, das 19h do dia anterior à viagem até exatamente 30 minutos antes da saída.
+        **Permissões:** Autenticado. L3 (EDITAR_TUDO) vê todas as execuções; demais usuários veem somente execuções abertas, em data operacional, da abertura configurada na rota até exatamente 30 minutos antes da saída.
       summary: Detalhar execução de rota
       parameters:
       - in: path
@@ -6414,7 +6414,7 @@ paths:
     post:
       operationId: transporte_execucoes_rotas_fila_espera_entrar_create
       description: |-
-        Entra explicitamente na fila quando a execução está lotada, em data operacional, das 19h do dia anterior até exatamente 30 minutos antes da saída.
+        Entra explicitamente na fila quando a execução está lotada, em data operacional, da abertura configurada na rota até exatamente 30 minutos antes da saída.
 
         **Permissões:** Usuário autenticado. A operação exige perfil de aluno ativo e matriculado; tickets são sempre escopados ao próprio aluno.
       summary: Entrar na fila de espera
@@ -6497,7 +6497,7 @@ paths:
     post:
       operationId: transporte_execucoes_rotas_reservar_create
       description: |-
-        Reserva uma vaga disponível, em data operacional, das 19h do dia anterior à execução até exatamente 30 minutos antes da saída.
+        Reserva uma vaga disponível, em data operacional, a partir da abertura configurada na rota até exatamente 30 minutos antes da saída.
 
         **Permissões:** Usuário autenticado. A operação exige perfil de aluno ativo e matriculado; tickets são sempre escopados ao próprio aluno.
       summary: Reservar ticket
@@ -7564,7 +7564,10 @@ paths:
       description: "\n    Lista as rotas cadastradas, com filtros e paginação.\n\n
         \   **Permissões:** L3 (EDITAR_TUDO) — perfil TI / administradores.\n\n    **Paginação:**
         query param `paginacao` (padrão 10, máximo 100).\n\n    **Filtros:** os query
-        params apenas reduzem o conjunto de resultados.\n    "
+        params apenas reduzem o conjunto de resultados.\n\n    **Ordenação:** por
+        padrão, as rotas são retornadas por `-created_at,-id`.\n    O parâmetro `ordering`
+        aceita somente `created_at` e `id`, com prefixo\n    opcional `-` para ordem
+        decrescente. Valores inválidos usam a ordenação padrão.\n    "
       summary: Listar rotas
       parameters:
       - in: query
@@ -7584,6 +7587,12 @@ paths:
           type: string
         description: Filtra pelo dia da semana (segunda, terca, quarta, quinta, sexta,
           sabado, domingo). Valores inválidos são ignorados.
+      - in: query
+        name: ordering
+        schema:
+          type: string
+        description: 'Ordenação separada por vírgulas. Campos permitidos: `created_at`
+          e `id`; prefixe com `-` para ordem decrescente. Padrão: `-created_at,-id`.'
       - name: page
         required: false
         in: query
@@ -7625,7 +7634,11 @@ paths:
           description: ''
     post:
       operationId: transporte_rotas_create
-      description: "\n    Cadastra uma nova rota vinculada a um percurso.\n\n    **Permissões:**
+      description: "\n    Cadastra uma nova rota vinculada a um percurso.\n    Configure
+        horario_abertura_solicitacoes. Se o horário de abertura for posterior\n    ao
+        horário de saída, a abertura ocorrerá no dia anterior; caso contrário,\n    ocorrerá
+        no mesmo dia. O horário de abertura é obrigatório.\n    A abertura deve ocorrer
+        até 30 minutos antes da saída, no fuso America/Fortaleza.\n\n    **Permissões:**
         L3 (EDITAR_TUDO) — perfil TI / administradores.\n    "
       summary: Criar rota
       tags:
@@ -7718,8 +7731,10 @@ paths:
           description: ''
     patch:
       operationId: transporte_rotas_partial_update
-      description: "\n    Atualiza parcialmente uma rota.\n\n    **Permissões:** L3
-        (EDITAR_TUDO) — perfil TI / administradores.\n    "
+      description: "\n    Atualiza parcialmente uma rota. A abertura é revalidada
+        com o horário de saída.\n    Alterações de abertura valem também para execuções
+        abertas existentes,\n    preservando os tickets já emitidos.\n\n    **Permissões:**
+        L3 (EDITAR_TUDO) — perfil TI / administradores.\n    "
       summary: Atualizar rota
       parameters:
       - in: path
@@ -7985,7 +8000,7 @@ paths:
     post:
       operationId: transporte_tickets_cancelar_create
       description: |-
-        Cancela uma reserva, em data operacional, das 19h do dia anterior até exatamente 30 minutos antes da saída.
+        Cancela uma reserva, em data operacional, da abertura configurada na rota até exatamente 30 minutos antes da saída.
 
         **Permissões:** Usuário autenticado. A operação exige perfil de aluno ativo e matriculado; tickets são sempre escopados ao próprio aluno.
       summary: Cancelar ticket reservado
@@ -8079,7 +8094,7 @@ paths:
     post:
       operationId: transporte_tickets_sair_fila_create
       description: |-
-        Remove o próprio ticket da fila, em data operacional, das 19h do dia anterior até exatamente 30 minutos antes da saída.
+        Remove o próprio ticket da fila, em data operacional, da abertura configurada na rota até exatamente 30 minutos antes da saída.
 
         **Permissões:** Usuário autenticado. A operação exige perfil de aluno ativo e matriculado; tickets são sempre escopados ao próprio aluno.
       summary: Sair da fila de espera
@@ -8934,6 +8949,12 @@ components:
     CriarRota:
       type: object
       properties:
+        horario_abertura_solicitacoes:
+          type: string
+          format: time
+          description: Horário local de abertura (hh:mm ou hh:mm:ss). Se for posterior
+            ao horário de saída, a abertura será no dia anterior; caso contrário,
+            será no mesmo dia.
         percurso_id:
           type: integer
         horario_saida:
@@ -8947,6 +8968,7 @@ components:
           minimum: 1
       required:
       - dia_semana
+      - horario_abertura_solicitacoes
       - horario_saida
       - percurso_id
       - quantidade_vagas
@@ -10924,6 +10946,12 @@ components:
     PatchedAtualizarRota:
       type: object
       properties:
+        horario_abertura_solicitacoes:
+          type: string
+          format: time
+          description: Horário local de abertura (hh:mm ou hh:mm:ss). Se for posterior
+            ao horário de saída, a abertura será no dia anterior; caso contrário,
+            será no mesmo dia.
         percurso_id:
           type: integer
         horario_saida:
@@ -11619,6 +11647,10 @@ components:
           type: string
           format: time
           readOnly: true
+        horario_abertura_solicitacoes:
+          type: string
+          format: time
+          readOnly: true
         dia_semana:
           allOf:
           - $ref: '#/components/schemas/DiaSemanaEnum'
@@ -11641,6 +11673,7 @@ components:
       - created_at
       - dia_semana
       - dia_semana_display
+      - horario_abertura_solicitacoes
       - horario_saida
       - id
       - percurso

@@ -100,6 +100,7 @@ def criar_rota_e_execucao(
     rota = Rota.objects.create(
         percurso=percurso,
         horario_saida=horario_saida,
+        horario_abertura_solicitacoes=time(8, 0),
         dia_semana=DIAS_POR_WEEKDAY[data_execucao.weekday()],
         quantidade_vagas=vagas,
     )
@@ -143,4 +144,3 @@ def criar_execucao_hoje(vagas=2, horario_saida=time(18, 0)):
         horario_saida=horario_saida,
         data_execucao=timezone.localdate(),
     )
-

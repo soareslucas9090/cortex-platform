@@ -1,8 +1,9 @@
 from datetime import date, datetime, timedelta
 
-from django.db.models import Count, Prefetch, Q
+from django.db.models import Count, F, Prefetch, Q
 
-from django.utils.timezone import localdate, now
+from django.utils import timezone
+from django.utils.timezone import localdate, localtime, now
 
 from AppCore.core.helpers.helpers import ModelInstanceHelpers
 
@@ -20,15 +21,34 @@ STATUSES_LISTAGEM_CONFERENCIA = (
 
 class ExecucaoRotaHelpers(ModelInstanceHelpers):
 
-    def listar_rotas_para_geracao_automatica(self, data_execucao):
+    def listar_rotas_para_geracao_automatica(self, data_execucao, instante=None):
         from Transporte.rotas.choices import dia_semana_da_data
         from Transporte.rotas.models import Rota
 
-        return Rota.objects.select_related('percurso').filter(
+        queryset = Rota.objects.select_related('percurso').filter(
             ativo=True,
             percurso__ativo=True,
             dia_semana=dia_semana_da_data(data_execucao),
         ).order_by('horario_saida', 'pk')
+        if instante is not None:
+            instante_local = localtime(instante)
+            if data_execucao < instante_local.date():
+                return queryset.none()
+
+            rotas_elegiveis = [
+                rota.pk
+                for rota in queryset
+                if timezone.make_aware(
+                    datetime.combine(
+                        data_execucao
+                        - timedelta(days=int(rota.horario_abertura_solicitacoes > rota.horario_saida)),
+                        rota.horario_abertura_solicitacoes,
+                    ),
+                    timezone.get_current_timezone(),
+                ) <= instante
+            ]
+            queryset = queryset.filter(pk__in=rotas_elegiveis)
+        return queryset
 
     def _queryset_historico_concluidas(self, filtros=None, *relacionados):
         from Transporte.tickets.choices import StatusTicket
@@ -202,10 +222,27 @@ class ExecucaoRotaHelpers(ModelInstanceHelpers):
         from .models import ExecucaoRota
 
         agora = now()
+        instante_local = localtime(agora)
+        hoje = instante_local.date()
+        horario = instante_local.time()
         queryset = ExecucaoRota.objects.filter(
             status=StatusExecucaoRota.ABERTA,
             data_execucao__in=datas_operacionais,
             data_hora_saida__gte=agora + timedelta(minutes=30),
+        ).filter(
+            Q(
+                data_execucao=hoje,
+                rota__horario_abertura_solicitacoes__gt=F('rota__horario_saida'),
+            )
+            | Q(
+                data_execucao=hoje,
+                rota__horario_abertura_solicitacoes__lte=horario,
+            )
+            | Q(
+                data_execucao=hoje + timedelta(days=1),
+                rota__horario_abertura_solicitacoes__gt=F('rota__horario_saida'),
+                rota__horario_abertura_solicitacoes__lte=horario,
+            ),
         ).select_related('rota', 'rota__percurso')
         return queryset
 

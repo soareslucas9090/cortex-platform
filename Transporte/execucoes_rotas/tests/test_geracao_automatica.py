@@ -33,6 +33,9 @@ class GeracaoAutomaticaExecucoesTestCase(APITestCase):
         return Rota.objects.create(
             percurso=percurso,
             horario_saida=horario_saida,
+            horario_abertura_solicitacoes=(
+                datetime.combine(date.min, horario_saida) - timedelta(hours=1)
+            ).time(),
             dia_semana=dia_semana,
             quantidade_vagas=vagas,
             ativo=rota_ativa,
@@ -157,6 +160,44 @@ class GeracaoAutomaticaExecucoesTestCase(APITestCase):
 
         self.assertEqual(resultado['fora_do_prazo'], 1)
         self.assertFalse(ExecucaoRota.objects.exists())
+
+    def test_abertura_no_mesmo_dia_respeita_horario_configurado(self):
+        rota = self.criar_rota(
+            'Abertura hoje',
+            horario_saida=time(12, 0),
+        )
+        rota.horario_abertura_solicitacoes = time(8, 0)
+        rota.save(update_fields=['horario_abertura_solicitacoes'])
+
+        antes = ExecucaoRota().business.gerar_execucoes_automaticas(
+            self.instante(self.data_segunda, time(7, 59)),
+        )
+        self.assertEqual(antes['resultados'][0]['criadas'], 0)
+
+        depois = ExecucaoRota().business.gerar_execucoes_automaticas(
+            self.instante(self.data_segunda, time(8, 0)),
+        )
+        self.assertEqual(depois['resultados'][0]['criadas'], 1)
+
+    def test_abertura_posterior_a_saida_usa_dia_anterior(self):
+        rota = self.criar_rota(
+            'Abertura ontem',
+            horario_saida=time(6, 0),
+        )
+        rota.horario_abertura_solicitacoes = time(20, 0)
+        rota.save(update_fields=['horario_abertura_solicitacoes'])
+
+        retorno = ExecucaoRota().business.gerar_execucoes_automaticas(
+            self.instante(self.data_segunda - timedelta(days=1), time(20, 0)),
+        )
+
+        self.assertEqual(retorno['resultados'][1]['criadas'], 1)
+        self.assertTrue(
+            ExecucaoRota.objects.filter(
+                rota=rota,
+                data_execucao=self.data_segunda,
+            ).exists(),
+        )
 
     def test_reexecucao_e_execucao_manual_existente_sao_idempotentes(self):
         rota = self.criar_rota('Idempotente')

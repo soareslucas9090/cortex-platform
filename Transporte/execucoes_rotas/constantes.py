@@ -1,8 +1,3 @@
-from datetime import time
-
-
-HORARIO_ABERTURA_SOLICITACOES = time(19, 0)
-
 FASE_CONFERENCIA_PRIMEIRA = 'primeira'
 FASE_CONFERENCIA_SEGUNDA = 'segunda'
 FASE_CONFERENCIA_CPF = 'cpf'

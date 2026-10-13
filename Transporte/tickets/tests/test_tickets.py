@@ -133,6 +133,7 @@ class TicketBusinessTestCase(APITestCase):
         rota = Rota.objects.create(
             percurso=percurso,
             horario_saida=time(12, 0),
+            horario_abertura_solicitacoes=time(11, 0),
             dia_semana=DiaSemana.SEGUNDA,
             quantidade_vagas=1,
         )
@@ -159,6 +160,7 @@ class TicketBusinessTestCase(APITestCase):
         rota = Rota.objects.create(
             percurso=percurso,
             horario_saida=time(12, 0),
+            horario_abertura_solicitacoes=time(11, 0),
             dia_semana=DiaSemana.SABADO,
             quantidade_vagas=1,
         )
