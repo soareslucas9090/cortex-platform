@@ -5,7 +5,7 @@ from django.utils import timezone
 from AppCore.core.rules.rules import ModelInstanceRules
 
 from .choices import DiaSemana
-from .horarios import calcular_abertura_solicitacoes
+from .utils import calcular_abertura_solicitacoes
 
 MENSAGEM_ROTA_DUPLICADA = (
     'Já existe uma rota com este percurso, dia da semana e horário de saída.'

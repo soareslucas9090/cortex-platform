@@ -5,7 +5,7 @@ from django.utils.timezone import now
 from Academico.alunos.choices import SituacaoAluno
 from AppCore.core.rules.rules import ModelInstanceRules
 from Transporte.execucoes_rotas.choices import StatusExecucaoRota
-from Transporte.rotas.horarios import calcular_abertura_solicitacoes
+from Transporte.rotas.utils import calcular_abertura_solicitacoes
 
 from .choices import StatusTicket
 
