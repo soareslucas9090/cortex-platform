@@ -4,7 +4,7 @@
 
 A pasta `docs/diagrams/` concentra os artefatos de documentação estrutural e conceitual do Cortex.
 
-Ela registra decisões de modelagem, divisão de domínio, visão do sistema e regras centrais que descrevem o **backend implementado** e orientam evolução e programação agentic.
+Ela registra decisões de modelagem, divisão de domínio, visão do sistema e regras centrais que descrevem o **backend implementado** (seis domínios), o bounded context **planejado** **AcessoCampus**, e orientam evolução e programação agentic.
 
 Esses documentos não substituem o código, mas servem como apoio para:
 
@@ -24,7 +24,7 @@ Documento índice desta pasta, com visão geral dos artefatos.
 
 ### `01-product-and-system-overview.md`
 
-Visão geral do produto e da estrutura do sistema (seis domínios de negócio, base técnica, rotas).
+Visão geral do produto e da estrutura do sistema (seis domínios implementados, AcessoCampus planejado, base técnica, rotas).
 
 ### `02-bounded-contexts.md`
 
@@ -52,7 +52,7 @@ A ordem recomendada de leitura é:
 
 Essa sequência vai do mais geral para o mais específico.
 
-Para regras operacionais por módulo, use `docs/domains/` (Identidade, Organizacional, Pessoas Institucionais, Acadêmico, Infraestrutura, Transporte). O schema de produto de Infraestrutura permanece em `docs/schema/infraestrutura.md`.
+Para regras operacionais por módulo, use `docs/domains/` (Identidade, Organizacional, Pessoas Institucionais, Acadêmico, Infraestrutura, Transporte). Especificação funcional do produto **planejado** de circulação/portaria EM: [`docs/domains/acesso-campus.md`](../domains/acesso-campus.md). O schema de produto de Infraestrutura permanece em `docs/schema/infraestrutura.md`.
 
 ---
 
@@ -68,6 +68,7 @@ Artefatos centrais:
 
 - [ADR-001: Modularização por domínio](../decisions/ADR-001-modularizacao-por-dominio.md)
 - [ADR-002: Permissões Cortex por nível (L1–L3)](../decisions/ADR-002-permissoes-cortex-niveis.md)
+- [ADR-003: Bounded context AcessoCampus (planejado)](../decisions/ADR-003-acesso-campus.md)
 
 ### `docs/project/`
 
@@ -91,7 +92,7 @@ Marcos de implementação concluídos e follow-ups operacionais (`followup-*`).
    - diagramas e textos descrevem o estado atual; divergências devem ser corrigidas na documentação ou no código de forma explícita.
 
 2. **Espelhar a linguagem do negócio**
-   - seis módulos de domínio na raiz do repositório, roteados em `Cortex/urls.py`.
+   - seis módulos de domínio **implementados** na raiz do repositório, roteados em `Cortex/urls.py`; sétimo contexto **AcessoCampus** documentado como **planejado** (ver ADR-003 e `docs/domains/acesso-campus.md`), ainda **fora** de `PROJECT_APPS`.
 
 3. **Servir como apoio à arquitetura em camadas**
    - separação entre `models`, `business`, `rules`, `helpers`, `serializers` e `views`.
@@ -118,6 +119,10 @@ Domínios implementados:
 4. `Academico`
 5. `Infraestrutura`
 6. `Transporte`
+
+Bounded context **planejado** (não listado em `PROJECT_APPS` hoje):
+
+7. `AcessoCampus` — circulação e autorizações de alunos EM na portaria (ADR-003).
 
 ### Convenção de nomes
 
@@ -153,12 +158,13 @@ Prefixo por domínio: `/cortex/<dominio>/` (com hífen em `pessoas-institucionai
 
 ## Estado atual da documentação
 
-Esta pasta descreve o sistema **já implementado**:
+Esta pasta descreve o sistema **já implementado** e registra o contexto **planejado** **AcessoCampus** em seções explicitamente marcadas (sem misturar com `PROJECT_APPS`):
 
 - seis bounded contexts com apps listados em `Cortex/settings.py` (`PROJECT_APPS`);
+- **AcessoCampus** documentado como sétimo domínio **planejado** — pasta, apps e rotas **ainda não** existem no código;
 - `AppCore`, `Auth` e `Cortex` como base técnica em uso (`AUTH_USER_MODEL = usuarios.Usuario`);
-- ERD textual, agregados e invariantes como referência complementar;
-- decisões formalizadas em ADR-001 e ADR-002.
+- ERD textual, agregados e invariantes como referência complementar (inclui modelagem planejada de AcessoCampus onde indicado);
+- decisões formalizadas em ADR-001, ADR-002 e ADR-003 (AcessoCampus).
 
 A revisão histórica da base `AppCore` está registrada em `docs/project/appcore-review-summary.md`; não é um passo pendente de implementação dos domínios.
 

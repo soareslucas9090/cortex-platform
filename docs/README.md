@@ -8,9 +8,10 @@ Este diretório contém a documentação técnica, decisões arquiteturais, plan
 Contém registros de decisões arquiteturais (ADRs - Architecture Decision Records).
 - [ADR-001: Modularização por Domínio](decisions/ADR-001-modularizacao-por-dominio.md)
 - [ADR-002: Permissões Cortex por Nível (L1–L3)](decisions/ADR-002-permissoes-cortex-niveis.md)
+- [ADR-003: Bounded context AcessoCampus (planejado)](decisions/ADR-003-acesso-campus.md)
 
 ### 📊 Diagrams
-Diagramas e visões gerais do sistema e produto. Os documentos **00–04** descrevem o sistema **implementado** (seis domínios de negócio: Identidade, Organizacional, Pessoas Institucionais, Acadêmico, Infraestrutura e Transporte).
+Diagramas e visões gerais do sistema e produto. Os documentos **00–04** descrevem o sistema **implementado** (seis domínios de negócio: Identidade, Organizacional, Pessoas Institucionais, Acadêmico, Infraestrutura e Transporte) **e** o bounded context **planejado** **AcessoCampus** (sétimo domínio — ainda fora de `PROJECT_APPS`).
 - [00: README](diagrams/00-readme.md)
 - [01: Product and System Overview](diagrams/01-product-and-system-overview.md)
 - [02: Bounded Contexts](diagrams/02-bounded-contexts.md)
@@ -18,7 +19,7 @@ Diagramas e visões gerais do sistema e produto. Os documentos **00–04** descr
 - [04: Aggregates and Invariants](diagrams/04-aggregates-and-invariants.md)
 
 ### 🗺️ Planning
-Documentos de planejamento de implementação e marcos. Os planos de milestone e o master plan são **histórico de execução** — não usar como backlog; a estrutura atual está em [django-project-tree](project/django-project-tree.md) e [domains](domains/).
+Documentos de planejamento de implementação e marcos. Os planos de milestone M1–M5, Infraestrutura e importações são **histórico de execução** — não usar como backlog. Exceção: [Milestone AcessoCampus](planning/milestone-acesso-campus.md) é **backlog futuro**. A estrutura atual está em [django-project-tree](project/django-project-tree.md) e [domains](domains/).
 - [Master Implementation Plan](planning/master-implementation-plan.md) — visão macro histórica + ordem original M0–M5; execução ampliada (Infraestrutura, importações, Transporte) já refletida no código
 - [Milestone 1: Identidade Plan](planning/milestone-1-identidade-plan.md)
 - [Milestone 2: Organizacional Plan](planning/milestone-2-organizacional-plan.md)
@@ -30,11 +31,13 @@ Documentos de planejamento de implementação e marcos. Os planos de milestone e
 - [Milestone: Infraestrutura (v1)](planning/milestone-infraestrutura-plan.md)
 - [Follow-up: revisão fotos S3 (recursos + AppCore)](planning/followup-revisao-fotos-s3.md) — FOTO-S3-1 a FOTO-S3-14 (concluídas); retomar por ID em outro computador/conversa
 - [Follow-up: revisão pré-produção (base completa)](planning/followup-revisao-pre-producao.md) — PREPROD-1 a PREPROD-21; retomar por ID em outro computador/conversa
+- [Milestone: AcessoCampus (backlog futuro)](planning/milestone-acesso-campus.md) — AC.0–AC.12; módulo **planejado**, não histórico de execução
 
 ### 🔌 API
 Especificações e especificações de integração das APIs.
 - [Importação de Usuários OpenAPI](api/importacao-usuarios-openapi.md)
 - [Importação de Infraestrutura OpenAPI](api/importacao-infraestrutura-openapi.md)
+- [AcessoCampus (contrato planejado)](api/acesso-campus.md)
 
 ### 📊 Schemas e Importação
 Modelagens de dados, mapeamentos e regras de carga.
@@ -43,6 +46,7 @@ Modelagens de dados, mapeamentos e regras de carga.
 - [Importação de Infraestrutura](schema/importacao-infraestrutura.md)
 - [Infraestrutura](schema/infraestrutura.md)
 - [Funcionamento do Chameco legado](schema/funcionamento-antigo-sigec.md)
+- [AcessoCampus (DER planejado)](schema/acesso-campus.md)
 
 ### 🌱 Seeds e Inicialização
 Dados de sementes (seeds) e informações de carga inicial do banco.
@@ -63,6 +67,7 @@ Documentos gerais do projeto, checklists, revisões, regras de arquitetura e gui
 - [Django Project Tree](project/django-project-tree.md)
 - [Implementation Checklist](project/implementation-checklist.md)
 - [Test Users and Seed Scenarios](project/test-users-and-seed-scenarios.md)
+- [Implantação AcessoCampus (planejado)](project/implantacao-acesso-campus.md)
 - [Debugando com Docker](debug-docker.md)
 
 ### 📦 Domains
@@ -74,3 +79,4 @@ Diretrizes e regras específicas por domínio de negócio.
 - [Infraestrutura](domains/infraestrutura.md)
 - [Transporte](domains/transporte.md)
 - [Histórico de rotas executadas](domains/transporte.md#12-histórico-de-rotas-executadas)
+- [AcessoCampus (planejado)](domains/acesso-campus.md)

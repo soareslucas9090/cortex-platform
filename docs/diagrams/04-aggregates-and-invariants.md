@@ -39,7 +39,7 @@ Um agregado é um agrupamento de entidades e regras que devem ser tratadas como 
 
 ## Visão geral dos agregados
 
-Os agregados identificados no Cortex, alinhados aos seis contextos do ERD (documento 03), são:
+Os agregados identificados no Cortex, alinhados aos seis contextos implementados do ERD (documento 03) e ao agregado planejado de AcessoCampus, são:
 
 | # | Agregado | Raiz | Contexto |
 |---|----------|------|----------|
@@ -57,6 +57,7 @@ Os agregados identificados no Cortex, alinhados aos seis contextos do ERD (docum
 | 12 | `EmprestimoAggregate` | `Emprestimo` | Infraestrutura |
 | 13 | `PermissaoInfraestruturaAggregate` | (compilação) | Infraestrutura |
 | 14 | `CalendarioTransporteAggregate` | `DiaCalendarioTransporte` | Transporte |
+| 15 | `SolicitacaoAcessoAggregate` (**PLANEJADO**) | `SolicitacaoAcesso` | AcessoCampus |
 
 `ImportacaoLote` aparece em dois apps (`Identidade.usuarios` e `Infraestrutura.importacoes`) com a mesma invariante de lote único `EM_ANDAMENTO`; pode ser tratado como sub-agregado operacional de cada contexto, não como raiz transversal.
 
@@ -591,6 +592,47 @@ Define exceções operacionais por data (`tipo`, `ativo`) usadas na geração au
 
 ---
 
+# 15. SolicitacaoAcessoAggregate (**PLANEJADO**)
+
+> Módulo **AcessoCampus** ainda **não** implementado. Especificação: `docs/domains/acesso-campus.md`, `docs/schema/acesso-campus.md`.
+
+## Aggregate Root
+
+`SolicitacaoAcesso`
+
+## Entidades relacionadas
+
+- `SolicitacaoAcesso`
+- `ProgramacaoAcesso` (1..N)
+- `EventoAcesso` (materializados na aprovação)
+- `RegistroAcesso` (0..1 por evento)
+
+## Responsabilidade
+
+Unidade de consistência do fluxo solicitação → programação → eventos operacionais → registro na portaria para alunos EM elegíveis.
+
+## Invariantes
+
+1. Toda solicitação possui **1..N** `ProgramacaoAcesso` na criação.
+2. `EventoAcesso` só existe após solicitação **`APROVADA`** (materialização atômica na aprovação).
+3. `exige_confirmacao` é **congelado** em cada `EventoAcesso` na materialização; eventos aprovados **não** são reescritos silenciosamente.
+4. `SituacaoConfirmacao` (**PENDENTE**, **NAO_EXIGIDA**, **RECEBIDA**) é **derivada** — não persistida.
+5. `RegistroAcesso` **0..1** por `EventoAcesso` (`OneToOne`).
+6. `registrado_por` em `RegistroAcesso` é sempre `Usuario` **pessoa física** — nunca `usuario_coletivo`.
+7. `RECORRENTE` exige `data_fim` e `dias_semana` não vazio; materialização conforme tipo de programação.
+8. Sem sobreposição de janelas data/hora entre solicitações `PENDENTE` ou `APROVADA` do mesmo aluno (eventos não cancelados).
+9. Cancelamento de solicitação **APROVADA** marca eventos futuros sem registro com `cancelado_em`; **não** apaga registros já gravados.
+10. Elegibilidade EM via `Curso.nivel_ensino=ENSINO_MEDIO` — **não** inferir pelo nome do curso.
+11. **Sem** entidade `Campus`; **sem** model `Autorizacao` separado — **autorização = solicitação aprovada**.
+12. Auditoria de análise: **`analisada_por`**, **`analisada_em`** (nunca `analizada_`).
+
+## Onde as regras devem morar (quando implementado)
+
+- `AcessoCampus/*/rules.py` — elegibilidade, sobreposição, transições, campos por tipo de programação
+- `AcessoCampus/*/business.py` — materialização na aprovação, cancelamento, registro idempotente, `select_for_update` na aprovação
+
+---
+
 # Invariantes transversais
 
 As regras abaixo atravessam mais de um agregado e precisam ser tratadas com cuidado na camada de negócio.
@@ -674,6 +716,15 @@ Deve orquestrar:
 - compilação de permissões do módulo;
 - importação em lote de estrutura/recursos (`Infraestrutura/importacoes/business.py`).
 
+## Apps de `AcessoCampus/` (**planejado**)
+
+Deve orquestrar (quando existir):
+
+- criação/cancelamento de solicitações no escopo do aluno;
+- análise (aprovar/rejeitar/cancelar aprovada) com materialização de eventos;
+- fila operacional da portaria e registro 0..1 por evento;
+- compilação de permissões `acesso_campus`.
+
 ---
 
 # Regras que não devem ir para as views
@@ -728,6 +779,12 @@ As views devem apenas:
 - registrar ausência, strike e decisão de justificativa de modo consistente;
 - entrada sem ticket e lote de CPF após a chamada.
 
+## No domínio AcessoCampus (**planejado**)
+
+- aprovar com materialização atômica e concorrência (`select_for_update`);
+- registrar na portaria com idempotência e bloqueio de alteração de resultado;
+- validar elegibilidade EM e sobreposição temporal.
+
 ## No domínio Infraestrutura
 
 - retirada com vários recursos e devolução parcial;
@@ -771,13 +828,14 @@ Este documento ainda pode evoluir com:
 - regras de coexistência de perfis no mesmo usuário;
 - restrições mais detalhadas de situação acadêmica;
 - regras específicas para múltiplos vínculos simultâneos no mesmo setor;
-- perfil `Estagiario` e reservas de infraestrutura (fora da v1).
+- perfil `Estagiario` e reservas de infraestrutura (fora da v1);
+- agregado `SolicitacaoAcessoAggregate` (AcessoCampus) — ver seção 15.
 
 ---
 
 # Resumo executivo
 
-Os agregados do Cortex foram definidos em torno de seis contextos:
+Os agregados do Cortex foram definidos em torno de seis contextos **implementados**, mais **`SolicitacaoAcessoAggregate` (AcessoCampus — PLANEJADO)**:
 
 - identidade da pessoa;
 - estrutura organizacional;
