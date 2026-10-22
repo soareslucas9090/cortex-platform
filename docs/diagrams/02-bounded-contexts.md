@@ -336,7 +336,7 @@ Cadastro de percursos/rotas, calendário operacional, geração de execuções (
 
 **Responsabilidade**
 
-Dispatcher transversal `Notificacao().business.disparar(...)` invocado por outros domínios; persistência in-app (canal `sistema`); e-mail assíncrono via Celery + `enviar_email_simples`. **Sem** POST de criação para frontend; **sem** signals genéricos. Detalhe: `docs/domains/notificacoes.md`.
+Dispatcher transversal `Notificacao().business.disparar(...)` invocado por outros domínios; persistência in-app (canal `sistema`); e-mail assíncrono via Celery + `enviar_email_simples`. **Sem** POST de criação para frontend; **sem** signals genéricos. Como disparar: [docs/domains/notificacoes.md](../domains/notificacoes.md#como-um-business-dispara-uma-notificação).
 
 **Regras / escopo v1**
 

@@ -423,7 +423,7 @@ Notificacoes/
 
 Registro previsto em `PROJECT_APPS`: `Notificacoes.notificacoes`.
 
-Detalhe operacional: [docs/domains/notificacoes.md](../domains/notificacoes.md).
+Detalhe operacional e **como disparar a partir de outro business**: [docs/domains/notificacoes.md](../domains/notificacoes.md#como-um-business-dispara-uma-notificação).
 
 ---
 

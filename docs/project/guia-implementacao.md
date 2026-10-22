@@ -681,6 +681,23 @@ urlpatterns = [
 - Query params inválidos são ignorados silenciosamente (nunca retornam 400).
 - Permissões validadas antes de qualquer filtro adicional.
 
+### Notificações (outros domínios)
+
+Para avisar um usuário a partir de um `business.py`, chame o dispatcher — **não** crie POST, **não** use signal, **não** envie SMTP na mão:
+
+```python
+from Notificacoes.notificacoes.models import Notificacao
+
+Notificacao().business.disparar(
+    destinatario_id=usuario.id,
+    tipo='dominio.recurso.evento',
+    titulo='...',
+    corpo='...',
+)
+```
+
+Guia completo (parâmetros, idempotência, canais, transação, o que não fazer): [docs/domains/notificacoes.md](../domains/notificacoes.md#como-um-business-dispara-uma-notificação).
+
 ### Estrutura de App
 
 ```

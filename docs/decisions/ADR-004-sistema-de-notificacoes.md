@@ -48,7 +48,7 @@ Outros domínios **não** expõem POST de criação para o frontend. A criação
 Notificacao().business.disparar(...)
 ```
 
-(chamada a partir de `business.py` de outros módulos, no mesmo fluxo de negócio que motivou a notificação).
+Chamada a partir de `business.py` de outros módulos, no mesmo fluxo de negócio que motivou a notificação. **Como usar** (import, exemplo no `try` do emissor, `tipo`, idempotência, canais, transação): [docs/domains/notificacoes.md](../domains/notificacoes.md#como-um-business-dispara-uma-notificação).
 
 **Proibido** na v1:
 

@@ -80,5 +80,5 @@ Diretrizes e regras específicas por domínio de negócio.
 - [Infraestrutura](domains/infraestrutura.md)
 - [Transporte](domains/transporte.md)
 - [Histórico de rotas executadas](domains/transporte.md#12-histórico-de-rotas-executadas)
-- [Notificacoes](domains/notificacoes.md)
+- [Notificacoes](domains/notificacoes.md) — inclui [como um business dispara](domains/notificacoes.md#como-um-business-dispara-uma-notificação)
 - [AcessoCampus (planejado)](domains/acesso-campus.md)
