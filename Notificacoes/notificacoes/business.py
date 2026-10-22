@@ -1,6 +1,7 @@
 import logging
 
 from django.db import IntegrityError, transaction
+from django.utils import timezone
 
 from AppCore.core.business.business import ModelInstanceBusiness
 
@@ -53,32 +54,35 @@ class NotificacaoBusiness(ModelInstanceBusiness):
             chave_normalizada = (chave_idempotencia or '').strip() or None
 
             if chave_normalizada:
-                existente = Notificacao.objects.filter(
-                    destinatario_id=destinatario_id,
-                    tipo=tipo,
-                    chave_idempotencia=chave_normalizada,
-                ).first()
+                existente = self.object_instance.helper.obter_por_chave_idempotencia(
+                    destinatario_id,
+                    tipo,
+                    chave_normalizada,
+                )
                 if existente is not None:
                     return existente
 
             contexto_final = contexto if contexto is not None else {}
 
             try:
-                notificacao = Notificacao.objects.create(
-                    destinatario_id=destinatario_id,
-                    tipo=tipo,
-                    titulo=titulo,
-                    corpo=corpo,
-                    contexto=contexto_final,
-                    chave_idempotencia=chave_normalizada,
-                )
-            except IntegrityError:
-                if chave_normalizada:
-                    return Notificacao.objects.get(
+                with transaction.atomic():
+                    notificacao = Notificacao.objects.create(
                         destinatario_id=destinatario_id,
                         tipo=tipo,
+                        titulo=titulo,
+                        corpo=corpo,
+                        contexto=contexto_final,
                         chave_idempotencia=chave_normalizada,
                     )
+            except IntegrityError:
+                if chave_normalizada:
+                    existente = self.object_instance.helper.obter_por_chave_idempotencia(
+                        destinatario_id,
+                        tipo,
+                        chave_normalizada,
+                    )
+                    if existente is not None:
+                        return existente
                 raise
 
             for canal in canais:
@@ -109,25 +113,53 @@ class NotificacaoBusiness(ModelInstanceBusiness):
                 logger,
             )
 
-    def processar_envio(self, envio_id):
+    def processar_envio(self, envio_id, ultima_tentativa=False):
         try:
             from .canais import obter_canal
             from .choices import StatusEnvio
-            from .models import Envio
 
-            envio = Envio.objects.select_related(
-                'notificacao',
-                'notificacao__destinatario',
-            ).get(pk=envio_id)
+            erro_para_relancar = None
+            with transaction.atomic():
+                envio = self.object_instance.helper.obter_envio_bloqueado(envio_id)
+                if envio is None:
+                    logger.warning(
+                        'Envio %s não encontrado para envio assíncrono.',
+                        envio_id,
+                    )
+                    return
+                if envio.status in (StatusEnvio.ENVIADO, StatusEnvio.IGNORADO):
+                    return
 
-            if envio.status in (StatusEnvio.ENVIADO, StatusEnvio.IGNORADO):
-                return
+                envio.tentativas += 1
+                try:
+                    resultado = obter_canal(envio.canal).enviar(envio)
+                    envio.status = resultado.status
+                    if resultado.destino:
+                        envio.destino = resultado.destino
+                    envio.ultimo_erro = resultado.mensagem
+                    if resultado.status == StatusEnvio.ENVIADO:
+                        envio.enviado_em = timezone.now()
+                except Exception as e:
+                    envio.ultimo_erro = self.object_instance.helper.resumir_erro(e)
+                    if ultima_tentativa:
+                        envio.status = StatusEnvio.FALHOU
+                    else:
+                        envio.status = StatusEnvio.PENDENTE
+                    erro_para_relancar = e
 
-            envio.tentativas += 1
-            envio.save(update_fields=['tentativas', 'updated_at'])
+                envio.save(
+                    update_fields=[
+                        'status',
+                        'destino',
+                        'tentativas',
+                        'ultimo_erro',
+                        'enviado_em',
+                        'updated_at',
+                    ]
+                )
 
-            adaptador = obter_canal(envio.canal)
-            adaptador.enviar(envio)
+            if erro_para_relancar is not None:
+                raise erro_para_relancar
         except Exception as e:
             self.relancar_ou_erro_sistema(
                 e,
@@ -164,8 +196,6 @@ class NotificacaoBusiness(ModelInstanceBusiness):
 
     def marcar_lida(self):
         try:
-            from django.utils import timezone
-
             if self.object_instance.lida_em is None:
                 self.object_instance.lida_em = timezone.now()
                 self.object_instance.save(update_fields=['lida_em', 'updated_at'])
@@ -178,8 +208,6 @@ class NotificacaoBusiness(ModelInstanceBusiness):
 
     def marcar_todas_lidas(self, destinatario_id):
         try:
-            from django.utils import timezone
-
             agora = timezone.now()
             queryset = self.object_instance.helper.listar_do_destinatario(destinatario_id).filter(
                 lida_em__isnull=True,
