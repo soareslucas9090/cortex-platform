@@ -899,3 +899,51 @@ class PermissaoDocumentacao:
                 },
             ],
         }
+
+    @classmethod
+    def documentacao_notificacoes(cls) -> dict:
+        return {
+            'chave': 'notificacoes',
+            'titulo': 'Notificações (inbox)',
+            'resumo': (
+                'Caixa de entrada in-app por usuário. Níveis Cortex L2/L3 não ampliam '
+                'o escopo: cada um vê apenas as próprias notificações.'
+            ),
+            'texto': (
+                'A API expõe listagem paginada, contador de não lidas e marcação como lida. '
+                'Não há endpoint HTTP de criação — outros domínios disparam via '
+                '`Notificacao().business.disparar`. Usuário autenticado acessa somente '
+                'notificações cujo destinatário é ele mesmo.'
+            ),
+            'capacidades': [
+                {
+                    'codigo': 'ler_proprias',
+                    'nome': 'Ler próprias notificações',
+                    'quem_usa': 'Qualquer usuário autenticado',
+                    'pode': (
+                        'Listar, contar não lidas e marcar como lidas as notificações '
+                        'endereçadas a si.'
+                    ),
+                    'nao_sem_capacidade': 'Acessar a inbox de outro usuário.',
+                    'descricao': (
+                        'Metadado compilado em permissoes_notificacoes; o escopo real '
+                        'é aplicado no queryset (destinatario=request.user).'
+                    ),
+                },
+            ],
+            'exemplos': [
+                {
+                    'perfil': 'Usuário autenticado (L1, L2 ou L3)',
+                    'capacidades': {'ler_proprias': True},
+                    'pode': [
+                        'GET /cortex/notificacoes/',
+                        'GET /cortex/notificacoes/nao-lidas/contador/',
+                        'PATCH marcar uma ou todas como lidas',
+                    ],
+                    'nao_pode': [
+                        'ler ou alterar notificações de outro destinatário',
+                        'criar notificações via POST na API v1',
+                    ],
+                },
+            ],
+        }

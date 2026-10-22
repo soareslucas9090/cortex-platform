@@ -134,3 +134,60 @@ class NotificacaoBusiness(ModelInstanceBusiness):
                 'Não foi possível processar o envio da notificação.',
                 logger,
             )
+
+    def listar_para_usuario(self, usuario, lida=None, tipo=None):
+        try:
+            queryset = self.object_instance.helper.listar_do_destinatario(usuario.pk)
+            if lida is True:
+                queryset = queryset.filter(lida_em__isnull=False)
+            elif lida is False:
+                queryset = queryset.filter(lida_em__isnull=True)
+            if tipo:
+                queryset = queryset.filter(tipo=tipo)
+            return queryset
+        except Exception as e:
+            self.relancar_ou_erro_sistema(
+                e,
+                'Não foi possível listar as notificações do usuário.',
+                logger,
+            )
+
+    def contar_nao_lidas(self, destinatario_id):
+        try:
+            return self.object_instance.helper.contar_nao_lidas(destinatario_id)
+        except Exception as e:
+            self.relancar_ou_erro_sistema(
+                e,
+                'Não foi possível contar as notificações não lidas.',
+                logger,
+            )
+
+    def marcar_lida(self):
+        try:
+            from django.utils import timezone
+
+            if self.object_instance.lida_em is None:
+                self.object_instance.lida_em = timezone.now()
+                self.object_instance.save(update_fields=['lida_em', 'updated_at'])
+        except Exception as e:
+            self.relancar_ou_erro_sistema(
+                e,
+                'Não foi possível marcar a notificação como lida.',
+                logger,
+            )
+
+    def marcar_todas_lidas(self, destinatario_id):
+        try:
+            from django.utils import timezone
+
+            agora = timezone.now()
+            queryset = self.object_instance.helper.listar_do_destinatario(destinatario_id).filter(
+                lida_em__isnull=True,
+            )
+            return queryset.update(lida_em=agora, updated_at=agora)
+        except Exception as e:
+            self.relancar_ou_erro_sistema(
+                e,
+                'Não foi possível marcar todas as notificações como lidas.',
+                logger,
+            )

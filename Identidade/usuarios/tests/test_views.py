@@ -72,6 +72,7 @@ def permissoes_esperadas(
             'faltas': faltas,
             'bloqueios': bloqueios,
         },
+        'notificacoes': {'ler_proprias': True},
     }
 
 
@@ -1760,9 +1761,12 @@ class DocumentarPermissoesViewTest(APITestCase):
         resposta = self.client.get(self.url)
         self.assertEqual(resposta.status_code, status.HTTP_200_OK)
         modulos = resposta.data['dados']['modulos']
-        self.assertEqual(len(modulos), 3)
+        self.assertEqual(len(modulos), 4)
         chaves = {modulo['chave'] for modulo in modulos}
-        self.assertEqual(chaves, {'cortex', 'infraestrutura', 'transporte'})
+        self.assertEqual(chaves, {'cortex', 'infraestrutura', 'notificacoes', 'transporte'})
+
+        notificacoes = next(modulo for modulo in modulos if modulo['chave'] == 'notificacoes')
+        self.assertEqual(notificacoes['capacidades'][0]['codigo'], 'ler_proprias')
 
         cortex = next(modulo for modulo in modulos if modulo['chave'] == 'cortex')
         self.assertEqual(len(cortex['niveis']), 3)

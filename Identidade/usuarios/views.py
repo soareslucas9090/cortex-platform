@@ -53,7 +53,8 @@ logger = logging.getLogger(__name__)
     Retorna a documentação narrativa e estruturada das permissões de cada módulo registrado.
 
     Inclui **cortex** (níveis L1–L3), **infraestrutura** (capacidades booleanas, secoes
-    estruturadas, acesso total de admin/superuser, elegibilidade do solicitante) e
+    estruturadas, acesso total de admin/superuser, elegibilidade do solicitante),
+    **notificacoes** (inbox própria; L2/L3 não leem terceiros) e
     **transporte** (capacidades `gerenciar` para L3, `motorista` para motoristas ativos;
     ambas liberam a visão das rotas do dia, `reservar` para aluno elegível e `conferir`
     para L3 ou colaborador com função; `visualizar_relatorio_alunos` para L3, diretores,

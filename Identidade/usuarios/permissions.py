@@ -146,3 +146,7 @@ class UsuarioPermissions(UserModelPermission):
                 'motorista': motorista,
             },
         }
+
+    def permissoes_notificacoes(self) -> dict:
+        user = self.object_instance
+        return {'notificacoes': {'ler_proprias': bool(user)}}
