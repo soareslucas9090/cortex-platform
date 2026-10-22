@@ -4,6 +4,7 @@ from rest_framework.response import Response
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import OpenApiParameter, extend_schema
 
+from AppCore.basics.decorators.decorators import handle_exceptions
 from AppCore.basics.mixins.mixins import IsAuthenticatedMixin
 from AppCore.basics.pagination.pagination import PaginacaoCustomizada
 from AppCore.basics.views.basic_views import BasicGetAPIView, BasicPatchAPIView
@@ -28,6 +29,7 @@ PERMISSAO_INBOX = (
     Lista paginada das notificações do usuário autenticado, ordenadas da mais recente.
 
     Filtros opcionais: `lida` (`true`/`false`) e `tipo` (código estável).
+    Os query params apenas reduzem o conjunto de resultados, nunca expandem o acesso.
 
     {PERMISSAO_INBOX}
     ''',
@@ -101,6 +103,7 @@ class ContadorNaoLidasView(IsAuthenticatedMixin, BasicGetAPIView):
     pagination_class = None
     mensagem_sucesso = 'Contador de não lidas obtido com sucesso.'
 
+    @handle_exceptions
     def get(self, request, *args, **kwargs):
         quantidade = Notificacao().business.contar_nao_lidas(request.user.pk)
         return Response({

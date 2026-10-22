@@ -1,5 +1,8 @@
 from rest_framework import serializers
 
+from drf_spectacular.types import OpenApiTypes
+from drf_spectacular.utils import extend_schema_field
+
 from .models import Notificacao
 
 
@@ -20,6 +23,7 @@ class NotificacaoSerializer(serializers.ModelSerializer):
         )
         read_only_fields = fields
 
+    @extend_schema_field(OpenApiTypes.BOOL)
     def get_lida(self, obj):
         return obj.lida_em is not None
 
