@@ -2,7 +2,7 @@
 
 ## 1. Objetivo
 
-Este documento é o **mapa canônico** dos bounded contexts do Cortex: **seis domínios implementados hoje** (módulos agregadores, apps Django em `PROJECT_APPS`) e uma seção explícita do sétimo contexto **AcessoCampus** (**PLANEJADO**, ainda fora de `PROJECT_APPS` e de `Cortex/urls.py`). Cobre entidades principais, responsabilidades, regras codificadas ou documentadas em `docs/domains/`, dependências, prefixos HTTP e exceções à regra “um app, um model ORM principal”.
+Este documento é o **mapa canônico** dos bounded contexts do Cortex: **seis domínios implementados hoje** (módulos agregadores, apps Django em `PROJECT_APPS`), o sétimo contexto **Notificacoes** (**contrato adotado** — ADR-004; código no mesmo marco de implementação) e uma seção explícita do oitavo contexto **AcessoCampus** (**PLANEJADO**, ainda fora de `PROJECT_APPS` e de `Cortex/urls.py`). Cobre entidades principais, responsabilidades, regras codificadas ou documentadas em `docs/domains/`, dependências, prefixos HTTP e exceções à regra “um app, um model ORM principal”.
 
 Use-o antes de explorar o código em volume (agentes, revisões, novas features).
 
@@ -32,7 +32,8 @@ Convenção: **domínio** com inicial maiúscula (pasta PascalCase); **app** em 
 | 4 | `Academico` | `/cortex/academico/` | implementado |
 | 5 | `Infraestrutura` | `/cortex/infraestrutura/` | implementado |
 | 6 | `Transporte` | `/cortex/transporte/` | implementado |
-| 7 | `AcessoCampus` | `/cortex/acesso-campus/` (**planejado**) | **PLANEJADO** — ainda **sem** include em `Cortex/urls.py` |
+| 7 | `Notificacoes` | `/cortex/notificacoes/` | **contrato adotado** (ADR-004) — implementação no mesmo marco |
+| 8 | `AcessoCampus` | `/cortex/acesso-campus/` (**planejado**) | **PLANEJADO** — ainda **sem** include em `Cortex/urls.py` |
 
 ### Base técnica (não são bounded contexts de negócio)
 
@@ -64,6 +65,7 @@ Mixins AppCore (`IsAuthenticatedMixin`, `IsOwnerOrAdminMixin`, `IsAdminMixin`) e
 
 - **Infraestrutura:** `operar`, `cadastrar`, `autorizar`, `retirada_irrestrita` — por `Funcao` e/ou `Usuario` (`Infraestrutura.permissoes`); **sem rotas HTTP** no agregador (admin + compilação em `permissoes['infraestrutura']`).
 - **Transporte:** capacidades documentadas em ADR-002 e `Transporte.permissoes` — em especial `conferir` e `visualizar_relatorio_alunos` (por função e usuário); app **sem** `urls` no agregador `Transporte/urls.py`.
+- **Notificacoes (contrato adotado):** chave `notificacoes`; inbox REST **sempre** do próprio `Usuario` (L2/L3 **não** leem terceiros); hooks `permissoes_notificacoes()` e `documentacao_notificacoes()` em Identidade (ADR-004).
 - **AcessoCampus (planejado):** `solicitar`, `analisar_solicitacoes`, `operar_portaria`, `visualizar_historico` — por `Funcao` e/ou `Usuario` em `AcessoCampus.permissoes` (**sem rotas HTTP** no agregador quando existir); compilação futura em `permissoes['acesso_campus']`; L3 recebe todas as capacidades na implementação planejada.
 
 ### Matrícula distribuída (sem app `matriculas`)
@@ -317,7 +319,46 @@ Cadastro de percursos/rotas, calendário operacional, geração de execuções (
 
 ---
 
-### 5.7 AcessoCampus (**PLANEJADO**)
+### 5.7 Notificacoes (contrato adotado — ADR-004)
+
+| Item | Valor |
+|------|--------|
+| Status | **Contrato adotado** — bounded context definido; registro em `PROJECT_APPS` e código no marco de implementação |
+| Módulo | `Notificacoes/` |
+| Prefixo HTTP | `/cortex/notificacoes/` |
+| `app_name` | `notificacoes` |
+| Apps internos | `notificacoes` (`Notificacao`, `Envio`) |
+
+**Entidades principais**
+
+- `Notificacao` — inbox in-app (`destinatario`, `tipo`, `titulo`, `corpo`, `contexto`, `lida_em`, `chave_idempotencia`).
+- `Envio` — rastreio por canal externo (`email`, futuros `sms`/`whatsapp`); status `pendente`, `enviado`, `falhou`, `ignorado`.
+
+**Responsabilidade**
+
+Dispatcher transversal `Notificacao().business.disparar(...)` invocado por outros domínios; persistência in-app (canal `sistema`); e-mail assíncrono via Celery + `enviar_email_simples`. **Sem** POST de criação para frontend; **sem** signals genéricos. Detalhe: `docs/domains/notificacoes.md`.
+
+**Regras / escopo v1**
+
+- Falha de e-mail **não** remove registro da inbox.
+- API: autenticado, queryset `destinatario = request.user` (independente de L2/L3).
+- SMS/WhatsApp ignorados até credenciais; sem WebSocket/SSE; sem preferências de canal.
+
+**Dependências**
+
+- **Identidade** — `Usuario`, `Contato` (resolução de e-mail); hooks de permissão/documentação.
+
+**Rotas no agregador (quando implementado)**
+
+`notificacoes/` — listagem, contador não lidas, marcar lida / marcar todas.
+
+**Exceções 1-app-1-model**
+
+- `notificacoes`: `Notificacao` + `Envio` (auxiliar de entrega — exceção documentada ADR-004).
+
+---
+
+### 5.8 AcessoCampus (**PLANEJADO**)
 
 | Item | Valor |
 |------|--------|
@@ -374,6 +415,7 @@ flowchart TB
   Identidade --> Academico
   Identidade --> Infraestrutura
   Identidade --> Transporte
+  Identidade --> NotificacoesContrato[Notificacoes contrato adotado]
 
   Organizacional --> Infraestrutura
   Organizacional --> Transporte
@@ -389,6 +431,10 @@ flowchart TB
   Transporte --> Academico
   Transporte --> Organizacional
 
+  Infraestrutura -.-> NotificacoesContrato
+  Transporte -.-> NotificacoesContrato
+  Academico -.-> NotificacoesContrato
+
   Identidade --> AcessoCampusPlanejado[AcessoCampus planejado]
   Academico --> AcessoCampusPlanejado
   Organizacional --> AcessoCampusPlanejado
@@ -401,6 +447,7 @@ flowchart TB
 - **PessoasInstitucionais** e **Academico** especializam `Usuario`; matrículas alimentam login.
 - **Infraestrutura** consome usuários, setores e permissões compiladas; não depende de Acadêmico para o núcleo v1.
 - **Transporte** consome alunos, usuários, calendário e funções; atualiza estado de bloqueio/faltas em `Aluno`.
+- **Notificacoes (contrato adotado)** depende de Identidade; demais domínios **emitem** via `disparar` sem acoplamento inverso obrigatório na v1.
 - **AcessoCampus (planejado)** consumirá Identidade, Acadêmico e Organizacional; **não** há ciclo implementado com Transporte ou autorizações de Infraestrutura.
 
 ---
@@ -416,7 +463,8 @@ flowchart TB
 | `Cargo` | Catálogo com uso **obrigatório** em `Servidor` e **opcional** em `Terceirizado` |
 | Matrícula | Distribuída em perfis; sem app `matriculas` |
 | Modularização | ADR-001 — módulos na raiz, não pasta genérica `APPs/` |
-| Permissões | ADR-002 — L1–L3 + módulos Infraestrutura/Transporte |
+| Permissões | ADR-002 — L1–L3 + módulos Infraestrutura/Transporte/Notificacoes |
+| Notificacoes | Bounded context transversal adotado (ADR-004) — dispatcher `disparar`, inbox própria na API |
 | Estagiário | Não implementado |
 | AcessoCampus | Módulo agregador **planejado** na raiz (ADR-003) — **não** app dentro de `Academico` |
 | Campus | **Não** modelar entidade `Campus` na v1 de AcessoCampus |
@@ -435,7 +483,8 @@ flowchart TB
 7. **Importação de usuários** — `ImportacaoLote` em `Identidade.usuarios`
 8. **Infraestrutura** — blocos, salas, recursos, permissões, autorizações, empréstimos, importações
 9. **Transporte** — 12 apps, Beat, bloqueios, relatórios, entradas sem ticket
-10. **AcessoCampus (planejado)** — backlog `docs/planning/milestone-acesso-campus.md` (AC.0–AC.12); **não** iniciado no código
+10. **Notificacoes (contrato adotado)** — ADR-004; inbox, e-mail assíncrono, hooks Identidade; **após** Transporte no mapa de produto
+11. **AcessoCampus (planejado)** — backlog `docs/planning/milestone-acesso-campus.md` (AC.0–AC.12); **não** iniciado no código
 
 Referência de marcos: `docs/planning/milestone-*-plan.md`; AcessoCampus: `docs/planning/milestone-acesso-campus.md`.
 
@@ -462,6 +511,8 @@ Opcionais: `choices.py`, `state.py`, `access.py`, `permissions.py`, `tasks.py`, 
 | `decisions/ADR-001-modularizacao-por-dominio.md` | Modularização |
 | `decisions/ADR-002-permissoes-cortex-niveis.md` | L1–L3 e extensões |
 | `decisions/ADR-003-acesso-campus.md` | Bounded context AcessoCampus (planejado) |
+| `decisions/ADR-004-sistema-de-notificacoes.md` | Bounded context Notificacoes |
+| `domains/notificacoes.md` | Regras Notificacoes (detalhe operacional) |
 | `domains/acesso-campus.md` | Especificação funcional AcessoCampus |
 | `schema/acesso-campus.md` | DER planejado |
 | `api/acesso-campus.md` | Contrato HTTP planejado |
@@ -480,7 +531,7 @@ Opcionais: `choices.py`, `state.py`, `access.py`, `permissions.py`, `tasks.py`, 
 
 ## 11. Resumo executivo
 
-O Cortex implementa **seis bounded contexts** em módulos PascalCase, listados em `Cortex/settings.py` (`PROJECT_APPS`), roteados sob `/cortex/<dominio>/`, com `Usuario` em `Identidade.usuarios` e autenticação em `/cortex/auth/`. Um sétimo contexto, **AcessoCampus**, está **documentado e planejado** (ADR-003) mas **ainda não** registrado em `PROJECT_APPS` nem roteado.
+O Cortex implementa **seis bounded contexts** em módulos PascalCase, listados em `Cortex/settings.py` (`PROJECT_APPS`), roteados sob `/cortex/<dominio>/`, com `Usuario` em `Identidade.usuarios` e autenticação em `/cortex/auth/`. Um sétimo contexto, **Notificacoes**, está **adotado** (ADR-004) com contrato completo; implementação alinhada ao mesmo marco. Um oitavo contexto, **AcessoCampus**, está **documentado e planejado** (ADR-003) mas **ainda não** registrado em `PROJECT_APPS` nem roteado.
 
 - **Identidade:** `usuarios`, `contatos`, `enderecos` — importação de usuários em `usuarios`; **sem** `matriculas`.
 - **Organizacional:** `setores`, `funcoes`, `vinculos`.
@@ -489,6 +540,8 @@ O Cortex implementa **seis bounded contexts** em módulos PascalCase, listados e
 - **Infraestrutura:** `blocos`, `salas`, `recursos`, `permissoes`, `autorizacoes`, `emprestimos`, `importacoes` — permissões sem HTTP agregado; reservas fora da v1.
 - **Transporte:** doze apps — incluindo `motoristas`, `calendario_operacional` e `permissoes` sem rotas no agregador; `relatorios` com HTTP mas sem ORM persistido; `bloqueios` com HTTP sem `models.py`; task Beat a cada 5 min.
 
-- **AcessoCampus (planejado):** `solicitacoes`, `programacoes`, `eventos`, `registros`, `permissoes` — prefixo futuro `/cortex/acesso-campus/`; ver seção 5.7.
+- **Notificacoes (contrato adotado):** app `notificacoes` — `Notificacao` + `Envio`; prefixo `/cortex/notificacoes/`; ver seção 5.7.
 
-`AppCore`, `Auth` e `Cortex` sustentam os domínios sem serem contextos de negócio. Manter este mapa alinhado a `PROJECT_APPS`, `Cortex/urls.py` e `docs/domains/` após cada mudança estrutural; ao implementar AcessoCampus, atualizar tabela da seção 3 e remover marcação PLANEJADO apenas quando o código existir.
+- **AcessoCampus (planejado):** `solicitacoes`, `programacoes`, `eventos`, `registros`, `permissoes` — prefixo futuro `/cortex/acesso-campus/`; ver seção 5.8.
+
+`AppCore`, `Auth` e `Cortex` sustentam os domínios sem serem contextos de negócio. Manter este mapa alinhado a `PROJECT_APPS`, `Cortex/urls.py` e `docs/domains/` após cada mudança estrutural; ao implementar Notificacoes ou AcessoCampus, atualizar tabela da seção 3 e ajustar status quando o código existir.

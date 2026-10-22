@@ -67,6 +67,7 @@ cortex-platform/
 ├── Cortex/
 ├── Identidade/
 ├── Infraestrutura/
+├── Notificacoes/
 ├── Organizacional/
 ├── PessoasInstitucionais/
 ├── Transporte/
@@ -237,6 +238,7 @@ urlpatterns = [
     path('cortex/pessoas-institucionais/', include('PessoasInstitucionais.urls')),
     path('cortex/academico/', include('Academico.urls')),
     path('cortex/infraestrutura/', include('Infraestrutura.urls')),
+    path('cortex/notificacoes/', include('Notificacoes.urls')),
     path('cortex/transporte/', include('Transporte.urls')),
 ]
 ```
@@ -399,6 +401,29 @@ Infraestrutura/
 - `autorizacoes/` → model principal `Autorizacao`
 - `emprestimos/` → models de empréstimo multi-item
 - `importacoes/` → model `ImportacaoLote` e rotinas de importação em lote (blocos, salas, recursos)
+
+---
+
+### `Notificacoes/`
+
+Domínio transversal de notificações: caixa in-app (`sistema`) e entrega assíncrona por e-mail (Celery). Outros módulos disparam via `Notificacao().business.disparar(...)` — **sem** POST de criação na API para o frontend. ADR-004.
+
+#### Estrutura (contrato adotado)
+
+```text name=notificacoes-module-tree.txt
+Notificacoes/
+├── __init__.py
+├── urls.py                 # app_name = 'notificacoes'
+└── notificacoes/           # Notificacao + Envio (exceção 1-app-2-models)
+```
+
+#### Responsabilidades
+
+- `notificacoes/` → models `Notificacao` (inbox) e `Envio` (rastreio por canal externo); tasks Celery para e-mail; endpoints GET/PATCH da inbox do usuário autenticado
+
+Registro previsto em `PROJECT_APPS`: `Notificacoes.notificacoes`.
+
+Detalhe operacional: [docs/domains/notificacoes.md](../domains/notificacoes.md).
 
 ---
 

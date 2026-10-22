@@ -9,9 +9,10 @@ Contém registros de decisões arquiteturais (ADRs - Architecture Decision Recor
 - [ADR-001: Modularização por Domínio](decisions/ADR-001-modularizacao-por-dominio.md)
 - [ADR-002: Permissões Cortex por Nível (L1–L3)](decisions/ADR-002-permissoes-cortex-niveis.md)
 - [ADR-003: Bounded context AcessoCampus (planejado)](decisions/ADR-003-acesso-campus.md)
+- [ADR-004: Sistema de notificações](decisions/ADR-004-sistema-de-notificacoes.md)
 
 ### 📊 Diagrams
-Diagramas e visões gerais do sistema e produto. Os documentos **00–04** descrevem o sistema **implementado** (seis domínios de negócio: Identidade, Organizacional, Pessoas Institucionais, Acadêmico, Infraestrutura e Transporte) **e** o bounded context **planejado** **AcessoCampus** (sétimo domínio — ainda fora de `PROJECT_APPS`).
+Diagramas e visões gerais do sistema e produto. Os documentos **00–04** descrevem o sistema **implementado** (seis domínios de negócio: Identidade, Organizacional, Pessoas Institucionais, Acadêmico, Infraestrutura e Transporte), o bounded context **Notificacoes** (sétimo — contrato adotado ADR-004, implementação no mesmo marco) **e** o bounded context **planejado** **AcessoCampus** (oitavo — ainda fora de `PROJECT_APPS`).
 - [00: README](diagrams/00-readme.md)
 - [01: Product and System Overview](diagrams/01-product-and-system-overview.md)
 - [02: Bounded Contexts](diagrams/02-bounded-contexts.md)
@@ -79,4 +80,5 @@ Diretrizes e regras específicas por domínio de negócio.
 - [Infraestrutura](domains/infraestrutura.md)
 - [Transporte](domains/transporte.md)
 - [Histórico de rotas executadas](domains/transporte.md#12-histórico-de-rotas-executadas)
+- [Notificacoes](domains/notificacoes.md)
 - [AcessoCampus (planejado)](domains/acesso-campus.md)

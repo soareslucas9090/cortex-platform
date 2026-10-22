@@ -61,6 +61,8 @@ Novos produtos adicionam `permissoes_<modulo>()` em `UsuarioPermissions` e apps 
   execução monitorada. L3 não recebe a capacidade operacional de motorista
   automaticamente.
 
+- **Notificacoes:** chave payload **`notificacoes`**; API de inbox **sempre** escopada ao próprio usuário (`destinatario = request.user`), **sem** leitura alheia via REST mesmo para L2/L3; hooks `UsuarioPermissions.permissoes_notificacoes()` e `documentacao_notificacoes()` em `Identidade/usuarios/`. Ver ADR-004 e `docs/domains/notificacoes.md`.
+
 **AcessoCampus (planejado — ainda sem hooks no código):** módulo futuro `AcessoCampus/` com chave payload **`acesso_campus`**; capacidades booleanas `solicitar`, `analisar_solicitacoes`, `operar_portaria`, `visualizar_historico` (OR entre `PermissaoFuncaoAcessoCampus` e `PermissaoUsuarioAcessoCampus`); **L3** recebe **todas** na compilação planejada. Hooks previstos: `UsuarioPermissions.permissoes_acesso_campus()` e `documentacao_acesso_campus()` em `Identidade/usuarios/`; mixins em `AcessoCampus/permissoes/access.py`. App `permissoes` **sem** rotas HTTP no agregador. Ver ADR-003 e `docs/domains/acesso-campus.md`.
 
 ### Documentação viva da API

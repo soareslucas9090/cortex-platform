@@ -27,6 +27,7 @@ O Cortex é um backend modular para operação de um contexto institucional e ac
 - **perfil acadêmico** (alunos, cursos, matrículas por curso);
 - **infraestrutura** física e operacional (blocos, salas, recursos, empréstimos, autorizações — substituto funcional dos fluxos legados Chameco/Sigec na v1);
 - **transporte universitário** (percursos, rotas, execuções, tickets, strikes, calendário operacional, bloqueios);
+- **notificações transversais** (bounded context **Notificacoes** — inbox in-app, e-mail assíncrono, dispatcher para outros módulos; ADR-004 e `docs/domains/notificacoes.md`);
 - **circulação e portaria para Ensino Médio** (**planejado** — bounded context **AcessoCampus**: solicitações, análise gerencial, eventos operacionais e registro na guarita; ver ADR-003 e `docs/domains/acesso-campus.md`).
 
 O núcleo permanece a entidade `Usuario`, sobre a qual perfis e vínculos se especializam.
@@ -53,7 +54,7 @@ Conceitos próximos permanecem separados, por exemplo:
 
 ## Visão geral do domínio
 
-O sistema está dividido em **seis domínios implementados** de negócio, cada um um módulo agregador na raiz do repositório, mais o bounded context **planejado** `AcessoCampus`:
+O sistema está dividido em **seis domínios implementados** de negócio, cada um um módulo agregador na raiz do repositório, mais o bounded context **Notificacoes** (contrato adotado — ADR-004) e o bounded context **planejado** `AcessoCampus`:
 
 ### `Identidade`
 
@@ -81,6 +82,11 @@ O sistema está dividido em **seis domínios implementados** de negócio, cada u
 ### `Transporte`
 
 - Doze apps em `PROJECT_APPS` (percursos, rotas, motoristas, calendário, execuções, tickets, strikes, justificativas, relatórios, permissões, entradas sem ticket, bloqueios)
+
+### `Notificacoes` (contrato adotado — ADR-004)
+
+- Módulo agregador `Notificacoes/`; prefixo HTTP **`/cortex/notificacoes/`**; `app_name` **`notificacoes`**.
+- App interno `notificacoes/` — models `Notificacao` (inbox) e `Envio` (canais externos); disparo via `Notificacao().business.disparar(...)`; API somente leitura/marcação de lida para o próprio usuário.
 
 ### `AcessoCampus` (**PLANEJADO** — ainda **não** em `PROJECT_APPS` nem em `Cortex/urls.py`)
 
@@ -120,7 +126,7 @@ Monitor é registro em `Funcao`, não atributo booleano em `SetorVinculo`.
 
 ### Permissões transversais
 
-Níveis Cortex L1–L3 (ADR-002) compilados em `user.permissoes['cortex']`. Módulos Infraestrutura e Transporte adicionam capacidades próprias (booleanas), independentes da hierarquia L1–L3 onde aplicável. **Planejado:** módulo **AcessoCampus** com chave `acesso_campus` e capacidades `solicitar`, `analisar_solicitacoes`, `operar_portaria`, `visualizar_historico` (OR função/usuário; L3 todas — hooks `permissoes_acesso_campus()` / `documentacao_acesso_campus()` ainda **não** no código).
+Níveis Cortex L1–L3 (ADR-002) compilados em `user.permissoes['cortex']`. Módulos Infraestrutura e Transporte adicionam capacidades próprias (booleanas), independentes da hierarquia L1–L3 onde aplicável. **Notificacoes:** chave `notificacoes`; inbox REST **sempre** do próprio usuário (L2/L3 não leem terceiros); hooks `permissoes_notificacoes()` / `documentacao_notificacoes()`. **Planejado:** módulo **AcessoCampus** com chave `acesso_campus` e capacidades `solicitar`, `analisar_solicitacoes`, `operar_portaria`, `visualizar_historico` (OR função/usuário; L3 todas — hooks `permissoes_acesso_campus()` / `documentacao_acesso_campus()` ainda **não** no código).
 
 ### Aluno e transporte
 
@@ -167,6 +173,8 @@ Celery Beat executa `gerar_execucoes_rotas_automaticas_task` a cada 5 minutos (`
 | `Infraestrutura` | `/cortex/infraestrutura/` |
 | `Transporte` | `/cortex/transporte/` |
 
+**Contrato adotado (ADR-004):** módulo **`Notificacoes`** — prefixo **`/cortex/notificacoes/`** (registro em `PROJECT_APPS` no marco de implementação).
+
 Além disso: `/cortex/auth/`, `/cortex/admin/`, schema OpenAPI em `/cortex/api/schema/`.
 
 Alguns apps existem em `INSTALLED_APPS` sem `urls` no agregador do domínio (ex.: permissões de Infraestrutura e parte dos apps de Transporte). Ver `02-bounded-contexts.md`.
@@ -190,9 +198,10 @@ A sequência abaixo reflete marcos **já concluídos**, não roadmap futuro:
 | — | Importação de usuários (`ImportacaoLote` em Identidade) |
 | — | Infraestrutura v1 (blocos, salas, recursos, empréstimos, autorizações, importações) |
 | — | Transporte (12 apps, permissões, relatórios, bloqueios, calendário, task Beat) |
+| — | **Notificacoes** (ADR-004) — inbox, e-mail assíncrono, dispatcher transversal |
 | *futuro* | **AcessoCampus** — backlog [milestone-acesso-campus.md](../planning/milestone-acesso-campus.md) (AC.0–AC.12); **não** concluído |
 
-Detalhes de planejamento: `docs/planning/master-implementation-plan.md` e milestones M1–M5. Backlog do sétimo domínio: `docs/planning/milestone-acesso-campus.md`.
+Detalhes de planejamento: `docs/planning/master-implementation-plan.md` e milestones M1–M5. Backlog do oitavo domínio: `docs/planning/milestone-acesso-campus.md`.
 
 ---
 
@@ -217,6 +226,8 @@ Detalhes de planejamento: `docs/planning/master-implementation-plan.md` e milest
 - `docs/decisions/ADR-001-modularizacao-por-dominio.md`
 - `docs/decisions/ADR-002-permissoes-cortex-niveis.md`
 - `docs/decisions/ADR-003-acesso-campus.md`
+- `docs/decisions/ADR-004-sistema-de-notificacoes.md`
+- `docs/domains/notificacoes.md`
 - `docs/domains/acesso-campus.md`
 - `docs/project/django-project-tree.md`
 - `docs/domains/*` (incluindo `docs/domains/infraestrutura.md`)
@@ -238,4 +249,4 @@ Não lista todos os atributos, endpoints ou regras finas — isso está em `docs
 
 ## Resumo executivo
 
-O Cortex é um backend modular com **seis domínios** implementados e um sétimo (**AcessoCampus**) **planejado**, `Usuario` no centro, autenticação híbrida e rotas sob `/cortex/<dominio>/` para os módulos já registrados em `PROJECT_APPS`. Infraestrutura e Transporte estendem o núcleo identidade–organizacional–institucional–acadêmico; circulação/portaria EM ficará em **AcessoCampus** quando implementado. A base `AppCore` já está em uso; a evolução contínua prioriza coerência entre código, ADRs e esta documentação estrutural.
+O Cortex é um backend modular com **seis domínios** implementados, um sétimo (**Notificacoes**, contrato ADR-004) e um oitavo (**AcessoCampus**) **planejado**, `Usuario` no centro, autenticação híbrida e rotas sob `/cortex/<dominio>/`. Infraestrutura e Transporte estendem o núcleo identidade–organizacional–institucional–acadêmico; **Notificacoes** oferece dispatcher transversal e inbox; circulação/portaria EM ficará em **AcessoCampus** quando implementado. A base `AppCore` já está em uso; a evolução contínua prioriza coerência entre código, ADRs e esta documentação estrutural.
