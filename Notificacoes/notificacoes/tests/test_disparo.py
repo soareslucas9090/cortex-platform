@@ -1,12 +1,23 @@
+import smtplib
 from unittest.mock import patch
 
-from django.test import TestCase
+from django.core.mail import EmailMultiAlternatives
+from django.db import connection, transaction
+from django.test.utils import CaptureQueriesContext
 
-from AppCore.core.exceptions.exceptions import ValidationException
+from rest_framework.test import APITestCase
+
+from AppCore.core.exceptions.exceptions import (
+    NotFoundException,
+    SystemErrorException,
+    ValidationException,
+)
 from Identidade.contatos.models import Contato
 from Identidade.usuarios.models import Usuario
 
+from Notificacoes.notificacoes.canais import obter_canal
 from Notificacoes.notificacoes.choices import CanalEnvio, StatusEnvio
+from Notificacoes.notificacoes.helpers import NotificacaoHelpers
 from Notificacoes.notificacoes.models import Envio, Notificacao
 
 
@@ -17,7 +28,7 @@ def _criar_usuario(cpf, email=None, nome='Usuário teste'):
     return Usuario.objects.create_user(**kwargs)
 
 
-class DisparoNotificacaoTestCase(TestCase):
+class DisparoNotificacaoTestCase(APITestCase):
     _cpf_seq = 70000000000
 
     def _proximo_cpf(self):
@@ -191,11 +202,12 @@ class DisparoNotificacaoTestCase(TestCase):
         self.assertEqual(envio.tentativas, tentativas_antes)
         self.assertEqual(enviar_mock.call_count, 1)
 
-    @patch(
-        'Notificacoes.notificacoes.business.NotificacaoBusiness.processar_envio',
-        side_effect=RuntimeError('falha smtp'),
+    @patch.object(
+        EmailMultiAlternatives,
+        'send',
+        side_effect=smtplib.SMTPException('connection refused'),
     )
-    def test_task_esgota_retries_e_marca_falhou(self, _processar_mock):
+    def test_task_esgota_retries_e_marca_falhou(self, _send_mock):
         from Notificacoes.notificacoes.tasks import enviar_envio_task
 
         usuario = _criar_usuario(self._proximo_cpf(), email='falha@teste.local')
@@ -216,7 +228,7 @@ class DisparoNotificacaoTestCase(TestCase):
             enviar_envio_task.pop_request()
         envio.refresh_from_db()
         self.assertEqual(envio.status, StatusEnvio.FALHOU)
-        self.assertEqual(envio.ultimo_erro, 'Falha ao enviar notificação.')
+        self.assertIn('SMTPException', envio.ultimo_erro)
         self.assertTrue(Notificacao.objects.filter(pk=notificacao.pk).exists())
 
     def test_canais_ou_tipo_invalidos_levantam_validation_exception(self):
@@ -236,3 +248,114 @@ class DisparoNotificacaoTestCase(TestCase):
                 corpo='Corpo',
                 canais=['sistema', 'telegram'],
             )
+        with self.assertRaises(ValidationException):
+            obter_canal('telegram')
+
+    def test_destinatario_inexistente_levanta_not_found(self):
+        with self.assertRaises(NotFoundException):
+            Notificacao().business.disparar(
+                destinatario_id=999999999,
+                tipo='teste.inexistente',
+                titulo='Título',
+                corpo='Corpo',
+            )
+
+    def test_corrida_de_idempotencia_recupera_existente_sem_erro_de_transacao(self):
+        usuario = _criar_usuario(self._proximo_cpf())
+        chave = 'corrida:1'
+        tipo = 'teste.corrida'
+        existente = Notificacao.objects.create(
+            destinatario=usuario,
+            tipo=tipo,
+            titulo='Existente',
+            corpo='Corpo',
+            chave_idempotencia=chave,
+        )
+        original = NotificacaoHelpers.obter_por_chave_idempotencia
+        chamadas = {'n': 0}
+
+        def fake(self, *args, **kwargs):
+            chamadas['n'] += 1
+            if chamadas['n'] == 1:
+                return None
+            return original(self, *args, **kwargs)
+
+        with patch.object(NotificacaoHelpers, 'obter_por_chave_idempotencia', fake):
+            with patch('Notificacoes.notificacoes.tasks.enviar_envio_task.delay'):
+                with self.captureOnCommitCallbacks(execute=True):
+                    resultado = Notificacao().business.disparar(
+                        destinatario_id=usuario.pk,
+                        tipo=tipo,
+                        titulo='Novo título',
+                        corpo='Novo corpo',
+                        chave_idempotencia=chave,
+                    )
+
+        self.assertEqual(resultado.pk, existente.pk)
+        self.assertEqual(
+            Notificacao.objects.filter(destinatario=usuario, tipo=tipo).count(),
+            1,
+        )
+
+    def test_rollback_do_emissor_nao_enfileira_task(self):
+        usuario = _criar_usuario(self._proximo_cpf())
+        with patch('Notificacoes.notificacoes.tasks.enviar_envio_task.delay') as delay_mock:
+            with self.captureOnCommitCallbacks(execute=True):
+                try:
+                    with transaction.atomic():
+                        Notificacao().business.disparar(
+                            destinatario_id=usuario.pk,
+                            tipo='teste.rollback',
+                            titulo='Título',
+                            corpo='Corpo',
+                        )
+                        raise RuntimeError('rollback emissor')
+                except RuntimeError:
+                    pass
+
+        self.assertEqual(Notificacao.objects.count(), 0)
+        delay_mock.assert_not_called()
+
+    @patch.object(
+        EmailMultiAlternatives,
+        'send',
+        side_effect=smtplib.SMTPException('connection refused'),
+    )
+    def test_falha_smtp_tentativa_intermediaria_mantem_pendente(self, _send_mock):
+        usuario = _criar_usuario(self._proximo_cpf(), email='falha@teste.local')
+        with patch('Notificacoes.notificacoes.tasks.enviar_envio_task.delay'):
+            with self.captureOnCommitCallbacks(execute=True):
+                notificacao = Notificacao().business.disparar(
+                    destinatario_id=usuario.pk,
+                    tipo='teste.smtp_intermediaria',
+                    titulo='Título',
+                    corpo='Corpo',
+                )
+
+        envio = Envio.objects.get(notificacao=notificacao)
+        with self.assertRaises(SystemErrorException):
+            Notificacao().business.processar_envio(envio.pk, ultima_tentativa=False)
+        envio.refresh_from_db()
+        self.assertEqual(envio.status, StatusEnvio.PENDENTE)
+        self.assertEqual(envio.tentativas, 1)
+        self.assertIn('SMTPException', envio.ultimo_erro)
+
+    def test_processar_envio_inexistente_retorna_sem_erro(self):
+        Notificacao().business.processar_envio(999999999)
+
+    def test_processar_envio_bloqueia_linha_com_for_update(self):
+        usuario = _criar_usuario(self._proximo_cpf())
+        with patch('Notificacoes.notificacoes.tasks.enviar_envio_task.delay'):
+            with self.captureOnCommitCallbacks(execute=True):
+                notificacao = Notificacao().business.disparar(
+                    destinatario_id=usuario.pk,
+                    tipo='teste.lock',
+                    titulo='Título',
+                    corpo='Corpo',
+                )
+
+        envio = Envio.objects.get(notificacao=notificacao)
+        with CaptureQueriesContext(connection) as ctx:
+            Notificacao().business.processar_envio(envio.pk)
+        sqls = ' '.join(q['sql'] for q in ctx.captured_queries).upper()
+        self.assertIn('FOR UPDATE', sqls)

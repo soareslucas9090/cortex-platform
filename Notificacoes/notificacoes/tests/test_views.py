@@ -88,6 +88,36 @@ class NotificacoesInboxAPITest(APITestCase):
         resposta = self.client.patch(url_lida_outro)
         self.assertEqual(resposta.status_code, status.HTTP_404_NOT_FOUND)
 
+    def test_admin_l3_nao_ve_nem_marca_notificacao_de_outro(self):
+        admin = Usuario.objects.create_superuser(
+            cpf='80000000004',
+            password='Senha@123',
+            nome='Admin L3 Notif',
+        )
+        token_admin = obter_tokens(admin)
+        notif_outro = disparar_inbox(self.outro, titulo='Privada L3')
+        disparar_inbox(admin, titulo='Do admin')
+
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {token_admin}')
+        resposta = self.client.get(self.url_lista)
+        self.assertEqual(resposta.status_code, status.HTTP_200_OK)
+        titulos = [item['titulo'] for item in resposta.data['dados']]
+        self.assertNotIn('Privada L3', titulos)
+        self.assertIn('Do admin', titulos)
+
+        url_lida_outro = reverse('notificacoes:notificacao-lida', kwargs={'pk': notif_outro.pk})
+        resposta = self.client.patch(url_lida_outro)
+        self.assertEqual(resposta.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_filtro_lida_invalido_e_ignorado(self):
+        disparar_inbox(self.usuario, titulo='A')
+        disparar_inbox(self.usuario, titulo='B')
+
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token}')
+        resposta = self.client.get(self.url_lista, {'lida': 'invalido'})
+        self.assertEqual(resposta.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(resposta.data['dados']), 2)
+
     def test_filtro_lida_e_tipo(self):
         n1 = disparar_inbox(self.usuario, tipo='tipo.a', titulo='N1')
         n2 = disparar_inbox(self.usuario, tipo='tipo.b', titulo='N2')
