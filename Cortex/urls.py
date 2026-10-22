@@ -16,6 +16,7 @@ urlpatterns = [
     path('cortex/academico/', include('Academico.urls')),
     path('cortex/infraestrutura/', include('Infraestrutura.urls')),
     path('cortex/transporte/', include('Transporte.urls')),
+    path('cortex/notificacoes/', include('Notificacoes.urls')),
 ]
 
 if settings.DEBUG:
