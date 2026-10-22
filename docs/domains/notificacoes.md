@@ -34,13 +34,14 @@ Notificacoes/
 ├── urls.py                 # app_name = 'notificacoes'
 └── notificacoes/           # Notificacao + Envio (exceção 1-app-2-models)
     ├── models.py
-    ├── business.py         # disparar(...)
+    ├── business.py         # disparar(...) e processar_envio(...)
     ├── rules.py
     ├── helpers.py
+    ├── canais.py           # adaptadores de canal (sem persistência)
     ├── serializers.py
     ├── views.py
     ├── urls.py
-    ├── tasks.py            # envio assíncrono de e-mail
+    ├── tasks.py            # envio assíncrono de e-mail (sem ORM)
     └── migrations/
 ```
 
@@ -161,15 +162,16 @@ Só inbox, sem e-mail: `canais=['sistema']`.
 
 ### Transação e Celery
 
-`disparar` grava na **transação corrente** do caller. A task `enviar_envio_task` só entra na fila no `transaction.on_commit`.
+`disparar` grava na **transação corrente** do caller. A criação com `chave_idempotencia` usa um **savepoint** (`transaction.atomic` interno) para a constraint única não abortar a transação do emissor em corrida. A task `enviar_envio_task` só entra na fila no `transaction.on_commit`.
 
 - Se o método de business der rollback, a notificação some e o e-mail **não** é enfileirado.
 - Não chame `enviar_envio_task.delay` no módulo emissor.
 - Não abra `transaction.atomic()` extra na view (já é da BasicView).
 - Worker + Redis já usados pelo Cortex; **não** há fila nem variável de ambiente nova. Sem worker, a inbox existe e o `Envio` de e-mail fica `pendente` até o worker processar.
 - Beat **não** dispara notificação.
-
-SMTP usa `DEFAULT_FROM_EMAIL` / `EMAIL_HOST_*` já existentes. Sem SMTP configurado, a inbox continua; o e-mail tende a `falhou` após retries.
+- `processar_envio` trava a linha de `Envio` com `SELECT … FOR UPDATE` (só a tabela `Envio`) para dois workers não enviarem o mesmo e-mail. Sem status `PROCESSANDO`: se o worker morrer, a linha permanece `pendente` e o retry reprocessa.
+- Entrega **pelo menos uma vez**: se o SMTP concluir e o `save`/`commit` falhar, o retry pode reenviar.
+- SMTP usa `DEFAULT_FROM_EMAIL` / `EMAIL_HOST_*` já existentes e `EMAIL_TIMEOUT` (default 30s em `Cortex/settings.py`) para o lock não ficar preso em servidor pendurado. Sem SMTP configurado, a inbox continua; o e-mail tende a `falhou` após retries.
 
 ### Exceções (propagam para o caller)
 
@@ -216,7 +218,7 @@ Constraint de negócio: toda linha visível na API pertence ao `destinatario` au
 | `status` | Choice — ver tabela abaixo |
 | `destino` | CharField opcional — e-mail ou telefone efetivo usado na tentativa |
 | `tentativas` | PositiveSmallInteger, default 0 |
-| `ultimo_erro` | TextField opcional — mensagem resumida da falha |
+| `ultimo_erro` | TextField opcional — causa raiz resumida (`Tipo: mensagem`, truncada em 500 caracteres), visível só no Django Admin; a API da inbox **não** expõe `Envio` |
 | `enviado_em` | DateTime nullable — preenchido em sucesso |
 
 Canal **`sistema`** não gera `Envio`: a própria `Notificacao` materializa a inbox.
@@ -272,10 +274,10 @@ Paths relativos ao prefixo `/cortex/notificacoes/`.
 
 | Método | Path | Comportamento |
 | ------ | ---- | ------------- |
-| GET | `notificacoes/` | Lista paginada da inbox do usuário (filtros `lida`, `tipo` apenas estreitam; ordenação por data desc) |
-| GET | `notificacoes/nao-lidas/contador/` | Contador inteiro de não lidas (`lida_em` nulo) |
-| PATCH | `notificacoes/{id}/lida/` | Marca uma notificação como lida (`lida_em=now`) — somente se `destinatario=request.user` |
-| PATCH | `notificacoes/marcar-todas-lidas/` | Marca todas as não lidas do destinatário |
+| GET | `''` | Lista paginada da inbox do usuário (filtros `lida`, `tipo` apenas estreitam; ordenação por data desc) |
+| GET | `nao-lidas/contador/` | Contador inteiro de não lidas (`lida_em` nulo) |
+| PATCH | `<id>/lida/` | Marca uma notificação como lida (`lida_em=now`) — somente se `destinatario=request.user` |
+| PATCH | `marcar-todas-lidas/` | Marca todas as não lidas do destinatário |
 
 Toda view deve declarar bloco **`**Permissões:**`** no `@extend_schema` (autenticado; apenas própria inbox).
 
@@ -285,9 +287,11 @@ Toda view deve declarar bloco **`**Permissões:**`** no `@extend_schema` (autent
 
 | Assunto | Onde implementar |
 | ------- | ---------------- |
-| Dispatcher | `Notificacoes/notificacoes/business.py` |
+| Dispatcher e persistência de `Envio` | `Notificacoes/notificacoes/business.py` (`disparar`, `processar_envio`) |
 | Validação de canais | `Notificacoes/notificacoes/rules.py` |
-| E-mail / resolução de endereço | `Notificacoes/notificacoes/helpers.py`, `tasks.py` |
+| Resolução de e-mail, lock de `Envio`, resumo de erro | `Notificacoes/notificacoes/helpers.py` |
+| Adaptadores de canal (sem `.save()`) | `Notificacoes/notificacoes/canais.py` |
+| Task Celery (sem ORM; delega ao business) | `Notificacoes/notificacoes/tasks.py` |
 | Escopo queryset | `Notificacoes/notificacoes/views.py` |
 
 Fluxo padrão: **View → Business → Rules/Helpers**; `business.py` com try/except conforme [regras-do-projeto](../project/regras-do-projeto.md).

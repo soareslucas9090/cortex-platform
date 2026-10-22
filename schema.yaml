@@ -852,12 +852,13 @@ paths:
       description: "\n    Retorna a documentação narrativa e estruturada das permissões
         de cada módulo registrado.\n\n    Inclui **cortex** (níveis L1–L3), **infraestrutura**
         (capacidades booleanas, secoes\n    estruturadas, acesso total de admin/superuser,
-        elegibilidade do solicitante) e\n    **transporte** (capacidades `gerenciar`
-        para L3, `motorista` para motoristas ativos;\n    ambas liberam a visão das
-        rotas do dia, `reservar` para aluno elegível e `conferir`\n    para L3 ou
-        colaborador com função; `visualizar_relatorio_alunos` para L3, diretores,\n
-        \   coordenadores e chefes com vínculo ativo, ou colaborador autorizado diretamente).\n
-        \   Novos módulos\n    entram automaticamente ao implementar `documentacao_<modulo>()`.\n\n
+        elegibilidade do solicitante),\n    **notificacoes** (inbox própria; L2/L3
+        não leem terceiros) e\n    **transporte** (capacidades `gerenciar` para L3,
+        `motorista` para motoristas ativos;\n    ambas liberam a visão das rotas do
+        dia, `reservar` para aluno elegível e `conferir`\n    para L3 ou colaborador
+        com função; `visualizar_relatorio_alunos` para L3, diretores,\n    coordenadores
+        e chefes com vínculo ativo, ou colaborador autorizado diretamente).\n    Novos
+        módulos\n    entram automaticamente ao implementar `documentacao_<modulo>()`.\n\n
         \   **Permissões:** Qualquer usuário autenticado.\n\n    **Manutenção:** toda
         alteração de regra de permissão deve atualizar o método\n    `documentacao_<modulo>()`
         correspondente em `Identidade.usuarios.documentacao`.\n    "
@@ -3809,6 +3810,138 @@ paths:
             application/json:
               schema:
                 description: Sala reativada com sucesso.
+          description: ''
+  /cortex/notificacoes/:
+    get:
+      operationId: notificacoes_list
+      description: "\n    Lista paginada das notificações do usuário autenticado,
+        ordenadas da mais recente.\n\n    Filtros opcionais: `lida` (`true`/`false`)
+        e `tipo` (código estável).\n    Os query params apenas reduzem o conjunto
+        de resultados, nunca expandem o acesso.\n\n    **Permissões:** Usuário autenticado;
+        somente a própria inbox (L2/L3 não leem caixa alheia).\n    "
+      summary: Listar notificações da inbox
+      parameters:
+      - in: query
+        name: lida
+        schema:
+          type: boolean
+        description: Filtra por lidas (`true`) ou não lidas (`false`).
+      - name: page
+        required: false
+        in: query
+        description: Um número de página dentro do conjunto de resultados paginado.
+        schema:
+          type: integer
+      - in: query
+        name: paginacao
+        schema:
+          type: integer
+        description: Itens por página (1–100).
+      - in: query
+        name: tipo
+        schema:
+          type: string
+        description: Filtra pelo código de tipo da notificação.
+      tags:
+      - Notificações
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedNotificacaoList'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                description: Não autenticado.
+          description: ''
+  /cortex/notificacoes/{id}/lida/:
+    patch:
+      operationId: notificacoes_lida_partial_update
+      description: "\n    Define `lida_em` para o instante atual se ainda não estiver
+        lida. Idempotente.\n\n    **Permissões:** Usuário autenticado; somente a própria
+        inbox (L2/L3 não leem caixa alheia).\n    "
+      summary: Marcar notificação como lida
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - Notificações
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                description: Notificação marcada como lida.
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                description: Não autenticado.
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                description: Notificação inexistente ou de outro usuário.
+          description: ''
+  /cortex/notificacoes/marcar-todas-lidas/:
+    patch:
+      operationId: notificacoes_marcar_todas_lidas_partial_update
+      description: "\n    Marca como lidas todas as notificações não lidas do usuário
+        autenticado.\n\n    **Permissões:** Usuário autenticado; somente a própria
+        inbox (L2/L3 não leem caixa alheia).\n    "
+      summary: Marcar todas as notificações como lidas
+      tags:
+      - Notificações
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                description: Notificações atualizadas.
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                description: Não autenticado.
+          description: ''
+  /cortex/notificacoes/nao-lidas/contador/:
+    get:
+      operationId: notificacoes_nao_lidas_contador_retrieve
+      description: "\n    Retorna a quantidade de notificações com `lida_em` nulo
+        do usuário autenticado.\n\n    **Permissões:** Usuário autenticado; somente
+        a própria inbox (L2/L3 não leem caixa alheia).\n    "
+      summary: Contador de notificações não lidas
+      tags:
+      - Notificações
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ContadorNaoLidas'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                description: Não autenticado.
           description: ''
   /cortex/organizacional/funcoes/:
     get:
@@ -8740,6 +8873,13 @@ components:
       required:
       - id
       - nome
+    ContadorNaoLidas:
+      type: object
+      properties:
+        quantidade:
+          type: integer
+      required:
+      - quantidade
     Contato:
       type: object
       properties:
@@ -10125,6 +10265,45 @@ components:
       - refresh
       - tem_perfil_aluno
       - usuario_coletivo
+    Notificacao:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        tipo:
+          type: string
+          readOnly: true
+        titulo:
+          type: string
+          readOnly: true
+          title: Título
+        corpo:
+          type: string
+          readOnly: true
+        contexto:
+          readOnly: true
+        lida_em:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        lida:
+          type: boolean
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - contexto
+      - corpo
+      - created_at
+      - id
+      - lida
+      - lida_em
+      - tipo
+      - titulo
     NullEnum:
       enum:
       - null
@@ -10473,6 +10652,29 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Justificativa'
+    PaginatedNotificacaoList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Notificacao'
     PaginatedPercursoHistoricoList:
       type: object
       required:
