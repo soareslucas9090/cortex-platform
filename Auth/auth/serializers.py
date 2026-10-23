@@ -112,7 +112,7 @@ class LoginResponseSerializer(serializers.Serializer):
     tipo_conta_coletiva = serializers.CharField(
         required=False,
         allow_null=True,
-        help_text='Finalidade da conta coletiva (ex.: guarita).',
+        help_text='Finalidade da conta coletiva: guarita ou codis.',
     )
     permissoes = serializers.JSONField(
         help_text='Dicionário de permissões por módulo (ex: {"cortex": "EDITAR_EU"}).'

@@ -52,6 +52,7 @@ class TipoDeficiencia(models.TextChoices):
 
 class TipoContaColetiva(models.TextChoices):
     GUARITA = 'guarita', 'Guarita'
+    CODIS = 'codis', 'CODIS'
 
 
 class Usuario(ModelHelperMixin, ModelBusinessMixin, ModelRulesMixin, UserModelPermissionMixin, AbstractBaseAppUser):
@@ -117,7 +118,7 @@ class Usuario(ModelHelperMixin, ModelBusinessMixin, ModelRulesMixin, UserModelPe
         choices=TipoContaColetiva.choices,
         null=True,
         blank=True,
-        help_text='Finalidade da conta compartilhada. Ex.: guarita.',
+        help_text='Finalidade da conta compartilhada. Ex.: guarita ou CODIS.',
     )
     empresas_coletivo = models.ManyToManyField(
         'empresas_instituicoes.EmpresaInstituicao',

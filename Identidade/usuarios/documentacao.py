@@ -290,8 +290,15 @@ class PermissaoDocumentacao:
                         ),
                         (
                             'Consulta de empréstimos sem operar (L1 do módulo): só empréstimos '
-                            'ativos em que o usuário é o solicitante; sem histórico concluído e '
-                            'sem filtros de terceiros.'
+                            'em que o usuário é o solicitante, incluindo o histórico concluído; '
+                            'o filtro ativo separa pendentes e concluídos, sem ampliar o acesso '
+                            'a registros de terceiros.'
+                        ),
+                        (
+                            'O titular pessoal de um empréstimo aberto pode consultar servidores '
+                            'elegíveis em solicitantes-elegiveis para os próprios recursos, mesmo '
+                            'sem operar. A consulta exclui o próprio titular e não amplia acesso '
+                            'para recursos de terceiros.'
                         ),
                     ],
                 },
@@ -356,6 +363,20 @@ class PermissaoDocumentacao:
                     ],
                 },
                 {
+                    'titulo': 'Solicitação pessoal de troca de titular',
+                    'paragrafos': [
+                        (
+                            'O titular pessoal pode convidar outro servidor ativo e elegível para '
+                            'assumir todos os itens ainda abertos do empréstimo.'
+                        ),
+                        (
+                            'Somente o destinatário aceita ou recusa; somente o solicitante '
+                            'cancela. Aceite, recusa e cancelamento encerram a solicitação, e o '
+                            'aceite cria e vincula o novo empréstimo.'
+                        ),
+                    ],
+                },
+                {
                     'titulo': 'Relação com níveis Cortex (orientação típica)',
                     'itens': [
                         {
@@ -400,8 +421,9 @@ class PermissaoDocumentacao:
                         'retirada_irrestrita': False,
                     },
                     'pode': [
-                        'consultar empréstimos ativos no próprio nome',
+                        'consultar empréstimos pendentes e concluídos no próprio nome',
                         'listar blocos, salas e recursos (somente leitura)',
+                        'solicitar troca de titular dos próprios empréstimos ativos',
                     ],
                     'nao_pode': [
                         'receber chave/recurso (não elegível)',
@@ -439,7 +461,7 @@ class PermissaoDocumentacao:
                     },
                     'pode': [
                         'receber qualquer chave como solicitante (regra automática por perfil)',
-                        'consultar empréstimos ativos no próprio nome',
+                        'consultar empréstimos pendentes e concluídos no próprio nome',
                     ],
                     'nao_pode': [
                         'receber mídia ou material didático só por ser terceirizado '
@@ -458,6 +480,7 @@ class PermissaoDocumentacao:
                     },
                     'pode': [
                         'receber qualquer recurso (chave, mídia ou material didático) como solicitante',
+                        'solicitar troca de titular dos próprios empréstimos ativos',
                     ],
                     'nao_pode': [
                         'operar o balcão só por ser servidor',
