@@ -3,12 +3,17 @@ from django.urls import path
 from AppCore.basics.views.basic_views import roteador_por_metodo
 
 from .views import (
+    AceitarSolicitacaoTrocaTitularView,
+    CancelarSolicitacaoTrocaTitularView,
+    CriarSolicitacaoTrocaTitularView,
     DetalheEmprestimoView,
     DevolverItensEmprestimoView,
     ListarEmprestimosView,
     ListarResponsaveisElegiveisView,
+    ListarSolicitacoesTrocaTitularView,
     ListarSolicitantesElegiveisView,
     RealizarEmprestimoView,
+    RecusarSolicitacaoTrocaTitularView,
     TrocarTitularEmprestimoView,
 )
 
@@ -42,5 +47,30 @@ urlpatterns = [
         'emprestimos/<int:pk>/trocar-titular/',
         TrocarTitularEmprestimoView.as_view(),
         name='emprestimo-trocar-titular',
+    ),
+    path(
+        'emprestimos/<int:emprestimo_id>/solicitacoes-troca/',
+        CriarSolicitacaoTrocaTitularView.as_view(),
+        name='emprestimo-solicitacao-troca-criar',
+    ),
+    path(
+        'solicitacoes-troca/',
+        ListarSolicitacoesTrocaTitularView.as_view(),
+        name='solicitacao-troca-list',
+    ),
+    path(
+        'solicitacoes-troca/<int:pk>/aceitar/',
+        AceitarSolicitacaoTrocaTitularView.as_view(),
+        name='solicitacao-troca-aceitar',
+    ),
+    path(
+        'solicitacoes-troca/<int:pk>/recusar/',
+        RecusarSolicitacaoTrocaTitularView.as_view(),
+        name='solicitacao-troca-recusar',
+    ),
+    path(
+        'solicitacoes-troca/<int:pk>/cancelar/',
+        CancelarSolicitacaoTrocaTitularView.as_view(),
+        name='solicitacao-troca-cancelar',
     ),
 ]

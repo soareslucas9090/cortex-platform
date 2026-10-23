@@ -35,7 +35,7 @@ Identidade/
 - **Elegibilidade**: Após localizar o usuário, o backend exige **CPF** ou **matrícula válida** em uma das três fontes para permitir login.
 - **Não há auto-cadastro**: Usuários não podem se cadastrar sozinhos no sistema. A criação é feita exclusivamente por administradores.
 - **Criação de Usuários**: Deve suportar criação individual ou em lote via payload JSON por um administrador ou via portal Admin. Não há fluxo de envio de e-mail para confirmação automática de cadastro.
-- **Usuário coletivo**: flag `usuario_coletivo` na criação/edição do usuário. Conta compartilhada (ex.: guarita) usada na operação de Infraestrutura. O pool de associações (empresas, cargos, funções, setores) **não** é enviado na criação; é configurado em endpoints dedicados:
+- **Usuário coletivo**: flag `usuario_coletivo` na criação/edição do usuário. Conta compartilhada usada em operações coletivas. O campo `tipo_conta_coletiva` identifica sua finalidade e aceita `guarita` ou `codis`. O pool de associações (empresas, cargos, funções, setores) **não** é enviado na criação; é configurado em endpoints dedicados:
   - `GET/PUT /usuarios/{pk}/coletivo/` — consultar e substituir o pool
   - `POST /usuarios/{pk}/coletivo/itens/` — adicionar item (`tipo` + `id`)
   - `DELETE /usuarios/{pk}/coletivo/itens/{tipo}/{item_id}/` — remover item

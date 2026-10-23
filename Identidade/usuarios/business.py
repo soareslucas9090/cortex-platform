@@ -162,6 +162,19 @@ class UsuarioBusiness(ModelInstanceBusiness):
         except Exception as e:
             self.relancar_ou_erro_sistema(e, 'Não foi possível atualizar as associações do usuário coletivo.', logger)
 
+    def listar_responsaveis_do_coletivo(self, conta, **filtros):
+        try:
+            return self.object_instance.helper.listar_responsaveis_do_coletivo(
+                conta,
+                **filtros,
+            )
+        except Exception as e:
+            self.relancar_ou_erro_sistema(
+                e,
+                'Não foi possível listar os responsáveis elegíveis.',
+                logger,
+            )
+
     def adicionar_associacao_coletiva(self, tipo: str, item_id: int):
         """Adiciona um item ao pool do usuário coletivo."""
         try:
