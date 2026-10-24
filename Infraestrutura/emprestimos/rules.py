@@ -113,8 +113,8 @@ class EmprestimoRules(ModelInstanceRules):
             self.return_exception('Não há itens em aberto para troca de titular.')
         return True
 
-    def pode_consultar(self, usuario) -> bool:
-        if not self.object_instance.helper.usuario_pode_consultar_emprestimo(usuario, self.object_instance):
+    def validar_consulta(self, permitido: bool) -> bool:
+        if not permitido:
             self.return_not_allowed('Você não tem permissão para consultar este empréstimo.')
         return True
 

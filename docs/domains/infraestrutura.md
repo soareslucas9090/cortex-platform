@@ -76,10 +76,10 @@ Condicionam **escopo de leitura** em empréstimos e o papel típico do usuário:
 
 | Nível | Empréstimos (sem `operar`) |
 | ----- | --------------------------- |
-| **L1** | Lista e detalhe apenas empréstimos em que o usuário é **solicitante**, pendentes ou concluídos; a listagem aceita o filtro `ativo` |
+| **L1** | Lista e detalhe de empréstimos em que é **solicitante**, pendentes ou concluídos, e daqueles com solicitação de troca pendente em que é **destinatário**; a listagem aceita o filtro `ativo` |
 | **L2+** | Mesmo escopo restrito **até** receber capacidade `operar` |
 
-Quem tem **`operar`** (ou `is_admin` / superuser) consulta empréstimos abertos e encerrados com filtros amplos. Sem `operar`, `ativo=true` limita aos próprios empréstimos pendentes, `ativo=false` aos próprios concluídos e a ausência do parâmetro retorna ambos.
+Quem tem **`operar`** (ou `is_admin` / superuser) consulta empréstimos abertos e encerrados com filtros amplos. Sem `operar`, `ativo=true` limita os registros autorizados aos pendentes, `ativo=false` aos concluídos e a ausência do parâmetro retorna ambos.
 
 ### Capacidades Infraestrutura (`user.permissoes['infraestrutura']`)
 
@@ -150,6 +150,8 @@ Implementação de autorização vigente: `EmprestimoHelpers._usuario_tem_autori
 - Conta coletiva **não** pode ser solicitante nem responsável (`UsuarioRules` / `EmprestimoRules`).
 - **Troca de titular:** devolve itens em aberto e abre novo empréstimo (sem vínculo entre registros).
 - **Solicitação de troca:** o titular pessoal pode convidar outro servidor ativo e elegível; somente o destinatário aceita/recusa e somente o solicitante cancela. O aceite vincula a solicitação ao novo empréstimo.
+- Enquanto estiver pendente, a solicitação concede ao destinatário visibilidade do empréstimo original. Recusa ou cancelamento removem esse acesso; no aceite, o original deixa de aparecer e o novo empréstimo passa a ser próprio do destinatário.
+- A listagem prioriza, antes da paginação: solicitação pendente relacionada ao usuário, empréstimo aberto, retirada mais recente e ID como desempate estável.
 - Na seleção do destinatário, uma conta pessoal pode usar `solicitantes-elegiveis` somente para recursos abertos de empréstimo próprio; nesse caso são retornados apenas servidores ativos, excluindo o próprio usuário.
 - **Atraso UI:** empréstimo ativo há mais de 24 h (`HORAS_ALERTA_ATRASO`).
 

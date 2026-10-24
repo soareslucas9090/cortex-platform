@@ -40,15 +40,24 @@ class EmprestimoHelpers(ModelInstanceHelpers):
             .exists()
         )
 
-    def listar_detalhados(self):
+    def listar_detalhados(self, usuario=None):
         from .models import Emprestimo, ItemEmprestimo
 
         itens_abertos = ItemEmprestimo.objects.filter(emprestimo_id=OuterRef('pk'), devolvido_em__isnull=True)
-        return (
+        qs = (
             Emprestimo.objects.select_related('solicitante', 'responsavel')
             .prefetch_related('itens__recurso__sala__bloco')
             .annotate(_aberto=Exists(itens_abertos))
         )
+        if usuario is not None:
+            qs = qs.prefetch_related(
+                Prefetch(
+                    'solicitacoes_troca_titular',
+                    queryset=self._listar_solicitacoes_pendentes_relacionadas(usuario),
+                    to_attr='_solicitacoes_troca_usuario',
+                )
+            )
+        return qs
 
     def obter_detalhado(self, emprestimo_id: int):
         return self.listar_detalhados().get(pk=emprestimo_id)
@@ -163,26 +172,31 @@ class EmprestimoHelpers(ModelInstanceHelpers):
         tipo_recurso=None,
         atrasado=None,
     ):
-        """L2 (`operar`): consulta ampla. L1: apenas empréstimos próprios."""
+        """L2 (`operar`): consulta ampla. L1: próprios e pendências recebidas."""
         from .choices import StatusSolicitacaoTrocaTitular
         from .models import Emprestimo, ItemEmprestimo, SolicitacaoTrocaTitular
 
-        solicitacoes_usuario = (
-            SolicitacaoTrocaTitular.objects.filter(status=StatusSolicitacaoTrocaTitular.PENDENTE)
-            .filter(Q(solicitante=usuario) | Q(destinatario=usuario))
-            .select_related('solicitante', 'destinatario')
-            .annotate(
-                _emprestimo_aberto=Exists(
-                    ItemEmprestimo.objects.filter(emprestimo_id=OuterRef('emprestimo_id'), devolvido_em__isnull=True)
-                )
-            )
+        solicitacoes_usuario = self._listar_solicitacoes_pendentes_relacionadas(usuario)
+        solicitacoes_pendentes = SolicitacaoTrocaTitular.objects.filter(
+            emprestimo_id=OuterRef('pk'), status=StatusSolicitacaoTrocaTitular.PENDENTE
         )
+        solicitacoes_pendentes_relacionadas = solicitacoes_pendentes.filter(
+            Q(solicitante=usuario) | Q(destinatario=usuario)
+        )
+        solicitacoes_pendentes_recebidas = solicitacoes_pendentes.filter(destinatario=usuario)
 
-        qs = Emprestimo.objects.select_related('solicitante', 'responsavel').prefetch_related(
-            'itens__recurso__sala__bloco',
-            Prefetch(
-                'solicitacoes_troca_titular', queryset=solicitacoes_usuario, to_attr='_solicitacoes_troca_usuario'
-            ),
+        qs = (
+            Emprestimo.objects.select_related('solicitante', 'responsavel')
+            .prefetch_related(
+                'itens__recurso__sala__bloco',
+                Prefetch(
+                    'solicitacoes_troca_titular', queryset=solicitacoes_usuario, to_attr='_solicitacoes_troca_usuario'
+                ),
+            )
+            .annotate(
+                _solicitacao_pendente_relacionada=Exists(solicitacoes_pendentes_relacionadas),
+                _solicitacao_pendente_recebida=Exists(solicitacoes_pendentes_recebidas),
+            )
         )
 
         if usuario_pode_operar_infraestrutura(usuario):
@@ -194,7 +208,7 @@ class EmprestimoHelpers(ModelInstanceHelpers):
             if ativo is not None:
                 qs = self._filtrar_por_ativo(qs, ativo)
         else:
-            qs = qs.filter(solicitante=usuario)
+            qs = qs.filter(Q(solicitante=usuario) | Q(_solicitacao_pendente_recebida=True))
             if ativo is not None:
                 qs = self._filtrar_por_ativo(qs, ativo)
 
@@ -205,12 +219,17 @@ class EmprestimoHelpers(ModelInstanceHelpers):
         if atrasado is not None:
             qs = self._filtrar_por_atrasado(qs, atrasado)
 
-        # Abertos primeiro; dentro de cada grupo, mais recentes primeiro.
+        # Pendências relacionadas primeiro; depois abertos e mais recentes.
         itens_abertos = ItemEmprestimo.objects.filter(emprestimo_id=OuterRef('pk'), devolvido_em__isnull=True)
-        return qs.annotate(_aberto=Exists(itens_abertos)).order_by('-_aberto', '-retirada_em', 'pk')
+        return qs.annotate(_aberto=Exists(itens_abertos)).order_by(
+            '-_solicitacao_pendente_relacionada', '-_aberto', '-retirada_em', 'pk'
+        )
 
     def usuario_pode_consultar_emprestimo(self, usuario, emprestimo) -> bool:
-        """Operador consulta conforme seu escopo; L1 consulta empréstimos próprios."""
+        """Operador consulta conforme seu escopo; L1 consulta próprios e pendências recebidas."""
+        from .choices import StatusSolicitacaoTrocaTitular
+        from .models import SolicitacaoTrocaTitular
+
         if usuario_tem_acesso_total_infraestrutura(usuario):
             return True
         if usuario_pode_operar_infraestrutura(usuario):
@@ -218,9 +237,26 @@ class EmprestimoHelpers(ModelInstanceHelpers):
                 tipo = usuario.tipo_conta_coletiva
                 return tipo in OrigemContaColetiva.values and emprestimo.origem_conta_coletiva == tipo
             return True
-        if emprestimo.solicitante_id != usuario.pk:
-            return False
-        return True
+        if emprestimo.solicitante_id == usuario.pk:
+            return True
+        return SolicitacaoTrocaTitular.objects.filter(
+            emprestimo=emprestimo, destinatario=usuario, status=StatusSolicitacaoTrocaTitular.PENDENTE
+        ).exists()
+
+    def _listar_solicitacoes_pendentes_relacionadas(self, usuario):
+        from .choices import StatusSolicitacaoTrocaTitular
+        from .models import ItemEmprestimo, SolicitacaoTrocaTitular
+
+        return (
+            SolicitacaoTrocaTitular.objects.filter(status=StatusSolicitacaoTrocaTitular.PENDENTE)
+            .filter(Q(solicitante=usuario) | Q(destinatario=usuario))
+            .select_related('solicitante', 'destinatario')
+            .annotate(
+                _emprestimo_aberto=Exists(
+                    ItemEmprestimo.objects.filter(emprestimo_id=OuterRef('emprestimo_id'), devolvido_em__isnull=True)
+                )
+            )
+        )
 
     def restringir_por_origem_conta_coletiva(self, qs, usuario):
         """Restringe contas coletivas sem afetar administradores ou contas comuns."""

@@ -41,9 +41,9 @@ class EmprestimoBusiness(ModelInstanceBusiness):
         except Exception as e:
             self.relancar_ou_erro_sistema(e, 'Não foi possível consultar o empréstimo.', logger)
 
-    def listar_detalhados(self):
+    def listar_detalhados(self, usuario=None):
         try:
-            return self.object_instance.helper.listar_detalhados()
+            return self.object_instance.helper.listar_detalhados(usuario=usuario)
         except Exception as e:
             self.relancar_ou_erro_sistema(e, 'Não foi possível listar os empréstimos.', logger)
 
@@ -55,7 +55,8 @@ class EmprestimoBusiness(ModelInstanceBusiness):
 
     def verificar_consulta(self, usuario):
         try:
-            self.object_instance.rules.pode_consultar(usuario)
+            permitido = self.object_instance.helper.usuario_pode_consultar_emprestimo(usuario, self.object_instance)
+            self.object_instance.rules.validar_consulta(permitido)
         except Exception as e:
             self.relancar_ou_erro_sistema(e, 'Não foi possível consultar o empréstimo.', logger)
 
@@ -136,7 +137,10 @@ class EmprestimoBusiness(ModelInstanceBusiness):
         try:
             with transaction.atomic():
                 self.object_instance.rules.pode_operar(conta_autenticada)
-                self.object_instance.rules.pode_consultar(conta_autenticada)
+                permitido = self.object_instance.helper.usuario_pode_consultar_emprestimo(
+                    conta_autenticada, self.object_instance
+                )
+                self.object_instance.rules.validar_consulta(permitido)
                 self.object_instance.rules.pode_devolver_itens()
                 itens = list(
                     self.object_instance.itens.select_for_update().filter(pk__in=item_ids).select_related('recurso')
@@ -189,7 +193,8 @@ class EmprestimoBusiness(ModelInstanceBusiness):
             with transaction.atomic():
                 emprestimo = Emprestimo.objects.select_for_update().get(pk=self.object_instance.pk)
                 emprestimo.rules.pode_operar(conta_autenticada)
-                emprestimo.rules.pode_consultar(conta_autenticada)
+                permitido = emprestimo.helper.usuario_pode_consultar_emprestimo(conta_autenticada, emprestimo)
+                emprestimo.rules.validar_consulta(permitido)
                 responsavel = emprestimo.rules.resolver_responsavel(conta_autenticada, responsavel_id=responsavel_id)
                 origem_conta_coletiva = emprestimo.rules.resolver_origem_conta_coletiva(conta_autenticada)
                 emprestimo.rules.validar_solicitante_ativo(novo_solicitante_id)

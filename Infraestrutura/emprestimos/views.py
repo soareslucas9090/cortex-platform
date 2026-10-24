@@ -145,14 +145,15 @@ class ListarResponsaveisElegiveisView(PodeOperarInfraestruturaMixin, BasicGetAPI
     summary='Listar empréstimos',
     description='''
     Com `operar`: consulta ampla com filtros.
-    Sem `operar`: somente empréstimos do próprio solicitante. Nesse escopo,
-    `ativo=true` retorna os pendentes, `ativo=false` retorna os concluídos e a
-    ausência de `ativo` retorna ambos.
+    Sem `operar`: empréstimos do próprio solicitante e empréstimos com solicitação
+    de troca pendente recebida pelo usuário. Nesse escopo, `ativo=true` retorna os
+    pendentes, `ativo=false` retorna os concluídos e a ausência de `ativo` retorna ambos.
     Contas coletivas enxergam apenas empréstimos da própria origem (`guarita` ou `codis`).
     Administradores e superusuários mantêm acesso a todas as origens.
 
-    Ordenação padrão: empréstimos **abertos** primeiro (mais recentes primeiro),
-    depois os **fechados** (mais recentes primeiro).
+    Ordenação padrão: solicitações de troca pendentes relacionadas ao usuário primeiro;
+    depois empréstimos **abertos**, data de retirada mais recente e ID como desempate.
+    A ordenação é aplicada antes da paginação.
 
     **Permissões:** Usuário autenticado (escopo conforme capacidade `operar`).
 
@@ -271,7 +272,8 @@ class RealizarEmprestimoView(PodeOperarInfraestruturaMixin, BasicPostAPIView):
     summary='Detalhe do empréstimo',
     description='''
     Com `operar`: qualquer empréstimo.
-    Sem `operar`: qualquer empréstimo do próprio solicitante, pendente ou concluído.
+    Sem `operar`: empréstimos próprios, pendentes ou concluídos, e empréstimos com
+    solicitação de troca pendente recebida pelo usuário.
     Contas coletivas ficam restritas à origem correspondente ao seu tipo; administradores
     e superusuários podem consultar todas as origens.
 
@@ -291,7 +293,7 @@ class DetalheEmprestimoView(IsAuthenticatedMixin, BasicRetrieveAPIView):
     mensagem_sucesso = 'Empréstimo obtido com sucesso.'
 
     def get_queryset(self):
-        return Emprestimo().business.listar_detalhados()
+        return Emprestimo().business.listar_detalhados(usuario=self.request.user)
 
     def validate_retrieve(self, request, *args, **kwargs):
         self.object.business.verificar_consulta(request.user)

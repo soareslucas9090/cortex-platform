@@ -1,3 +1,4 @@
+from datetime import timedelta
 from types import SimpleNamespace
 
 from django.db import IntegrityError, connection, transaction
@@ -58,6 +59,7 @@ class SolicitacaoTrocaTitularTest(APITestCase):
             kwargs={'emprestimo_id': self.emprestimo.pk},
         )
         self.url_listar = reverse('infraestrutura:solicitacao-troca-list')
+        self.url_emprestimos = reverse('infraestrutura:emprestimos-list')
         self.url_destinatarios = reverse(
             'infraestrutura:emprestimos-solicitantes-elegiveis',
         )
@@ -78,6 +80,20 @@ class SolicitacaoTrocaTitularTest(APITestCase):
             destinatario_id=self.destinatario.pk,
             observacao='Assuma este empréstimo',
         )
+
+    def _criar_emprestimo(self, solicitante, codigo):
+        recurso = Recurso.objects.create(
+            codigo=codigo,
+            tipo=TipoRecurso.CHAVE,
+            sala=self.recurso.sala,
+        )
+        emprestimo = Emprestimo.objects.create(
+            solicitante=solicitante,
+            responsavel=solicitante,
+            retirada_em=timezone.now(),
+        )
+        ItemEmprestimo.objects.create(emprestimo=emprestimo, recurso=recurso)
+        return emprestimo
 
     def test_titular_lista_servidores_elegiveis_para_o_proprio_emprestimo(self):
         usuario_comum = criar_usuario('41000000004', 'Usuário comum')
@@ -296,8 +312,7 @@ class SolicitacaoTrocaTitularTest(APITestCase):
     def test_listagem_de_emprestimos_expoe_solicitacao_pendente(self):
         solicitacao = self._criar_solicitacao()
         self.client.force_authenticate(self.titular)
-        url = reverse('infraestrutura:emprestimos-list')
-        resposta = self.client.get(url)
+        resposta = self.client.get(self.url_emprestimos)
         self.assertEqual(resposta.status_code, status.HTTP_200_OK)
         self.assertEqual(
             resposta.data['dados'][0]['solicitacao_troca']['id'],
@@ -307,6 +322,121 @@ class SolicitacaoTrocaTitularTest(APITestCase):
             resposta.data['dados'][0]['solicitacao_troca']['direcao'],
             'ENVIADA',
         )
+
+    def test_destinatario_l1_visualiza_emprestimo_recebido_na_lista_e_no_detalhe(self):
+        solicitacao = self._criar_solicitacao()
+        self.client.force_authenticate(self.destinatario)
+
+        listagem = self.client.get(self.url_emprestimos)
+        detalhe = self.client.get(
+            reverse('infraestrutura:emprestimo-detail', kwargs={'pk': self.emprestimo.pk})
+        )
+
+        self.assertEqual(listagem.status_code, status.HTTP_200_OK)
+        self.assertEqual([item['id'] for item in listagem.data['dados']], [self.emprestimo.pk])
+        self.assertEqual(listagem.data['dados'][0]['solicitacao_troca']['id'], solicitacao.pk)
+        self.assertEqual(listagem.data['dados'][0]['solicitacao_troca']['direcao'], 'RECEBIDA')
+        self.assertEqual(detalhe.status_code, status.HTTP_200_OK)
+        self.assertEqual(detalhe.data['dados']['id'], self.emprestimo.pk)
+        self.assertEqual(detalhe.data['dados']['solicitacao_troca']['id'], solicitacao.pk)
+
+    def test_usuario_nao_relacionado_nao_visualiza_emprestimo_recebido(self):
+        self._criar_solicitacao()
+        self.client.force_authenticate(self.terceiro)
+
+        listagem = self.client.get(self.url_emprestimos)
+        listagem_filtrada = self.client.get(
+            self.url_emprestimos,
+            {'ativo': 'true', 'recurso_id': self.recurso.pk, 'tipo_recurso': TipoRecurso.CHAVE},
+        )
+        detalhe = self.client.get(
+            reverse('infraestrutura:emprestimo-detail', kwargs={'pk': self.emprestimo.pk})
+        )
+
+        self.assertEqual(listagem.status_code, status.HTTP_200_OK)
+        self.assertNotIn(self.emprestimo.pk, [item['id'] for item in listagem.data['dados']])
+        self.assertNotIn(self.emprestimo.pk, [item['id'] for item in listagem_filtrada.data['dados']])
+        self.assertEqual(detalhe.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_solicitacao_pendente_e_priorizada_antes_da_paginacao(self):
+        proprio = self._criar_emprestimo(self.destinatario, 'CH-TROCA-PRIORIDADE')
+        Emprestimo.objects.filter(pk=self.emprestimo.pk).update(
+            retirada_em=timezone.now() - timedelta(days=1)
+        )
+        self._criar_solicitacao()
+        self.client.force_authenticate(self.destinatario)
+
+        primeira_pagina = self.client.get(self.url_emprestimos, {'paginacao': 1, 'page': 1})
+        segunda_pagina = self.client.get(self.url_emprestimos, {'paginacao': 1, 'page': 2})
+
+        self.assertEqual(primeira_pagina.status_code, status.HTTP_200_OK)
+        self.assertEqual(primeira_pagina.data['count'], 2)
+        self.assertEqual(primeira_pagina.data['dados'][0]['id'], self.emprestimo.pk)
+        self.assertIsNotNone(primeira_pagina.data['next'])
+        self.assertIsNone(primeira_pagina.data['previous'])
+        self.assertEqual(segunda_pagina.status_code, status.HTTP_200_OK)
+        self.assertEqual(segunda_pagina.data['count'], 2)
+        self.assertEqual(segunda_pagina.data['dados'][0]['id'], proprio.pk)
+        self.assertIsNone(segunda_pagina.data['next'])
+        self.assertIsNotNone(segunda_pagina.data['previous'])
+
+    def test_recusa_remove_visibilidade_adicional_do_destinatario(self):
+        solicitacao = self._criar_solicitacao()
+        self.client.force_authenticate(self.destinatario)
+        antes = self.client.get(self.url_emprestimos)
+
+        resposta = self.client.post(
+            reverse('infraestrutura:solicitacao-troca-recusar', kwargs={'pk': solicitacao.pk}), {}
+        )
+        depois = self.client.get(self.url_emprestimos)
+        detalhe = self.client.get(
+            reverse('infraestrutura:emprestimo-detail', kwargs={'pk': self.emprestimo.pk})
+        )
+
+        self.assertIn(self.emprestimo.pk, [item['id'] for item in antes.data['dados']])
+        self.assertEqual(resposta.status_code, status.HTTP_200_OK)
+        self.assertNotIn(self.emprestimo.pk, [item['id'] for item in depois.data['dados']])
+        self.assertEqual(detalhe.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_cancelamento_remove_visibilidade_adicional_do_destinatario(self):
+        solicitacao = self._criar_solicitacao()
+        self.client.force_authenticate(self.titular)
+        resposta = self.client.post(
+            reverse('infraestrutura:solicitacao-troca-cancelar', kwargs={'pk': solicitacao.pk}), {}
+        )
+
+        self.client.force_authenticate(self.destinatario)
+        depois = self.client.get(self.url_emprestimos)
+        detalhe = self.client.get(
+            reverse('infraestrutura:emprestimo-detail', kwargs={'pk': self.emprestimo.pk})
+        )
+
+        self.assertEqual(resposta.status_code, status.HTTP_200_OK)
+        self.assertNotIn(self.emprestimo.pk, [item['id'] for item in depois.data['dados']])
+        self.assertEqual(detalhe.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_aceite_substitui_original_pelo_novo_emprestimo_na_listagem(self):
+        solicitacao = self._criar_solicitacao()
+        self.client.force_authenticate(self.destinatario)
+        resposta = self.client.post(
+            reverse('infraestrutura:solicitacao-troca-aceitar', kwargs={'pk': solicitacao.pk}), {}
+        )
+        solicitacao.refresh_from_db()
+
+        listagem = self.client.get(self.url_emprestimos)
+        ids = [item['id'] for item in listagem.data['dados']]
+        detalhe_original = self.client.get(
+            reverse('infraestrutura:emprestimo-detail', kwargs={'pk': self.emprestimo.pk})
+        )
+        detalhe_novo = self.client.get(
+            reverse('infraestrutura:emprestimo-detail', kwargs={'pk': solicitacao.novo_emprestimo_id})
+        )
+
+        self.assertEqual(resposta.status_code, status.HTTP_201_CREATED)
+        self.assertNotIn(self.emprestimo.pk, ids)
+        self.assertIn(solicitacao.novo_emprestimo_id, ids)
+        self.assertEqual(detalhe_original.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(detalhe_novo.status_code, status.HTTP_200_OK)
 
     def test_serializer_de_emprestimos_nao_cresce_queries_por_registro(self):
         self._criar_solicitacao()

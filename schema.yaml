@@ -2669,17 +2669,18 @@ paths:
     get:
       operationId: infraestrutura_emprestimos_list
       description: "\n    Com `operar`: consulta ampla com filtros.\n    Sem `operar`:
-        somente empréstimos do próprio solicitante. Nesse escopo,\n    `ativo=true`
-        retorna os pendentes, `ativo=false` retorna os concluídos e a\n    ausência
-        de `ativo` retorna ambos.\n    Contas coletivas enxergam apenas empréstimos
-        da própria origem (`guarita` ou `codis`).\n    Administradores e superusuários
-        mantêm acesso a todas as origens.\n\n    Ordenação padrão: empréstimos **abertos**
-        primeiro (mais recentes primeiro),\n    depois os **fechados** (mais recentes
-        primeiro).\n\n    **Permissões:** Usuário autenticado (escopo conforme capacidade
-        `operar`).\n\n    **Segurança:** Os query params apenas reduzem o conjunto
-        já autorizado e nunca\n    expandem o acesso. `atrasado=true` retorna ativos
-        há mais de 24 horas;\n    `atrasado=false` retorna os demais empréstimos.\n
-        \   "
+        empréstimos do próprio solicitante e empréstimos com solicitação\n    de troca
+        pendente recebida pelo usuário. Nesse escopo, `ativo=true` retorna os\n    pendentes,
+        `ativo=false` retorna os concluídos e a ausência de `ativo` retorna ambos.\n
+        \   Contas coletivas enxergam apenas empréstimos da própria origem (`guarita`
+        ou `codis`).\n    Administradores e superusuários mantêm acesso a todas as
+        origens.\n\n    Ordenação padrão: solicitações de troca pendentes relacionadas
+        ao usuário primeiro;\n    depois empréstimos **abertos**, data de retirada
+        mais recente e ID como desempate.\n    A ordenação é aplicada antes da paginação.\n\n
+        \   **Permissões:** Usuário autenticado (escopo conforme capacidade `operar`).\n\n
+        \   **Segurança:** Os query params apenas reduzem o conjunto já autorizado
+        e nunca\n    expandem o acesso. `atrasado=true` retorna ativos há mais de
+        24 horas;\n    `atrasado=false` retorna os demais empréstimos.\n    "
       summary: Listar empréstimos
       parameters:
       - in: query
@@ -2849,11 +2850,12 @@ paths:
   /cortex/infraestrutura/emprestimos/{id}/:
     get:
       operationId: infraestrutura_emprestimos_retrieve
-      description: "\n    Com `operar`: qualquer empréstimo.\n    Sem `operar`: qualquer
-        empréstimo do próprio solicitante, pendente ou concluído.\n    Contas coletivas
-        ficam restritas à origem correspondente ao seu tipo; administradores\n    e
-        superusuários podem consultar todas as origens.\n\n    **Permissões:** Usuário
-        autenticado (escopo conforme capacidade `operar`).\n    "
+      description: "\n    Com `operar`: qualquer empréstimo.\n    Sem `operar`: empréstimos
+        próprios, pendentes ou concluídos, e empréstimos com\n    solicitação de troca
+        pendente recebida pelo usuário.\n    Contas coletivas ficam restritas à origem
+        correspondente ao seu tipo; administradores\n    e superusuários podem consultar
+        todas as origens.\n\n    **Permissões:** Usuário autenticado (escopo conforme
+        capacidade `operar`).\n    "
       summary: Detalhe do empréstimo
       parameters:
       - in: path

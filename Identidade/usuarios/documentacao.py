@@ -289,10 +289,10 @@ class PermissaoDocumentacao:
                             'POST de criação do recurso).'
                         ),
                         (
-                            'Consulta de empréstimos sem operar (L1 do módulo): só empréstimos '
-                            'em que o usuário é o solicitante, incluindo o histórico concluído; '
-                            'o filtro ativo separa pendentes e concluídos, sem ampliar o acesso '
-                            'a registros de terceiros.'
+                            'Consulta de empréstimos sem operar (L1 do módulo): empréstimos em '
+                            'que o usuário é o solicitante, incluindo o histórico concluído, e '
+                            'empréstimos com solicitação de troca pendente recebida. O filtro '
+                            'ativo apenas reduz esse conjunto autorizado.'
                         ),
                         (
                             'O titular pessoal de um empréstimo aberto pode consultar servidores '
