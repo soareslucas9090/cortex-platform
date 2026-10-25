@@ -2,8 +2,86 @@ from drf_spectacular.utils import extend_schema_serializer
 from rest_framework import serializers
 
 from Identidade.usuarios.constantes import ANEXO_FOTO_SECUNDARIA
+from Infraestrutura.recursos.choices import TipoRecurso
 
 from .models import Emprestimo, ItemEmprestimo, SolicitacaoTrocaTitular
+
+ORDENACOES_EMPRESTIMOS = [
+    'sala',
+    '-sala',
+    'recurso',
+    '-recurso',
+    'solicitante',
+    '-solicitante',
+    'responsavel',
+    '-responsavel',
+    'retirada_em',
+    '-retirada_em',
+    'devolucao_em',
+    '-devolucao_em',
+]
+
+
+class BooleanoQueryField(serializers.Field):
+    def to_internal_value(self, data):
+        if isinstance(data, str):
+            valor = data.lower()
+            if valor == 'true':
+                return True
+            if valor == 'false':
+                return False
+        raise serializers.ValidationError('Informe true ou false.')
+
+    def to_representation(self, value):
+        return bool(value)
+
+
+class ListarEmprestimosQuerySerializer(serializers.Serializer):
+    busca = serializers.CharField(required=False, allow_blank=True, trim_whitespace=True)
+    ativo = BooleanoQueryField(required=False)
+    atrasado = BooleanoQueryField(required=False)
+    solicitante_id = serializers.IntegerField(required=False, min_value=1)
+    responsavel_id = serializers.IntegerField(required=False, min_value=1)
+    recurso_id = serializers.IntegerField(required=False, min_value=1)
+    sala_id = serializers.IntegerField(required=False, min_value=1)
+    tipo_recurso = serializers.ChoiceField(required=False, choices=TipoRecurso.choices)
+    retirada_data = serializers.DateField(required=False, input_formats=['%Y-%m-%d'])
+    retirada_hora_inicio = serializers.TimeField(required=False, input_formats=['%H:%M'])
+    retirada_hora_fim = serializers.TimeField(required=False, input_formats=['%H:%M'])
+    devolucao_data = serializers.DateField(required=False, input_formats=['%Y-%m-%d'])
+    devolucao_hora_inicio = serializers.TimeField(required=False, input_formats=['%H:%M'])
+    devolucao_hora_fim = serializers.TimeField(required=False, input_formats=['%H:%M'])
+    ordenacao = serializers.ChoiceField(required=False, choices=ORDENACOES_EMPRESTIMOS)
+
+    def to_internal_value(self, data):
+        """Ignora campos malformados, conforme o contrato geral de query params do projeto."""
+        valores = {}
+        for field in self._writable_fields:
+            if field.field_name not in data:
+                continue
+            valor_primitivo = field.get_value(data)
+            try:
+                valor_validado = field.run_validation(valor_primitivo)
+            except serializers.SkipField:
+                continue
+            except serializers.ValidationError:
+                continue
+            self.set_value(valores, field.source_attrs, valor_validado)
+        return valores
+
+    def validate(self, attrs):
+        intervalos = (
+            ('retirada_hora_inicio', 'retirada_hora_fim', 'retirada'),
+            ('devolucao_hora_inicio', 'devolucao_hora_fim', 'devolução'),
+        )
+        for campo_inicio, campo_fim, rotulo in intervalos:
+            inicio = attrs.get(campo_inicio)
+            fim = attrs.get(campo_fim)
+            if inicio is not None and fim is not None and inicio > fim:
+                raise serializers.ValidationError(
+                    {campo_fim: f'A hora final da {rotulo} deve ser maior ou igual à hora inicial.'}
+                )
+        return attrs
 
 
 @extend_schema_serializer(component_name='EmprestimoUsuarioResumo')

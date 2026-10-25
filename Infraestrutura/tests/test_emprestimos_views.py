@@ -1,4 +1,5 @@
 import datetime
+from zoneinfo import ZoneInfo
 
 from django.urls import reverse
 from django.utils import timezone
@@ -9,7 +10,8 @@ from rest_framework_simplejwt.tokens import RefreshToken
 
 from Identidade.usuarios.models import TipoContaColetiva, Usuario
 from Infraestrutura.blocos.models import Bloco
-from Infraestrutura.emprestimos.models import Emprestimo, ItemEmprestimo
+from Infraestrutura.emprestimos.choices import StatusSolicitacaoTrocaTitular
+from Infraestrutura.emprestimos.models import Emprestimo, ItemEmprestimo, SolicitacaoTrocaTitular
 from Infraestrutura.permissoes.models import PermissaoFuncaoInfraestrutura, PermissaoUsuarioInfraestrutura
 from Infraestrutura.recursos.choices import TipoRecurso
 from Infraestrutura.recursos.models import Recurso
@@ -299,6 +301,304 @@ class EmprestimosViewsTest(APITestCase):
         )
         self.assertEqual(resposta.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn('empréstimo em aberto', str(resposta.data).lower())
+
+
+class EmprestimosConsultaAvancadaViewsTest(APITestCase):
+
+    def setUp(self):
+        self.operador = conceder_capacidade_operar(criar_usuario('43000000001', nome='Operador Consulta'))
+        self.solicitante = criar_usuario('43000000002', nome='Álvaro Solicitante')
+        self.responsavel = criar_usuario('43000000003', nome='Bruna Responsável')
+        self.outro_solicitante = criar_usuario('43000000004', nome='Carlos Solicitante')
+        self.bloco = Bloco.objects.create(nome='Bloco Ômega')
+        self.sala = Sala.objects.create(bloco=self.bloco, nome='Sala Ágata')
+        self.outra_sala = Sala.objects.create(bloco=self.bloco, nome='Sala Beta')
+        self.url = reverse('infraestrutura:emprestimos-list')
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {obter_tokens(self.operador)}')
+        self._contador_recurso = 0
+
+    def _recurso(self, *, codigo=None, descricao='', tipo=TipoRecurso.CHAVE, sala=None):
+        self._contador_recurso += 1
+        if sala is None and tipo == TipoRecurso.CHAVE:
+            sala = self.sala
+        return Recurso.objects.create(
+            codigo=codigo or f'CONS-{self._contador_recurso:03d}',
+            descricao=descricao,
+            tipo=tipo,
+            sala=sala,
+        )
+
+    def _emprestimo(
+        self,
+        recursos,
+        *,
+        solicitante=None,
+        responsavel=None,
+        retirada_em=None,
+        observacao='',
+        devolvido_em=None,
+    ):
+        emprestimo = Emprestimo.objects.create(
+            solicitante=solicitante or self.solicitante,
+            responsavel=responsavel or self.responsavel,
+            retirada_em=retirada_em or timezone.now(),
+            observacao=observacao,
+        )
+        devolucoes = devolvido_em if isinstance(devolvido_em, list) else [devolvido_em] * len(recursos)
+        for recurso, devolucao in zip(recursos, devolucoes, strict=True):
+            ItemEmprestimo.objects.create(emprestimo=emprestimo, recurso=recurso, devolvido_em=devolucao)
+        return emprestimo
+
+    def _listar(self, **params):
+        resposta = self.client.get(self.url, params)
+        self.assertEqual(resposta.status_code, status.HTTP_200_OK, resposta.data)
+        return resposta, [item['id'] for item in resposta.data['dados']]
+
+    def test_busca_cobre_campos_e_ignora_caixa_e_acentos(self):
+        recurso = self._recurso(codigo='CHV-ÁGUA', descricao='Projetor multimídia')
+        emprestimo = self._emprestimo([recurso], observacao='Uso na apresentação científica')
+
+        for busca in (
+            'alvaro',
+            'BRUNA',
+            'cientifica',
+            'chv-agua',
+            'multimidia',
+            'sala agata',
+            'bloco omega',
+        ):
+            with self.subTest(busca=busca):
+                _, ids = self._listar(busca=busca)
+                self.assertEqual(ids, [emprestimo.pk])
+
+    def test_filtros_estruturados_isolados_e_combinados(self):
+        recurso = self._recurso(tipo=TipoRecurso.CHAVE, sala=self.sala)
+        esperado = self._emprestimo([recurso])
+        outro_recurso = self._recurso(tipo=TipoRecurso.MIDIA, sala=None)
+        self._emprestimo([outro_recurso], solicitante=self.outro_solicitante, responsavel=self.operador)
+
+        filtros = (
+            {'solicitante_id': self.solicitante.pk},
+            {'responsavel_id': self.responsavel.pk},
+            {'recurso_id': recurso.pk},
+            {'sala_id': self.sala.pk},
+            {'tipo_recurso': TipoRecurso.CHAVE},
+            {
+                'solicitante_id': self.solicitante.pk,
+                'sala_id': self.sala.pk,
+                'tipo_recurso': TipoRecurso.CHAVE,
+            },
+        )
+        for params in filtros:
+            with self.subTest(params=params):
+                _, ids = self._listar(**params)
+                self.assertEqual(ids, [esperado.pk])
+
+    def test_filtros_de_retirada_usam_horario_de_sao_paulo(self):
+        retirada_utc = datetime.datetime(2026, 1, 2, 2, 30, tzinfo=datetime.UTC)
+        emprestimo = self._emprestimo([self._recurso()], retirada_em=retirada_utc)
+
+        _, ids = self._listar(retirada_data='2026-01-01', retirada_hora_inicio='23:00', retirada_hora_fim='23:59')
+        self.assertEqual(ids, [emprestimo.pk])
+
+        _, ids_dia_utc = self._listar(retirada_data='2026-01-02')
+        self.assertEqual(ids_dia_utc, [])
+
+    def test_filtros_de_devolucao_usam_mesmo_item_e_horario_de_sao_paulo(self):
+        devolucao_local_2330 = datetime.datetime(2026, 1, 2, 2, 30, tzinfo=datetime.UTC)
+        devolucao_local_1000 = datetime.datetime(2026, 1, 2, 13, 0, tzinfo=datetime.UTC)
+        emprestimo = self._emprestimo(
+            [self._recurso(), self._recurso()],
+            devolvido_em=[devolucao_local_2330, devolucao_local_1000],
+        )
+
+        _, ids = self._listar(devolucao_data='2026-01-01', devolucao_hora_inicio='23:00', devolucao_hora_fim='23:59')
+        self.assertEqual(ids, [emprestimo.pk])
+
+        _, ids_campos_em_itens_diferentes = self._listar(
+            devolucao_data='2026-01-01', devolucao_hora_inicio='10:00', devolucao_hora_fim='10:30'
+        )
+        self.assertEqual(ids_campos_em_itens_diferentes, [])
+
+    def test_intervalos_invertidos_retornam_400_e_malformados_sao_ignorados(self):
+        emprestimo = self._emprestimo([self._recurso()])
+
+        retirada = self.client.get(self.url, {'retirada_hora_inicio': '18:00', 'retirada_hora_fim': '08:00'})
+        devolucao = self.client.get(self.url, {'devolucao_hora_inicio': '18:00', 'devolucao_hora_fim': '08:00'})
+        self.assertEqual(retirada.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(devolucao.status_code, status.HTTP_400_BAD_REQUEST)
+
+        _, ids = self._listar(sala_id='inválida', tipo_recurso='outro', retirada_data='31/12/2026')
+        self.assertEqual(ids, [emprestimo.pk])
+
+    def test_booleanos_aceitam_somente_true_e_false(self):
+        aberto_atrasado = self._emprestimo([self._recurso()], retirada_em=timezone.now() - datetime.timedelta(days=2))
+        concluido = self._emprestimo([self._recurso()], devolvido_em=timezone.now())
+
+        _, ids_ativo_malformado = self._listar(ativo='1')
+        _, ids_atrasado_malformado = self._listar(atrasado='0')
+        self.assertCountEqual(ids_ativo_malformado, [aberto_atrasado.pk, concluido.pk])
+        self.assertCountEqual(ids_atrasado_malformado, [aberto_atrasado.pk, concluido.pk])
+
+        _, ids_ativos = self._listar(ativo='TRUE')
+        _, ids_concluidos = self._listar(ativo='false')
+        self.assertEqual(ids_ativos, [aberto_atrasado.pk])
+        self.assertEqual(ids_concluidos, [concluido.pk])
+
+    def test_item_devolvido_nao_filtra_emprestimo_parcial_mas_filtra_concluido(self):
+        recurso_devolvido = self._recurso(codigo='HIST-DEV', tipo=TipoRecurso.MIDIA, sala=self.sala)
+        recurso_aberto = self._recurso(codigo='ATUAL-ABERTO', sala=self.outra_sala)
+        agora = timezone.now()
+        emprestimo = self._emprestimo([recurso_devolvido, recurso_aberto], devolvido_em=[agora, None])
+
+        for params in (
+            {'recurso_id': recurso_devolvido.pk},
+            {'sala_id': self.sala.pk},
+            {'tipo_recurso': TipoRecurso.MIDIA},
+            {'busca': 'HIST-DEV'},
+        ):
+            with self.subTest(params=params):
+                _, ids = self._listar(**params)
+                self.assertEqual(ids, [])
+
+        _, ids_aberto = self._listar(
+            recurso_id=recurso_aberto.pk,
+            sala_id=self.outra_sala.pk,
+            tipo_recurso=TipoRecurso.CHAVE,
+        )
+        self.assertEqual(ids_aberto, [emprestimo.pk])
+
+        ItemEmprestimo.objects.filter(emprestimo=emprestimo, recurso=recurso_aberto).update(devolvido_em=agora)
+        _, ids_concluido = self._listar(recurso_id=recurso_devolvido.pk, busca='HIST-DEV')
+        self.assertEqual(ids_concluido, [emprestimo.pk])
+
+        _, ids_tipo_historico = self._listar(tipo_recurso=TipoRecurso.MIDIA)
+        self.assertEqual(ids_tipo_historico, [emprestimo.pk])
+
+    def test_multiplos_itens_nao_duplicam_resultado(self):
+        emprestimo = self._emprestimo(
+            [
+                self._recurso(descricao='Equipamento duplicável'),
+                self._recurso(descricao='Equipamento duplicável'),
+            ]
+        )
+
+        resposta, ids = self._listar(busca='duplicavel')
+        self.assertEqual(resposta.data['count'], 1)
+        self.assertEqual(ids, [emprestimo.pk])
+
+    def test_filtro_encontra_registro_da_segunda_pagina_e_recalcula_total(self):
+        base = timezone.now()
+        for indice in range(11):
+            self._emprestimo(
+                [self._recurso()],
+                retirada_em=base - datetime.timedelta(minutes=indice),
+                observacao='Registro comum',
+            )
+        alvo = self._emprestimo(
+            [self._recurso()],
+            retirada_em=base - datetime.timedelta(days=1),
+            observacao='Marcador exclusivo da segunda página',
+        )
+
+        primeira, ids_primeira = self._listar()
+        segunda, ids_segunda = self._listar(page=2)
+        filtrada, ids_filtrados = self._listar(busca='marcador exclusivo')
+
+        self.assertNotIn(alvo.pk, ids_primeira)
+        self.assertIn(alvo.pk, ids_segunda)
+        self.assertEqual(primeira.data['count'], 12)
+        self.assertEqual(segunda.data['count'], 12)
+        self.assertEqual(filtrada.data['count'], 1)
+        self.assertEqual(ids_filtrados, [alvo.pk])
+
+    def test_ordenacoes_ascendente_descendente_atravessam_paginas(self):
+        zona = ZoneInfo('America/Sao_Paulo')
+        usuarios = [
+            criar_usuario('43000000011', nome='Ana Ordem'),
+            criar_usuario('43000000012', nome='Bia Ordem'),
+            criar_usuario('43000000013', nome='Cris Ordem'),
+        ]
+        responsaveis = [
+            criar_usuario('43000000021', nome='Davi Ordem'),
+            criar_usuario('43000000022', nome='Enzo Ordem'),
+            criar_usuario('43000000023', nome='Fábio Ordem'),
+        ]
+        blocos = [Bloco.objects.create(nome=f'Bloco {letra}') for letra in ('A', 'B', 'C')]
+        salas = [Sala.objects.create(bloco=bloco, nome=f'Sala {letra}') for bloco, letra in zip(blocos, 'ABC')]
+        emprestimos = []
+        for indice, letra in enumerate('ABC'):
+            retirada = datetime.datetime(2026, 2, indice + 1, 8, 0, tzinfo=zona)
+            devolucao = datetime.datetime(2026, 2, indice + 1, 12, 0, tzinfo=zona)
+            recurso = self._recurso(codigo=f'ORD-{letra}', descricao=f'Descrição {letra}', sala=salas[indice])
+            emprestimos.append(
+                self._emprestimo(
+                    [recurso],
+                    solicitante=usuarios[indice],
+                    responsavel=responsaveis[indice],
+                    retirada_em=retirada,
+                    devolvido_em=devolucao,
+                )
+            )
+        ids_asc = [emprestimo.pk for emprestimo in emprestimos]
+        ids_desc = list(reversed(ids_asc))
+
+        for campo in ('sala', 'recurso', 'solicitante', 'responsavel', 'retirada_em', 'devolucao_em'):
+            with self.subTest(campo=campo, direcao='asc'):
+                ids = [self._listar(ordenacao=campo, paginacao=1, page=pagina)[1][0] for pagina in (1, 2, 3)]
+                self.assertEqual(ids, ids_asc)
+            with self.subTest(campo=campo, direcao='desc'):
+                ids = [self._listar(ordenacao=f'-{campo}', paginacao=1, page=pagina)[1][0] for pagina in (1, 2, 3)]
+                self.assertEqual(ids, ids_desc)
+
+    def test_ordenacao_usa_menor_chave_e_id_como_desempate(self):
+        sala_z = Sala.objects.create(bloco=self.bloco, nome='Sala Zeta')
+        recurso_z = self._recurso(codigo='ZZZ', sala=sala_z)
+        recurso_a = self._recurso(codigo='AAA', sala=self.sala)
+        multiplo = self._emprestimo([recurso_z, recurso_a], devolvido_em=timezone.now())
+        simples = self._emprestimo([self._recurso(codigo='BBB', sala=self.outra_sala)], devolvido_em=timezone.now())
+
+        _, ids_recurso = self._listar(ordenacao='recurso')
+        _, ids_sala = self._listar(ordenacao='sala')
+        self.assertEqual(ids_recurso, [multiplo.pk, simples.pk])
+        self.assertEqual(ids_sala, [multiplo.pk, simples.pk])
+
+        empate_um = self._emprestimo([self._recurso()], devolvido_em=timezone.now())
+        empate_dois = self._emprestimo([self._recurso()], devolvido_em=timezone.now())
+        _, ids_empate = self._listar(ordenacao='solicitante')
+        self.assertLess(ids_empate.index(empate_um.pk), ids_empate.index(empate_dois.pk))
+
+    def test_ordenacao_devolucao_usa_maior_data_e_deixa_nulos_por_ultimo(self):
+        zona = ZoneInfo('America/Sao_Paulo')
+        dia_um = datetime.datetime(2026, 3, 1, 10, 0, tzinfo=zona)
+        dia_dois = datetime.datetime(2026, 3, 2, 10, 0, tzinfo=zona)
+        dia_tres = datetime.datetime(2026, 3, 3, 10, 0, tzinfo=zona)
+        maior_dia_tres = self._emprestimo([self._recurso(), self._recurso()], devolvido_em=[dia_um, dia_tres])
+        maior_dia_dois = self._emprestimo([self._recurso()], devolvido_em=dia_dois)
+        sem_devolucao = self._emprestimo([self._recurso()])
+
+        _, ids_asc = self._listar(ordenacao='devolucao_em')
+        _, ids_desc = self._listar(ordenacao='-devolucao_em')
+
+        self.assertEqual(ids_asc, [maior_dia_dois.pk, maior_dia_tres.pk, sem_devolucao.pk])
+        self.assertEqual(ids_desc, [maior_dia_tres.pk, maior_dia_dois.pk, sem_devolucao.pk])
+
+    def test_solicitacao_pendente_continua_prioritaria_na_ordenacao_personalizada(self):
+        primeiro_alfabetico = self._emprestimo(
+            [self._recurso()], solicitante=criar_usuario('43000000031', nome='Ana Sem Pendência')
+        )
+        pendente = self._emprestimo(
+            [self._recurso()], solicitante=criar_usuario('43000000032', nome='Zeca Com Pendência')
+        )
+        SolicitacaoTrocaTitular.objects.create(
+            emprestimo=pendente,
+            solicitante=pendente.solicitante,
+            destinatario=self.operador,
+            status=StatusSolicitacaoTrocaTitular.PENDENTE,
+        )
+
+        _, ids = self._listar(ordenacao='solicitante')
+        self.assertEqual(ids[:2], [pendente.pk, primeiro_alfabetico.pk])
 
 
 class EmprestimoUsuarioColetivoViewsTest(APITestCase):

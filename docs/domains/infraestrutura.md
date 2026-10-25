@@ -154,6 +154,16 @@ Implementação de autorização vigente: `EmprestimoHelpers._usuario_tem_autori
 - A listagem prioriza, antes da paginação: solicitação pendente relacionada ao usuário, empréstimo aberto, retirada mais recente e ID como desempate estável.
 - Na seleção do destinatário, uma conta pessoal pode usar `solicitantes-elegiveis` somente para recursos abertos de empréstimo próprio; nesse caso são retornados apenas servidores ativos, excluindo o próprio usuário.
 - **Atraso UI:** empréstimo ativo há mais de 24 h (`HORAS_ALERTA_ATRASO`).
+- **Consulta antes da paginação:** a listagem aplica busca, filtros e ordenação somente
+  depois do escopo autorizado. Datas e horários usam `America/Sao_Paulo`; intervalos
+  com hora inicial maior que a final são inválidos. Em empréstimos ainda abertos,
+  busca e filtros por recurso, sala e tipo consideram somente itens não devolvidos;
+  em concluídos, consideram todo o histórico.
+- **Ordenação da consulta:** sem parâmetro, preserva solicitação pendente relacionada,
+  aberto, retirada mais recente e ID. Com ordenação explícita, preserva somente a
+  prioridade da solicitação pendente e usa ID ascendente como desempate. Sala usa a
+  menor chave normalizada bloco + sala; recurso usa o menor código normalizado com
+  descrição como desempate; devolução usa o maior `devolvido_em` dos itens.
 
 ### Recursos
 

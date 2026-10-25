@@ -16,6 +16,8 @@ from .serializers import (
     CriarSolicitacaoTrocaTitularSerializer,
     DevolverItensSerializer,
     EmprestimoSerializer,
+    ListarEmprestimosQuerySerializer,
+    ORDENACOES_EMPRESTIMOS,
     RealizarEmprestimoSerializer,
     SerializerVazio,
     SolicitacaoTrocaTitularSerializer,
@@ -160,6 +162,12 @@ class ListarResponsaveisElegiveisView(PodeOperarInfraestruturaMixin, BasicGetAPI
     **Segurança:** Os query params apenas reduzem o conjunto já autorizado e nunca
     expandem o acesso. `atrasado=true` retorna ativos há mais de 24 horas;
     `atrasado=false` retorna os demais empréstimos.
+
+    Datas e horários são avaliados em `America/Sao_Paulo`. Parâmetros malformados são
+    ignorados; intervalos cuja hora inicial seja maior que a final retornam 400.
+    Em empréstimos parcialmente devolvidos, busca e filtros de recurso, sala e tipo
+    consideram somente itens ainda abertos. Em empréstimos concluídos, consideram todo
+    o histórico de itens.
     ''',
     parameters=[
         OpenApiParameter(
@@ -175,7 +183,71 @@ class ListarResponsaveisElegiveisView(PodeOperarInfraestruturaMixin, BasicGetAPI
         OpenApiParameter('solicitante_id', OpenApiTypes.INT, OpenApiParameter.QUERY, required=False),
         OpenApiParameter('responsavel_id', OpenApiTypes.INT, OpenApiParameter.QUERY, required=False),
         OpenApiParameter('recurso_id', OpenApiTypes.INT, OpenApiParameter.QUERY, required=False),
-        OpenApiParameter('tipo_recurso', OpenApiTypes.STR, OpenApiParameter.QUERY, required=False),
+        OpenApiParameter('sala_id', OpenApiTypes.INT, OpenApiParameter.QUERY, required=False),
+        OpenApiParameter(
+            'tipo_recurso',
+            OpenApiTypes.STR,
+            OpenApiParameter.QUERY,
+            required=False,
+            enum=['chave', 'midia', 'material_didatico'],
+        ),
+        OpenApiParameter(
+            'busca',
+            OpenApiTypes.STR,
+            OpenApiParameter.QUERY,
+            required=False,
+            description='Busca sem diferença de caixa ou acentos nos dados do empréstimo, recurso, sala e bloco.',
+        ),
+        OpenApiParameter(
+            'retirada_data',
+            OpenApiTypes.DATE,
+            OpenApiParameter.QUERY,
+            required=False,
+            description='Data local da retirada no formato YYYY-MM-DD.',
+        ),
+        OpenApiParameter(
+            'retirada_hora_inicio',
+            OpenApiTypes.TIME,
+            OpenApiParameter.QUERY,
+            required=False,
+            description='Hora local mínima da retirada, inclusiva, no formato HH:mm.',
+        ),
+        OpenApiParameter(
+            'retirada_hora_fim',
+            OpenApiTypes.TIME,
+            OpenApiParameter.QUERY,
+            required=False,
+            description='Hora local máxima da retirada, inclusiva, no formato HH:mm.',
+        ),
+        OpenApiParameter(
+            'devolucao_data',
+            OpenApiTypes.DATE,
+            OpenApiParameter.QUERY,
+            required=False,
+            description='Data local da devolução de algum item no formato YYYY-MM-DD.',
+        ),
+        OpenApiParameter(
+            'devolucao_hora_inicio',
+            OpenApiTypes.TIME,
+            OpenApiParameter.QUERY,
+            required=False,
+            description='Hora local mínima da devolução, inclusiva, no formato HH:mm.',
+        ),
+        OpenApiParameter(
+            'devolucao_hora_fim',
+            OpenApiTypes.TIME,
+            OpenApiParameter.QUERY,
+            required=False,
+            description='Hora local máxima da devolução, inclusiva, no formato HH:mm.',
+        ),
+        OpenApiParameter(
+            'ordenacao',
+            OpenApiTypes.STR,
+            OpenApiParameter.QUERY,
+            required=False,
+            enum=ORDENACOES_EMPRESTIMOS,
+            description='Prefixe com - para ordem decrescente. Solicitações de troca pendentes permanecem prioritárias.',
+        ),
         OpenApiParameter(
             'atrasado',
             OpenApiTypes.BOOL,
@@ -190,6 +262,7 @@ class ListarResponsaveisElegiveisView(PodeOperarInfraestruturaMixin, BasicGetAPI
     ],
     responses={
         status.HTTP_200_OK: EmprestimoSerializer(many=True),
+        status.HTTP_400_BAD_REQUEST: {'description': 'Intervalo de horários inválido.'},
         status.HTTP_401_UNAUTHORIZED: {'description': 'Não autenticado.'},
     },
 )
@@ -200,35 +273,14 @@ class ListarEmprestimosView(IsAuthenticatedMixin, BasicGetAPIView):
     serializer_class = EmprestimoSerializer
     mensagem_sucesso = 'Empréstimos listados com sucesso.'
 
+    def validate_get(self, request, *args, **kwargs):
+        serializer = ListarEmprestimosQuerySerializer(data=request.query_params)
+        serializer.is_valid(raise_exception=True)
+        self.filtros_validados = serializer.validated_data
+
     def get_queryset(self):
-        params = self.request.query_params
-        kwargs = {}
-
-        ativo = params.get('ativo')
-        if ativo is not None and ativo.lower() in ('true', 'false'):
-            kwargs['ativo'] = ativo.lower() == 'true'
-
-        solicitante_id = params.get('solicitante_id')
-        if solicitante_id and solicitante_id.isdigit():
-            kwargs['solicitante_id'] = int(solicitante_id)
-
-        responsavel_id = params.get('responsavel_id')
-        if responsavel_id and responsavel_id.isdigit():
-            kwargs['responsavel_id'] = int(responsavel_id)
-
-        recurso_id = params.get('recurso_id')
-        if recurso_id and recurso_id.isdigit():
-            kwargs['recurso_id'] = int(recurso_id)
-
-        tipo_recurso = params.get('tipo_recurso')
-        if tipo_recurso:
-            kwargs['tipo_recurso'] = tipo_recurso
-
-        atrasado = params.get('atrasado')
-        if atrasado is not None and atrasado.lower() in ('true', 'false'):
-            kwargs['atrasado'] = atrasado.lower() == 'true'
-
-        return Emprestimo().business.listar_para_usuario(self.request.user, **kwargs)
+        filtros = getattr(self, 'filtros_validados', {})
+        return Emprestimo().business.listar_para_usuario(self.request.user, **filtros)
 
 
 @extend_schema(

@@ -2680,7 +2680,12 @@ paths:
         \   **Permissões:** Usuário autenticado (escopo conforme capacidade `operar`).\n\n
         \   **Segurança:** Os query params apenas reduzem o conjunto já autorizado
         e nunca\n    expandem o acesso. `atrasado=true` retorna ativos há mais de
-        24 horas;\n    `atrasado=false` retorna os demais empréstimos.\n    "
+        24 horas;\n    `atrasado=false` retorna os demais empréstimos.\n\n    Datas
+        e horários são avaliados em `America/Sao_Paulo`. Parâmetros malformados são\n
+        \   ignorados; intervalos cuja hora inicial seja maior que a final retornam
+        400.\n    Em empréstimos parcialmente devolvidos, busca e filtros de recurso,
+        sala e tipo\n    consideram somente itens ainda abertos. Em empréstimos concluídos,
+        consideram todo\n    o histórico de itens.\n    "
       summary: Listar empréstimos
       parameters:
       - in: query
@@ -2695,6 +2700,49 @@ paths:
           type: boolean
         description: Filtra empréstimos atrasados (ativos há mais de 24 horas). Use
           false para retornar os que não estão atrasados.
+      - in: query
+        name: busca
+        schema:
+          type: string
+        description: Busca sem diferença de caixa ou acentos nos dados do empréstimo,
+          recurso, sala e bloco.
+      - in: query
+        name: devolucao_data
+        schema:
+          type: string
+          format: date
+        description: Data local da devolução de algum item no formato YYYY-MM-DD.
+      - in: query
+        name: devolucao_hora_fim
+        schema:
+          type: string
+          format: time
+        description: Hora local máxima da devolução, inclusiva, no formato HH:mm.
+      - in: query
+        name: devolucao_hora_inicio
+        schema:
+          type: string
+          format: time
+        description: Hora local mínima da devolução, inclusiva, no formato HH:mm.
+      - in: query
+        name: ordenacao
+        schema:
+          type: string
+          enum:
+          - -devolucao_em
+          - -recurso
+          - -responsavel
+          - -retirada_em
+          - -sala
+          - -solicitante
+          - devolucao_em
+          - recurso
+          - responsavel
+          - retirada_em
+          - sala
+          - solicitante
+        description: Prefixe com - para ordem decrescente. Solicitações de troca pendentes
+          permanecem prioritárias.
       - name: page
         required: false
         in: query
@@ -2714,6 +2762,28 @@ paths:
         schema:
           type: integer
       - in: query
+        name: retirada_data
+        schema:
+          type: string
+          format: date
+        description: Data local da retirada no formato YYYY-MM-DD.
+      - in: query
+        name: retirada_hora_fim
+        schema:
+          type: string
+          format: time
+        description: Hora local máxima da retirada, inclusiva, no formato HH:mm.
+      - in: query
+        name: retirada_hora_inicio
+        schema:
+          type: string
+          format: time
+        description: Hora local mínima da retirada, inclusiva, no formato HH:mm.
+      - in: query
+        name: sala_id
+        schema:
+          type: integer
+      - in: query
         name: solicitante_id
         schema:
           type: integer
@@ -2721,6 +2791,10 @@ paths:
         name: tipo_recurso
         schema:
           type: string
+          enum:
+          - chave
+          - material_didatico
+          - midia
       tags:
       - Infraestrutura · Empréstimos
       security:
@@ -2731,6 +2805,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/PaginatedEmprestimoList'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                description: Intervalo de horários inválido.
           description: ''
         '401':
           content:
