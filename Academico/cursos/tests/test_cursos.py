@@ -6,6 +6,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from AppCore.core.exceptions.exceptions import BusinessRuleException
 from Identidade.usuarios.models import Usuario
 from Organizacional.setores.models import Setor
+from Academico.cursos.choices import NivelEnsino
 from Academico.cursos.models import Curso
 
 
@@ -38,10 +39,12 @@ class CursoBusinessTestCase(APITestCase):
             nome='Sistemas de Informação',
             codigo_curso='SI-001',
             setor_id=self.setor.pk,
+            nivel_ensino=NivelEnsino.SUPERIOR,
         )
         self.assertEqual(curso.nome, 'Sistemas de Informação')
         self.assertEqual(curso.codigo_curso, 'SI-001')
         self.assertEqual(curso.setor_id, self.setor.pk)
+        self.assertEqual(curso.nivel_ensino, NivelEnsino.SUPERIOR)
         self.assertTrue(curso.ativo)
 
     def test_criar_curso_sem_setor(self):
@@ -50,6 +53,7 @@ class CursoBusinessTestCase(APITestCase):
                 nome='Sistemas de Informação',
                 codigo_curso='SI-001',
                 setor_id=None,
+                nivel_ensino=NivelEnsino.SUPERIOR,
             )
         self.assertIn('O curso deve possuir um setor associado', str(ctx.exception))
 
@@ -59,20 +63,63 @@ class CursoBusinessTestCase(APITestCase):
                 nome='Sistemas de Informação',
                 codigo_curso='SI-001',
                 setor_id=999999,
+                nivel_ensino=NivelEnsino.SUPERIOR,
             )
         self.assertIn('Setor associado ao curso não encontrado', str(ctx.exception))
+
+    def test_criar_curso_sem_nivel(self):
+        with self.assertRaises(BusinessRuleException) as ctx:
+            Curso().business.criar_curso(
+                nome='Sistemas de Informação',
+                codigo_curso='SI-001',
+                setor_id=self.setor.pk,
+            )
+        self.assertIn('nível de ensino válido', str(ctx.exception))
+
+    def test_criar_curso_nivel_invalido(self):
+        with self.assertRaises(BusinessRuleException) as ctx:
+            Curso().business.criar_curso(
+                nome='Sistemas de Informação',
+                codigo_curso='SI-001',
+                setor_id=self.setor.pk,
+                nivel_ensino=99,
+            )
+        self.assertIn('nível de ensino válido', str(ctx.exception))
+
+    def test_atualizar_nivel_ensino(self):
+        curso = Curso().business.criar_curso(
+            nome='Sistemas de Informação',
+            codigo_curso='SI-001',
+            setor_id=self.setor.pk,
+            nivel_ensino=NivelEnsino.SUPERIOR,
+        )
+        curso.business.atualizar_dados({'nivel_ensino': NivelEnsino.ENSINO_MEDIO})
+        curso.refresh_from_db()
+        self.assertEqual(curso.nivel_ensino, NivelEnsino.ENSINO_MEDIO)
+
+    def test_atualizar_nivel_invalido(self):
+        curso = Curso().business.criar_curso(
+            nome='Sistemas de Informação',
+            codigo_curso='SI-001',
+            setor_id=self.setor.pk,
+            nivel_ensino=NivelEnsino.SUPERIOR,
+        )
+        with self.assertRaises(BusinessRuleException):
+            curso.business.atualizar_dados({'nivel_ensino': 99})
 
     def test_criar_curso_codigo_duplicado(self):
         Curso().business.criar_curso(
             nome='Sistemas de Informação',
             codigo_curso='SI-001',
             setor_id=self.setor.pk,
+            nivel_ensino=NivelEnsino.SUPERIOR,
         )
         with self.assertRaises(BusinessRuleException) as ctx:
             Curso().business.criar_curso(
                 nome='Sistemas II',
                 codigo_curso='SI-001',
                 setor_id=self.setor.pk,
+                nivel_ensino=NivelEnsino.SUPERIOR,
             )
         self.assertIn('Já existe um curso cadastrado com esse código', str(ctx.exception))
 
@@ -81,6 +128,7 @@ class CursoBusinessTestCase(APITestCase):
             nome='Sistemas de Informação',
             codigo_curso='SI-001',
             setor_id=self.setor.pk,
+            nivel_ensino=NivelEnsino.SUPERIOR,
         )
         curso.business.atualizar_dados({'nome': 'Ciência da Computação'})
         curso.refresh_from_db()
@@ -91,11 +139,13 @@ class CursoBusinessTestCase(APITestCase):
             nome='Sistemas de Informação',
             codigo_curso='SI-001',
             setor_id=self.setor.pk,
+            nivel_ensino=NivelEnsino.SUPERIOR,
         )
         curso2 = Curso().business.criar_curso(
             nome='Engenharia de Software',
             codigo_curso='ES-001',
             setor_id=self.setor.pk,
+            nivel_ensino=NivelEnsino.SUPERIOR,
         )
         with self.assertRaises(BusinessRuleException):
             curso2.business.atualizar_dados({'codigo_curso': 'SI-001'})
@@ -106,6 +156,7 @@ class CursoBusinessTestCase(APITestCase):
             nome='Sistemas de Informação',
             codigo_curso='SI-001',
             setor_id=self.setor.pk,
+            nivel_ensino=NivelEnsino.SUPERIOR,
         )
         curso.business.atualizar_dados({
             'nome': 'Sistemas de Informação Atualizado',
@@ -139,6 +190,7 @@ class CursoBusinessTestCase(APITestCase):
             nome='Sistemas de Informação',
             codigo_curso='SI-001',
             setor_id=self.setor.pk,
+            nivel_ensino=NivelEnsino.SUPERIOR,
         )
         curso.business.desativar()
         curso.refresh_from_db()
@@ -149,6 +201,7 @@ class CursoBusinessTestCase(APITestCase):
             nome='Sistemas de Informação',
             codigo_curso='SI-001',
             setor_id=self.setor.pk,
+            nivel_ensino=NivelEnsino.SUPERIOR,
         )
         curso.business.desativar()
         with self.assertRaises(BusinessRuleException):
@@ -159,6 +212,7 @@ class CursoBusinessTestCase(APITestCase):
             nome='Sistemas de Informação',
             codigo_curso='SI-001',
             setor_id=self.setor.pk,
+            nivel_ensino=NivelEnsino.SUPERIOR,
         )
         curso.business.desativar()
         curso.business.reativar()
@@ -170,6 +224,7 @@ class CursoBusinessTestCase(APITestCase):
             nome='Sistemas de Informação',
             codigo_curso='SI-001',
             setor_id=self.setor.pk,
+            nivel_ensino=NivelEnsino.SUPERIOR,
         )
         with self.assertRaises(BusinessRuleException):
             curso.business.reativar()
@@ -221,17 +276,64 @@ class CursosAPITestCase(APITestCase):
             'nome': 'Engenharia de Software',
             'codigo_curso': 'ES-001',
             'setor_id': self.setor.pk,
+            'nivel_ensino': NivelEnsino.SUPERIOR,
         }
         response = self.client.post(url, payload, format='json')
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.data['dados']['nivel_ensino'], NivelEnsino.SUPERIOR)
+        self.assertEqual(response.data['dados']['nivel_ensino_display'], 'Superior')
         curso = Curso.objects.get(codigo_curso='ES-001')
         self.assertEqual(curso.setor_id, self.setor.pk)
 
     def test_criar_curso_sem_setor(self):
         url = reverse('academico:curso-list')
-        payload = {'nome': 'Engenharia de Software', 'codigo_curso': 'ES-001'}
+        payload = {
+            'nome': 'Engenharia de Software',
+            'codigo_curso': 'ES-001',
+            'nivel_ensino': NivelEnsino.SUPERIOR,
+        }
         response = self.client.post(url, payload, format='json')
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_criar_curso_sem_nivel(self):
+        url = reverse('academico:curso-list')
+        payload = {
+            'nome': 'Engenharia de Software',
+            'codigo_curso': 'ES-002',
+            'setor_id': self.setor.pk,
+        }
+        response = self.client.post(url, payload, format='json')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_criar_curso_nivel_invalido(self):
+        url = reverse('academico:curso-list')
+        payload = {
+            'nome': 'Engenharia de Software',
+            'codigo_curso': 'ES-003',
+            'setor_id': self.setor.pk,
+            'nivel_ensino': 99,
+        }
+        response = self.client.post(url, payload, format='json')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_atualizar_nivel_ensino(self):
+        url = reverse('academico:curso-detail', kwargs={'pk': self.curso.pk})
+        response = self.client.patch(url, {'nivel_ensino': NivelEnsino.TECNICO}, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.curso.refresh_from_db()
+        self.assertEqual(self.curso.nivel_ensino, NivelEnsino.TECNICO)
+
+    def test_listar_cursos_filtrar_nivel_ensino(self):
+        Curso.objects.create(
+            nome='Ensino Médio',
+            codigo_curso='EM-001',
+            nivel_ensino=NivelEnsino.ENSINO_MEDIO,
+        )
+        url = reverse('academico:curso-list')
+        response = self.client.get(url, {'nivel_ensino': NivelEnsino.ENSINO_MEDIO})
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data['dados']), 1)
+        self.assertEqual(response.data['dados'][0]['codigo_curso'], 'EM-001')
 
     def test_criar_curso_codigo_duplicado(self):
         url = reverse('academico:curso-list')
@@ -239,6 +341,7 @@ class CursosAPITestCase(APITestCase):
             'nome': 'Outro Curso',
             'codigo_curso': 'SI-001',
             'setor_id': self.setor.pk,
+            'nivel_ensino': NivelEnsino.SUPERIOR,
         }
         response = self.client.post(url, payload, format='json')
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
@@ -311,3 +414,10 @@ class CursosAPITestCase(APITestCase):
         url = reverse('academico:curso-list')
         response = self.client.get(url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+
+class CursoSeedTestCase(APITestCase):
+
+    def test_seed_permanece_sem_nivel(self):
+        curso = Curso.objects.get(codigo_curso='14LMAT')
+        self.assertIsNone(curso.nivel_ensino)

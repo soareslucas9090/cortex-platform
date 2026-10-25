@@ -45,6 +45,8 @@ Entregar o bounded context **AcessoCampus/** com API REST em **`/cortex/acesso-c
 
 ### AC.1 — `Curso.nivel_ensino` (Academico)
 
+**Status:** entregue. Cursos já existentes, inclusive o seed, permanecem com `nivel_ensino` nulo (não classificado) até edição explícita. Nulo não é Ensino Médio.
+
 | | |
 |--|--|
 | **Pré-requisito** | AC.0 |

@@ -7,9 +7,10 @@ logger = logging.getLogger(__name__)
 class CursoBusiness(ModelInstanceBusiness):
 
     def criar_curso(self, nome: str, codigo_curso: str, setor_id: int, **kwargs):
-        """Cria um novo curso validando unicidade do código e setor obrigatório."""
+        """Cria um novo curso validando unicidade do código, setor e nível de ensino."""
         try:
             from .models import Curso
+            self.object_instance.rules.nivel_ensino_valido(kwargs.get('nivel_ensino'))
             self.object_instance.rules.codigo_unico(codigo_curso)
             self.object_instance.rules.validar_setor_obrigatorio(setor_id)
             return Curso.objects.create(
@@ -22,7 +23,7 @@ class CursoBusiness(ModelInstanceBusiness):
             self.relancar_ou_erro_sistema(e, 'Não foi possível criar o curso.', logger)
 
     def atualizar_dados(self, dados: dict):
-        """Atualiza campos do curso. Revalida código e impede curso sem setor."""
+        """Atualiza campos do curso. Revalida código, setor e nível quando informados."""
         try:
             if 'codigo_curso' in dados:
                 self.object_instance.rules.codigo_unico(
@@ -31,6 +32,8 @@ class CursoBusiness(ModelInstanceBusiness):
                 )
             if 'setor_id' in dados:
                 self.object_instance.rules.validar_setor_obrigatorio(dados['setor_id'])
+            if 'nivel_ensino' in dados:
+                self.object_instance.rules.nivel_ensino_valido(dados.get('nivel_ensino'))
             for attr, value in dados.items():
                 setattr(self.object_instance, attr, value)
             if not self.object_instance.setor_id:

@@ -46,6 +46,11 @@ from .serializers import CursoSerializer, CriarCursoSerializer, AtualizarCursoSe
             required=False, description='Filtra pelos cursos associados ao setor informado.',
         ),
         OpenApiParameter(
+            'nivel_ensino', OpenApiTypes.INT, OpenApiParameter.QUERY,
+            required=False,
+            description='Filtra pelo nível: 1 = Ensino Médio, 2 = Técnico, 3 = Superior, 4 = Pós-graduação.',
+        ),
+        OpenApiParameter(
             'paginacao', OpenApiTypes.INT, OpenApiParameter.QUERY,
             required=False, description='Tamanho da página (1–100, padrão 10).',
         ),
@@ -83,6 +88,10 @@ class ListarCursosView(IsAuthenticatedMixin, BasicGetAPIView):
             except (ValueError, TypeError):
                 pass
 
+        nivel_ensino = self.request.query_params.get('nivel_ensino')
+        if nivel_ensino is not None and nivel_ensino.isdigit():
+            qs = qs.filter(nivel_ensino=int(nivel_ensino))
+
         return qs
 
 
@@ -90,14 +99,16 @@ class ListarCursosView(IsAuthenticatedMixin, BasicGetAPIView):
     tags=['Cursos'],
     summary='Criar curso',
     description='''
-    Cria um novo curso. O campo `setor_id` é obrigatório.
+    Cria um novo curso. Os campos `setor_id` e `nivel_ensino` são obrigatórios.
 
     **Permissões:** Qualquer usuário autenticado (catálogo de referência). Escrita apenas L3 (EDITAR_TUDO).
     ''',
     request=CriarCursoSerializer,
     responses={
         status.HTTP_201_CREATED: CursoSerializer,
-        status.HTTP_400_BAD_REQUEST: {'description': 'Dados inválidos, código de curso já em uso ou setor ausente.'},
+        status.HTTP_400_BAD_REQUEST: {
+            'description': 'Dados inválidos, código de curso já em uso, setor ausente ou nível de ensino inválido.',
+        },
         status.HTTP_401_UNAUTHORIZED: {'description': 'Não autenticado.'},
         status.HTTP_403_FORBIDDEN: {'description': 'Sem permissão.'},
     }
