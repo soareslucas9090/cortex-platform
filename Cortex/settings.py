@@ -288,9 +288,14 @@ CELERY_BEAT_SCHEDULE = {
     },
 }
 
-# Configurações do armazenamento de modelos (S3)
+# Configurações do armazenamento de modelos (S3 / Tigris)
 AWS_S3_ENDPOINT_URL = os.environ.get('AWS_S3_ENDPOINT_URL', 'https://t3.storage.box')
 AWS_STORAGE_BUCKET_NAME = os.environ.get('AWS_STORAGE_BUCKET_NAME', 'bucket-name')
 AWS_ACCESS_KEY_ID = os.environ.get('AWS_ACCESS_KEY_ID', '')
 AWS_SECRET_ACCESS_KEY = os.environ.get('AWS_SECRET_ACCESS_KEY', '')
+AWS_S3_REGION_NAME = (
+    os.environ.get('AWS_S3_REGION_NAME')
+    or os.environ.get('AWS_REGION')
+    or 'auto'
+)
 CORTEX_PUBLIC_BASE_URL = os.environ.get('CORTEX_PUBLIC_BASE_URL', '').rstrip('/')
