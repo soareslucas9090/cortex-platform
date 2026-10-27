@@ -6,28 +6,64 @@ logger = logging.getLogger(__name__)
 
 class CursoBusiness(ModelInstanceBusiness):
 
-    def criar_curso(self, nome: str, codigo_curso: str, **kwargs):
-        """Cria um novo curso validando unicidade do código."""
+    def criar_curso(self, nome: str, codigo_curso: str, setor_id: int, **kwargs):
+        """Cria um novo curso validando unicidade do código e setor obrigatório."""
         try:
             from .models import Curso
             self.object_instance.rules.codigo_unico(codigo_curso)
-            return Curso.objects.create(nome=nome, codigo_curso=codigo_curso, **kwargs)
+            self.object_instance.rules.validar_setor_obrigatorio(setor_id)
+            return Curso.objects.create(
+                nome=nome,
+                codigo_curso=codigo_curso,
+                setor_id=setor_id,
+                **kwargs,
+            )
         except Exception as e:
             self.relancar_ou_erro_sistema(e, 'Não foi possível criar o curso.', logger)
 
     def atualizar_dados(self, dados: dict):
-        """Atualiza campos do curso. Revalida código se estiver nos dados."""
+        """Atualiza campos do curso. Revalida código e impede curso sem setor."""
         try:
             if 'codigo_curso' in dados:
                 self.object_instance.rules.codigo_unico(
                     dados['codigo_curso'],
                     excluir_id=self.object_instance.pk,
                 )
+            if 'setor_id' in dados:
+                self.object_instance.rules.validar_setor_obrigatorio(dados['setor_id'])
             for attr, value in dados.items():
                 setattr(self.object_instance, attr, value)
+            if not self.object_instance.setor_id:
+                self.object_instance.rules.validar_setor_obrigatorio(None)
             self.object_instance.save()
         except Exception as e:
             self.relancar_ou_erro_sistema(e, 'Não foi possível atualizar o curso.', logger)
+
+    def importar_curso(self, codigo_curso: str, nome: str, setor, ativo: bool = True):
+        """Cria ou atualiza um curso pela chave natural codigo_curso, com setor obrigatório."""
+        try:
+            from .models import Curso
+
+            setor_id = setor.pk if setor is not None else None
+            self.object_instance.rules.validar_setor_obrigatorio(setor_id)
+
+            curso = Curso.objects.filter(codigo_curso=codigo_curso).first()
+            if curso:
+                curso.nome = nome
+                curso.setor = setor
+                curso.ativo = ativo
+                curso.save()
+                return curso, False
+
+            curso = Curso.objects.create(
+                nome=nome,
+                codigo_curso=codigo_curso,
+                setor=setor,
+                ativo=ativo,
+            )
+            return curso, True
+        except Exception as e:
+            self.relancar_ou_erro_sistema(e, 'Não foi possível importar o curso.', logger)
 
     def desativar(self):
         """Desativa o curso."""

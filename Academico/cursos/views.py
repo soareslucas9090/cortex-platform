@@ -42,6 +42,10 @@ from .serializers import CursoSerializer, CriarCursoSerializer, AtualizarCursoSe
             required=False, description='Filtra por parte do código do curso.',
         ),
         OpenApiParameter(
+            'setor_id', OpenApiTypes.INT, OpenApiParameter.QUERY,
+            required=False, description='Filtra pelos cursos associados ao setor informado.',
+        ),
+        OpenApiParameter(
             'paginacao', OpenApiTypes.INT, OpenApiParameter.QUERY,
             required=False, description='Tamanho da página (1–100, padrão 10).',
         ),
@@ -58,7 +62,7 @@ class ListarCursosView(IsAuthenticatedMixin, BasicGetAPIView):
     mensagem_sucesso = 'Cursos listados com sucesso.'
 
     def get_queryset(self):
-        qs = Curso.objects.all()
+        qs = Curso.objects.select_related('setor').all()
 
         ativo = self.request.query_params.get('ativo')
         if ativo is not None and ativo.lower() in ('true', 'false'):
@@ -72,6 +76,13 @@ class ListarCursosView(IsAuthenticatedMixin, BasicGetAPIView):
         if codigo_curso:
             qs = qs.filter(codigo_curso__unaccent__icontains=codigo_curso)
 
+        setor_id = self.request.query_params.get('setor_id')
+        if setor_id is not None:
+            try:
+                qs = qs.filter(setor_id=int(setor_id))
+            except (ValueError, TypeError):
+                pass
+
         return qs
 
 
@@ -79,14 +90,14 @@ class ListarCursosView(IsAuthenticatedMixin, BasicGetAPIView):
     tags=['Cursos'],
     summary='Criar curso',
     description='''
-    Cria um novo curso.
+    Cria um novo curso. O campo `setor_id` é obrigatório.
 
     **Permissões:** Qualquer usuário autenticado (catálogo de referência). Escrita apenas L3 (EDITAR_TUDO).
     ''',
     request=CriarCursoSerializer,
     responses={
         status.HTTP_201_CREATED: CursoSerializer,
-        status.HTTP_400_BAD_REQUEST: {'description': 'Dados inválidos ou código de curso já em uso.'},
+        status.HTTP_400_BAD_REQUEST: {'description': 'Dados inválidos, código de curso já em uso ou setor ausente.'},
         status.HTTP_401_UNAUTHORIZED: {'description': 'Não autenticado.'},
         status.HTTP_403_FORBIDDEN: {'description': 'Sem permissão.'},
     }
@@ -120,7 +131,7 @@ class CriarCursoView(IsAdminMixin, BasicPostAPIView):
     }
 )
 class DetalharCursoView(IsAuthenticatedMixin, BasicRetrieveAPIView):
-    queryset = Curso.objects.all()
+    queryset = Curso.objects.select_related('setor').all()
     serializer_class = CursoSerializer
     mensagem_sucesso = 'Curso detalhado com sucesso.'
 
@@ -129,21 +140,21 @@ class DetalharCursoView(IsAuthenticatedMixin, BasicRetrieveAPIView):
     tags=['Cursos'],
     summary='Atualizar curso',
     description='''
-    Atualiza parcialmente os dados de um curso existente.
+    Atualiza parcialmente os dados de um curso existente. Não é permitido remover o setor associado.
 
     **Permissões:** Qualquer usuário autenticado (catálogo de referência). Escrita apenas L3 (EDITAR_TUDO).
     ''',
     request=AtualizarCursoSerializer,
     responses={
         status.HTTP_200_OK: CursoSerializer,
-        status.HTTP_400_BAD_REQUEST: {'description': 'Dados inválidos ou código já em uso.'},
+        status.HTTP_400_BAD_REQUEST: {'description': 'Dados inválidos, código já em uso ou tentativa de remover o setor.'},
         status.HTTP_401_UNAUTHORIZED: {'description': 'Não autenticado.'},
         status.HTTP_403_FORBIDDEN: {'description': 'Sem permissão.'},
         status.HTTP_404_NOT_FOUND: {'description': 'Curso não encontrado.'},
     }
 )
 class AtualizarCursoView(IsAdminMixin, BasicPatchAPIView):
-    queryset = Curso.objects.all()
+    queryset = Curso.objects.select_related('setor').all()
     serializer_class = AtualizarCursoSerializer
     mensagem_sucesso = 'Curso atualizado com sucesso.'
 
@@ -180,7 +191,7 @@ class SerializerVazio(Serializer):
     }
 )
 class DesativarCursoView(IsAdminMixin, BasicPostAPIView):
-    queryset = Curso.objects.all()
+    queryset = Curso.objects.select_related('setor').all()
     serializer_class = SerializerVazio
     mensagem_sucesso = 'Curso desativado com sucesso.'
 
@@ -213,7 +224,7 @@ class DesativarCursoView(IsAdminMixin, BasicPostAPIView):
     }
 )
 class ReativarCursoView(IsAdminMixin, BasicPostAPIView):
-    queryset = Curso.objects.all()
+    queryset = Curso.objects.select_related('setor').all()
     serializer_class = SerializerVazio
     mensagem_sucesso = 'Curso reativado com sucesso.'
 

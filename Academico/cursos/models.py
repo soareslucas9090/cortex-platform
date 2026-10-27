@@ -17,6 +17,14 @@ class Curso(ModelHelperMixin, ModelBusinessMixin, ModelRulesMixin, BasicModel):
 
     nome = models.CharField('Nome', max_length=255)
     codigo_curso = models.CharField('Código do Curso', max_length=50, unique=True)
+    setor = models.ForeignKey(
+        'setores.Setor',
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name='cursos',
+        verbose_name='Setor',
+    )
     ativo = models.BooleanField('Ativo', default=True)
 
     class Meta:
