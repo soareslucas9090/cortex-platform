@@ -495,6 +495,13 @@ class UsuarioBusiness(ModelInstanceBusiness):
                     or importacao_lote.linhas_processadas == importacao_lote.total_linhas
                 ):
                     importacao_lote.save(update_fields=['linhas_processadas'])
+            self._importar_referencias_da_planilha(
+                estrutura,
+                resolver_referencias,
+                resumo,
+                erros,
+                _incrementar_progresso,
+            )
             mapa_matriculas = self._construir_mapa_matriculas_por_usuario(estrutura)
             from .models import Usuario
             cpfs_planilha = []
@@ -1199,10 +1206,163 @@ class UsuarioBusiness(ModelInstanceBusiness):
         except Exception as e:
             self.relancar_ou_erro_sistema(e, 'Não foi possível executar _garantir_vinculo_aluno_curso.', logger)
 
+    def _importar_referencias_da_planilha(
+        self,
+        estrutura,
+        resolver,
+        resumo,
+        erros,
+        incrementar_progresso,
+    ):
+        try:
+            self._importar_setores_referencia(estrutura, resolver, resumo, erros, incrementar_progresso)
+            self._importar_funcoes_referencia(estrutura, resolver, resumo, erros, incrementar_progresso)
+            self._importar_cargos_referencia(estrutura, resolver, resumo, erros, incrementar_progresso)
+            self._importar_empresas_referencia(estrutura, resolver, resumo, erros, incrementar_progresso)
+        except Exception as e:
+            self.relancar_ou_erro_sistema(e, 'Não foi possível executar _importar_referencias_da_planilha.', logger)
+
+    def _importar_setores_referencia(self, estrutura, resolver, resumo, erros, incrementar_progresso):
+        try:
+            from Organizacional.setores.models import Setor
+
+            for linha in estrutura.setores:
+                incrementar_progresso()
+                try:
+                    with transaction.atomic():
+                        setor, criado = Setor().business.importar_setor(
+                            nome=linha.nome,
+                            sigla=linha.sigla,
+                            ativo=linha.ativo,
+                        )
+                        resolver.registrar_setor(linha.sigla, setor)
+                        if criado:
+                            resumo.setores_criados += 1
+                except Exception as exc:
+                    if not (linha.sigla or '').strip():
+                        campo = 'sigla'
+                        valor = linha.sigla
+                    elif not (linha.nome or '').strip():
+                        campo = 'nome'
+                        valor = linha.nome
+                    else:
+                        campo = 'sigla'
+                        valor = linha.sigla
+                    erros.append(
+                        self._criar_erro(
+                            aba='Setor',
+                            numero_linha=linha.numero_linha,
+                            campo=campo,
+                            valor=valor,
+                            codigo='erro_setor',
+                            mensagem=str(exc),
+                        )
+                    )
+        except Exception as e:
+            self.relancar_ou_erro_sistema(e, 'Não foi possível executar _importar_setores_referencia.', logger)
+
+    def _importar_funcoes_referencia(self, estrutura, resolver, resumo, erros, incrementar_progresso):
+        try:
+            from Organizacional.funcoes.models import Funcao
+
+            for linha in estrutura.funcoes:
+                incrementar_progresso()
+                try:
+                    with transaction.atomic():
+                        funcao, criado = Funcao().business.importar_funcao(
+                            papel_funcao=linha.papel_funcao,
+                            descricao=linha.descricao,
+                            categoria=linha.categoria,
+                            ativo=linha.ativo,
+                        )
+                        resolver.registrar_funcao(linha.papel_funcao, funcao)
+                        if criado:
+                            resumo.funcoes_criadas += 1
+                except Exception as exc:
+                    mensagem = str(exc)
+                    campo = 'categoria' if 'categoria' in mensagem.lower() else 'papel_funcao'
+                    erros.append(
+                        self._criar_erro(
+                            aba='Funcao',
+                            numero_linha=linha.numero_linha,
+                            campo=campo,
+                            valor=linha.papel_funcao if campo == 'papel_funcao' else linha.categoria,
+                            codigo='erro_funcao',
+                            mensagem=mensagem,
+                        )
+                    )
+        except Exception as e:
+            self.relancar_ou_erro_sistema(e, 'Não foi possível executar _importar_funcoes_referencia.', logger)
+
+    def _importar_cargos_referencia(self, estrutura, resolver, resumo, erros, incrementar_progresso):
+        try:
+            from PessoasInstitucionais.cargos.models import Cargo
+
+            for linha in estrutura.cargos:
+                incrementar_progresso()
+                try:
+                    with transaction.atomic():
+                        cargo, criado = Cargo().business.importar_cargo(
+                            nome=linha.nome,
+                            ativo=linha.ativo,
+                        )
+                        resolver.registrar_cargo(linha.nome, cargo)
+                        if criado:
+                            resumo.cargos_criados += 1
+                except Exception as exc:
+                    erros.append(
+                        self._criar_erro(
+                            aba='Cargo',
+                            numero_linha=linha.numero_linha,
+                            campo='nome',
+                            valor=linha.nome,
+                            codigo='erro_cargo',
+                            mensagem=str(exc),
+                        )
+                    )
+        except Exception as e:
+            self.relancar_ou_erro_sistema(e, 'Não foi possível executar _importar_cargos_referencia.', logger)
+
+    def _importar_empresas_referencia(self, estrutura, resolver, resumo, erros, incrementar_progresso):
+        try:
+            from PessoasInstitucionais.empresas_instituicoes.models import EmpresaInstituicao
+
+            for linha in estrutura.empresas:
+                incrementar_progresso()
+                try:
+                    with transaction.atomic():
+                        empresa, criado = EmpresaInstituicao().business.importar_empresa(
+                            nome=linha.nome,
+                            cnpj=linha.cnpj or None,
+                            ativo=linha.ativo,
+                        )
+                        resolver.registrar_empresa(linha.nome, empresa)
+                        if criado:
+                            resumo.empresas_criadas += 1
+                except Exception as exc:
+                    mensagem = str(exc)
+                    campo = 'cnpj' if 'cnpj' in mensagem.lower() else 'nome'
+                    erros.append(
+                        self._criar_erro(
+                            aba='Empresa_Instituicao',
+                            numero_linha=linha.numero_linha,
+                            campo=campo,
+                            valor=linha.cnpj if campo == 'cnpj' else linha.nome,
+                            codigo='erro_empresa_instituicao',
+                            mensagem=mensagem,
+                        )
+                    )
+        except Exception as e:
+            self.relancar_ou_erro_sistema(e, 'Não foi possível executar _importar_empresas_referencia.', logger)
+
     def _contar_abas_processadas(self, estrutura):
         try:
             total = 0
             for colecao in [
+                estrutura.setores,
+                estrutura.funcoes,
+                estrutura.cargos,
+                estrutura.empresas,
                 estrutura.usuarios,
                 estrutura.contatos,
                 estrutura.enderecos,
@@ -1222,6 +1382,10 @@ class UsuarioBusiness(ModelInstanceBusiness):
     def _contar_linhas_processadas(self, estrutura):
         try:
             return sum([
+                len(estrutura.setores),
+                len(estrutura.funcoes),
+                len(estrutura.cargos),
+                len(estrutura.empresas),
                 len(estrutura.usuarios),
                 len(estrutura.contatos),
                 len(estrutura.enderecos),

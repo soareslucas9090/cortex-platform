@@ -16,11 +16,15 @@ from .importacao_dtos import (
     ArquivoImportacaoUsuariosDTO,
     LinhaAlunoCursoImportacaoDTO,
     LinhaAlunoImportacaoDTO,
+    LinhaCargoReferenciaImportacaoDTO,
     LinhaCursoImportacaoDTO,
     LinhaContatoImportacaoDTO,
+    LinhaEmpresaReferenciaImportacaoDTO,
     LinhaEnderecoImportacaoDTO,
+    LinhaFuncaoReferenciaImportacaoDTO,
     LinhaServidorImportacaoDTO,
     LinhaSetorLotacaoImportacaoDTO,
+    LinhaSetorReferenciaImportacaoDTO,
     LinhaTerceirizadoImportacaoDTO,
     LinhaUsuarioImportacaoDTO,
     ReferenciasImportacaoDTO,
@@ -72,19 +76,27 @@ class ImportacaoUsuariosParser:
             resultado.terceirizados = self._parse_terceirizados(planilha['Terceirizado'])
 
         if ABA_SETOR in planilha:
-            self._parse_referencia_setores(planilha[ABA_SETOR], resultado.referencias)
+            resultado.setores = self._parse_referencia_setores(
+                planilha[ABA_SETOR], resultado.referencias
+            )
 
         if ABA_FUNCAO in planilha:
-            self._parse_referencia_funcoes(planilha[ABA_FUNCAO], resultado.referencias)
+            resultado.funcoes = self._parse_referencia_funcoes(
+                planilha[ABA_FUNCAO], resultado.referencias
+            )
 
         if ABA_CARGO in planilha:
-            self._parse_referencia_cargos(planilha[ABA_CARGO], resultado.referencias)
+            resultado.cargos = self._parse_referencia_cargos(
+                planilha[ABA_CARGO], resultado.referencias
+            )
 
         if ABA_CURSO in planilha:
             resultado.cursos = self._parse_cursos(planilha[ABA_CURSO], resultado.referencias)
 
         if ABA_EMPRESA_INSTITUICAO in planilha:
-            self._parse_referencia_empresas(planilha[ABA_EMPRESA_INSTITUICAO], resultado.referencias)
+            resultado.empresas = self._parse_referencia_empresas(
+                planilha[ABA_EMPRESA_INSTITUICAO], resultado.referencias
+            )
 
         if 'Setor_Lotacao' in planilha:
             resultado.setores_lotacao = self._parse_setores_lotacao(planilha['Setor_Lotacao'])
@@ -302,25 +314,62 @@ class ImportacaoUsuariosParser:
         ]
 
     def _parse_referencia_setores(self, dados_aba, referencias: ReferenciasImportacaoDTO):
-        for linha in self._extrair_linhas(dados_aba, ABA_SETOR):
+        linhas = self._extrair_linhas(dados_aba, ABA_SETOR)
+        setores = []
+        for linha in linhas:
             setor_id = self._to_int(linha.get('setor_id'))
-            sigla = self._to_str(linha.get('sigla'))
+            sigla_raw = self._to_str(linha.get('sigla'))
+            sigla = SIGLA_SETOR_ALIASES.get(sigla_raw, sigla_raw) if sigla_raw else ''
             if setor_id is not None and sigla:
-                referencias.mapa_setor_id_para_sigla[setor_id] = SIGLA_SETOR_ALIASES.get(sigla, sigla)
+                referencias.mapa_setor_id_para_sigla[setor_id] = sigla
+            setores.append(
+                LinhaSetorReferenciaImportacaoDTO(
+                    numero_linha=linha['numero_linha'],
+                    setor_id_planilha=setor_id,
+                    nome=self._to_str(linha.get('nome')),
+                    sigla=sigla,
+                    ativo=self._to_bool(linha.get('ativo'), default=True),
+                )
+            )
+        return setores
 
     def _parse_referencia_funcoes(self, dados_aba, referencias: ReferenciasImportacaoDTO):
-        for linha in self._extrair_linhas(dados_aba, ABA_FUNCAO):
+        linhas = self._extrair_linhas(dados_aba, ABA_FUNCAO)
+        funcoes = []
+        for linha in linhas:
             funcao_id = normalizar_id_referencia(linha.get('funcao_id'))
             papel = self._to_str(linha.get('papel_funcao'))
             if funcao_id and papel:
                 referencias.mapa_funcao_id_para_papel[funcao_id] = papel
+            funcoes.append(
+                LinhaFuncaoReferenciaImportacaoDTO(
+                    numero_linha=linha['numero_linha'],
+                    funcao_id_planilha=funcao_id,
+                    papel_funcao=papel,
+                    descricao=self._to_str(linha.get('descricao')),
+                    categoria=self._to_str(linha.get('categoria')),
+                    ativo=self._to_bool(linha.get('ativo'), default=True),
+                )
+            )
+        return funcoes
 
     def _parse_referencia_cargos(self, dados_aba, referencias: ReferenciasImportacaoDTO):
-        for linha in self._extrair_linhas(dados_aba, ABA_CARGO):
+        linhas = self._extrair_linhas(dados_aba, ABA_CARGO)
+        cargos = []
+        for linha in linhas:
             cargo_id = self._to_int(linha.get('cargo_id'))
             nome = self._to_str(linha.get('nome'))
             if cargo_id is not None and nome:
                 referencias.mapa_cargo_id_para_nome[cargo_id] = nome
+            cargos.append(
+                LinhaCargoReferenciaImportacaoDTO(
+                    numero_linha=linha['numero_linha'],
+                    cargo_id_planilha=cargo_id,
+                    nome=nome,
+                    ativo=self._to_bool(linha.get('ativo'), default=True),
+                )
+            )
+        return cargos
 
     def _parse_cursos(self, dados_aba, referencias: ReferenciasImportacaoDTO):
         linhas = self._extrair_linhas(dados_aba, ABA_CURSO)
@@ -343,11 +392,23 @@ class ImportacaoUsuariosParser:
         return cursos
 
     def _parse_referencia_empresas(self, dados_aba, referencias: ReferenciasImportacaoDTO):
-        for linha in self._extrair_linhas(dados_aba, ABA_EMPRESA_INSTITUICAO):
+        linhas = self._extrair_linhas(dados_aba, ABA_EMPRESA_INSTITUICAO)
+        empresas = []
+        for linha in linhas:
             empresa_id = self._to_int(linha.get('empresa_instituicao_id'))
             nome = self._to_str(linha.get('nome'))
             if empresa_id is not None and nome:
                 referencias.mapa_empresa_id_para_nome[empresa_id] = nome
+            empresas.append(
+                LinhaEmpresaReferenciaImportacaoDTO(
+                    numero_linha=linha['numero_linha'],
+                    empresa_instituicao_id_planilha=empresa_id,
+                    nome=nome,
+                    cnpj=self._to_str(linha.get('cnpj')),
+                    ativo=self._to_bool(linha.get('ativo'), default=True),
+                )
+            )
+        return empresas
 
     def _to_str(self, valor):
         if valor is None:

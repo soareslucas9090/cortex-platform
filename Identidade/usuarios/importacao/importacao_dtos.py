@@ -90,6 +90,42 @@ class LinhaTerceirizadoImportacaoDTO:
 
 
 @dataclass
+class LinhaSetorReferenciaImportacaoDTO:
+    numero_linha: int
+    setor_id_planilha: int
+    nome: str
+    sigla: str
+    ativo: bool = True
+
+
+@dataclass
+class LinhaFuncaoReferenciaImportacaoDTO:
+    numero_linha: int
+    funcao_id_planilha: str
+    papel_funcao: str
+    descricao: str = ''
+    categoria: str = ''
+    ativo: bool = True
+
+
+@dataclass
+class LinhaCargoReferenciaImportacaoDTO:
+    numero_linha: int
+    cargo_id_planilha: int
+    nome: str
+    ativo: bool = True
+
+
+@dataclass
+class LinhaEmpresaReferenciaImportacaoDTO:
+    numero_linha: int
+    empresa_instituicao_id_planilha: int
+    nome: str
+    cnpj: str = ''
+    ativo: bool = True
+
+
+@dataclass
 class ReferenciasImportacaoDTO:
     mapa_setor_id_para_sigla: dict[int, str] = field(default_factory=dict)
     mapa_funcao_id_para_papel: dict[str, str] = field(default_factory=dict)
@@ -132,6 +168,10 @@ class ResumoImportacaoDTO:
     alunos_criados: int = 0
     servidores_criados: int = 0
     terceirizados_criados: int = 0
+    setores_criados: int = 0
+    funcoes_criadas: int = 0
+    cargos_criados: int = 0
+    empresas_criadas: int = 0
     cursos_criados: int = 0
     cursos_atualizados: int = 0
     vinculos_aluno_curso_criados: int = 0
@@ -150,6 +190,10 @@ class ResultadoImportacaoDTO:
 @dataclass
 class ArquivoImportacaoUsuariosDTO:
     referencias: ReferenciasImportacaoDTO = field(default_factory=ReferenciasImportacaoDTO)
+    setores: list[LinhaSetorReferenciaImportacaoDTO] = field(default_factory=list)
+    funcoes: list[LinhaFuncaoReferenciaImportacaoDTO] = field(default_factory=list)
+    cargos: list[LinhaCargoReferenciaImportacaoDTO] = field(default_factory=list)
+    empresas: list[LinhaEmpresaReferenciaImportacaoDTO] = field(default_factory=list)
     usuarios: list[LinhaUsuarioImportacaoDTO] = field(default_factory=list)
     contatos: list[LinhaContatoImportacaoDTO] = field(default_factory=list)
     enderecos: list[LinhaEnderecoImportacaoDTO] = field(default_factory=list)
