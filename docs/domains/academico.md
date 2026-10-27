@@ -78,6 +78,7 @@ No banco, `Curso.setor` é **nullable** (`null=True`, `blank=True`) por compatib
 - **Criar** curso (API ou importação): `setor` / `setor_id` **obrigatório** — não é permitido criar sem setor.
 - **Editar** curso: **não** é permitido remover o setor (PATCH que deixaria o curso sem setor é rejeitado).
 - **Importação de usuários** (aba `Curso`): cria ou atualiza cursos por `codigo_curso` normalizado (caixa, acentos e espaços); `setor_id` obrigatório em cada linha — o setor pode ter sido criado na fase de catálogo da mesma importação (ver `docs/schema/importacao-usuarios.md`).
+- **Cursos legados** (data migration `cursos.0004`): associa o setor de cada curso semeado conforme as abas `Curso`/`Setor` de `docs/seeds/import/modelo-importacao-usuarios.ods`. A migration **nunca aborta o deploy**: sigla de setor ausente no banco gera apenas log de aviso e o curso permanece com `setor` NULL; só cursos ainda sem setor são atualizados (associação existente nunca é sobrescrita). Curso legado com `setor` NULL precisa receber setor para ser editado (PATCH). O curso `14JOPC` não consta no `.ods` atual, mas é preservado (setor `DEPENTE`) por já existir em bancos implantados.
 
 ### `AlunoCurso.matricula`
 
