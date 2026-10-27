@@ -838,7 +838,7 @@ As regras específicas, escolhas de campos (choices), e detalhes de modelagem f�
 | **Terceirizado**       | ✅ Implementado | `PessoasInstitucionais/terceirizados/`         | OneToOne com Usuario, N:1 com EmpresaInstituicao; `matricula` opcional |
 | **Aluno**              | ✅ Implementado | `Academico/alunos/`                            | OneToOne com Usuario                                      |
 | **AlunoCurso**         | ✅ Implementado | `Academico/aluno_cursos/`                      | N:1 com Aluno e Curso; `matricula` opcional               |
-| **Curso**              | ✅ Implementado | `Academico/cursos/`                            | M:N com Aluno via AlunoCurso                              |
+| **Curso**              | ✅ Implementado | `Academico/cursos/`                            | N:1 com Setor; M:N com Aluno via AlunoCurso               |
 | **Bloco / Sala / Recurso** | ✅ Implementado | `Infraestrutura/blocos`, `salas`, `recursos` | Cadastro físico e recursos                                |
 | **Autorizacao / Emprestimo** | ✅ Implementado | `Infraestrutura/autorizacoes`, `emprestimos` | Fluxos de uso e empréstimo                                |
 | **ImportacaoLote**     | ✅ Implementado | `Identidade/usuarios/` e `Infraestrutura/importacoes/` | Dois models homônimos, um por contexto de carga |
@@ -871,7 +871,7 @@ A ordem de criação respeita as dependências entre domínios. Apps dentro do m
 **Módulo [Acadêmico](../domains/academico.md)** (Milestone 4 — concluído):
 
 11. `Academico/alunos/` — Model: `Aluno` (depende de `usuarios`)
-12. `Academico/cursos/` — Model: `Curso` (sem dependências externas)
+12. `Academico/cursos/` — Model: `Curso` (depende de `setores`)
 13. `Academico/aluno_cursos/` — Model: `AlunoCurso` (depende de `alunos`, `cursos`; `matricula` no vínculo)
 
 **Módulo Infraestrutura** (concluído):

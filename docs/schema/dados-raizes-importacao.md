@@ -4,10 +4,10 @@
 Garantir que as entidades institucionais de referência existam no banco antes da importação em lote.
 
 ## Entidades semeadas
-- Curso
+- Setor
+- Curso (depende de `Setor` já semeado; cada curso referencia setor pela **sigla** do setor)
 - Cargo
 - Empresa_Instituicao
-- Setor
 - Funcao
 
 ## Chaves naturais recomendadas
@@ -24,7 +24,8 @@ Garantir que as entidades institucionais de referência existam no banco antes d
 - migrações devem ser idempotentes;
 - não duplicar registros;
 - dados devem ser implantados via seed;
-- importação não deve criar esses registros automaticamente.
+- a ordem de seed deve garantir `Setor` antes de `Curso` (FK por sigla);
+- importação não deve criar `Cargo`, `Empresa_Instituicao`, `Setor` nem `Funcao` automaticamente; cursos adicionais ou atualizações podem ocorrer pela aba operacional `Curso` na importação de usuários (ver `importacao-usuarios.md`).
 
 ## Resultado esperado
 Ao subir um banco novo, os dados raízes necessários à importação devem existir uma única vez.

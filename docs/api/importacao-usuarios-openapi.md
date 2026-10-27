@@ -55,7 +55,7 @@ Consulta o status da importação atual ou da última realizada.
 
 ### Respostas
 
-- 200: Retorna o status (`EM_ANDAMENTO`, `CONCLUIDA`, `ERRO`) e a `porcentagem` de conclusão. Caso concluída, retorna os resultados no campo `resultado_json`.
+- 200: Retorna o status (`EM_ANDAMENTO`, `CONCLUIDA`, `ERRO`) e a `porcentagem` de conclusão. Caso concluída, retorna os resultados no campo `resultado_json` (inclui contadores do resumo, entre eles `cursos_criados` e `cursos_atualizados` quando a aba `Curso` foi processada).
 - 404: Nenhuma importação encontrada
 - 403: sem permissão de administrador
 

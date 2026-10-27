@@ -21,6 +21,7 @@ Estas abas participam diretamente do processamento da importação:
 - `Contato`
 - `Endereco`
 - `Aluno`
+- `Curso`
 - `Aluno_Curso`
 - `Servidor`
 - `Terceirizado`
@@ -29,7 +30,6 @@ Estas abas participam diretamente do processamento da importação:
 ### Abas de referência
 Estas abas podem existir no arquivo, mas **não devem ser persistidas pela importação operacional** na primeira versão, pois seus dados já devem existir no banco por meio de migrações seed:
 
-- `Curso`
 - `Cargo`
 - `Empresa_Instituicao`
 - `Setor`
@@ -55,7 +55,8 @@ Eles devem ser usados apenas como **identificadores temporários internos do arq
 5. `Servidor`
 6. `Terceirizado`
 7. `Setor_Lotacao`
-8. `Aluno_Curso`
+8. `Curso`
+9. `Aluno_Curso`
 
 ## Abas e colunas esperadas
 
@@ -127,6 +128,25 @@ Campos opcionais, se presentes no arquivo, também são lidos: `cep`, `complemen
 
 ---
 
+## Aba `Curso`
+
+### Colunas
+- `curso_id (int, PK)` — identificador interno da planilha (correlação com `Aluno_Curso`)
+- `setor_id (int, FK)` — **obrigatório**; resolvido contra a aba `Setor` e contra setores já existentes no banco (seed)
+- `nome (String)`
+- `codigo_curso (String)` — chave natural para criar ou atualizar o registro no banco
+- `ativo (boolean)`
+
+A coluna `modalidade` pode existir no arquivo por compatibilidade com o layout legado, mas **não** é lida nem persistida (não faz parte do model `Curso`).
+
+### Regras
+- `setor_id` é obrigatório em cada linha; o setor deve existir na aba `Setor` de referência ou no seed;
+- a importação **cria** ou **atualiza** `Curso` pelo `codigo_curso`;
+- não é permitido deixar curso sem setor (linhas sem `setor_id` válido falham);
+- `curso_id` da planilha alimenta o mapa interno usado pela aba `Aluno_Curso`.
+
+---
+
 ## Aba `Aluno_Curso`
 
 ### Colunas
@@ -141,9 +161,9 @@ Campos opcionais, se presentes no arquivo, também são lidos: `cep`, `complemen
 
 ### Regras
 - `aluno_id` deve existir previamente na aba `Aluno`;
-- `curso_id` deve ser resolvido contra os dados seed já existentes no banco;
+- `curso_id` deve ser resolvido contra cursos já no banco **ou** criados/atualizados na mesma importação (aba `Curso` processada antes);
 - `matricula`, quando informada, deve ser única no sistema;
-- esta aba não deve criar cursos.
+- esta aba **não** cria cursos — apenas vincula aluno a curso existente no mapa de resolução.
 
 ---
 
@@ -232,7 +252,8 @@ A importação deve validar:
 - `Contato` depende de `Usuario`
 - `Endereco` depende de `Usuario`
 - `Aluno` depende de `Usuario`
-- `Aluno_Curso` depende de `Aluno`
+- `Curso` depende de `Setor` (aba de referência `Setor` e/ou seed)
+- `Aluno_Curso` depende de `Aluno` e de `Curso` (resolução de `curso_id`)
 - `Servidor` depende de `Usuario`
 - `Terceirizado` depende de `Usuario`
 - `Setor_Lotacao` depende de `Usuario`
@@ -257,7 +278,7 @@ A aba `Funcao` é apenas referência (não é persistida pela importação). Col
 - a importação deve usar transação por linha lógica;
 - falhas em uma linha não devem impedir o processamento das demais;
 - a importação pode permitir sucesso parcial;
-- os dados raízes devem ser resolvidos no banco e nunca criados automaticamente pela rotina de importação;
+- cargos, empresas, setores e funções de referência devem ser resolvidos no banco (seed) e não criados pela importação; a aba `Curso` é exceção e pode criar ou atualizar cursos conforme as regras acima;
 - o processamento definitivo ocorre em background (Celery), com progresso e resultado consolidados no `ImportacaoLote`.
 
 ## Resultado esperado
@@ -266,6 +287,6 @@ Ao final do processamento, a rotina deve ser capaz de:
 
 - mapear IDs temporários da planilha para objetos reais do banco;
 - criar ou atualizar usuários;
-- criar ou atualizar entidades relacionadas;
+- criar ou atualizar cursos (aba `Curso`) e demais entidades relacionadas;
 - registrar erros estruturados por aba, linha e campo;
 - retornar um resumo consolidado da execução.

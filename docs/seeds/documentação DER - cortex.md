@@ -257,6 +257,12 @@ String
 
 Código institucional
 
+setor_id
+
+int (FK)
+
+Referência para `Setor` (coordenação ou unidade responsável pelo curso)
+
 ativo
 
 boolean
@@ -937,6 +943,8 @@ Ela pode possuir:
 ## Acadêmico
 
 -   `Aluno` possui relação N:N com `Curso` através de `Aluno_Curso`
+    
+-   `Curso` possui relação N:1 com `Setor` (`setor_id`)
     
 -   Cursos podem estar ativos ou inativos
     

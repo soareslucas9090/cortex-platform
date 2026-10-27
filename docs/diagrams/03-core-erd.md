@@ -360,11 +360,17 @@ Representa um curso institucional.
 ### Atributos principais
 
 - `id`
+- `setor` (FK para `Setor`; nullable no banco, obrigatório na regra de negócio em criar/editar/importar)
 - `nome`
 - `codigo_curso`
 - `ativo`
 - `created_at`
 - `updated_at`
+
+### Relacionamentos
+
+- um `Curso` pertence a um `Setor` (N:1)
+- um `Setor` pode possuir muitos `Curso` (1:N)
 
 ### Atributo planejado (pré-requisito AcessoCampus)
 
@@ -424,6 +430,7 @@ Representa o vínculo entre aluno e curso.
 ## Relações acadêmicas
 
 - `Usuario` 1:1 `Aluno`
+- `Setor` 1:N `Curso`
 - `Aluno` 1:N `AlunoCurso`
 - `Curso` 1:N `AlunoCurso`
 
