@@ -73,6 +73,11 @@ class ImportacaoReferenciasResolver:
             return None
         return self._get_cursos_db().get(codigo)
 
+    def registrar_curso(self, codigo_curso: str, curso):
+        if not codigo_curso or curso is None:
+            return
+        self._get_cursos_db()[codigo_curso] = curso
+
     def resolver_empresa(self, empresa_id_planilha: int):
         nome = self.referencias.mapa_empresa_id_para_nome.get(empresa_id_planilha)
         if not nome:

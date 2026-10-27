@@ -17,6 +17,7 @@ ABAS_OPERACIONAIS = [
     ABA_CONTATO,
     ABA_ENDERECO,
     ABA_ALUNO,
+    ABA_CURSO,
     ABA_ALUNO_CURSO,
     ABA_SERVIDOR,
     ABA_TERCEIRIZADO,
@@ -24,7 +25,6 @@ ABAS_OPERACIONAIS = [
 ]
 
 ABAS_REFERENCIA = [
-    ABA_CURSO,
     ABA_CARGO,
     ABA_EMPRESA_INSTITUICAO,
     ABA_SETOR,
@@ -130,6 +130,7 @@ COLUNAS_ABA_CARGO_REFERENCIA = [
 
 COLUNAS_ABA_CURSO_REFERENCIA = [
     'curso_id',
+    'setor_id',
     'nome',
     'codigo_curso',
     'ativo',

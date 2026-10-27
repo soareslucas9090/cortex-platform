@@ -16,6 +16,7 @@ from .importacao_dtos import (
     ArquivoImportacaoUsuariosDTO,
     LinhaAlunoCursoImportacaoDTO,
     LinhaAlunoImportacaoDTO,
+    LinhaCursoImportacaoDTO,
     LinhaContatoImportacaoDTO,
     LinhaEnderecoImportacaoDTO,
     LinhaServidorImportacaoDTO,
@@ -80,7 +81,7 @@ class ImportacaoUsuariosParser:
             self._parse_referencia_cargos(planilha[ABA_CARGO], resultado.referencias)
 
         if ABA_CURSO in planilha:
-            self._parse_referencia_cursos(planilha[ABA_CURSO], resultado.referencias)
+            resultado.cursos = self._parse_cursos(planilha[ABA_CURSO], resultado.referencias)
 
         if ABA_EMPRESA_INSTITUICAO in planilha:
             self._parse_referencia_empresas(planilha[ABA_EMPRESA_INSTITUICAO], resultado.referencias)
@@ -321,12 +322,25 @@ class ImportacaoUsuariosParser:
             if cargo_id is not None and nome:
                 referencias.mapa_cargo_id_para_nome[cargo_id] = nome
 
-    def _parse_referencia_cursos(self, dados_aba, referencias: ReferenciasImportacaoDTO):
-        for linha in self._extrair_linhas(dados_aba, ABA_CURSO):
+    def _parse_cursos(self, dados_aba, referencias: ReferenciasImportacaoDTO):
+        linhas = self._extrair_linhas(dados_aba, ABA_CURSO)
+        cursos = []
+        for linha in linhas:
             curso_id = self._to_int(linha.get('curso_id'))
             codigo = self._to_str(linha.get('codigo_curso'))
             if curso_id is not None and codigo:
                 referencias.mapa_curso_id_para_codigo[curso_id] = codigo
+            cursos.append(
+                LinhaCursoImportacaoDTO(
+                    numero_linha=linha['numero_linha'],
+                    curso_id_planilha=curso_id,
+                    setor_id_planilha=self._to_int(linha.get('setor_id')),
+                    nome=self._to_str(linha.get('nome')),
+                    codigo_curso=codigo,
+                    ativo=self._to_bool(linha.get('ativo'), default=True),
+                )
+            )
+        return cursos
 
     def _parse_referencia_empresas(self, dados_aba, referencias: ReferenciasImportacaoDTO):
         for linha in self._extrair_linhas(dados_aba, ABA_EMPRESA_INSTITUICAO):

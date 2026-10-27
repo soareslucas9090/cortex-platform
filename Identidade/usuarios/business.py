@@ -441,6 +441,18 @@ class UsuarioBusiness(ModelInstanceBusiness):
                         mensagem=str(exc),
                     )
                 )
+            for linha in estrutura.cursos:
+                if not linha.setor_id_planilha:
+                    erros.append(
+                        ErroImportacaoDTO(
+                            aba='Curso',
+                            numero_linha=linha.numero_linha,
+                            campo='setor_id',
+                            valor=linha.setor_id_planilha,
+                            codigo='erro_curso',
+                            mensagem='O curso deve possuir um setor associado.',
+                        )
+                    )
             return ResultadoImportacaoDTO(
                 sucesso=len(erros) == 0,
                 mensagem='Pré-visualização concluída.' if not erros else 'Pré-visualização concluída com pendências.',
@@ -732,6 +744,49 @@ class UsuarioBusiness(ModelInstanceBusiness):
                             campo=campo_erro,
                             valor=valor_erro,
                             codigo='erro_lotacao',
+                            mensagem=str(exc),
+                        )
+                    )
+            from Academico.cursos.models import Curso
+            for linha in estrutura.cursos:
+                _incrementar_progresso()
+                campo_erro = 'setor_id'
+                valor_erro = linha.setor_id_planilha
+                try:
+                    with transaction.atomic():
+                        if not linha.codigo_curso:
+                            campo_erro = 'codigo_curso'
+                            valor_erro = linha.codigo_curso
+                            raise ValidationException('O código do curso é obrigatório.')
+
+                        setor = resolver_referencias.resolver_setor(linha.setor_id_planilha)
+                        if not setor:
+                            campo_erro = 'setor_id'
+                            valor_erro = linha.setor_id_planilha
+                        self.object_instance.rules.referencia_seed_existe(
+                            setor,
+                            f'setor_id={linha.setor_id_planilha}',
+                        )
+
+                        curso, criado = Curso().business.importar_curso(
+                            codigo_curso=linha.codigo_curso,
+                            nome=linha.nome,
+                            setor=setor,
+                            ativo=linha.ativo,
+                        )
+                        resolver_referencias.registrar_curso(linha.codigo_curso, curso)
+                        if criado:
+                            resumo.cursos_criados += 1
+                        else:
+                            resumo.cursos_atualizados += 1
+                except Exception as exc:
+                    erros.append(
+                        self._criar_erro(
+                            aba='Curso',
+                            numero_linha=linha.numero_linha,
+                            campo=campo_erro,
+                            valor=valor_erro,
+                            codigo='erro_curso',
                             mensagem=str(exc),
                         )
                     )
@@ -1152,6 +1207,7 @@ class UsuarioBusiness(ModelInstanceBusiness):
                 estrutura.contatos,
                 estrutura.enderecos,
                 estrutura.alunos,
+                estrutura.cursos,
                 estrutura.alunos_cursos,
                 estrutura.servidores,
                 estrutura.terceirizados,
@@ -1170,6 +1226,7 @@ class UsuarioBusiness(ModelInstanceBusiness):
                 len(estrutura.contatos),
                 len(estrutura.enderecos),
                 len(estrutura.alunos),
+                len(estrutura.cursos),
                 len(estrutura.alunos_cursos),
                 len(estrutura.servidores),
                 len(estrutura.terceirizados),

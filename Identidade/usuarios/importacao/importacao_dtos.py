@@ -46,6 +46,16 @@ class LinhaAlunoImportacaoDTO:
 
 
 @dataclass
+class LinhaCursoImportacaoDTO:
+    numero_linha: int
+    curso_id_planilha: int
+    setor_id_planilha: int
+    nome: str
+    codigo_curso: str
+    ativo: bool = True
+
+
+@dataclass
 class LinhaAlunoCursoImportacaoDTO:
     numero_linha: int
     aluno_id_planilha: int
@@ -122,6 +132,8 @@ class ResumoImportacaoDTO:
     alunos_criados: int = 0
     servidores_criados: int = 0
     terceirizados_criados: int = 0
+    cursos_criados: int = 0
+    cursos_atualizados: int = 0
     vinculos_aluno_curso_criados: int = 0
     lotacoes_criadas: int = 0
 
@@ -142,6 +154,7 @@ class ArquivoImportacaoUsuariosDTO:
     contatos: list[LinhaContatoImportacaoDTO] = field(default_factory=list)
     enderecos: list[LinhaEnderecoImportacaoDTO] = field(default_factory=list)
     alunos: list[LinhaAlunoImportacaoDTO] = field(default_factory=list)
+    cursos: list[LinhaCursoImportacaoDTO] = field(default_factory=list)
     alunos_cursos: list[LinhaAlunoCursoImportacaoDTO] = field(default_factory=list)
     servidores: list[LinhaServidorImportacaoDTO] = field(default_factory=list)
     terceirizados: list[LinhaTerceirizadoImportacaoDTO] = field(default_factory=list)

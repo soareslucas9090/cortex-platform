@@ -414,6 +414,8 @@ class ResumoImportacaoSerializer(serializers.Serializer):
     alunos_criados = serializers.IntegerField()
     servidores_criados = serializers.IntegerField()
     terceirizados_criados = serializers.IntegerField()
+    cursos_criados = serializers.IntegerField()
+    cursos_atualizados = serializers.IntegerField()
     vinculos_aluno_curso_criados = serializers.IntegerField()
     lotacoes_criadas = serializers.IntegerField()
 
