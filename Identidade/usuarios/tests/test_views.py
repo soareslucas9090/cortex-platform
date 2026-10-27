@@ -72,6 +72,12 @@ def permissoes_esperadas(
             'faltas': faltas,
             'bloqueios': bloqueios,
         },
+        'acesso_campus': {
+            'solicitar': cortex_nivel == PERMISSAO_CORTEX_EDITAR_TUDO,
+            'analisar_solicitacoes': cortex_nivel == PERMISSAO_CORTEX_EDITAR_TUDO,
+            'operar_portaria': cortex_nivel == PERMISSAO_CORTEX_EDITAR_TUDO,
+            'visualizar_historico': cortex_nivel == PERMISSAO_CORTEX_EDITAR_TUDO,
+        },
     }
 
 
@@ -1956,9 +1962,9 @@ class DocumentarPermissoesViewTest(APITestCase):
         resposta = self.client.get(self.url)
         self.assertEqual(resposta.status_code, status.HTTP_200_OK)
         modulos = resposta.data['dados']['modulos']
-        self.assertEqual(len(modulos), 3)
+        self.assertEqual(len(modulos), 4)
         chaves = {modulo['chave'] for modulo in modulos}
-        self.assertEqual(chaves, {'cortex', 'infraestrutura', 'transporte'})
+        self.assertEqual(chaves, {'acesso_campus', 'cortex', 'infraestrutura', 'transporte'})
 
         cortex = next(modulo for modulo in modulos if modulo['chave'] == 'cortex')
         self.assertEqual(len(cortex['niveis']), 3)

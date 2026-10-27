@@ -14,9 +14,9 @@ O domínio `Academico` gerencia **alunos**, **cursos** e **vínculos aluno–cur
 - **Curso**: catálogo de cursos ofertados; relação **N:1** com **Setor** (`Organizacional`).
 - **AlunoCurso**: associação aluno ↔ curso; **`matricula` opcional com unicidade global** quando preenchida; campo **`ativo`** no vínculo.
 
-### Atributo planejado em `Curso` (pré-requisito AcessoCampus)
+### `Curso.nivel_ensino` (AC.1)
 
-**`nivel_ensino`** — **PLANEJADO**, ainda **não** no model no código. `IntegerChoices` **`NivelEnsino`**: `ENSINO_MEDIO=1`, `TECNICO=2`, `SUPERIOR=3`, `POS_GRADUACAO=4`. Entrega prevista na etapa AC.1 do [milestone AcessoCampus](../planning/milestone-acesso-campus.md). Elegibilidade de solicitação na portaria EM usará `nivel_ensino=ENSINO_MEDIO` — **proibido** inferir ensino médio pelo **nome** do curso.
+**`nivel_ensino`** está no model. `IntegerChoices` **`NivelEnsino`**: `ENSINO_MEDIO=1`, `TECNICO=2`, `SUPERIOR=3`, `POS_GRADUACAO=4`. O campo aceita nulo: **nulo significa não classificado** e não é Ensino Médio. Cursos já gravados, inclusive o seed, permanecem nulos até edição explícita — a carga não infere o nível pelo nome. Criação pela API exige um dos quatro inteiros. Elegibilidade de solicitação na portaria EM usará `nivel_ensino=ENSINO_MEDIO`.
 
 ### Fronteira com AcessoCampus (**planejado**)
 
@@ -145,5 +145,5 @@ Paths relativos a `/cortex/academico/`.
 - **Não** alterar `faltas` / `is_bloqueado` / `quantidade_bloqueios` em business de Aluno sem coordenar com Transporte.
 - **Não** inventar endpoints fora dos `urls.py` existentes.
 - **Não** tratar choices como strings na API persistida sem alinhar aos inteiros do model.
-- **Não** inferir Ensino Médio pelo nome do curso — usar **`nivel_ensino`** quando implementado.
+- **Não** inferir Ensino Médio pelo nome do curso — usar **`nivel_ensino`**. Nulo não é Ensino Médio.
 - **Não** implementar fluxo de circulação/portaria (solicitação, eventos, registro na guarita) no Academico — bounded context **AcessoCampus** ([domains/acesso-campus.md](acesso-campus.md), ADR-003).

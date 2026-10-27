@@ -135,6 +135,8 @@ PROJECT_APPS = [
     'Academico.cursos',
     'Academico.alunos',
     'Academico.aluno_cursos',
+    'AcessoCampus.solicitacoes',
+    'AcessoCampus.permissoes',
     'Infraestrutura.blocos',
     'Infraestrutura.salas',
     'Infraestrutura.recursos',

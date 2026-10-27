@@ -7,8 +7,8 @@ from .models import Curso
 
 @admin.register(Curso)
 class CursoAdmin(AtivoModelAdmin):
-    list_display = ('nome', 'codigo_curso', 'setor', 'ativo', 'created_at')
-    list_filter = ('ativo', 'setor')
+    list_display = ('nome', 'codigo_curso', 'setor', 'nivel_ensino', 'ativo', 'created_at')
+    list_filter = ('ativo', 'setor', 'nivel_ensino')
     search_fields = ('nome', 'codigo_curso', 'setor__sigla', 'setor__nome')
     autocomplete_fields = ('setor',)
     ordering = ('nome',)
@@ -26,6 +26,7 @@ class CursoAdmin(AtivoModelAdmin):
                     codigo_curso=obj.codigo_curso,
                     setor_id=obj.setor_id,
                     ativo=obj.ativo,
+                    nivel_ensino=obj.nivel_ensino,
                 )
             )
             obj.pk = created.pk

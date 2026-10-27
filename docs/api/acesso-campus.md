@@ -1,6 +1,6 @@
 # API — AcessoCampus (contrato planejado)
 
-> **Status:** PLANEJADO — endpoints **não** existem no código. Prefixo base: **`/cortex/acesso-campus/`**. Namespace URL: **`acesso_campus`**. Envelope e paginação: padrão **AppCore** (`PaginacaoCustomizada`).
+> **Status:** corte da **gestão** existe em `/cortex/acesso-campus/` (`acesso_campus`): `GET alunos/`, `GET turmas/`, `POST autorizacoes/`, `GET solicitacoes/`, `GET solicitacoes/{pk}/`, `POST solicitacoes/{pk}/aceitar/`, `POST solicitacoes/{pk}/recusar/`. Os cinco papéis, quando são o responsável pelo setor, e o L3 alcançam qualquer Ensino Médio. O responsável pelo setor do curso alcança só esse curso. A listagem traz pedido do aluno e autorização da gestão. Criar ou aceitar recusa data passada e segunda autorização aceita do mesmo aluno, dia e tipo. O contrato abaixo, com programações, eventos e portaria, continua **planejado**.
 
 Autenticação: JWT/sessão padrão Cortex (401 se ausente). Permissões de módulo na chave **`acesso_campus`** do payload compilado. **L3** acessa todos os recursos.
 

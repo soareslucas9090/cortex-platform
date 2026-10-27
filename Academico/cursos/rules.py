@@ -1,7 +1,15 @@
 from AppCore.core.rules.rules import ModelInstanceRules
 
+from .choices import NivelEnsino
+
 
 class CursoRules(ModelInstanceRules):
+
+    def nivel_ensino_valido(self, nivel_ensino) -> bool:
+        """Aceita somente os inteiros de NivelEnsino. Ausência não é Ensino Médio."""
+        if nivel_ensino is None or nivel_ensino not in NivelEnsino.values:
+            self.return_exception('Informe um nível de ensino válido.')
+        return True
 
     def codigo_unico(self, codigo: str, excluir_id=None) -> bool:
         """Valida que o código do curso não está em uso."""
