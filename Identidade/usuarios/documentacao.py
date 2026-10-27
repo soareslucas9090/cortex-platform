@@ -899,3 +899,58 @@ class PermissaoDocumentacao:
                 },
             ],
         }
+
+    @classmethod
+    def documentacao_acesso_campus(cls) -> dict:
+        return {
+            'chave': 'acesso_campus',
+            'titulo': 'Acesso ao campus',
+            'resumo': (
+                'Gestão autoriza entrada ou saída de alunos do Ensino Médio e avalia '
+                'pedidos. A solicitação do aluno e a portaria ficam para um corte seguinte.'
+            ),
+            'capacidades': [
+                {
+                    'codigo': 'analisar_solicitacoes',
+                    'nome': 'Analisar solicitações',
+                    'quem_usa': (
+                        'Direção de ensino, chefias de departamento de ensino, '
+                        'coordenação de disciplina e das áreas de Natureza, Humanas e Letras'
+                    ),
+                    'pode': (
+                        'Listar alunos e turmas elegíveis, autorizar um ou vários alunos, '
+                        'autorizar uma turma, listar, detalhar, aceitar e recusar.'
+                    ),
+                    'nao_sem_capacidade': 'Operar a fila da gestão de acesso ao campus.',
+                    'descricao': (
+                        'L3 recebe a capacidade. Só o responsável pelo setor analisa: '
+                        'os cinco papéis, qualquer Ensino Médio; o responsável do setor do curso, só esse curso.'
+                    ),
+                },
+            ],
+            'secoes': [
+                {
+                    'titulo': 'Compilação (permissoes_acesso_campus)',
+                    'itens': [
+                        {'destaque': 'L3 (EDITAR_TUDO)', 'texto': 'Recebe todas as capacidades.'},
+                        {
+                            'destaque': 'Cinco papéis',
+                            'texto': 'analisar_solicitacoes só se o vínculo for o responsável pelo setor.',
+                        },
+                    ],
+                },
+            ],
+            'exemplos': [
+                {
+                    'perfil': 'Diretor(a) de Ensino',
+                    'capacidades': {
+                        'solicitar': False,
+                        'analisar_solicitacoes': True,
+                        'operar_portaria': False,
+                        'visualizar_historico': False,
+                    },
+                    'pode': ['autorizar e avaliar solicitações de qualquer Ensino Médio'],
+                    'nao_pode': ['registrar a portaria', 'criar o pedido no lugar do aluno'],
+                },
+            ],
+        }

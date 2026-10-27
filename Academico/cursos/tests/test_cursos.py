@@ -170,6 +170,7 @@ class CursoBusinessTestCase(APITestCase):
             nome='Sistemas de Informação',
             codigo_curso='SI-001',
             setor_id=self.setor.pk,
+            nivel_ensino=NivelEnsino.SUPERIOR,
         )
         with self.assertRaises(BusinessRuleException) as ctx:
             curso.business.atualizar_dados({'setor_id': None})
