@@ -11583,6 +11583,18 @@ components:
           type: integer
         terceirizados_criados:
           type: integer
+        setores_criados:
+          type: integer
+        funcoes_criadas:
+          type: integer
+        cargos_criados:
+          type: integer
+        empresas_criadas:
+          type: integer
+        cursos_criados:
+          type: integer
+        cursos_atualizados:
+          type: integer
         vinculos_aluno_curso_criados:
           type: integer
         lotacoes_criadas:
@@ -11602,6 +11614,12 @@ components:
       - usuarios_atualizados
       - usuarios_criados
       - vinculos_aluno_curso_criados
+      - cargos_criados
+      - cursos_atualizados
+      - cursos_criados
+      - empresas_criadas
+      - funcoes_criadas
+      - setores_criados
     ResumoImportacaoInfraestrutura:
       type: object
       properties:

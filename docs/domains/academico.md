@@ -77,7 +77,7 @@ No banco, `Curso.setor` é **nullable** (`null=True`, `blank=True`) por compatib
 
 - **Criar** curso (API ou importação): `setor` / `setor_id` **obrigatório** — não é permitido criar sem setor.
 - **Editar** curso: **não** é permitido remover o setor (PATCH que deixaria o curso sem setor é rejeitado).
-- **Importação de usuários** (aba `Curso`): cria ou atualiza cursos por `codigo_curso`; `setor_id` obrigatório em cada linha (ver `docs/schema/importacao-usuarios.md`).
+- **Importação de usuários** (aba `Curso`): cria ou atualiza cursos por `codigo_curso` normalizado (caixa, acentos e espaços); `setor_id` obrigatório em cada linha — o setor pode ter sido criado na fase de catálogo da mesma importação (ver `docs/schema/importacao-usuarios.md`).
 
 ### `AlunoCurso.matricula`
 
