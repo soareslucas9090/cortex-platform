@@ -31,11 +31,16 @@ def obter_cliente_s3():
     '''
     Instancia o cliente S3 a partir das settings do projeto.
     Retorna (cliente, bucket) ou (None, None) se a configuração estiver incompleta.
+
+    Tigris (e outros S3-compatíveis) exige ``region_name='auto'``. O boto3 1.36+
+    envia checksums por padrão no GetObject; isso vira ClientError no proxy e
+    a API responde 404 mesmo com o objeto presente no bucket.
     '''
     endpoint_url = getattr(settings, 'AWS_S3_ENDPOINT_URL', None)
     bucket_name = getattr(settings, 'AWS_STORAGE_BUCKET_NAME', None)
     access_key = getattr(settings, 'AWS_ACCESS_KEY_ID', None)
     secret_key = getattr(settings, 'AWS_SECRET_ACCESS_KEY', None)
+    region_name = getattr(settings, 'AWS_S3_REGION_NAME', None) or 'auto'
 
     if not all([endpoint_url, bucket_name, access_key, secret_key]):
         logger.error('Credenciais de S3 do projeto não configuradas completamente.')
@@ -47,7 +52,12 @@ def obter_cliente_s3():
             endpoint_url=endpoint_url,
             aws_access_key_id=access_key,
             aws_secret_access_key=secret_key,
-            config=Config(signature_version='s3v4'),
+            region_name=region_name,
+            config=Config(
+                signature_version='s3v4',
+                request_checksum_calculation='when_required',
+                response_checksum_validation='when_required',
+            ),
         )
         return s3_client, bucket_name
     except Exception as exc:
