@@ -162,11 +162,92 @@ DEPENDENCIAS_ENTRE_ABAS = {
     ABA_CONTATO: [ABA_USUARIO],
     ABA_ENDERECO: [ABA_USUARIO],
     ABA_ALUNO: [ABA_USUARIO],
-    ABA_ALUNO_CURSO: [ABA_ALUNO],
-    ABA_SERVIDOR: [ABA_USUARIO],
-    ABA_TERCEIRIZADO: [ABA_USUARIO],
-    ABA_SETOR_LOTACAO: [ABA_USUARIO],
+    ABA_CURSO: [ABA_SETOR],
+    ABA_ALUNO_CURSO: [ABA_ALUNO, ABA_CURSO],
+    ABA_SERVIDOR: [ABA_USUARIO, ABA_CARGO],
+    ABA_TERCEIRIZADO: [ABA_USUARIO, ABA_EMPRESA_INSTITUICAO],
+    ABA_SETOR_LOTACAO: [ABA_USUARIO, ABA_SETOR, ABA_FUNCAO],
 }
+
+ATTR_ID_PLANILHA_POR_ABA = {
+    ABA_USUARIO: 'usuario_id_planilha',
+    ABA_ALUNO: 'aluno_id_planilha',
+    ABA_CURSO: 'curso_id_planilha',
+    ABA_SERVIDOR: 'servidor_id_planilha',
+    ABA_TERCEIRIZADO: 'terceirizado_id_planilha',
+    ABA_SETOR: 'setor_id_planilha',
+    ABA_FUNCAO: 'funcao_id_planilha',
+    ABA_CARGO: 'cargo_id_planilha',
+    ABA_EMPRESA_INSTITUICAO: 'empresa_instituicao_id_planilha',
+}
+
+COLECAO_POR_ABA = {
+    ABA_SETOR: 'setores',
+    ABA_FUNCAO: 'funcoes',
+    ABA_CARGO: 'cargos',
+    ABA_EMPRESA_INSTITUICAO: 'empresas',
+    ABA_USUARIO: 'usuarios',
+    ABA_CONTATO: 'contatos',
+    ABA_ENDERECO: 'enderecos',
+    ABA_ALUNO: 'alunos',
+    ABA_CURSO: 'cursos',
+    ABA_ALUNO_CURSO: 'alunos_cursos',
+    ABA_SERVIDOR: 'servidores',
+    ABA_TERCEIRIZADO: 'terceirizados',
+    ABA_SETOR_LOTACAO: 'setores_lotacao',
+}
+
+DEPENDENCIAS_DE_LINHA = {
+    ABA_CONTATO: [
+        {'campo': 'usuario_id', 'aba_pai': ABA_USUARIO, 'attr': 'usuario_id_planilha'},
+    ],
+    ABA_ENDERECO: [
+        {'campo': 'usuario_id', 'aba_pai': ABA_USUARIO, 'attr': 'usuario_id_planilha'},
+    ],
+    ABA_ALUNO: [
+        {'campo': 'usuario_id', 'aba_pai': ABA_USUARIO, 'attr': 'usuario_id_planilha'},
+    ],
+    ABA_SERVIDOR: [
+        {'campo': 'usuario_id', 'aba_pai': ABA_USUARIO, 'attr': 'usuario_id_planilha'},
+        {'campo': 'cargo_id', 'aba_pai': ABA_CARGO, 'attr': 'cargo_id_planilha'},
+    ],
+    ABA_TERCEIRIZADO: [
+        {'campo': 'usuario_id', 'aba_pai': ABA_USUARIO, 'attr': 'usuario_id_planilha'},
+        {
+            'campo': 'empresa_instituicao_id',
+            'aba_pai': ABA_EMPRESA_INSTITUICAO,
+            'attr': 'empresa_instituicao_id_planilha',
+        },
+    ],
+    ABA_SETOR_LOTACAO: [
+        {'campo': 'usuario_id', 'aba_pai': ABA_USUARIO, 'attr': 'usuario_id_planilha'},
+        {'campo': 'setor_id', 'aba_pai': ABA_SETOR, 'attr': 'setor_id_planilha'},
+        {
+            'campo': 'funcao_id',
+            'aba_pai': ABA_FUNCAO,
+            'attr': 'funcao_id_planilha',
+            'opcional': True,
+        },
+    ],
+    ABA_CURSO: [
+        {'campo': 'setor_id', 'aba_pai': ABA_SETOR, 'attr': 'setor_id_planilha'},
+    ],
+    ABA_ALUNO_CURSO: [
+        {'campo': 'aluno_id', 'aba_pai': ABA_ALUNO, 'attr': 'aluno_id_planilha'},
+        {'campo': 'curso_id', 'aba_pai': ABA_CURSO, 'attr': 'curso_id_planilha'},
+    ],
+}
+
+PAPEL_ERRO_CAUSA = 'causa'
+PAPEL_ERRO_IMPACTO = 'impacto'
+
+TIPO_GRUPO_FALHA_ENTIDADE = 'falha_entidade'
+TIPO_GRUPO_REFERENCIA_INEXISTENTE = 'referencia_inexistente'
+TIPO_GRUPO_LINHA = 'linha'
+
+MAX_GRUPOS_ERRO_API = 50
+MAX_ERROS_PLANOS_API = 50
+MAX_IMPACTOS_POR_GRUPO_API = 20
 
 CODIGO_ERRO_ARQUIVO_INVALIDO = 'arquivo_invalido'
 CODIGO_ERRO_EXTENSAO_INVALIDA = 'extensao_invalida'

@@ -152,6 +152,41 @@ class ErroImportacaoDTO:
     valor: Any
     codigo: str
     mensagem: str
+    grupo_id: str | None = None
+    papel: str = 'causa'
+
+
+@dataclass
+class CausaErroImportacaoDTO:
+    aba: str
+    id_planilha: Any = None
+    numero_linha: int = 0
+    rotulo: str = ''
+    campo: str = ''
+    valor: Any = None
+    codigo: str = ''
+    mensagem: str = ''
+
+
+@dataclass
+class ImpactoErroImportacaoDTO:
+    aba: str
+    numero_linha: int
+    campo: str
+    valor: Any = None
+    codigo: str = ''
+    mensagem: str = ''
+
+
+@dataclass
+class GrupoErroImportacaoDTO:
+    id: str
+    tipo: str
+    titulo: str
+    causa: CausaErroImportacaoDTO | None = None
+    total_impactos: int = 0
+    impactos_por_aba: dict[str, int] = field(default_factory=dict)
+    impactos: list[ImpactoErroImportacaoDTO] = field(default_factory=list)
 
 
 @dataclass
@@ -159,6 +194,7 @@ class ResumoImportacaoDTO:
     total_abas_processadas: int = 0
     total_linhas_processadas: int = 0
     total_linhas_com_erro: int = 0
+    total_grupos_erro: int = 0
     usuarios_criados: int = 0
     usuarios_atualizados: int = 0
     contatos_criados: int = 0
@@ -184,6 +220,7 @@ class ResultadoImportacaoDTO:
     mensagem: str
     resumo: ResumoImportacaoDTO = field(default_factory=ResumoImportacaoDTO)
     erros: list[ErroImportacaoDTO] = field(default_factory=list)
+    grupos_erro: list[GrupoErroImportacaoDTO] = field(default_factory=list)
     metadados: dict[str, Any] = field(default_factory=dict)
 
 
