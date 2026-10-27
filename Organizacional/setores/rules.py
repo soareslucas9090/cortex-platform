@@ -3,6 +3,14 @@ from AppCore.core.rules.rules import ModelInstanceRules
 
 class SetorRules(ModelInstanceRules):
 
+    def validar_dados_importacao(self, nome, sigla) -> bool:
+        """Valida campos obrigatórios na importação de setor."""
+        if not (nome or '').strip():
+            self.return_exception('O nome do setor é obrigatório.')
+        if not (sigla or '').strip():
+            self.return_exception('A sigla do setor é obrigatória.')
+        return True
+
     def sigla_unica(self, sigla: str, excluir_id=None) -> bool:
         """Valida que a sigla não está em uso por outro setor."""
         from .models import Setor

@@ -47,17 +47,19 @@ class CursoBusiness(ModelInstanceBusiness):
             setor_id = setor.pk if setor is not None else None
             self.object_instance.rules.validar_setor_obrigatorio(setor_id)
 
-            curso = Curso.objects.filter(codigo_curso=codigo_curso).first()
+            nome_gravar = ' '.join((nome or '').strip().split())
+            curso = self.object_instance.helper.obter_por_codigo_normalizado(codigo_curso)
             if curso:
-                curso.nome = nome
+                curso.nome = nome_gravar
                 curso.setor = setor
                 curso.ativo = ativo
                 curso.save()
                 return curso, False
 
+            codigo_gravar = ' '.join((codigo_curso or '').strip().split())
             curso = Curso.objects.create(
-                nome=nome,
-                codigo_curso=codigo_curso,
+                nome=nome_gravar,
+                codigo_curso=codigo_gravar,
                 setor=setor,
                 ativo=ativo,
             )

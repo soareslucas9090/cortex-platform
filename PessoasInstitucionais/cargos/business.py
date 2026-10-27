@@ -47,3 +47,21 @@ class CargoBusiness(ModelInstanceBusiness):
             self.object_instance.save(update_fields=['ativo'])
         except Exception as e:
             self.relancar_ou_erro_sistema(e, 'Não foi possível reativar o cargo.', logger)
+
+    def importar_cargo(self, nome: str, ativo: bool = True):
+        """Cria cargo pelo nome normalizado se ainda não existir (sem atualizar existente)."""
+        try:
+            from .models import Cargo
+
+            self.object_instance.rules.validar_dados_importacao(nome)
+            nome_gravar = ' '.join((nome or '').strip().split())
+
+            cargo = self.object_instance.helper.obter_por_nome_normalizado(nome)
+            if cargo:
+                return cargo, False
+
+            self.object_instance.rules.nome_unico(nome_gravar)
+            cargo = Cargo.objects.create(nome=nome_gravar, ativo=ativo)
+            return cargo, True
+        except Exception as e:
+            self.relancar_ou_erro_sistema(e, 'Não foi possível importar o cargo.', logger)

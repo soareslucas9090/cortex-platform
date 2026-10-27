@@ -3,6 +3,12 @@ from AppCore.core.rules.rules import ModelInstanceRules
 
 class CargoRules(ModelInstanceRules):
 
+    def validar_dados_importacao(self, nome) -> bool:
+        """Valida campos obrigatórios na importação de cargo."""
+        if not (nome or '').strip():
+            self.return_exception('O nome do cargo é obrigatório.')
+        return True
+
     def nome_unico(self, nome: str, excluir_id=None) -> bool:
         """Valida que o nome do cargo não está em uso."""
         from .models import Cargo
