@@ -554,7 +554,7 @@ AppNome/
 
 Upload, download, remoção e URL de proxy de arquivos no bucket do projeto ficam em `AppCore.common.storage.s3`. O descritor `AnexoS3` (`AppCore.common.storage.anexo`) agrupa prefixo, nome da rota e path de fallback; cada app declara instâncias (e política de imagem, se houver) em `constantes.py`, com docstring acima de cada constante. Apps de domínio **não** devem copiar helpers S3. Importe o módulo concreto (`from AppCore.common.storage.anexo import AnexoS3`); **não** reexporte pelo `__init__.py` do pacote. Processamento genérico de imagem (abrir, recorte central por proporção, reencode JPEG) fica em `AppCore.common.storage.imagens`.
 
-O cliente S3 (`obter_cliente_s3`) é o ponto único de configuração (`AWS_S3_ENDPOINT_URL`, `AWS_STORAGE_BUCKET_NAME`, chaves). Fluxos específicos (ex.: planilha de importação) podem continuar no app, mas reutilizam esse cliente.
+O cliente S3 (`obter_cliente_s3`) é o ponto único de configuração (`AWS_S3_ENDPOINT_URL`, `AWS_STORAGE_BUCKET_NAME`, `AWS_S3_REGION_NAME` / `AWS_REGION`, chaves). No Tigris a região é `auto`; checksums do boto3 ficam em `when_required` para o GetObject do proxy não falhar. Fluxos específicos (ex.: planilha de importação) podem continuar no app, mas reutilizam esse cliente.
 
 
 ### Localização
