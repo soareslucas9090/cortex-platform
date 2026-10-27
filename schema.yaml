@@ -450,6 +450,11 @@ paths:
         schema:
           type: integer
         description: Tamanho da página (1–100, padrão 10).
+      - in: query
+        name: setor_id
+        schema:
+          type: integer
+        description: Filtra pelos cursos associados ao setor informado.
       tags:
       - Cursos
       security:
@@ -475,8 +480,9 @@ paths:
           description: ''
     post:
       operationId: academico_cursos_create
-      description: "\n    Cria um novo curso.\n\n    **Permissões:** Qualquer usuário
-        autenticado (catálogo de referência). Escrita apenas L3 (EDITAR_TUDO).\n    "
+      description: "\n    Cria um novo curso. O campo `setor_id` é obrigatório.\n\n
+        \   **Permissões:** Qualquer usuário autenticado (catálogo de referência).
+        Escrita apenas L3 (EDITAR_TUDO).\n    "
       summary: Criar curso
       tags:
       - Cursos
@@ -505,7 +511,7 @@ paths:
           content:
             application/json:
               schema:
-                description: Dados inválidos ou código de curso já em uso.
+                description: Dados inválidos, código de curso já em uso ou setor ausente.
           description: ''
         '401':
           content:
@@ -563,9 +569,9 @@ paths:
           description: ''
     patch:
       operationId: academico_cursos_partial_update
-      description: "\n    Atualiza parcialmente os dados de um curso existente.\n\n
-        \   **Permissões:** Qualquer usuário autenticado (catálogo de referência).
-        Escrita apenas L3 (EDITAR_TUDO).\n    "
+      description: "\n    Atualiza parcialmente os dados de um curso existente. Não
+        é permitido remover o setor associado.\n\n    **Permissões:** Qualquer usuário
+        autenticado (catálogo de referência). Escrita apenas L3 (EDITAR_TUDO).\n    "
       summary: Atualizar curso
       parameters:
       - in: path
@@ -599,7 +605,8 @@ paths:
           content:
             application/json:
               schema:
-                description: Dados inválidos ou código já em uso.
+                description: Dados inválidos, código já em uso ou tentativa de remover
+                  o setor.
           description: ''
         '401':
           content:
@@ -8850,9 +8857,12 @@ components:
         codigo_curso:
           type: string
           maxLength: 50
+        setor_id:
+          type: integer
       required:
       - codigo_curso
       - nome
+      - setor_id
     CriarEmpresaInstituicao:
       type: object
       properties:
@@ -9132,6 +9142,18 @@ components:
           type: string
           title: Código do Curso
           maxLength: 50
+        setor_id:
+          type: integer
+          nullable: true
+          readOnly: true
+        setor_nome:
+          type: string
+          readOnly: true
+          nullable: true
+        setor_sigla:
+          type: string
+          readOnly: true
+          nullable: true
         ativo:
           type: boolean
         created_at:
@@ -9147,6 +9169,9 @@ components:
       - created_at
       - id
       - nome
+      - setor_id
+      - setor_nome
+      - setor_sigla
       - updated_at
     DeficienciaEnum:
       enum:
@@ -9813,6 +9838,29 @@ components:
       - rota_finalizada_em
       - rota_iniciada_em
       - sem_ticket
+    ImportacaoCausaErro:
+      type: object
+      properties:
+        aba:
+          type: string
+        id_planilha:
+          nullable: true
+        numero_linha:
+          type: integer
+        rotulo:
+          type: string
+        campo:
+          type: string
+        valor:
+          nullable: true
+        codigo:
+          type: string
+        mensagem:
+          type: string
+      required:
+      - aba
+      - mensagem
+      - numero_linha
     ImportacaoErroLinha:
       type: object
       properties:
@@ -9827,6 +9875,11 @@ components:
         codigo:
           type: string
         mensagem:
+          type: string
+        grupo_id:
+          type: string
+          nullable: true
+        papel:
           type: string
       required:
       - aba
@@ -9853,6 +9906,55 @@ components:
       - aba
       - campo
       - codigo
+      - mensagem
+      - numero_linha
+    ImportacaoGrupoErro:
+      type: object
+      properties:
+        id:
+          type: string
+        tipo:
+          type: string
+        titulo:
+          type: string
+        causa:
+          allOf:
+          - $ref: '#/components/schemas/ImportacaoCausaErro'
+          nullable: true
+        total_impactos:
+          type: integer
+        impactos_por_aba:
+          type: object
+          additionalProperties:
+            type: integer
+        impactos:
+          type: array
+          items:
+            $ref: '#/components/schemas/ImportacaoImpactoErro'
+      required:
+      - id
+      - impactos
+      - tipo
+      - titulo
+      - total_impactos
+    ImportacaoImpactoErro:
+      type: object
+      properties:
+        aba:
+          type: string
+        numero_linha:
+          type: integer
+        campo:
+          type: string
+        valor:
+          nullable: true
+        codigo:
+          type: string
+        mensagem:
+          type: string
+      required:
+      - aba
+      - campo
       - mensagem
       - numero_linha
     ImportacaoInfraestruturaPreviewResponse:
@@ -9889,6 +9991,10 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/ImportacaoErroLinha'
+        grupos_erro:
+          type: array
+          items:
+            $ref: '#/components/schemas/ImportacaoGrupoErro'
         metadados:
           type: object
           additionalProperties: {}
@@ -10885,6 +10991,8 @@ components:
         codigo_curso:
           type: string
           maxLength: 50
+        setor_id:
+          type: integer
     PatchedAtualizarEmpresaInstituicao:
       type: object
       properties:
@@ -11565,6 +11673,8 @@ components:
           type: integer
         total_linhas_com_erro:
           type: integer
+        total_grupos_erro:
+          type: integer
         usuarios_criados:
           type: integer
         usuarios_atualizados:
@@ -11583,18 +11693,36 @@ components:
           type: integer
         terceirizados_criados:
           type: integer
+        setores_criados:
+          type: integer
+        funcoes_criadas:
+          type: integer
+        cargos_criados:
+          type: integer
+        empresas_criadas:
+          type: integer
+        cursos_criados:
+          type: integer
+        cursos_atualizados:
+          type: integer
         vinculos_aluno_curso_criados:
           type: integer
         lotacoes_criadas:
           type: integer
       required:
       - alunos_criados
+      - cargos_criados
       - contatos_atualizados
       - contatos_criados
+      - cursos_atualizados
+      - cursos_criados
+      - empresas_criadas
       - enderecos_atualizados
       - enderecos_criados
+      - funcoes_criadas
       - lotacoes_criadas
       - servidores_criados
+      - setores_criados
       - terceirizados_criados
       - total_abas_processadas
       - total_linhas_com_erro

@@ -20,6 +20,7 @@ from AppCore.basics.views.basic_views import (
     BasicDeleteAPIView,
 )
 
+from .importacao.importacao_erros import serializar_resultado_importacao
 from .models import Usuario
 from .serializers import (
     AdicionarItemColetivoSerializer,
@@ -832,9 +833,8 @@ class PreVisualizarImportacaoUsuariosView(IsAdminMixin, BasicPostAPIView):
             'dados': {
                 'sucesso': resultado.sucesso,
                 'mensagem': resultado.mensagem,
-                'resumo': resultado.resumo.__dict__,
-                'erros': [erro.__dict__ for erro in resultado.erros],
                 'metadados': resultado.metadados,
+                **serializar_resultado_importacao(resultado),
             },
             'status_code': status.HTTP_200_OK,
         }

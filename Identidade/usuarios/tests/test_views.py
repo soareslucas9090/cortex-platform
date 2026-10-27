@@ -613,6 +613,33 @@ class ImportacaoUsuariosParserTests(TestCase):
         self.assertEqual(resultado.enderecos[0].cep, '')
 
     @patch('Identidade.usuarios.importacao.importacao_parser.get_data')
+    def test_deve_fazer_parse_da_aba_curso_com_setor(self, mock_get_data):
+        parser = ImportacaoUsuariosParser()
+        arquivo = SimpleUploadedFile(
+            'modelo-importacao-usuarios.ods',
+            b'fake-content',
+            content_type='application/vnd.oasis.opendocument.spreadsheet',
+        )
+        mock_get_data.return_value = {
+            'Usuario': [
+                ['usuario_id(int, PK)', 'cpf(String)', 'nome(String)', 'foto(String)', 'ativo(boolean)', 'ultimo_login(Date)', 'colaborador_externo(boolean)'],
+                [1, '12345678901', 'Usuário Teste', '', True, None, False],
+            ],
+            'Curso': [
+                ['curso_id(int, PK)', 'setor_id(int, FK)', 'nome(String)', 'codigo_curso(String)', 'ativo(boolean)', 'modalidade(string)'],
+                [10, 3, 'TADS', '14TADS', True, 'presencial'],
+            ],
+        }
+
+        resultado = parser.parse(arquivo)
+
+        self.assertEqual(len(resultado.cursos), 1)
+        self.assertEqual(resultado.cursos[0].curso_id_planilha, 10)
+        self.assertEqual(resultado.cursos[0].setor_id_planilha, 3)
+        self.assertEqual(resultado.cursos[0].codigo_curso, '14TADS')
+        self.assertEqual(resultado.referencias.mapa_curso_id_para_codigo[10], '14TADS')
+
+    @patch('Identidade.usuarios.importacao.importacao_parser.get_data')
     def test_deve_rejeitar_colunas_obrigatorias_ausentes(self, mock_get_data):
         parser = ImportacaoUsuariosParser()
         arquivo = SimpleUploadedFile(
@@ -666,6 +693,37 @@ class ImportacaoUsuariosBusinessPreviewTests(TestCase):
         self.assertFalse(resultado.sucesso)
         self.assertEqual(len(resultado.erros), 1)
         self.assertEqual(resultado.erros[0].aba, '__arquivo__')
+
+    @patch('Identidade.usuarios.business.ImportacaoUsuariosParser.parse')
+    def test_preview_deve_reportar_curso_sem_setor(self, mock_parse):
+        from Identidade.usuarios.importacao.importacao_dtos import LinhaCursoImportacaoDTO
+
+        estrutura = ArquivoImportacaoUsuariosDTO(
+            usuarios=[
+                LinhaUsuarioImportacaoDTO(
+                    numero_linha=2,
+                    usuario_id_planilha=1,
+                    cpf='12345678901',
+                    nome='Usuário Preview',
+                )
+            ],
+            cursos=[
+                LinhaCursoImportacaoDTO(
+                    numero_linha=2,
+                    curso_id_planilha=10,
+                    setor_id_planilha=None,
+                    nome='Curso Sem Setor',
+                    codigo_curso='PREV-01',
+                )
+            ],
+        )
+        mock_parse.return_value = estrutura
+
+        resultado = Usuario().business.pre_visualizar_importacao(arquivo=BytesIO(b'test'))
+
+        self.assertFalse(resultado.sucesso)
+        self.assertEqual(resultado.erros[0].aba, 'Curso')
+        self.assertEqual(resultado.erros[0].campo, 'setor_id')
 
     @patch('Identidade.usuarios.business.ImportacaoUsuariosParser.parse')
     def test_preview_deve_relancar_erro_de_colunas_ausentes(self, mock_parse):
@@ -1148,6 +1206,144 @@ class ImportacaoUsuariosBusinessImportacaoTests(TestCase):
         self.assertTrue(resultado.sucesso)
         self.assertEqual(resultado.resumo.usuarios_criados, 1)
         self.assertEqual(self.User.objects.filter(cpf='00000000123').count(), 1)
+
+    @patch('Identidade.usuarios.business.ImportacaoUsuariosParser.parse')
+    def test_deve_importar_curso_com_setor(self, mock_parse):
+        from Academico.cursos.models import Curso
+        from Identidade.usuarios.importacao.importacao_dtos import (
+            LinhaCursoImportacaoDTO,
+            ReferenciasImportacaoDTO,
+        )
+        from Organizacional.setores.models import Setor
+
+        setor = Setor.objects.create(sigla='CURIMP', nome='Setor Importação Curso')
+        estrutura = ArquivoImportacaoUsuariosDTO(
+            referencias=ReferenciasImportacaoDTO(
+                mapa_setor_id_para_sigla={1: 'CURIMP'},
+                mapa_curso_id_para_codigo={10: 'IMP-01'},
+            ),
+            usuarios=[
+                LinhaUsuarioImportacaoDTO(
+                    numero_linha=2,
+                    usuario_id_planilha=1,
+                    cpf='12345678901',
+                    nome='Usuario Curso Importado',
+                    ativo=True,
+                )
+            ],
+            cursos=[
+                LinhaCursoImportacaoDTO(
+                    numero_linha=2,
+                    curso_id_planilha=10,
+                    setor_id_planilha=1,
+                    nome='Curso Importado',
+                    codigo_curso='IMP-01',
+                    ativo=True,
+                )
+            ],
+        )
+        mock_parse.return_value = estrutura
+
+        resultado = Usuario().business.importar_usuarios_em_lote(
+            importacao_lote=self._criar_importacao_lote(),
+        )
+
+        self.assertTrue(resultado.sucesso, resultado.erros)
+        self.assertEqual(resultado.resumo.cursos_criados, 1)
+        curso = Curso.objects.get(codigo_curso='IMP-01')
+        self.assertEqual(curso.setor_id, setor.pk)
+        self.assertEqual(curso.nome, 'Curso Importado')
+
+    @patch('Identidade.usuarios.business.ImportacaoUsuariosParser.parse')
+    def test_deve_atualizar_setor_do_curso_existente(self, mock_parse):
+        from Academico.cursos.models import Curso
+        from Identidade.usuarios.importacao.importacao_dtos import (
+            LinhaCursoImportacaoDTO,
+            ReferenciasImportacaoDTO,
+        )
+        from Organizacional.setores.models import Setor
+
+        setor = Setor.objects.create(sigla='CURUPD', nome='Setor Atualiza Curso')
+        Curso.objects.create(nome='Curso Antigo', codigo_curso='IMP-02')
+        estrutura = ArquivoImportacaoUsuariosDTO(
+            referencias=ReferenciasImportacaoDTO(
+                mapa_setor_id_para_sigla={1: 'CURUPD'},
+                mapa_curso_id_para_codigo={10: 'IMP-02'},
+            ),
+            usuarios=[
+                LinhaUsuarioImportacaoDTO(
+                    numero_linha=2,
+                    usuario_id_planilha=1,
+                    cpf='12345678901',
+                    nome='Usuario Atualiza Curso',
+                    ativo=True,
+                )
+            ],
+            cursos=[
+                LinhaCursoImportacaoDTO(
+                    numero_linha=2,
+                    curso_id_planilha=10,
+                    setor_id_planilha=1,
+                    nome='Curso Atualizado',
+                    codigo_curso='IMP-02',
+                    ativo=True,
+                )
+            ],
+        )
+        mock_parse.return_value = estrutura
+
+        resultado = Usuario().business.importar_usuarios_em_lote(
+            importacao_lote=self._criar_importacao_lote(),
+        )
+
+        self.assertTrue(resultado.sucesso, resultado.erros)
+        self.assertEqual(resultado.resumo.cursos_atualizados, 1)
+        curso = Curso.objects.get(codigo_curso='IMP-02')
+        self.assertEqual(curso.setor_id, setor.pk)
+        self.assertEqual(curso.nome, 'Curso Atualizado')
+
+    @patch('Identidade.usuarios.business.ImportacaoUsuariosParser.parse')
+    def test_deve_rejeitar_curso_sem_setor_na_importacao(self, mock_parse):
+        from Identidade.usuarios.importacao.importacao_dtos import (
+            LinhaCursoImportacaoDTO,
+            ReferenciasImportacaoDTO,
+        )
+
+        estrutura = ArquivoImportacaoUsuariosDTO(
+            referencias=ReferenciasImportacaoDTO(
+                mapa_curso_id_para_codigo={10: 'IMP-03'},
+            ),
+            usuarios=[
+                LinhaUsuarioImportacaoDTO(
+                    numero_linha=2,
+                    usuario_id_planilha=1,
+                    cpf='12345678901',
+                    nome='Usuario Curso Sem Setor',
+                    ativo=True,
+                )
+            ],
+            cursos=[
+                LinhaCursoImportacaoDTO(
+                    numero_linha=2,
+                    curso_id_planilha=10,
+                    setor_id_planilha=None,
+                    nome='Curso Sem Setor',
+                    codigo_curso='IMP-03',
+                    ativo=True,
+                )
+            ],
+        )
+        mock_parse.return_value = estrutura
+
+        resultado = Usuario().business.importar_usuarios_em_lote(
+            importacao_lote=self._criar_importacao_lote(),
+        )
+
+        self.assertFalse(resultado.sucesso)
+        self.assertTrue(
+            any(erro.aba == 'Curso' and erro.campo == 'setor_id' for erro in resultado.erros),
+            resultado.erros,
+        )
 
 
 

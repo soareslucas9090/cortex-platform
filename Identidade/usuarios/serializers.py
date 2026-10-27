@@ -399,12 +399,48 @@ class ImportacaoErroLinhaSerializer(serializers.Serializer):
     valor = serializers.JSONField(required=False, allow_null=True)
     codigo = serializers.CharField()
     mensagem = serializers.CharField()
+    grupo_id = serializers.CharField(required=False, allow_null=True)
+    papel = serializers.CharField(required=False)
+
+
+class ImportacaoCausaErroSerializer(serializers.Serializer):
+    aba = serializers.CharField()
+    id_planilha = serializers.JSONField(required=False, allow_null=True)
+    numero_linha = serializers.IntegerField()
+    rotulo = serializers.CharField(required=False, allow_blank=True)
+    campo = serializers.CharField(required=False, allow_blank=True)
+    valor = serializers.JSONField(required=False, allow_null=True)
+    codigo = serializers.CharField(required=False, allow_blank=True)
+    mensagem = serializers.CharField()
+
+
+class ImportacaoImpactoErroSerializer(serializers.Serializer):
+    aba = serializers.CharField()
+    numero_linha = serializers.IntegerField()
+    campo = serializers.CharField()
+    valor = serializers.JSONField(required=False, allow_null=True)
+    codigo = serializers.CharField(required=False, allow_blank=True)
+    mensagem = serializers.CharField()
+
+
+class ImportacaoGrupoErroSerializer(serializers.Serializer):
+    id = serializers.CharField()
+    tipo = serializers.CharField()
+    titulo = serializers.CharField()
+    causa = ImportacaoCausaErroSerializer(required=False, allow_null=True)
+    total_impactos = serializers.IntegerField()
+    impactos_por_aba = serializers.DictField(
+        child=serializers.IntegerField(),
+        required=False,
+    )
+    impactos = ImportacaoImpactoErroSerializer(many=True)
 
 
 class ResumoImportacaoSerializer(serializers.Serializer):
     total_abas_processadas = serializers.IntegerField()
     total_linhas_processadas = serializers.IntegerField()
     total_linhas_com_erro = serializers.IntegerField()
+    total_grupos_erro = serializers.IntegerField(required=False)
     usuarios_criados = serializers.IntegerField()
     usuarios_atualizados = serializers.IntegerField()
     contatos_criados = serializers.IntegerField()
@@ -414,6 +450,12 @@ class ResumoImportacaoSerializer(serializers.Serializer):
     alunos_criados = serializers.IntegerField()
     servidores_criados = serializers.IntegerField()
     terceirizados_criados = serializers.IntegerField()
+    setores_criados = serializers.IntegerField()
+    funcoes_criadas = serializers.IntegerField()
+    cargos_criados = serializers.IntegerField()
+    empresas_criadas = serializers.IntegerField()
+    cursos_criados = serializers.IntegerField()
+    cursos_atualizados = serializers.IntegerField()
     vinculos_aluno_curso_criados = serializers.IntegerField()
     lotacoes_criadas = serializers.IntegerField()
 
@@ -423,6 +465,7 @@ class ImportacaoUsuariosPreviewResponseSerializer(serializers.Serializer):
     mensagem = serializers.CharField()
     resumo = ResumoImportacaoSerializer()
     erros = ImportacaoErroLinhaSerializer(many=True)
+    grupos_erro = ImportacaoGrupoErroSerializer(many=True, required=False)
     metadados = serializers.DictField(required=False)
 
 
@@ -431,6 +474,7 @@ class ImportacaoUsuariosResponseSerializer(serializers.Serializer):
     mensagem = serializers.CharField()
     resumo = ResumoImportacaoSerializer()
     erros = ImportacaoErroLinhaSerializer(many=True)
+    grupos_erro = ImportacaoGrupoErroSerializer(many=True, required=False)
     metadados = serializers.DictField(required=False)
 
 
@@ -458,12 +502,6 @@ class StatusImportacaoLoteSerializer(serializers.ModelSerializer):
 
     @extend_schema_field(serializers.JSONField(allow_null=True))
     def get_resultado_json(self, obj):
-        res = obj.resultado_json
-        if res and isinstance(res, dict) and 'erros' in res:
-            max_erros = 50
-            if isinstance(res['erros'], list) and len(res['erros']) > max_erros:
-                res = dict(res)
-                total_erros = len(res['erros'])
-                res['erros'] = res['erros'][:max_erros]
-                res['mensagem_aviso'] = f"Foram omitidos {total_erros - max_erros} erros devido ao tamanho da resposta. Apenas os primeiros {max_erros} estão sendo exibidos."
-        return res
+        from .importacao.importacao_erros import truncar_resultado_json
+
+        return truncar_resultado_json(obj.resultado_json)

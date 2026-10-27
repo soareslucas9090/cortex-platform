@@ -46,6 +46,16 @@ class LinhaAlunoImportacaoDTO:
 
 
 @dataclass
+class LinhaCursoImportacaoDTO:
+    numero_linha: int
+    curso_id_planilha: int
+    setor_id_planilha: int
+    nome: str
+    codigo_curso: str
+    ativo: bool = True
+
+
+@dataclass
 class LinhaAlunoCursoImportacaoDTO:
     numero_linha: int
     aluno_id_planilha: int
@@ -80,6 +90,42 @@ class LinhaTerceirizadoImportacaoDTO:
 
 
 @dataclass
+class LinhaSetorReferenciaImportacaoDTO:
+    numero_linha: int
+    setor_id_planilha: int
+    nome: str
+    sigla: str
+    ativo: bool = True
+
+
+@dataclass
+class LinhaFuncaoReferenciaImportacaoDTO:
+    numero_linha: int
+    funcao_id_planilha: str
+    papel_funcao: str
+    descricao: str = ''
+    categoria: str = ''
+    ativo: bool = True
+
+
+@dataclass
+class LinhaCargoReferenciaImportacaoDTO:
+    numero_linha: int
+    cargo_id_planilha: int
+    nome: str
+    ativo: bool = True
+
+
+@dataclass
+class LinhaEmpresaReferenciaImportacaoDTO:
+    numero_linha: int
+    empresa_instituicao_id_planilha: int
+    nome: str
+    cnpj: str = ''
+    ativo: bool = True
+
+
+@dataclass
 class ReferenciasImportacaoDTO:
     mapa_setor_id_para_sigla: dict[int, str] = field(default_factory=dict)
     mapa_funcao_id_para_papel: dict[str, str] = field(default_factory=dict)
@@ -106,6 +152,41 @@ class ErroImportacaoDTO:
     valor: Any
     codigo: str
     mensagem: str
+    grupo_id: str | None = None
+    papel: str = 'causa'
+
+
+@dataclass
+class CausaErroImportacaoDTO:
+    aba: str
+    id_planilha: Any = None
+    numero_linha: int = 0
+    rotulo: str = ''
+    campo: str = ''
+    valor: Any = None
+    codigo: str = ''
+    mensagem: str = ''
+
+
+@dataclass
+class ImpactoErroImportacaoDTO:
+    aba: str
+    numero_linha: int
+    campo: str
+    valor: Any = None
+    codigo: str = ''
+    mensagem: str = ''
+
+
+@dataclass
+class GrupoErroImportacaoDTO:
+    id: str
+    tipo: str
+    titulo: str
+    causa: CausaErroImportacaoDTO | None = None
+    total_impactos: int = 0
+    impactos_por_aba: dict[str, int] = field(default_factory=dict)
+    impactos: list[ImpactoErroImportacaoDTO] = field(default_factory=list)
 
 
 @dataclass
@@ -113,6 +194,7 @@ class ResumoImportacaoDTO:
     total_abas_processadas: int = 0
     total_linhas_processadas: int = 0
     total_linhas_com_erro: int = 0
+    total_grupos_erro: int = 0
     usuarios_criados: int = 0
     usuarios_atualizados: int = 0
     contatos_criados: int = 0
@@ -122,6 +204,12 @@ class ResumoImportacaoDTO:
     alunos_criados: int = 0
     servidores_criados: int = 0
     terceirizados_criados: int = 0
+    setores_criados: int = 0
+    funcoes_criadas: int = 0
+    cargos_criados: int = 0
+    empresas_criadas: int = 0
+    cursos_criados: int = 0
+    cursos_atualizados: int = 0
     vinculos_aluno_curso_criados: int = 0
     lotacoes_criadas: int = 0
 
@@ -132,16 +220,22 @@ class ResultadoImportacaoDTO:
     mensagem: str
     resumo: ResumoImportacaoDTO = field(default_factory=ResumoImportacaoDTO)
     erros: list[ErroImportacaoDTO] = field(default_factory=list)
+    grupos_erro: list[GrupoErroImportacaoDTO] = field(default_factory=list)
     metadados: dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass
 class ArquivoImportacaoUsuariosDTO:
     referencias: ReferenciasImportacaoDTO = field(default_factory=ReferenciasImportacaoDTO)
+    setores: list[LinhaSetorReferenciaImportacaoDTO] = field(default_factory=list)
+    funcoes: list[LinhaFuncaoReferenciaImportacaoDTO] = field(default_factory=list)
+    cargos: list[LinhaCargoReferenciaImportacaoDTO] = field(default_factory=list)
+    empresas: list[LinhaEmpresaReferenciaImportacaoDTO] = field(default_factory=list)
     usuarios: list[LinhaUsuarioImportacaoDTO] = field(default_factory=list)
     contatos: list[LinhaContatoImportacaoDTO] = field(default_factory=list)
     enderecos: list[LinhaEnderecoImportacaoDTO] = field(default_factory=list)
     alunos: list[LinhaAlunoImportacaoDTO] = field(default_factory=list)
+    cursos: list[LinhaCursoImportacaoDTO] = field(default_factory=list)
     alunos_cursos: list[LinhaAlunoCursoImportacaoDTO] = field(default_factory=list)
     servidores: list[LinhaServidorImportacaoDTO] = field(default_factory=list)
     terceirizados: list[LinhaTerceirizadoImportacaoDTO] = field(default_factory=list)

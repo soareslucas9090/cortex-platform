@@ -16,8 +16,23 @@ from AppCore.common.util.util import normalizar_cpf, normalizar_cep, validar_sen
 from Identidade.usuarios.importacao.importacao_exceptions import ImportacaoUsuariosException
 from Identidade.usuarios.importacao.importacao_parser import ImportacaoUsuariosParser
 from Identidade.usuarios.importacao.importacao_resolucao import ImportacaoReferenciasResolver
+from Identidade.usuarios.importacao.importacao_erros import ColetorErrosImportacao
+from Identidade.usuarios.importacao.importacao_constants import (
+    ABA_ALUNO,
+    ABA_ALUNO_CURSO,
+    ABA_CARGO,
+    ABA_CONTATO,
+    ABA_CURSO,
+    ABA_EMPRESA_INSTITUICAO,
+    ABA_ENDERECO,
+    ABA_FUNCAO,
+    ABA_SERVIDOR,
+    ABA_SETOR,
+    ABA_SETOR_LOTACAO,
+    ABA_TERCEIRIZADO,
+    ABA_USUARIO,
+)
 from Identidade.usuarios.importacao.importacao_dtos import (
-    ErroImportacaoDTO,
     ResumoImportacaoDTO,
     ResultadoImportacaoDTO,
 )
@@ -425,30 +440,38 @@ class UsuarioBusiness(ModelInstanceBusiness):
             parser = ImportacaoUsuariosParser()
             estrutura = parser.parse(arquivo)
             resumo = ResumoImportacaoDTO()
-            erros = []
+            coletor = ColetorErrosImportacao(estrutura)
             resumo.total_abas_processadas = self._contar_abas_processadas(estrutura)
             resumo.total_linhas_processadas = self._contar_linhas_processadas(estrutura)
             try:
                 self._validar_estrutura_importacao(estrutura)
             except Exception as exc:
-                erros.append(
-                    ErroImportacaoDTO(
-                        aba='__arquivo__',
-                        numero_linha=0,
-                        campo='arquivo',
-                        valor=None,
-                        codigo='estrutura_invalida',
-                        mensagem=str(exc),
-                    )
+                coletor.registrar_falha_linha(
+                    aba='__arquivo__',
+                    numero_linha=0,
+                    campo='arquivo',
+                    valor=None,
+                    codigo='estrutura_invalida',
+                    mensagem=str(exc),
                 )
-            return ResultadoImportacaoDTO(
-                sucesso=len(erros) == 0,
-                mensagem='Pré-visualização concluída.' if not erros else 'Pré-visualização concluída com pendências.',
-                resumo=resumo,
-                erros=erros,
-                metadados={
-                    'modo': 'preview',
-                }
+            for linha in estrutura.cursos:
+                if not linha.setor_id_planilha:
+                    coletor.registrar_falha_linha(
+                        aba=ABA_CURSO,
+                        numero_linha=linha.numero_linha,
+                        campo='setor_id',
+                        valor=linha.setor_id_planilha,
+                        codigo='erro_curso',
+                        mensagem='O curso deve possuir um setor associado.',
+                        id_planilha=linha.curso_id_planilha,
+                    )
+            return self._montar_resultado_importacao(
+                resumo,
+                coletor,
+                estrutura,
+                modo='preview',
+                mensagem_ok='Pré-visualização concluída.',
+                mensagem_parcial='Pré-visualização concluída com pendências.',
             )
         except Exception as e:
             self.relancar_ou_erro_sistema(e, 'Não foi possível executar pre_visualizar_importacao.', logger)
@@ -459,7 +482,7 @@ class UsuarioBusiness(ModelInstanceBusiness):
             estrutura = parser.parse(importacao_lote.arquivo)
             self._validar_estrutura_importacao(estrutura)
             resumo = ResumoImportacaoDTO()
-            erros = []
+            coletor = ColetorErrosImportacao(estrutura)
             mapa_usuarios = {}
             mapa_alunos = {}
             resolver_referencias = ImportacaoReferenciasResolver(estrutura.referencias)
@@ -483,6 +506,13 @@ class UsuarioBusiness(ModelInstanceBusiness):
                     or importacao_lote.linhas_processadas == importacao_lote.total_linhas
                 ):
                     importacao_lote.save(update_fields=['linhas_processadas'])
+            self._importar_referencias_da_planilha(
+                estrutura,
+                resolver_referencias,
+                resumo,
+                coletor,
+                _incrementar_progresso,
+            )
             mapa_matriculas = self._construir_mapa_matriculas_por_usuario(estrutura)
             from .models import Usuario
             cpfs_planilha = []
@@ -527,15 +557,14 @@ class UsuarioBusiness(ModelInstanceBusiness):
                         else:
                             resumo.usuarios_atualizados += 1
                 except Exception as exc:
-                    erros.append(
-                        self._criar_erro(
-                            aba='Usuario',
-                            numero_linha=linha.numero_linha,
-                            campo='cpf',
-                            valor=linha.cpf,
-                            codigo='erro_usuario',
-                            mensagem=str(exc),
-                        )
+                    coletor.registrar_falha_linha(
+                        aba=ABA_USUARIO,
+                        numero_linha=linha.numero_linha,
+                        campo='cpf',
+                        valor=linha.cpf,
+                        codigo='erro_usuario',
+                        mensagem=str(exc),
+                        id_planilha=linha.usuario_id_planilha,
                     )
             usuarios_ids = [u.id for u in mapa_usuarios.values() if u.id]
             from Identidade.contatos.models import Contato
@@ -544,8 +573,20 @@ class UsuarioBusiness(ModelInstanceBusiness):
             for linha in estrutura.contatos:
                 _incrementar_progresso()
                 try:
+                    if coletor.registrar_se_pais_falharam(ABA_CONTATO, linha, 'erro_contato'):
+                        continue
                     usuario = self.object_instance.helper.obter_usuario_por_id_planilha(linha.usuario_id_planilha, mapa_usuarios)
-                    self.object_instance.rules.usuario_referenciado_existe(usuario, 'contato')
+                    if usuario is None:
+                        coletor.registrar_referencia_inexistente(
+                            aba=ABA_CONTATO,
+                            numero_linha=linha.numero_linha,
+                            campo='usuario_id',
+                            valor=linha.usuario_id_planilha,
+                            codigo='erro_contato',
+                            aba_referencia=ABA_USUARIO,
+                            id_referencia=linha.usuario_id_planilha,
+                        )
+                        continue
 
                     contato = contatos_existentes.get(usuario.id)
                     if contato:
@@ -568,12 +609,19 @@ class UsuarioBusiness(ModelInstanceBusiness):
                         novo_contato._linha = linha
                         contatos_to_create[usuario.id] = novo_contato
                 except Exception as exc:
-                    erros.append(self._criar_erro('Contato', linha.numero_linha, 'usuario_id', linha.usuario_id_planilha, 'erro_contato', str(exc)))
+                    coletor.registrar_falha_linha(
+                        aba=ABA_CONTATO,
+                        numero_linha=linha.numero_linha,
+                        campo='usuario_id',
+                        valor=linha.usuario_id_planilha,
+                        codigo='erro_contato',
+                        mensagem=str(exc),
+                    )
             resumo.contatos_atualizados += len(contatos_to_update)
             resumo.contatos_criados += len(contatos_to_create)
             self._executar_bulk_com_fallback(
                 Contato, list(contatos_to_update.values()), list(contatos_to_create.values()), ['email_academico', 'email_pessoal', 'telefone'],
-                resumo, 'contatos_atualizados', 'contatos_criados', erros, 'Contato', 'usuario_id'
+                resumo, 'contatos_atualizados', 'contatos_criados', coletor, ABA_CONTATO, 'usuario_id'
             )
             from Identidade.enderecos.models import Endereco
             enderecos_existentes = {e.usuario_id: e for e in Endereco.objects.filter(usuario_id__in=usuarios_ids)}
@@ -581,8 +629,20 @@ class UsuarioBusiness(ModelInstanceBusiness):
             for linha in estrutura.enderecos:
                 _incrementar_progresso()
                 try:
+                    if coletor.registrar_se_pais_falharam(ABA_ENDERECO, linha, 'erro_endereco'):
+                        continue
                     usuario = self.object_instance.helper.obter_usuario_por_id_planilha(linha.usuario_id_planilha, mapa_usuarios)
-                    self.object_instance.rules.usuario_referenciado_existe(usuario, 'endereço')
+                    if usuario is None:
+                        coletor.registrar_referencia_inexistente(
+                            aba=ABA_ENDERECO,
+                            numero_linha=linha.numero_linha,
+                            campo='usuario_id',
+                            valor=linha.usuario_id_planilha,
+                            codigo='erro_endereco',
+                            aba_referencia=ABA_USUARIO,
+                            id_referencia=linha.usuario_id_planilha,
+                        )
+                        continue
 
                     endereco = enderecos_existentes.get(usuario.id)
                     cep_normalizado = normalizar_cep(linha.cep)
@@ -615,159 +675,314 @@ class UsuarioBusiness(ModelInstanceBusiness):
                         novo_endereco._linha = linha
                         enderecos_to_create[usuario.id] = novo_endereco
                 except Exception as exc:
-                    erros.append(self._criar_erro('Endereco', linha.numero_linha, 'usuario_id', linha.usuario_id_planilha, 'erro_endereco', str(exc)))
+                    coletor.registrar_falha_linha(
+                        aba=ABA_ENDERECO,
+                        numero_linha=linha.numero_linha,
+                        campo='usuario_id',
+                        valor=linha.usuario_id_planilha,
+                        codigo='erro_endereco',
+                        mensagem=str(exc),
+                    )
             resumo.enderecos_atualizados += len(enderecos_to_update)
             resumo.enderecos_criados += len(enderecos_to_create)
             self._executar_bulk_com_fallback(
                 Endereco, list(enderecos_to_update.values()), list(enderecos_to_create.values()),
                 ['logradouro', 'bairro', 'cep', 'complemento', 'numero', 'cidade', 'estado'],
-                resumo, 'enderecos_atualizados', 'enderecos_criados', erros, 'Endereco', 'usuario_id'
+                resumo, 'enderecos_atualizados', 'enderecos_criados', coletor, ABA_ENDERECO, 'usuario_id'
             )
             for linha in estrutura.alunos:
                 _incrementar_progresso()
                 try:
+                    if coletor.registrar_se_pais_falharam(ABA_ALUNO, linha, 'erro_aluno'):
+                        continue
                     with transaction.atomic():
                         usuario = self.object_instance.helper.obter_usuario_por_id_planilha(linha.usuario_id_planilha, mapa_usuarios)
-                        self.object_instance.rules.usuario_referenciado_existe(usuario, 'aluno')
+                        if usuario is None:
+                            coletor.registrar_referencia_inexistente(
+                                aba=ABA_ALUNO,
+                                numero_linha=linha.numero_linha,
+                                campo='usuario_id',
+                                valor=linha.usuario_id_planilha,
+                                codigo='erro_aluno',
+                                aba_referencia=ABA_USUARIO,
+                                id_referencia=linha.usuario_id_planilha,
+                                id_planilha=linha.aluno_id_planilha,
+                            )
+                            continue
                         aluno, criado = self._garantir_aluno(usuario, linha)
                         mapa_alunos[linha.aluno_id_planilha] = aluno
                         if criado:
                             resumo.alunos_criados += 1
                 except Exception as exc:
-                    erros.append(
-                        self._criar_erro(
-                            aba='Aluno',
-                            numero_linha=linha.numero_linha,
-                            campo='usuario_id',
-                            valor=linha.usuario_id_planilha,
-                            codigo='erro_aluno',
-                            mensagem=str(exc),
-                        )
+                    coletor.registrar_falha_linha(
+                        aba=ABA_ALUNO,
+                        numero_linha=linha.numero_linha,
+                        campo='usuario_id',
+                        valor=linha.usuario_id_planilha,
+                        codigo='erro_aluno',
+                        mensagem=str(exc),
+                        id_planilha=linha.aluno_id_planilha,
                     )
             for linha in estrutura.servidores:
                 _incrementar_progresso()
                 try:
+                    if coletor.registrar_se_pais_falharam(ABA_SERVIDOR, linha, 'erro_servidor'):
+                        continue
                     with transaction.atomic():
                         usuario = self.object_instance.helper.obter_usuario_por_id_planilha(linha.usuario_id_planilha, mapa_usuarios)
-                        self.object_instance.rules.usuario_referenciado_existe(usuario, 'servidor')
+                        if usuario is None:
+                            coletor.registrar_referencia_inexistente(
+                                aba=ABA_SERVIDOR,
+                                numero_linha=linha.numero_linha,
+                                campo='usuario_id',
+                                valor=linha.usuario_id_planilha,
+                                codigo='erro_servidor',
+                                aba_referencia=ABA_USUARIO,
+                                id_referencia=linha.usuario_id_planilha,
+                                id_planilha=linha.servidor_id_planilha,
+                            )
+                            continue
 
                         cargo = resolver_referencias.resolver_cargo(linha.cargo_id_planilha)
-                        self.object_instance.rules.referencia_seed_existe(cargo, f'cargo_id={linha.cargo_id_planilha}')
+                        if cargo is None:
+                            coletor.registrar_referencia_inexistente(
+                                aba=ABA_SERVIDOR,
+                                numero_linha=linha.numero_linha,
+                                campo='cargo_id',
+                                valor=linha.cargo_id_planilha,
+                                codigo='erro_servidor',
+                                aba_referencia=ABA_CARGO,
+                                id_referencia=linha.cargo_id_planilha,
+                                id_planilha=linha.servidor_id_planilha,
+                            )
+                            continue
 
                         criado = self._garantir_servidor(usuario, cargo, linha, matriculas_em_lote)
                         if criado:
                             resumo.servidores_criados += 1
                 except Exception as exc:
-                    erros.append(
-                        self._criar_erro(
-                            aba='Servidor',
-                            numero_linha=linha.numero_linha,
-                            campo='cargo_id',
-                            valor=linha.cargo_id_planilha,
-                            codigo='erro_servidor',
-                            mensagem=str(exc),
-                        )
+                    coletor.registrar_falha_linha(
+                        aba=ABA_SERVIDOR,
+                        numero_linha=linha.numero_linha,
+                        campo='cargo_id',
+                        valor=linha.cargo_id_planilha,
+                        codigo='erro_servidor',
+                        mensagem=str(exc),
+                        id_planilha=linha.servidor_id_planilha,
                     )
             for linha in estrutura.terceirizados:
                 _incrementar_progresso()
                 try:
+                    if coletor.registrar_se_pais_falharam(ABA_TERCEIRIZADO, linha, 'erro_terceirizado'):
+                        continue
                     with transaction.atomic():
                         usuario = self.object_instance.helper.obter_usuario_por_id_planilha(linha.usuario_id_planilha, mapa_usuarios)
-                        self.object_instance.rules.usuario_referenciado_existe(usuario, 'terceirizado')
+                        if usuario is None:
+                            coletor.registrar_referencia_inexistente(
+                                aba=ABA_TERCEIRIZADO,
+                                numero_linha=linha.numero_linha,
+                                campo='usuario_id',
+                                valor=linha.usuario_id_planilha,
+                                codigo='erro_terceirizado',
+                                aba_referencia=ABA_USUARIO,
+                                id_referencia=linha.usuario_id_planilha,
+                                id_planilha=linha.terceirizado_id_planilha,
+                            )
+                            continue
 
                         empresa = resolver_referencias.resolver_empresa(linha.empresa_instituicao_id_planilha)
-                        self.object_instance.rules.referencia_seed_existe(
-                            empresa,
-                            f'empresa_instituicao_id={linha.empresa_instituicao_id_planilha}'
-                        )
+                        if empresa is None:
+                            coletor.registrar_referencia_inexistente(
+                                aba=ABA_TERCEIRIZADO,
+                                numero_linha=linha.numero_linha,
+                                campo='empresa_instituicao_id',
+                                valor=linha.empresa_instituicao_id_planilha,
+                                codigo='erro_terceirizado',
+                                aba_referencia=ABA_EMPRESA_INSTITUICAO,
+                                id_referencia=linha.empresa_instituicao_id_planilha,
+                                id_planilha=linha.terceirizado_id_planilha,
+                            )
+                            continue
 
                         criado = self._garantir_terceirizado(usuario, empresa, linha, matriculas_em_lote)
                         if criado:
                             resumo.terceirizados_criados += 1
                 except Exception as exc:
-                    erros.append(
-                        self._criar_erro(
-                            aba='Terceirizado',
-                            numero_linha=linha.numero_linha,
-                            campo='empresa_instituicao_id',
-                            valor=linha.empresa_instituicao_id_planilha,
-                            codigo='erro_terceirizado',
-                            mensagem=str(exc),
-                        )
+                    coletor.registrar_falha_linha(
+                        aba=ABA_TERCEIRIZADO,
+                        numero_linha=linha.numero_linha,
+                        campo='empresa_instituicao_id',
+                        valor=linha.empresa_instituicao_id_planilha,
+                        codigo='erro_terceirizado',
+                        mensagem=str(exc),
+                        id_planilha=linha.terceirizado_id_planilha,
                     )
             for linha in estrutura.setores_lotacao:
                 _incrementar_progresso()
                 campo_erro = 'usuario_id'
                 valor_erro = linha.usuario_id_planilha
                 try:
+                    if coletor.registrar_se_pais_falharam(ABA_SETOR_LOTACAO, linha, 'erro_lotacao'):
+                        continue
                     with transaction.atomic():
                         usuario = self.object_instance.helper.obter_usuario_por_id_planilha(linha.usuario_id_planilha, mapa_usuarios)
-                        self.object_instance.rules.usuario_referenciado_existe(usuario, 'lotação')
+                        if usuario is None:
+                            coletor.registrar_referencia_inexistente(
+                                aba=ABA_SETOR_LOTACAO,
+                                numero_linha=linha.numero_linha,
+                                campo='usuario_id',
+                                valor=linha.usuario_id_planilha,
+                                codigo='erro_lotacao',
+                                aba_referencia=ABA_USUARIO,
+                                id_referencia=linha.usuario_id_planilha,
+                            )
+                            continue
 
                         setor = resolver_referencias.resolver_setor(linha.setor_id_planilha)
-                        if not setor:
-                            campo_erro = 'setor_id'
-                            valor_erro = linha.setor_id_planilha
-                        self.object_instance.rules.referencia_seed_existe(setor, f'setor_id={linha.setor_id_planilha}')
+                        if setor is None:
+                            coletor.registrar_referencia_inexistente(
+                                aba=ABA_SETOR_LOTACAO,
+                                numero_linha=linha.numero_linha,
+                                campo='setor_id',
+                                valor=linha.setor_id_planilha,
+                                codigo='erro_lotacao',
+                                aba_referencia=ABA_SETOR,
+                                id_referencia=linha.setor_id_planilha,
+                            )
+                            continue
 
                         funcao = None
                         if linha.funcao_id_planilha:
                             funcao = resolver_referencias.resolver_funcao(linha.funcao_id_planilha)
-                            if not funcao:
-                                campo_erro = 'funcao_id'
-                                valor_erro = linha.funcao_id_planilha
-                            self.object_instance.rules.referencia_seed_existe(
-                                funcao,
-                                f'funcao_id={linha.funcao_id_planilha}',
-                            )
+                            if funcao is None:
+                                coletor.registrar_referencia_inexistente(
+                                    aba=ABA_SETOR_LOTACAO,
+                                    numero_linha=linha.numero_linha,
+                                    campo='funcao_id',
+                                    valor=linha.funcao_id_planilha,
+                                    codigo='erro_lotacao',
+                                    aba_referencia=ABA_FUNCAO,
+                                    id_referencia=linha.funcao_id_planilha,
+                                )
+                                continue
 
                         criado = self._garantir_lotacao(usuario, setor, funcao, linha)
                         if criado:
                             resumo.lotacoes_criadas += 1
                 except Exception as exc:
-                    erros.append(
-                        self._criar_erro(
-                            aba='Setor_Lotacao',
-                            numero_linha=linha.numero_linha,
-                            campo=campo_erro,
-                            valor=valor_erro,
-                            codigo='erro_lotacao',
-                            mensagem=str(exc),
+                    coletor.registrar_falha_linha(
+                        aba=ABA_SETOR_LOTACAO,
+                        numero_linha=linha.numero_linha,
+                        campo=campo_erro,
+                        valor=valor_erro,
+                        codigo='erro_lotacao',
+                        mensagem=str(exc),
+                    )
+            from Academico.cursos.models import Curso
+            for linha in estrutura.cursos:
+                _incrementar_progresso()
+                campo_erro = 'setor_id'
+                valor_erro = linha.setor_id_planilha
+                try:
+                    if coletor.registrar_se_pais_falharam(ABA_CURSO, linha, 'erro_curso'):
+                        continue
+                    with transaction.atomic():
+                        if not linha.codigo_curso:
+                            campo_erro = 'codigo_curso'
+                            valor_erro = linha.codigo_curso
+                            raise ValidationException('O código do curso é obrigatório.')
+
+                        if not linha.setor_id_planilha:
+                            campo_erro = 'setor_id'
+                            valor_erro = linha.setor_id_planilha
+                            raise ValidationException('O curso deve possuir um setor associado.')
+
+                        setor = resolver_referencias.resolver_setor(linha.setor_id_planilha)
+                        if setor is None:
+                            coletor.registrar_referencia_inexistente(
+                                aba=ABA_CURSO,
+                                numero_linha=linha.numero_linha,
+                                campo='setor_id',
+                                valor=linha.setor_id_planilha,
+                                codigo='erro_curso',
+                                aba_referencia=ABA_SETOR,
+                                id_referencia=linha.setor_id_planilha,
+                                id_planilha=linha.curso_id_planilha,
+                            )
+                            continue
+
+                        curso, criado = Curso().business.importar_curso(
+                            codigo_curso=linha.codigo_curso,
+                            nome=linha.nome,
+                            setor=setor,
+                            ativo=linha.ativo,
                         )
+                        resolver_referencias.registrar_curso(linha.codigo_curso, curso)
+                        if criado:
+                            resumo.cursos_criados += 1
+                        else:
+                            resumo.cursos_atualizados += 1
+                except Exception as exc:
+                    coletor.registrar_falha_linha(
+                        aba=ABA_CURSO,
+                        numero_linha=linha.numero_linha,
+                        campo=campo_erro,
+                        valor=valor_erro,
+                        codigo='erro_curso',
+                        mensagem=str(exc),
+                        id_planilha=linha.curso_id_planilha,
                     )
             for linha in estrutura.alunos_cursos:
                 _incrementar_progresso()
                 try:
+                    if coletor.registrar_se_pais_falharam(ABA_ALUNO_CURSO, linha, 'erro_aluno_curso'):
+                        continue
                     with transaction.atomic():
                         aluno = self.object_instance.helper.obter_aluno_por_id_planilha(linha.aluno_id_planilha, mapa_alunos)
-                        self.object_instance.rules.aluno_referenciado_existe(aluno)
+                        if aluno is None:
+                            coletor.registrar_referencia_inexistente(
+                                aba=ABA_ALUNO_CURSO,
+                                numero_linha=linha.numero_linha,
+                                campo='aluno_id',
+                                valor=linha.aluno_id_planilha,
+                                codigo='erro_aluno_curso',
+                                aba_referencia=ABA_ALUNO,
+                                id_referencia=linha.aluno_id_planilha,
+                            )
+                            continue
 
                         curso = resolver_referencias.resolver_curso(linha.curso_id_planilha)
-                        self.object_instance.rules.referencia_seed_existe(curso, f'curso_id={linha.curso_id_planilha}')
+                        if curso is None:
+                            coletor.registrar_referencia_inexistente(
+                                aba=ABA_ALUNO_CURSO,
+                                numero_linha=linha.numero_linha,
+                                campo='curso_id',
+                                valor=linha.curso_id_planilha,
+                                codigo='erro_aluno_curso',
+                                aba_referencia=ABA_CURSO,
+                                id_referencia=linha.curso_id_planilha,
+                            )
+                            continue
 
                         criado = self._garantir_vinculo_aluno_curso(aluno, curso, linha, matriculas_em_lote)
                         if criado:
                             resumo.vinculos_aluno_curso_criados += 1
                 except Exception as exc:
-                    erros.append(
-                        self._criar_erro(
-                            aba='Aluno_Curso',
-                            numero_linha=linha.numero_linha,
-                            campo='curso_id',
-                            valor=linha.curso_id_planilha,
-                            codigo='erro_aluno_curso',
-                            mensagem=str(exc),
-                        )
+                    coletor.registrar_falha_linha(
+                        aba=ABA_ALUNO_CURSO,
+                        numero_linha=linha.numero_linha,
+                        campo='curso_id',
+                        valor=linha.curso_id_planilha,
+                        codigo='erro_aluno_curso',
+                        mensagem=str(exc),
                     )
-            resumo.total_linhas_com_erro = len(erros)
-            return ResultadoImportacaoDTO(
-                sucesso=len(erros) == 0,
-                mensagem='Importação concluída com sucesso.' if not erros else 'Importação concluída com sucesso parcial.',
-                resumo=resumo,
-                erros=erros,
-                metadados={
-                    'modo': 'importacao',
-                }
+            return self._montar_resultado_importacao(
+                resumo,
+                coletor,
+                estrutura,
+                modo='importacao',
+                mensagem_ok='Importação concluída com sucesso.',
+                mensagem_parcial='Importação concluída com sucesso parcial.',
             )
         except Exception as e:
             self.relancar_ou_erro_sistema(e, 'Não foi possível executar importar_usuarios_em_lote.', logger)
@@ -1144,14 +1359,164 @@ class UsuarioBusiness(ModelInstanceBusiness):
         except Exception as e:
             self.relancar_ou_erro_sistema(e, 'Não foi possível executar _garantir_vinculo_aluno_curso.', logger)
 
+    def _importar_referencias_da_planilha(
+        self,
+        estrutura,
+        resolver,
+        resumo,
+        coletor,
+        incrementar_progresso,
+    ):
+        try:
+            self._importar_setores_referencia(estrutura, resolver, resumo, coletor, incrementar_progresso)
+            self._importar_funcoes_referencia(estrutura, resolver, resumo, coletor, incrementar_progresso)
+            self._importar_cargos_referencia(estrutura, resolver, resumo, coletor, incrementar_progresso)
+            self._importar_empresas_referencia(estrutura, resolver, resumo, coletor, incrementar_progresso)
+        except Exception as e:
+            self.relancar_ou_erro_sistema(e, 'Não foi possível executar _importar_referencias_da_planilha.', logger)
+
+    def _importar_setores_referencia(self, estrutura, resolver, resumo, coletor, incrementar_progresso):
+        try:
+            from Organizacional.setores.models import Setor
+
+            for linha in estrutura.setores:
+                incrementar_progresso()
+                try:
+                    with transaction.atomic():
+                        setor, criado = Setor().business.importar_setor(
+                            nome=linha.nome,
+                            sigla=linha.sigla,
+                            ativo=linha.ativo,
+                        )
+                        resolver.registrar_setor(linha.sigla, setor)
+                        if criado:
+                            resumo.setores_criados += 1
+                except Exception as exc:
+                    if not (linha.sigla or '').strip():
+                        campo = 'sigla'
+                        valor = linha.sigla
+                    elif not (linha.nome or '').strip():
+                        campo = 'nome'
+                        valor = linha.nome
+                    else:
+                        campo = 'sigla'
+                        valor = linha.sigla
+                    coletor.registrar_falha_linha(
+                        aba=ABA_SETOR,
+                        numero_linha=linha.numero_linha,
+                        campo=campo,
+                        valor=valor,
+                        codigo='erro_setor',
+                        mensagem=str(exc),
+                        id_planilha=linha.setor_id_planilha,
+                    )
+        except Exception as e:
+            self.relancar_ou_erro_sistema(e, 'Não foi possível executar _importar_setores_referencia.', logger)
+
+    def _importar_funcoes_referencia(self, estrutura, resolver, resumo, coletor, incrementar_progresso):
+        try:
+            from Organizacional.funcoes.models import Funcao
+
+            for linha in estrutura.funcoes:
+                incrementar_progresso()
+                try:
+                    with transaction.atomic():
+                        funcao, criado = Funcao().business.importar_funcao(
+                            papel_funcao=linha.papel_funcao,
+                            descricao=linha.descricao,
+                            categoria=linha.categoria,
+                            ativo=linha.ativo,
+                        )
+                        resolver.registrar_funcao(linha.papel_funcao, funcao)
+                        if criado:
+                            resumo.funcoes_criadas += 1
+                except Exception as exc:
+                    mensagem = str(exc)
+                    campo = 'categoria' if 'categoria' in mensagem.lower() else 'papel_funcao'
+                    coletor.registrar_falha_linha(
+                        aba=ABA_FUNCAO,
+                        numero_linha=linha.numero_linha,
+                        campo=campo,
+                        valor=linha.papel_funcao if campo == 'papel_funcao' else linha.categoria,
+                        codigo='erro_funcao',
+                        mensagem=mensagem,
+                        id_planilha=linha.funcao_id_planilha,
+                    )
+        except Exception as e:
+            self.relancar_ou_erro_sistema(e, 'Não foi possível executar _importar_funcoes_referencia.', logger)
+
+    def _importar_cargos_referencia(self, estrutura, resolver, resumo, coletor, incrementar_progresso):
+        try:
+            from PessoasInstitucionais.cargos.models import Cargo
+
+            for linha in estrutura.cargos:
+                incrementar_progresso()
+                try:
+                    with transaction.atomic():
+                        cargo, criado = Cargo().business.importar_cargo(
+                            nome=linha.nome,
+                            ativo=linha.ativo,
+                        )
+                        resolver.registrar_cargo(linha.nome, cargo)
+                        if criado:
+                            resumo.cargos_criados += 1
+                except Exception as exc:
+                    coletor.registrar_falha_linha(
+                        aba=ABA_CARGO,
+                        numero_linha=linha.numero_linha,
+                        campo='nome',
+                        valor=linha.nome,
+                        codigo='erro_cargo',
+                        mensagem=str(exc),
+                        id_planilha=linha.cargo_id_planilha,
+                    )
+        except Exception as e:
+            self.relancar_ou_erro_sistema(e, 'Não foi possível executar _importar_cargos_referencia.', logger)
+
+    def _importar_empresas_referencia(self, estrutura, resolver, resumo, coletor, incrementar_progresso):
+        try:
+            from PessoasInstitucionais.empresas_instituicoes.models import EmpresaInstituicao
+
+            for linha in estrutura.empresas:
+                incrementar_progresso()
+                try:
+                    with transaction.atomic():
+                        empresa, criado = EmpresaInstituicao().business.importar_empresa(
+                            nome=linha.nome,
+                            cnpj=linha.cnpj or None,
+                            ativo=linha.ativo,
+                        )
+                        resolver.registrar_empresa(linha.nome, empresa)
+                        if criado:
+                            resumo.empresas_criadas += 1
+                except Exception as exc:
+                    mensagem = str(exc)
+                    campo = 'cnpj' if 'cnpj' in mensagem.lower() else 'nome'
+                    coletor.registrar_falha_linha(
+                        aba=ABA_EMPRESA_INSTITUICAO,
+                        numero_linha=linha.numero_linha,
+                        campo=campo,
+                        valor=linha.cnpj if campo == 'cnpj' else linha.nome,
+                        codigo='erro_empresa_instituicao',
+                        mensagem=mensagem,
+                        id_planilha=linha.empresa_instituicao_id_planilha,
+                    )
+        except Exception as e:
+            self.relancar_ou_erro_sistema(e, 'Não foi possível executar _importar_empresas_referencia.', logger)
+
     def _contar_abas_processadas(self, estrutura):
         try:
             total = 0
             for colecao in [
+                estrutura.setores,
+                estrutura.funcoes,
+                estrutura.cargos,
+                estrutura.empresas,
                 estrutura.usuarios,
                 estrutura.contatos,
                 estrutura.enderecos,
                 estrutura.alunos,
+                estrutura.cursos,
                 estrutura.alunos_cursos,
                 estrutura.servidores,
                 estrutura.terceirizados,
@@ -1166,10 +1531,15 @@ class UsuarioBusiness(ModelInstanceBusiness):
     def _contar_linhas_processadas(self, estrutura):
         try:
             return sum([
+                len(estrutura.setores),
+                len(estrutura.funcoes),
+                len(estrutura.cargos),
+                len(estrutura.empresas),
                 len(estrutura.usuarios),
                 len(estrutura.contatos),
                 len(estrutura.enderecos),
                 len(estrutura.alunos),
+                len(estrutura.cursos),
                 len(estrutura.alunos_cursos),
                 len(estrutura.servidores),
                 len(estrutura.terceirizados),
@@ -1178,20 +1548,26 @@ class UsuarioBusiness(ModelInstanceBusiness):
         except Exception as e:
             self.relancar_ou_erro_sistema(e, 'Não foi possível executar _contar_linhas_processadas.', logger)
 
-    def _criar_erro(self, aba, numero_linha, campo, valor, codigo, mensagem):
+    def _montar_resultado_importacao(self, resumo, coletor, estrutura, modo, mensagem_ok, mensagem_parcial):
         try:
-            return ErroImportacaoDTO(
-                aba=aba,
-                numero_linha=numero_linha,
-                campo=campo,
-                valor=valor,
-                codigo=codigo,
-                mensagem=mensagem,
+            erros = coletor.erros
+            grupos = coletor.construir_grupos(estrutura)
+            resumo.total_linhas_com_erro = len(erros)
+            resumo.total_grupos_erro = len(grupos)
+            return ResultadoImportacaoDTO(
+                sucesso=len(erros) == 0,
+                mensagem=mensagem_ok if not erros else mensagem_parcial,
+                resumo=resumo,
+                erros=erros,
+                grupos_erro=grupos,
+                metadados={
+                    'modo': modo,
+                },
             )
         except Exception as e:
-            self.relancar_ou_erro_sistema(e, 'Não foi possível executar _criar_erro.', logger)
+            self.relancar_ou_erro_sistema(e, 'Não foi possível executar _montar_resultado_importacao.', logger)
 
-    def _executar_bulk_com_fallback(self, model_class, to_update, to_create, update_fields, resumo, attr_atualizados, attr_criados, erros, aba, campo_erro):
+    def _executar_bulk_com_fallback(self, model_class, to_update, to_create, update_fields, resumo, attr_atualizados, attr_criados, coletor, aba, campo_erro):
         try:
             if to_update:
                 try:
@@ -1206,7 +1582,14 @@ class UsuarioBusiness(ModelInstanceBusiness):
                                 setattr(resumo, attr_atualizados, getattr(resumo, attr_atualizados) + 1)
                         except Exception as exc:
                             valor = getattr(obj._linha, f"{campo_erro}_planilha", getattr(obj._linha, campo_erro, None))
-                            erros.append(self._criar_erro(aba, obj._linha.numero_linha, campo_erro, valor, f'erro_{aba.lower()}', str(exc)))
+                            coletor.registrar_falha_linha(
+                                aba=aba,
+                                numero_linha=obj._linha.numero_linha,
+                                campo=campo_erro,
+                                valor=valor,
+                                codigo=f'erro_{aba.lower()}',
+                                mensagem=str(exc),
+                            )
             if to_create:
                 try:
                     with transaction.atomic():
@@ -1220,6 +1603,13 @@ class UsuarioBusiness(ModelInstanceBusiness):
                                 setattr(resumo, attr_criados, getattr(resumo, attr_criados) + 1)
                         except Exception as exc:
                             valor = getattr(obj._linha, f"{campo_erro}_planilha", getattr(obj._linha, campo_erro, None))
-                            erros.append(self._criar_erro(aba, obj._linha.numero_linha, campo_erro, valor, f'erro_{aba.lower()}', str(exc)))
+                            coletor.registrar_falha_linha(
+                                aba=aba,
+                                numero_linha=obj._linha.numero_linha,
+                                campo=campo_erro,
+                                valor=valor,
+                                codigo=f'erro_{aba.lower()}',
+                                mensagem=str(exc),
+                            )
         except Exception as e:
             self.relancar_ou_erro_sistema(e, 'Não foi possível executar _executar_bulk_com_fallback.', logger)

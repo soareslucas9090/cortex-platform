@@ -233,7 +233,7 @@ class ValidacaoFuncionalMinimaE2ETest(APITestCase):
 
         r_curso = self.client.post(
             reverse('academico:curso-list'),
-            {'nome': 'Análise e Desenvolvimento de Sistemas', 'codigo_curso': 'ADS-56'},
+            {'nome': 'Análise e Desenvolvimento de Sistemas', 'codigo_curso': 'ADS-56', 'setor_id': setor_id},
             format='json',
         )
         self.assertEqual(r_curso.status_code, status.HTTP_201_CREATED, r_curso.data)
