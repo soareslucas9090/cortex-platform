@@ -350,4 +350,38 @@ Ao final do processamento, a rotina deve ser capaz de:
 - criar ou atualizar usuários;
 - criar ou atualizar cursos (aba `Curso`, contadores `cursos_criados` e `cursos_atualizados`) e demais entidades relacionadas;
 - registrar erros estruturados por aba, linha e campo;
+- agrupar erros em cascata pela causa raiz (`grupos_erro`);
 - retornar um resumo consolidado da execução.
+
+## Agrupamento de erros
+
+A lista plana `erros` continua com **uma entrada por linha com falha**. Cada entrada ganha `grupo_id` e `papel` (`causa` ou `impacto`) e é ordenada com as causas primeiro.
+
+`resumo.total_linhas_com_erro` continua sendo `len(erros)`. `resumo.total_grupos_erro` conta os problemas distintos a resolver.
+
+Dependentes de um pai que já falhou **não são tentados**: o erro da linha vira impacto do grupo do pai. A cadeia é transitiva (`Usuario` → `Aluno` → `Aluno_Curso` aponta para a raiz `Usuario`).
+
+### Tipos de grupo
+
+- `falha_entidade` — a própria linha da entidade falhou (`Usuario:12`, `Cargo:8`, `Curso:10`).
+- `referencia_inexistente` — o `*_id` não está no catálogo da planilha nem no sistema (`ref:Cargo:5`). Não há linha-causa; as linhas que referenciam o id são os impactos.
+- `linha` — erro isolado de aba sem id próprio (`linha:Contato:7`).
+
+### Mapa de dependências
+
+- `Contato`, `Endereco` e `Aluno` dependem de `usuario_id` (`Usuario`)
+- `Servidor` depende de `usuario_id` e `cargo_id`
+- `Terceirizado` depende de `usuario_id` e `empresa_instituicao_id`
+- `Setor_Lotacao` depende de `usuario_id`, `setor_id` e `funcao_id` (opcional)
+- `Curso` depende de `setor_id`
+- `Aluno_Curso` depende de `aluno_id` e `curso_id`
+
+Quando mais de um pai falhou, a linha entra no grupo do **primeiro** pai da lista acima.
+
+Lotes antigos em `resultado_json` podem não ter `grupos_erro`; o consumidor deve tratar o campo como ausente. A API de status trunca em no máximo 50 grupos (impactos limitados por grupo, com `total_impactos` sempre exato) e 50 erros planos.
+
+### Exemplo
+
+Quatro usuários com CPF inválido geram **quatro** grupos, mesmo que cada um tenha contato, aluno, vínculo e lotação. Cada grupo tem a causa na aba `Usuario` e os impactos nas abas dependentes, com mensagem no formato:
+
+`Não importado: depende de Usuario 12 (linha 7), que falhou: CPF inválido.`

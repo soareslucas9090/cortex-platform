@@ -27,7 +27,8 @@ Recebe arquivo da planilha e retorna validação sem persistência.
 - linhas inválidas
 - criação estimada
 - atualização estimada
-- lista de erros por linha
+- lista de erros por linha (`erros`, com `grupo_id` e `papel`)
+- grupos de erro por causa raiz (`grupos_erro`)
 
 ### Respostas
 
@@ -55,7 +56,7 @@ Consulta o status da importação atual ou da última realizada.
 
 ### Respostas
 
-- 200: Retorna o status (`EM_ANDAMENTO`, `CONCLUIDA`, `ERRO`) e a `porcentagem` de conclusão. Caso concluída, retorna os resultados no campo `resultado_json` (inclui contadores do resumo, entre eles `setores_criados`, `funcoes_criadas`, `cargos_criados`, `empresas_criadas`, `cursos_criados` e `cursos_atualizados` quando as abas de catálogo e `Curso` foram processadas).
+- 200: Retorna o status (`EM_ANDAMENTO`, `CONCLUIDA`, `ERRO`) e a `porcentagem` de conclusão. Caso concluída, retorna os resultados no campo `resultado_json` (inclui contadores do resumo, entre eles `setores_criados`, `funcoes_criadas`, `cargos_criados`, `empresas_criadas`, `cursos_criados`, `cursos_atualizados` e `total_grupos_erro` quando as abas de catálogo e `Curso` foram processadas; `erros` por linha; e `grupos_erro` com causa raiz e impactos). A resposta trunca em no máximo 50 grupos e 50 erros planos. Lotes antigos podem não ter `grupos_erro`.
 - 404: Nenhuma importação encontrada
 - 403: sem permissão de administrador
 
