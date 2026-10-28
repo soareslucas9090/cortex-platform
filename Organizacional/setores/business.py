@@ -47,3 +47,26 @@ class SetorBusiness(ModelInstanceBusiness):
             self.object_instance.save(update_fields=['ativo'])
         except Exception as e:
             self.relancar_ou_erro_sistema(e, 'Não foi possível reativar o setor.', logger)
+
+    def importar_setor(self, nome: str, sigla: str, ativo: bool = True):
+        """Cria setor pela sigla normalizada se ainda não existir (sem atualizar existente)."""
+        try:
+            from .models import Setor
+
+            self.object_instance.rules.validar_dados_importacao(nome, sigla)
+            nome_gravar = ' '.join((nome or '').strip().split())
+            sigla_gravar = ' '.join((sigla or '').strip().split())
+
+            setor = self.object_instance.helper.obter_por_sigla_normalizada(sigla)
+            if setor:
+                return setor, False
+
+            self.object_instance.rules.sigla_unica(sigla_gravar)
+            setor = Setor.objects.create(
+                nome=nome_gravar,
+                sigla=sigla_gravar,
+                ativo=ativo,
+            )
+            return setor, True
+        except Exception as e:
+            self.relancar_ou_erro_sistema(e, 'Não foi possível importar o setor.', logger)

@@ -11,12 +11,12 @@ O domínio `Academico` gerencia **alunos**, **cursos** e **vínculos aluno–cur
 ### Modelos e Relacionamentos
 
 - **Aluno**: herança 1:1 com `Usuario`; situação e forma de ingresso; campos de transporte (somente leitura de regra de escrita — ver abaixo).
-- **Curso**: catálogo de cursos ofertados.
+- **Curso**: catálogo de cursos ofertados; relação **N:1** com **Setor** (`Organizacional`).
 - **AlunoCurso**: associação aluno ↔ curso; **`matricula` opcional com unicidade global** quando preenchida; campo **`ativo`** no vínculo.
 
-### Atributo planejado em `Curso` (pré-requisito AcessoCampus)
+### `Curso.nivel_ensino` (AC.1)
 
-**`nivel_ensino`** — **PLANEJADO**, ainda **não** no model no código. `IntegerChoices` **`NivelEnsino`**: `ENSINO_MEDIO=1`, `TECNICO=2`, `SUPERIOR=3`, `POS_GRADUACAO=4`. Entrega prevista na etapa AC.1 do [milestone AcessoCampus](../planning/milestone-acesso-campus.md). Elegibilidade de solicitação na portaria EM usará `nivel_ensino=ENSINO_MEDIO` — **proibido** inferir ensino médio pelo **nome** do curso.
+**`nivel_ensino`** está no model. `IntegerChoices` **`NivelEnsino`**: `ENSINO_MEDIO=1`, `TECNICO=2`, `SUPERIOR=3`, `POS_GRADUACAO=4`. O campo aceita nulo: **nulo significa não classificado** e não é Ensino Médio. Cursos já gravados, inclusive o seed, permanecem nulos até edição explícita — a carga não infere o nível pelo nome. Criação pela API exige um dos quatro inteiros. Elegibilidade de solicitação na portaria EM usará `nivel_ensino=ENSINO_MEDIO`.
 
 ### Fronteira com AcessoCampus (**planejado**)
 
@@ -71,6 +71,15 @@ Persistidos como **`IntegerField`** com `IntegerChoices`:
 | `TRANSFERENCIA` | 3 | Transferência |
 | `REINGRESSO` | 4 | Reingresso |
 
+### `Curso` e `Setor`
+
+No banco, `Curso.setor` é **nullable** (`null=True`, `blank=True`) por compatibilidade de schema; na **regra de negócio**, todo curso **deve** ter setor.
+
+- **Criar** curso (API ou importação): `setor` / `setor_id` **obrigatório** — não é permitido criar sem setor.
+- **Editar** curso: **não** é permitido remover o setor (PATCH que deixaria o curso sem setor é rejeitado).
+- **Importação de usuários** (aba `Curso`): cria ou atualiza cursos por `codigo_curso` normalizado (caixa, acentos e espaços); `setor_id` obrigatório em cada linha — o setor pode ter sido criado na fase de catálogo da mesma importação (ver `docs/schema/importacao-usuarios.md`).
+- **Cursos legados** (data migration `cursos.0004`): associa o setor de cada curso semeado conforme as abas `Curso`/`Setor` de `docs/seeds/import/modelo-importacao-usuarios.ods`. A migration **nunca aborta o deploy**: sigla de setor ausente no banco gera apenas log de aviso e o curso permanece com `setor` NULL; só cursos ainda sem setor são atualizados (associação existente nunca é sobrescrita). Curso legado com `setor` NULL precisa receber setor para ser editado (PATCH). O curso `14JOPC` não consta no `.ods` atual, mas é preservado (setor `DEPENTE`) por já existir em bancos implantados.
+
 ### `AlunoCurso.matricula`
 
 Constraint `aluno_cursos_matricula_unica`: matrícula **única em todo o sistema** quando informada (mesma regra de unicidade global descrita em Identidade para login).
@@ -108,6 +117,8 @@ Paths relativos a `/cortex/academico/`.
 | GET, PATCH | `cursos/{pk}/` |
 | POST | `cursos/{pk}/desativar/`, `cursos/{pk}/reativar/` |
 
+**Listagem** (`GET cursos/`): filtro opcional por query param `setor_id`. Os query params apenas reduzem o conjunto de resultados — nunca expandem o acesso.
+
 ### Alunos
 
 | Método | Path |
@@ -129,9 +140,10 @@ Paths relativos a `/cortex/academico/`.
 
 ## O que NÃO fazer
 
+- **Não** criar, importar ou editar um curso sem setor associado.
 - **Não** criar entidade ou API de **monitoria** aqui — use Organizacional.
 - **Não** alterar `faltas` / `is_bloqueado` / `quantidade_bloqueios` em business de Aluno sem coordenar com Transporte.
 - **Não** inventar endpoints fora dos `urls.py` existentes.
 - **Não** tratar choices como strings na API persistida sem alinhar aos inteiros do model.
-- **Não** inferir Ensino Médio pelo nome do curso — usar **`nivel_ensino`** quando implementado.
+- **Não** inferir Ensino Médio pelo nome do curso — usar **`nivel_ensino`**. Nulo não é Ensino Médio.
 - **Não** implementar fluxo de circulação/portaria (solicitação, eventos, registro na guarita) no Academico — bounded context **AcessoCampus** ([domains/acesso-campus.md](acesso-campus.md), ADR-003).

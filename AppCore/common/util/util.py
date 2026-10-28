@@ -1,5 +1,6 @@
 import logging
 import re
+import unicodedata
 
 from django.core.mail import EmailMultiAlternatives
 
@@ -28,6 +29,36 @@ def enviar_email_simples(subject, simple_text, from_email, to_emails, html_conte
 def normalizar_cpf(cpf: str) -> str:
     """Remove formatação do CPF, mantendo apenas os dígitos."""
     return re.sub(r'\D', '', cpf)
+
+
+def normalizar_chave_texto(valor) -> str:
+    """Normaliza texto para comparação: sem acento, espaços colapsados, casefold."""
+    if valor is None:
+        return ''
+    texto = str(valor).strip()
+    if not texto:
+        return ''
+    sem_acento = unicodedata.normalize('NFKD', texto).encode('ascii', 'ignore').decode('ascii')
+    colapsado = ' '.join(sem_acento.split())
+    return colapsado.casefold()
+
+
+def normalizar_cnpj(valor):
+    """Normaliza CNPJ: só dígitos, trata sufixo .0 de planilha, zfill(14) se 1–14 dígitos.
+    Vazio/NULL → None. Mais de 14 dígitos → string só com os dígitos (rules rejeitam)."""
+    if valor is None:
+        return None
+    texto = str(valor).strip()
+    if not texto or texto.upper() == 'NULL':
+        return None
+    if texto.endswith('.0'):
+        texto = texto[:-2]
+    digitos = re.sub(r'\D', '', texto)
+    if not digitos:
+        return None
+    if len(digitos) <= 14:
+        return digitos.zfill(14)
+    return digitos
 
 
 def normalizar_matricula(valor):

@@ -32,3 +32,16 @@ class SetorHelpers(ModelInstanceHelpers):
         """Retorna todos os setores inativos."""
         from .models import Setor
         return Setor.objects.filter(ativo=False)
+
+    def obter_por_sigla_normalizada(self, sigla):
+        """Retorna o setor cuja sigla coincide após normalização de texto, ou None."""
+        from AppCore.common.util.util import normalizar_chave_texto
+        from .models import Setor
+
+        chave = normalizar_chave_texto(sigla)
+        if not chave:
+            return None
+        for setor in Setor.objects.all():
+            if normalizar_chave_texto(setor.sigla) == chave:
+                return setor
+        return None

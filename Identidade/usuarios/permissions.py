@@ -146,3 +146,33 @@ class UsuarioPermissions(UserModelPermission):
                 'motorista': motorista,
             },
         }
+
+    def permissoes_acesso_campus(self) -> dict:
+        """
+        Capacidades do acesso ao campus. L3 recebe todas.
+        analisar_solicitacoes exige ser o responsável pelo setor: um dos cinco
+        papéis alcança qualquer Ensino Médio; o responsável do setor do curso,
+        só esse curso. A marca da função, sozinha, não libera a tela.
+        """
+        from AcessoCampus.permissoes.access import usuario_tem_acesso_total_acesso_campus
+        from AcessoCampus.permissoes.choices import (
+            capacidades_acesso_campus_completas,
+            capacidades_acesso_campus_vazias,
+        )
+        from AcessoCampus.permissoes.models import PermissaoFuncaoAcessoCampus
+        from AcessoCampus.solicitacoes.escopo import (
+            curso_ids_sob_coordenacao,
+            usuario_tem_escopo_global,
+        )
+
+        user = self.object_instance
+        if not user:
+            return {'acesso_campus': capacidades_acesso_campus_vazias()}
+        if usuario_tem_acesso_total_acesso_campus(user):
+            return {'acesso_campus': capacidades_acesso_campus_completas()}
+
+        compiladas = PermissaoFuncaoAcessoCampus().helper.compilar_do_usuario(user)
+        compiladas['analisar_solicitacoes'] = bool(
+            usuario_tem_escopo_global(user) or curso_ids_sob_coordenacao(user).exists()
+        )
+        return {'acesso_campus': compiladas}

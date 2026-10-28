@@ -62,3 +62,39 @@ class FuncaoBusiness(ModelInstanceBusiness):
             self.object_instance.save(update_fields=['ativo'])
         except Exception as e:
             self.relancar_ou_erro_sistema(e, 'Não foi possível reativar a função.', logger)
+
+    def importar_funcao(
+        self,
+        papel_funcao: str,
+        descricao: str,
+        categoria,
+        ativo: bool = True,
+    ):
+        """Cria função pelo papel normalizado se ainda não existir (sem atualizar existente)."""
+        try:
+            from .models import Funcao
+
+            self.object_instance.rules.validar_dados_importacao(papel_funcao)
+            categoria_resolvida = self.object_instance.helper.resolver_categoria_funcao(categoria)
+            self.object_instance.rules.validar_categoria_funcao(categoria_resolvida)
+
+            papel_gravar = ' '.join((papel_funcao or '').strip().split())
+            if (descricao or '').strip():
+                descricao_gravar = ' '.join(descricao.strip().split())
+            else:
+                descricao_gravar = papel_gravar
+
+            funcao = self.object_instance.helper.obter_por_papel_funcao_normalizado(papel_funcao)
+            if funcao:
+                return funcao, False
+
+            self.object_instance.rules.papel_funcao_unico(papel_gravar)
+            funcao = Funcao.objects.create(
+                papel_funcao=papel_gravar,
+                descricao=descricao_gravar,
+                categoria=categoria_resolvida,
+                ativo=ativo,
+            )
+            return funcao, True
+        except Exception as e:
+            self.relancar_ou_erro_sistema(e, 'Não foi possível importar a função.', logger)

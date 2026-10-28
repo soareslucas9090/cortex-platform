@@ -14,6 +14,7 @@ urlpatterns = [
     path('cortex/organizacional/', include('Organizacional.urls')),
     path('cortex/pessoas-institucionais/', include('PessoasInstitucionais.urls')),
     path('cortex/academico/', include('Academico.urls')),
+    path('cortex/acesso-campus/', include('AcessoCampus.urls')),
     path('cortex/infraestrutura/', include('Infraestrutura.urls')),
     path('cortex/transporte/', include('Transporte.urls')),
 ]

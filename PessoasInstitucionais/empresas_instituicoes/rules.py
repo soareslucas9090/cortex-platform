@@ -3,6 +3,20 @@ from AppCore.core.rules.rules import ModelInstanceRules
 
 class EmpresaInstituicaoRules(ModelInstanceRules):
 
+    def validar_dados_importacao(self, nome) -> bool:
+        """Valida campos obrigatórios na importação de empresa/instituição."""
+        if not (nome or '').strip():
+            self.return_exception('O nome da empresa/instituição é obrigatório.')
+        return True
+
+    def validar_cnpj_importacao(self, cnpj) -> bool:
+        """Valida CNPJ informado na importação."""
+        if cnpj is None:
+            return True
+        if len(cnpj) != 14:
+            self.return_exception('CNPJ deve conter 14 dígitos.')
+        return True
+
     def nome_unico(self, nome: str, excluir_id=None) -> bool:
         """Valida que o nome da empresa/instituição não está em uso."""
         from .models import EmpresaInstituicao

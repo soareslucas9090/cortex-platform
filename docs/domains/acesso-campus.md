@@ -1,6 +1,6 @@
 # Diretrizes do Domínio: AcessoCampus
 
-> **Status:** PLANEJADO — módulo **AcessoCampus** ainda **não** implementado; **não** registrar em `PROJECT_APPS` até concluir as etapas do [milestone](../planning/milestone-acesso-campus.md).
+> **Status:** corte da **gestão** implementado em `PROJECT_APPS`. A gestão lista alunos (busca por nome e CPF) e turmas, cria autorização já aceita para alunos ou turma, lista, detalha, aceita e recusa. Os cinco papéis, quando são o responsável pelo setor, e o L3 alcançam qualquer Ensino Médio. O responsável pelo setor do curso alcança só esse curso. Quem está no setor sem ser o responsável não analisa. A lista mistura pedido do aluno e autorização da gestão. Não aceita data anterior a hoje nem segunda autorização aceita do mesmo aluno, no mesmo dia e no mesmo tipo. Pedido do aluno, portaria, seis tipos de programação e eventos continuam **planejados** neste arquivo — não tratar o restante como código existente.
 
 Este arquivo é a **especificação funcional canônica** do bounded context **AcessoCampus** (circulação e autorizações de alunos de Ensino Médio na portaria).
 

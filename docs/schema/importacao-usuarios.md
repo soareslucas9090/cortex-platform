@@ -21,19 +21,28 @@ Estas abas participam diretamente do processamento da importação:
 - `Contato`
 - `Endereco`
 - `Aluno`
+- `Curso`
 - `Aluno_Curso`
 - `Servidor`
 - `Terceirizado`
 - `Setor_Lotacao`
 
-### Abas de referência
-Estas abas podem existir no arquivo, mas **não devem ser persistidas pela importação operacional** na primeira versão, pois seus dados já devem existir no banco por meio de migrações seed:
+### Abas de catálogo (referência na planilha)
+Estas abas descrevem entidades institucionais usadas como referência pelos `*_id` das abas operacionais. Na **fase de catálogo** (antes da aba `Usuario`), a importação **cria** cada registro no banco se ele ainda **não** existir, casando pela chave natural com normalização de comparação; registro já existente **não** é alterado nem renomeado.
 
-- `Curso`
-- `Cargo`
-- `Empresa_Instituicao`
+Abas de catálogo:
+
 - `Setor`
 - `Funcao`
+- `Cargo`
+- `Empresa_Instituicao`
+
+Os seeds de migração continuam sendo a carga inicial típica; a planilha pode complementar o catálogo quando traz setores, funções, cargos ou empresas novas.
+
+### Normalização de chaves (catálogo e `Curso`)
+Para comparação de existência: `normalizar_chave_texto` (NFKD sem acento, espaços colapsados, casefold). CNPJ de empresa: apenas dígitos, `zfill` 14, tratando `.0` de planilha. Setor: sigla após aliases (`SIGLA_SETOR_ALIASES`, ex.: `NAPNE/FLO` → `NAPNE`).
+
+Registro **novo** grava o texto da planilha com `strip` e espaços colapsados e o `ativo` da planilha.
 
 ## Regra geral de correlação interna
 
@@ -48,16 +57,82 @@ Eles devem ser usados apenas como **identificadores temporários internos do arq
 
 ## Ordem recomendada de processamento
 
-1. `Usuario`
-2. `Contato`
-3. `Endereco`
-4. `Aluno`
-5. `Servidor`
-6. `Terceirizado`
-7. `Setor_Lotacao`
-8. `Aluno_Curso`
+1. `Setor`
+2. `Funcao`
+3. `Cargo`
+4. `Empresa_Instituicao`
+5. `Usuario`
+6. `Contato`
+7. `Endereco`
+8. `Aluno`
+9. `Servidor`
+10. `Terceirizado`
+11. `Setor_Lotacao`
+12. `Curso`
+13. `Aluno_Curso`
+
+As quatro primeiras abas correspondem à fase de catálogo executada antes de `Usuario`.
 
 ## Abas e colunas esperadas
+
+---
+
+## Aba `Setor`
+
+### Colunas
+- `setor_id (int, PK)` — identificador interno da planilha
+- `nome (String)`
+- `sigla (String)` — chave natural no banco (com `SIGLA_SETOR_ALIASES` na comparação)
+- `ativo (boolean)`
+
+### Regras
+- `sigla` e `nome` são obrigatórios em linhas válidas de catálogo;
+- se já existir setor com a mesma sigla normalizada, a linha não altera o registro existente;
+- se não existir, o setor é criado com os valores da planilha;
+- linha sem dado obrigatório ou inválida gera erro de linha; a importação continua nas demais.
+
+---
+
+## Aba `Funcao`
+
+### Colunas
+- `funcao_id (String, PK)` — identificador interno da planilha
+- `papel_funcao (String)` — chave natural no banco; o cabeçalho `funcao` também é aceito
+- `descricao (String)` — se vazia na criação, usa o valor de `papel_funcao`
+- `ativo (boolean)`
+- `categoria (String)` — opcional: `diretor`, `coordenador` ou `chefe`; vazio assume `coordenador`; valor inválido = erro de linha
+
+### Regras
+- casamento por `papel_funcao` normalizado;
+- cria função ausente; não atualiza função já existente;
+- linha inválida gera erro de linha; a importação continua.
+
+---
+
+## Aba `Cargo`
+
+### Colunas
+- `cargo_id (int, PK)` — identificador interno da planilha
+- `nome (String)` — chave natural (nome normalizado)
+- `ativo (boolean)`
+
+### Regras
+- cria cargo ausente; não atualiza cargo já existente;
+- linha sem `nome` ou inválida gera erro de linha; a importação continua.
+
+---
+
+## Aba `Empresa_Instituicao`
+
+### Colunas
+- `empresa_instituicao_id (int, PK)` — identificador interno da planilha
+- `nome (String)`
+- `cnpj (String)` — opcional; se informado (14 dígitos após normalização), é a chave natural; senão usa o nome normalizado
+- `ativo (boolean)`
+
+### Regras
+- cria empresa ausente; não atualiza empresa já existente;
+- linha inválida gera erro de linha; a importação continua.
 
 ---
 
@@ -127,6 +202,25 @@ Campos opcionais, se presentes no arquivo, também são lidos: `cep`, `complemen
 
 ---
 
+## Aba `Curso`
+
+### Colunas
+- `curso_id (int, PK)` — identificador interno da planilha (correlação com `Aluno_Curso`)
+- `setor_id (int, FK)` — **obrigatório**; resolvido contra a aba `Setor`, setores criados na fase de catálogo da mesma importação e setores já existentes no banco (seed)
+- `nome (String)`
+- `codigo_curso (String)` — chave natural para criar ou atualizar o registro no banco (`codigo_curso` normalizado)
+- `ativo (boolean)`
+
+A coluna `modalidade` pode existir no arquivo por compatibilidade com o layout legado, mas **não** é lida nem persistida (não faz parte do model `Curso`).
+
+### Regras
+- `setor_id` é obrigatório em cada linha; o setor deve existir na aba `Setor`, ter sido criado na fase de catálogo da mesma importação ou no seed;
+- a importação **cria** ou **atualiza** `Curso` pelo `codigo_curso` normalizado (única aba de catálogo/acadêmica que atualiza registro existente: nome, setor e ativo);
+- não é permitido deixar curso sem setor (linhas sem `setor_id` válido falham);
+- `curso_id` da planilha alimenta o mapa interno usado pela aba `Aluno_Curso`.
+
+---
+
 ## Aba `Aluno_Curso`
 
 ### Colunas
@@ -141,9 +235,9 @@ Campos opcionais, se presentes no arquivo, também são lidos: `cep`, `complemen
 
 ### Regras
 - `aluno_id` deve existir previamente na aba `Aluno`;
-- `curso_id` deve ser resolvido contra os dados seed já existentes no banco;
+- `curso_id` deve ser resolvido contra cursos já no banco **ou** criados/atualizados na mesma importação (aba `Curso` processada antes);
 - `matricula`, quando informada, deve ser única no sistema;
-- esta aba não deve criar cursos.
+- esta aba **não** cria cursos — apenas vincula aluno a curso existente no mapa de resolução.
 
 ---
 
@@ -159,9 +253,9 @@ Campos opcionais, se presentes no arquivo, também são lidos: `cep`, `complemen
 
 ### Regras
 - `usuario_id` deve existir previamente na aba `Usuario`;
-- `cargo_id` deve ser resolvido contra os dados seed já existentes no banco;
+- `cargo_id` deve ser resolvido contra cargos no banco **ou** criados na fase de catálogo (`Cargo`) da mesma importação;
 - `matricula`, quando informada, deve ser única no sistema;
-- esta aba não deve criar cargos.
+- linha operacional cujo `cargo_id` não está na aba `Cargo` **nem** no banco continua falhando (não há dado para criar o cargo).
 
 ---
 
@@ -176,9 +270,9 @@ Campos opcionais, se presentes no arquivo, também são lidos: `cep`, `complemen
 
 ### Regras
 - `usuario_id` deve existir previamente na aba `Usuario`;
-- `empresa_instituicao_id` deve ser resolvido contra os dados seed já existentes no banco;
+- `empresa_instituicao_id` deve ser resolvido contra empresas no banco **ou** criadas na fase de catálogo (`Empresa_Instituicao`) da mesma importação;
 - `matricula`, quando informada, deve ser única no sistema;
-- esta aba não deve criar empresas/instituições.
+- linha operacional cujo `empresa_instituicao_id` não está na aba de referência **nem** no banco continua falhando.
 
 ---
 
@@ -193,9 +287,9 @@ Campos opcionais, se presentes no arquivo, também são lidos: `cep`, `complemen
 
 ### Regras
 - `usuario_id` deve existir previamente na aba `Usuario`;
-- `setor_id` deve ser resolvido contra os dados seed já existentes no banco;
-- `funcao_id` deve ser resolvido contra os dados seed já existentes no banco;
-- esta aba não deve criar setores nem funções;
+- `setor_id` e `funcao_id`, quando informados, são resolvidos contra o banco **ou** contra registros criados na fase de catálogo (`Setor` / `Funcao`) da mesma importação;
+- `funcao_id` pode ser nulo/`NULL`: o vínculo é criado só com usuário + setor;
+- linha cujo `setor_id` ou `funcao_id` não está na planilha de catálogo **nem** no banco continua falhando;
 - a coluna `monitor` pode existir na planilha por compatibilidade com o layout legado, mas **não** grava booleano em `SetorVinculo`. Monitoria é representada pela **função** (`funcao_id` / `Funcao` com papel de monitor). A camada de business da importação **ignora** o valor de `monitor`.
 
 ## Fluxo operacional da API (importação definitiva)
@@ -229,35 +323,22 @@ A importação deve validar:
 
 ## Regras de dependência entre abas
 
+- `Setor`, `Funcao`, `Cargo` e `Empresa_Instituicao` são processadas na fase de catálogo (antes de `Usuario`)
 - `Contato` depende de `Usuario`
 - `Endereco` depende de `Usuario`
 - `Aluno` depende de `Usuario`
-- `Aluno_Curso` depende de `Aluno`
-- `Servidor` depende de `Usuario`
-- `Terceirizado` depende de `Usuario`
-- `Setor_Lotacao` depende de `Usuario`
-
-## Aba de referência `Funcao`
-
-A aba `Funcao` é apenas referência (não é persistida pela importação). Colunas esperadas:
-
-- `funcao_id (String, PK)` — identificador interno da planilha
-- `funcao (String)` — chave natural no banco (`papel_funcao`); o cabeçalho `papel_funcao` também é aceito
-- `descricao (String)`
-- `ativo (boolean)`
-- `categoria (String)` — opcional na planilha; no banco usa `diretor`, `coordenador` ou `chefe`
-
-### Aba `Setor_Lotacao` e função opcional
-
-- `funcao_id` pode ser nulo/`NULL`: o vínculo é criado só com usuário + setor
-- quando informado, deve existir na aba `Funcao` e no seed (`papel_funcao`)
+- `Curso` depende de `Setor` (aba `Setor`, setor criado na fase de catálogo da mesma importação e/ou seed)
+- `Aluno_Curso` depende de `Aluno` e de `Curso` (resolução de `curso_id`)
+- `Servidor` depende de `Usuario` e da resolução de `cargo_id` (catálogo e/ou banco)
+- `Terceirizado` depende de `Usuario` e da resolução de `empresa_instituicao_id` (catálogo e/ou banco)
+- `Setor_Lotacao` depende de `Usuario` e da resolução de `setor_id` / `funcao_id` (catálogo e/ou banco)
 
 ## Regras de persistência
 
 - a importação deve usar transação por linha lógica;
 - falhas em uma linha não devem impedir o processamento das demais;
 - a importação pode permitir sucesso parcial;
-- os dados raízes devem ser resolvidos no banco e nunca criados automaticamente pela rotina de importação;
+- na fase de catálogo, `Setor`, `Funcao`, `Cargo` e `Empresa_Instituicao` são criados apenas se ausentes (chave natural + normalização), sem duplicar e sem alterar existentes; a aba `Curso` cria ou atualiza cursos conforme as regras acima;
 - o processamento definitivo ocorre em background (Celery), com progresso e resultado consolidados no `ImportacaoLote`.
 
 ## Resultado esperado
@@ -265,7 +346,42 @@ A aba `Funcao` é apenas referência (não é persistida pela importação). Col
 Ao final do processamento, a rotina deve ser capaz de:
 
 - mapear IDs temporários da planilha para objetos reais do banco;
+- criar registros de catálogo ausentes (`Setor`, `Funcao`, `Cargo`, `Empresa_Instituicao`) e refletir isso nos contadores `setores_criados`, `funcoes_criadas`, `cargos_criados` e `empresas_criadas`;
 - criar ou atualizar usuários;
-- criar ou atualizar entidades relacionadas;
+- criar ou atualizar cursos (aba `Curso`, contadores `cursos_criados` e `cursos_atualizados`) e demais entidades relacionadas;
 - registrar erros estruturados por aba, linha e campo;
+- agrupar erros em cascata pela causa raiz (`grupos_erro`);
 - retornar um resumo consolidado da execução.
+
+## Agrupamento de erros
+
+A lista plana `erros` continua com **uma entrada por linha com falha**. Cada entrada ganha `grupo_id` e `papel` (`causa` ou `impacto`) e é ordenada com as causas primeiro.
+
+`resumo.total_linhas_com_erro` continua sendo `len(erros)`. `resumo.total_grupos_erro` conta os problemas distintos a resolver.
+
+Dependentes de um pai que já falhou **não são tentados**: o erro da linha vira impacto do grupo do pai. A cadeia é transitiva (`Usuario` → `Aluno` → `Aluno_Curso` aponta para a raiz `Usuario`).
+
+### Tipos de grupo
+
+- `falha_entidade` — a própria linha da entidade falhou (`Usuario:12`, `Cargo:8`, `Curso:10`).
+- `referencia_inexistente` — o `*_id` não está no catálogo da planilha nem no sistema (`ref:Cargo:5`). Não há linha-causa; as linhas que referenciam o id são os impactos.
+- `linha` — erro isolado de aba sem id próprio (`linha:Contato:7`).
+
+### Mapa de dependências
+
+- `Contato`, `Endereco` e `Aluno` dependem de `usuario_id` (`Usuario`)
+- `Servidor` depende de `usuario_id` e `cargo_id`
+- `Terceirizado` depende de `usuario_id` e `empresa_instituicao_id`
+- `Setor_Lotacao` depende de `usuario_id`, `setor_id` e `funcao_id` (opcional)
+- `Curso` depende de `setor_id`
+- `Aluno_Curso` depende de `aluno_id` e `curso_id`
+
+Quando mais de um pai falhou, a linha entra no grupo do **primeiro** pai da lista acima.
+
+Lotes antigos em `resultado_json` podem não ter `grupos_erro`; o consumidor deve tratar o campo como ausente. A API de status trunca em no máximo 50 grupos (impactos limitados por grupo, com `total_impactos` sempre exato) e 50 erros planos.
+
+### Exemplo
+
+Quatro usuários com CPF inválido geram **quatro** grupos, mesmo que cada um tenha contato, aluno, vínculo e lotação. Cada grupo tem a causa na aba `Usuario` e os impactos nas abas dependentes, com mensagem no formato:
+
+`Não importado: depende de Usuario 12 (linha 7), que falhou: CPF inválido.`

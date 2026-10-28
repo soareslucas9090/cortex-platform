@@ -51,7 +51,7 @@ Modelagens de dados, mapeamentos e regras de carga.
 ### 🌱 Seeds e Inicialização
 Dados de sementes (seeds) e informações de carga inicial do banco.
 - [Documentação DER - Cortex Seeds](seeds/documentação%20DER%20-%20cortex.md)
-- [Modelo de importação de usuários (referência)](seeds/import/modelo-importacao-usuarios.md)
+- [Modelo de importação de usuários (planilha de referência `.ods`)](seeds/import/modelo-importacao-usuarios.ods) — fonte dos dados raízes (Setor, Curso, Cargo, Função e Empresa); layout e regras em [Importação de Usuários](schema/importacao-usuarios.md)
 
 ### 📁 Project
 Documentos gerais do projeto, checklists, revisões, regras de arquitetura e guias de desenvolvimento.

@@ -3,6 +3,20 @@ from AppCore.core.rules.rules import ModelInstanceRules
 
 class FuncaoRules(ModelInstanceRules):
 
+    def validar_dados_importacao(self, papel_funcao) -> bool:
+        """Valida campos obrigatórios na importação de função."""
+        if not (papel_funcao or '').strip():
+            self.return_exception('O papel/função é obrigatório.')
+        return True
+
+    def validar_categoria_funcao(self, categoria_resolvida) -> bool:
+        """Valida categoria resolvida na importação."""
+        if categoria_resolvida is None:
+            self.return_exception(
+                'Categoria de função inválida. Use diretor, coordenador ou chefe.',
+            )
+        return True
+
     def papel_funcao_unico(self, papel_funcao: str, excluir_id=None) -> bool:
         """Valida que o papel/função não está em uso por outra função."""
         from .models import Funcao

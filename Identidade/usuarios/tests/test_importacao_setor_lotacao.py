@@ -55,6 +55,12 @@ class ImportacaoReferenciasParserTests(TestCase):
 
         self.assertEqual(resultado.referencias.mapa_setor_id_para_sigla[99], 'NAPNE')
         self.assertEqual(resultado.referencias.mapa_funcao_id_para_papel['1'], 'Diretor(a) Geral')
+        self.assertEqual(len(resultado.setores), 1)
+        self.assertEqual(resultado.setores[0].sigla, 'NAPNE')
+        self.assertEqual(resultado.setores[0].nome, 'Setor Teste')
+        self.assertEqual(len(resultado.funcoes), 1)
+        self.assertEqual(resultado.funcoes[0].papel_funcao, 'Diretor(a) Geral')
+        self.assertEqual(resultado.funcoes[0].categoria, 'Diretor')
         self.assertEqual(len(resultado.setores_lotacao), 2)
         self.assertEqual(resultado.setores_lotacao[0].funcao_id_planilha, '1')
         self.assertEqual(resultado.setores_lotacao[1].funcao_id_planilha, '')

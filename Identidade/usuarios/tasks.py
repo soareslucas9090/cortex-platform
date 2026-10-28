@@ -56,11 +56,10 @@ def processar_importacao_usuarios_task(importacao_id):
             )
             return
 
+        from .importacao.importacao_erros import serializar_resultado_importacao
+
         importacao.status = StatusImportacao.CONCLUIDA
-        importacao.resultado_json = {
-            'resumo': resultado.resumo.__dict__,
-            'erros': [erro.__dict__ for erro in resultado.erros],
-        }
+        importacao.resultado_json = serializar_resultado_importacao(resultado)
         importacao.save()
 
     except Exception as exc:

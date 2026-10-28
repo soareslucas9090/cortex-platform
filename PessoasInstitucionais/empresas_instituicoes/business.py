@@ -57,3 +57,40 @@ class EmpresaInstituicaoBusiness(ModelInstanceBusiness):
             self.object_instance.save(update_fields=['ativo'])
         except Exception as e:
             self.relancar_ou_erro_sistema(e, 'Não foi possível reativar a empresa/instituição.', logger)
+
+    def importar_empresa(self, nome: str, cnpj=None, ativo: bool = True):
+        """Cria empresa por CNPJ ou nome normalizado se ainda não existir (sem atualizar)."""
+        try:
+            from AppCore.common.util.util import normalizar_cnpj
+            from .models import EmpresaInstituicao
+
+            nome_gravar = ' '.join((nome or '').strip().split())
+            cnpj_norm = normalizar_cnpj(cnpj)
+
+            self.object_instance.rules.validar_dados_importacao(nome)
+            self.object_instance.rules.validar_cnpj_importacao(cnpj_norm)
+
+            empresa = None
+            if cnpj_norm:
+                empresa = self.object_instance.helper.obter_por_cnpj(cnpj_norm)
+            if not empresa:
+                empresa = self.object_instance.helper.obter_por_nome_normalizado(nome)
+            if empresa:
+                return empresa, False
+
+            self.object_instance.rules.nome_unico(nome_gravar)
+            if cnpj_norm:
+                self.object_instance.rules.cnpj_unico(cnpj_norm)
+
+            empresa = EmpresaInstituicao.objects.create(
+                nome=nome_gravar,
+                cnpj=cnpj_norm,
+                ativo=ativo,
+            )
+            return empresa, True
+        except Exception as e:
+            self.relancar_ou_erro_sistema(
+                e,
+                'Não foi possível importar a empresa/instituição.',
+                logger,
+            )

@@ -4,6 +4,7 @@ from rest_framework import status
 from rest_framework.test import APITestCase
 from rest_framework_simplejwt.tokens import RefreshToken
 
+from Academico.cursos.models import Curso
 from Identidade.usuarios.models import Usuario
 from Organizacional.setores.models import Setor
 
@@ -78,6 +79,8 @@ class ListarSetoresViewTest(APITestCase):
         self.assertEqual(resposta.status_code, status.HTTP_200_OK)
 
     def test_retorna_lista_vazia_sem_setores(self):
+        # Curso.setor é PROTECT: os cursos semeados pelas migrations precisam ser desvinculados antes.
+        Curso.objects.update(setor=None)
         Setor.objects.all().delete()
         self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token_admin}')
         resposta = self.client.get(self.url)

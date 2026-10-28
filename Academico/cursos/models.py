@@ -5,6 +5,8 @@ from AppCore.core.business.business_mixin import ModelBusinessMixin
 from AppCore.core.helpers.helpers_mixin import ModelHelperMixin
 from AppCore.core.rules.rules_mixin import ModelRulesMixin
 
+from .choices import NivelEnsino
+
 
 class Curso(ModelHelperMixin, ModelBusinessMixin, ModelRulesMixin, BasicModel):
     from .business import CursoBusiness
@@ -17,6 +19,20 @@ class Curso(ModelHelperMixin, ModelBusinessMixin, ModelRulesMixin, BasicModel):
 
     nome = models.CharField('Nome', max_length=255)
     codigo_curso = models.CharField('Código do Curso', max_length=50, unique=True)
+    setor = models.ForeignKey(
+        'setores.Setor',
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name='cursos',
+        verbose_name='Setor',
+    )
+    nivel_ensino = models.IntegerField(
+        'Nível de ensino',
+        choices=NivelEnsino.choices,
+        null=True,
+        blank=True,
+    )
     ativo = models.BooleanField('Ativo', default=True)
 
     class Meta:
