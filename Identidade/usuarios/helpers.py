@@ -115,6 +115,8 @@ class UsuarioHelpers(ModelInstanceHelpers):
 
         from .models import Usuario
 
+        if not getattr(conta, 'is_authenticated', False):
+            return Usuario.objects.none()
         if not conta.usuario_coletivo:
             return Usuario.objects.filter(
                 pk=conta.pk,

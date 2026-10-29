@@ -70,6 +70,20 @@ class UsuarioColetivoViewsTest(APITestCase):
             TipoContaColetiva.GUARITA,
         )
 
+    def test_criar_usuario_coletivo_com_tipo_codis(self):
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token_admin}')
+        resposta = self.client.post(reverse('identidade:usuario-list'), {
+            'cpf': '40000000007',
+            'nome': 'Conta coletiva CODIS',
+            'usuario_coletivo': True,
+            'tipo_conta_coletiva': TipoContaColetiva.CODIS,
+        })
+        self.assertEqual(resposta.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(
+            resposta.data['dados']['tipo_conta_coletiva'],
+            TipoContaColetiva.CODIS,
+        )
+
     def test_rejeita_tipo_coletivo_em_conta_comum(self):
         self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token_admin}')
         resposta = self.client.post(reverse('identidade:usuario-list'), {
@@ -88,6 +102,16 @@ class UsuarioColetivoViewsTest(APITestCase):
 
         self.assertEqual(payload_login['tipo_conta_coletiva'], TipoContaColetiva.GUARITA)
         self.assertEqual(payload_me['tipo_conta_coletiva'], TipoContaColetiva.GUARITA)
+
+    def test_login_e_me_expoem_tipo_codis(self):
+        self.conta.tipo_conta_coletiva = TipoContaColetiva.CODIS
+        self.conta.save(update_fields=['tipo_conta_coletiva'])
+
+        payload_login = LoginSerializer().get_extra_payload(self.conta)
+        payload_me = ProjectMeSerializer(self.conta).data
+
+        self.assertEqual(payload_login['tipo_conta_coletiva'], TipoContaColetiva.CODIS)
+        self.assertEqual(payload_me['tipo_conta_coletiva'], TipoContaColetiva.CODIS)
 
     def test_criar_usuario_coletivo_sem_cpf_com_senha(self):
         self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token_admin}')

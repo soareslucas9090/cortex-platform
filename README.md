@@ -274,11 +274,19 @@ Para ajustar o número de processos, altere `CELERY_CONCURRENCY` no arquivo `.en
 | `/cortex/api/schema/redoc/`   | ReDoc                      |
 | `/cortex/api/schema/`         | Schema OpenAPI (JSON/YAML) |
 
-Para gerar o arquivo de schema estático (`schema.yaml`) localmente via linha de comando:
+O arquivo estático `schema.yaml`, na raiz do repositório, é o contrato usado pelo frontend
+como guia para implementar e integrar as rotas da API. Ele é gerado pelo backend e **não deve
+ser editado manualmente**.
+
+Ao finalizar uma tarefa que possa alterar o contrato da API, execute os testes e as demais
+validações e, por último, regenere o arquivo com:
 
 ```bash
 python manage.py spectacular --file schema.yaml
 ```
+
+Confira o diff gerado antes de commit ou push. Alterações feitas diretamente no
+`schema.yaml`, inclusive por agentes de IA, não devem ser enviadas ao repositório.
 
 ### Autenticação
 

@@ -695,6 +695,25 @@ A descrição deve mencionar explicitamente que **"query params apenas reduzem o
 
 **OBRIGATÓRIO**: Toda view deve ter documentação completa usando `drf-spectacular`.
 
+### `schema.yaml` — contrato do frontend
+
+O arquivo `schema.yaml`, na raiz do repositório, é o guia usado pelo frontend para
+implementar e integrar as rotas da API.
+
+- `schema.yaml` é um **artefato gerado** pelo backend; nunca deve ser editado manualmente.
+- Alterações feitas diretamente nesse arquivo por pessoas ou agentes de IA não devem ser
+  enviadas ao repositório. A fonte de verdade são as views, serializers e anotações
+  `drf-spectacular` do código.
+- Ao concluir qualquer tarefa que possa alterar o contrato da API, depois da implementação,
+  dos testes e das demais validações, é obrigatório regenerar o arquivo com:
+
+```bash
+python manage.py spectacular --file schema.yaml
+```
+
+- O diff gerado deve ser conferido para garantir que representa somente o contrato esperado
+  para a tarefa antes de commit ou push.
+
 ### Decorador @extend_schema
 
 Sempre adicione o decorador `@extend_schema` em todas as views:

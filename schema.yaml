@@ -2675,26 +2675,81 @@ paths:
   /cortex/infraestrutura/emprestimos/:
     get:
       operationId: infraestrutura_emprestimos_list
-      description: "\n    Com `operar`: consulta ampla com filtros.\n    Sem `operar`
-        (L1): apenas empréstimos ativos do próprio solicitante.\n\n    Ordenação padrão:
-        empréstimos **abertos** primeiro (mais recentes primeiro),\n    depois os
-        **fechados** (mais recentes primeiro).\n\n    **Permissões:** Usuário autenticado
-        (escopo conforme capacidade `operar`).\n\n    **Segurança:** Os query params
-        apenas reduzem o conjunto já autorizado e nunca\n    expandem o acesso. `atrasado=true`
-        retorna ativos há mais de 24 horas;\n    `atrasado=false` retorna os demais
-        empréstimos.\n    "
+      description: "\n    Com `operar`: consulta ampla com filtros.\n    Sem `operar`:
+        empréstimos do próprio solicitante e empréstimos com solicitação\n    de troca
+        pendente recebida pelo usuário. Nesse escopo, `ativo=true` retorna os\n    pendentes,
+        `ativo=false` retorna os concluídos e a ausência de `ativo` retorna ambos.\n
+        \   Contas coletivas enxergam apenas empréstimos da própria origem (`guarita`
+        ou `codis`).\n    Administradores e superusuários mantêm acesso a todas as
+        origens.\n\n    Ordenação padrão: solicitações de troca pendentes relacionadas
+        ao usuário primeiro;\n    depois empréstimos **abertos**, data de retirada
+        mais recente e ID como desempate.\n    A ordenação é aplicada antes da paginação.\n\n
+        \   **Permissões:** Usuário autenticado (escopo conforme capacidade `operar`).\n\n
+        \   **Segurança:** Os query params apenas reduzem o conjunto já autorizado
+        e nunca\n    expandem o acesso. `atrasado=true` retorna ativos há mais de
+        24 horas;\n    `atrasado=false` retorna os demais empréstimos.\n\n    Datas
+        e horários são avaliados em `America/Sao_Paulo`. Parâmetros malformados são\n
+        \   ignorados; intervalos cuja hora inicial seja maior que a final retornam
+        400.\n    Em empréstimos parcialmente devolvidos, busca e filtros de recurso,
+        sala e tipo\n    consideram somente itens ainda abertos. Em empréstimos concluídos,
+        consideram todo\n    o histórico de itens.\n    "
       summary: Listar empréstimos
       parameters:
       - in: query
         name: ativo
         schema:
           type: boolean
+        description: Use true para empréstimos pendentes e false para concluídos.
+          Sem o parâmetro, retorna ambos dentro do escopo autorizado.
       - in: query
         name: atrasado
         schema:
           type: boolean
         description: Filtra empréstimos atrasados (ativos há mais de 24 horas). Use
           false para retornar os que não estão atrasados.
+      - in: query
+        name: busca
+        schema:
+          type: string
+        description: Busca sem diferença de caixa ou acentos nos dados do empréstimo,
+          recurso, sala e bloco.
+      - in: query
+        name: devolucao_data
+        schema:
+          type: string
+          format: date
+        description: Data local da devolução de algum item no formato YYYY-MM-DD.
+      - in: query
+        name: devolucao_hora_fim
+        schema:
+          type: string
+          format: time
+        description: Hora local máxima da devolução, inclusiva, no formato HH:mm.
+      - in: query
+        name: devolucao_hora_inicio
+        schema:
+          type: string
+          format: time
+        description: Hora local mínima da devolução, inclusiva, no formato HH:mm.
+      - in: query
+        name: ordenacao
+        schema:
+          type: string
+          enum:
+          - -devolucao_em
+          - -recurso
+          - -responsavel
+          - -retirada_em
+          - -sala
+          - -solicitante
+          - devolucao_em
+          - recurso
+          - responsavel
+          - retirada_em
+          - sala
+          - solicitante
+        description: Prefixe com - para ordem decrescente. Solicitações de troca pendentes
+          permanecem prioritárias.
       - name: page
         required: false
         in: query
@@ -2714,6 +2769,28 @@ paths:
         schema:
           type: integer
       - in: query
+        name: retirada_data
+        schema:
+          type: string
+          format: date
+        description: Data local da retirada no formato YYYY-MM-DD.
+      - in: query
+        name: retirada_hora_fim
+        schema:
+          type: string
+          format: time
+        description: Hora local máxima da retirada, inclusiva, no formato HH:mm.
+      - in: query
+        name: retirada_hora_inicio
+        schema:
+          type: string
+          format: time
+        description: Hora local mínima da retirada, inclusiva, no formato HH:mm.
+      - in: query
+        name: sala_id
+        schema:
+          type: integer
+      - in: query
         name: solicitante_id
         schema:
           type: integer
@@ -2721,6 +2798,10 @@ paths:
         name: tipo_recurso
         schema:
           type: string
+          enum:
+          - chave
+          - material_didatico
+          - midia
       tags:
       - Infraestrutura · Empréstimos
       security:
@@ -2732,6 +2813,12 @@ paths:
               schema:
                 $ref: '#/components/schemas/PaginatedEmprestimoList'
           description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                description: Intervalo de horários inválido.
+          description: ''
         '401':
           content:
             application/json:
@@ -2742,8 +2829,9 @@ paths:
       operationId: infraestrutura_emprestimos_create
       description: "\n    Registra retirada multi-item para um solicitante.\n\n  -
         Conta não coletiva: o responsável é o próprio usuário autenticado.\n  - Conta
-        coletiva: informe `responsavel_id` com um usuário do pool elegível.\n\n    **Permissões:**
-        Capacidade `operar` em Infraestrutura.\n    "
+        coletiva: informe `responsavel_id` com um usuário do pool elegível.\n    A
+        origem coletiva é determinada pelo backend e não pode ser enviada pelo cliente.\n\n
+        \   **Permissões:** Capacidade `operar` em Infraestrutura.\n    "
       summary: Realizar empréstimo
       tags:
       - Infraestrutura · Empréstimos
@@ -2768,12 +2856,93 @@ paths:
               schema:
                 $ref: '#/components/schemas/Emprestimo'
           description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                description: Payload ou regra de negócio inválida.
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                description: Não autenticado.
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                description: Sem capacidade para operar empréstimos.
+          description: ''
+  /cortex/infraestrutura/emprestimos/{emprestimo_id}/solicitacoes-troca/:
+    post:
+      operationId: infraestrutura_emprestimos_solicitacoes_troca_create
+      description: "\n    Solicita que outro servidor assuma os itens abertos do empréstimo.\n\n
+        \   **Permissões:** Qualquer usuário autenticado (L1–L3) que seja o titular
+        atual.\n    Contas coletivas não podem utilizar este fluxo.\n    "
+      summary: Criar solicitação de troca de titular
+      parameters:
+      - in: path
+        name: emprestimo_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - Infraestrutura · Solicitações de troca
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CriarSolicitacaoTrocaTitular'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/CriarSolicitacaoTrocaTitular'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/CriarSolicitacaoTrocaTitular'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SolicitacaoTrocaTitular'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                description: Regra de negócio inválida.
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                description: Não autenticado.
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                description: Sem autorização.
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                description: Empréstimo não encontrado.
+          description: ''
   /cortex/infraestrutura/emprestimos/{id}/:
     get:
       operationId: infraestrutura_emprestimos_retrieve
-      description: "\n    Com `operar`: qualquer empréstimo.\n    Sem `operar`: apenas
-        empréstimos ativos do próprio solicitante.\n\n    **Permissões:** Usuário
-        autenticado (escopo conforme capacidade `operar`).\n    "
+      description: "\n    Com `operar`: qualquer empréstimo.\n    Sem `operar`: empréstimos
+        próprios, pendentes ou concluídos, e empréstimos com\n    solicitação de troca
+        pendente recebida pelo usuário.\n    Contas coletivas ficam restritas à origem
+        correspondente ao seu tipo; administradores\n    e superusuários podem consultar
+        todas as origens.\n\n    **Permissões:** Usuário autenticado (escopo conforme
+        capacidade `operar`).\n    "
       summary: Detalhe do empréstimo
       parameters:
       - in: path
@@ -2792,11 +2961,30 @@ paths:
               schema:
                 $ref: '#/components/schemas/Emprestimo'
           description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                description: Não autenticado.
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                description: Empréstimo fora do escopo autorizado.
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                description: Empréstimo não encontrado.
+          description: ''
   /cortex/infraestrutura/emprestimos/{id}/devolver/:
     post:
       operationId: infraestrutura_emprestimos_devolver_create
       description: "\n    Devolução parcial de itens. O empréstimo encerra quando
-        todos forem devolvidos.\n\n    **Permissões:** Capacidade `operar` em Infraestrutura.\n
+        todos forem devolvidos.\n    Contas coletivas só podem devolver empréstimos
+        da própria origem.\n\n    **Permissões:** Capacidade `operar` em Infraestrutura.\n
         \   "
       summary: Devolver itens
       parameters:
@@ -2828,6 +3016,30 @@ paths:
               schema:
                 $ref: '#/components/schemas/Emprestimo'
           description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                description: Itens inválidos ou empréstimo encerrado.
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                description: Não autenticado.
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                description: Sem permissão ou empréstimo fora do escopo autorizado.
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                description: Empréstimo não encontrado.
+          description: ''
   /cortex/infraestrutura/emprestimos/{id}/trocar-titular/:
     post:
       operationId: infraestrutura_emprestimos_trocar_titular_create
@@ -2835,8 +3047,9 @@ paths:
         outro solicitante\n    (encerra o atual e abre outro).\n\n    - Conta não
         coletiva: o responsável do novo empréstimo é o próprio usuário autenticado.\n
         \   - Conta coletiva: informe `responsavel_id` com um usuário do pool elegível\n
-        \     (mesma regra do realizar empréstimo).\n\n    **Permissões:** Capacidade
-        `operar` em Infraestrutura.\n    "
+        \     (mesma regra do realizar empréstimo).\n    - A nova origem é determinada
+        exclusivamente pela conta autenticada.\n\n    **Permissões:** Capacidade `operar`
+        em Infraestrutura.\n    "
       summary: Trocar titular
       parameters:
       - in: path
@@ -2866,6 +3079,30 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Emprestimo'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                description: Payload ou regra de negócio inválida.
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                description: Não autenticado.
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                description: Sem permissão ou empréstimo fora do escopo autorizado.
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                description: Empréstimo não encontrado.
           description: ''
   /cortex/infraestrutura/emprestimos/responsaveis-elegiveis/:
     get:
@@ -2928,6 +3165,18 @@ paths:
               schema:
                 $ref: '#/components/schemas/PaginatedEmprestimoUsuarioResumoList'
           description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                description: Não autenticado.
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                description: Sem capacidade para operar empréstimos.
+          description: ''
   /cortex/infraestrutura/emprestimos/solicitantes-elegiveis/:
     get:
       operationId: infraestrutura_emprestimos_solicitantes_elegiveis_list
@@ -2936,8 +3185,10 @@ paths:
         (retirada irrestrita, servidor,\n    terceirizado em chaves, SalaSetor, autorização).\n\n
         \   Informe um ou mais IDs em `recurso_id` e/ou `recurso_ids` (repetidos ou
         separados\n    por vírgula). A resposta contém apenas usuários elegíveis a
-        cada recurso enviado.\n\n    **Permissões:** Capacidade `operar` em Infraestrutura.\n
-        \   "
+        cada recurso enviado.\n\n    **Permissões:** Capacidade `operar` em Infraestrutura
+        para a consulta administrativa.\n    Contas pessoais também podem consultar
+        servidores para recursos pertencentes a um\n    empréstimo aberto no próprio
+        nome.\n    "
       summary: Listar solicitantes elegíveis para recurso(s)
       parameters:
       - in: query
@@ -2975,6 +3226,24 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/PaginatedEmprestimoUsuarioResumoList'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                description: Recursos inválidos ou não informados.
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                description: Não autenticado.
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                description: Sem autorização para estes recursos.
           description: ''
   /cortex/infraestrutura/importacao/:
     post:
@@ -3816,6 +4085,208 @@ paths:
             application/json:
               schema:
                 description: Sala reativada com sucesso.
+          description: ''
+  /cortex/infraestrutura/solicitacoes-troca/:
+    get:
+      operationId: infraestrutura_solicitacoes_troca_list
+      description: "\n    Lista somente solicitações enviadas ou recebidas pelo usuário
+        autenticado.\n    Query params apenas reduzem o conjunto e nunca expandem
+        o acesso.\n\n    **Permissões:** Qualquer usuário autenticado (L1–L3).\n    "
+      summary: Listar solicitações de troca de titular
+      parameters:
+      - in: query
+        name: direcao
+        schema:
+          type: string
+          enum:
+          - enviadas
+          - recebidas
+      - in: query
+        name: emprestimo_id
+        schema:
+          type: integer
+      - name: page
+        required: false
+        in: query
+        description: Um número de página dentro do conjunto de resultados paginado.
+        schema:
+          type: integer
+      - in: query
+        name: paginacao
+        schema:
+          type: integer
+      - in: query
+        name: status
+        schema:
+          type: string
+          enum:
+          - '1'
+          - '2'
+          - '3'
+          - '4'
+          - ACEITA
+          - CANCELADA
+          - PENDENTE
+          - RECUSADA
+        description: Aceita o código numérico ou, por compatibilidade, o nome do status.
+      tags:
+      - Infraestrutura · Solicitações de troca
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedSolicitacaoTrocaTitularList'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                description: Não autenticado.
+          description: ''
+  /cortex/infraestrutura/solicitacoes-troca/{id}/aceitar/:
+    post:
+      operationId: infraestrutura_solicitacoes_troca_aceitar_create
+      description: "\n    Encerra os itens abertos do empréstimo original e cria um
+        novo empréstimo\n    para o destinatário.\n\n    **Permissões:** Somente o
+        destinatário autenticado da solicitação pendente.\n    "
+      summary: Aceitar solicitação de troca de titular
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - Infraestrutura · Solicitações de troca
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AceitarSolicitacaoTrocaTitularResposta'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                description: Solicitação inválida ou já processada.
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                description: Não autenticado.
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                description: Sem autorização.
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                description: Solicitação não encontrada.
+          description: ''
+  /cortex/infraestrutura/solicitacoes-troca/{id}/cancelar/:
+    post:
+      operationId: infraestrutura_solicitacoes_troca_cancelar_create
+      description: "\n    Cancela uma solicitação pendente sem alterar o empréstimo.\n\n
+        \   **Permissões:** Somente o solicitante autenticado da solicitação.\n    "
+      summary: Cancelar solicitação de troca de titular
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - Infraestrutura · Solicitações de troca
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SolicitacaoTrocaTitular'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                description: Solicitação já processada.
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                description: Não autenticado.
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                description: Sem autorização.
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                description: Solicitação não encontrada.
+          description: ''
+  /cortex/infraestrutura/solicitacoes-troca/{id}/recusar/:
+    post:
+      operationId: infraestrutura_solicitacoes_troca_recusar_create
+      description: "\n    Recusa uma solicitação pendente sem alterar o empréstimo.\n\n
+        \   **Permissões:** Somente o destinatário autenticado da solicitação.\n    "
+      summary: Recusar solicitação de troca de titular
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - Infraestrutura · Solicitações de troca
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SolicitacaoTrocaTitular'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                description: Solicitação já processada.
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                description: Não autenticado.
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                description: Sem autorização.
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                description: Solicitação não encontrada.
           description: ''
   /cortex/organizacional/funcoes/:
     get:
@@ -8192,6 +8663,16 @@ paths:
           description: ''
 components:
   schemas:
+    AceitarSolicitacaoTrocaTitularResposta:
+      type: object
+      properties:
+        solicitacao:
+          $ref: '#/components/schemas/SolicitacaoTrocaTitular'
+        novo_emprestimo:
+          $ref: '#/components/schemas/Emprestimo'
+      required:
+      - novo_emprestimo
+      - solicitacao
     AdicionarItemColetivo:
       type: object
       properties:
@@ -9034,6 +9515,16 @@ components:
       required:
       - nome
       - sigla
+    CriarSolicitacaoTrocaTitular:
+      type: object
+      properties:
+        destinatario_id:
+          type: integer
+        observacao:
+          type: string
+          default: ''
+      required:
+      - destinatario_id
     CriarTerceirizado:
       type: object
       properties:
@@ -9108,6 +9599,7 @@ components:
             Finalidade da conta coletiva.
 
             * `guarita` - Guarita
+            * `codis` - CODIS
           oneOf:
           - $ref: '#/components/schemas/TipoContaColetivaEnum'
           - $ref: '#/components/schemas/NullEnum'
@@ -9440,6 +9932,10 @@ components:
           allOf:
           - $ref: '#/components/schemas/EmprestimoUsuarioResumo'
           readOnly: true
+        origem_conta_coletiva:
+          type: string
+          readOnly: true
+          nullable: true
         retirada_em:
           type: string
           format: date-time
@@ -9457,6 +9953,11 @@ components:
         atrasado:
           type: boolean
           readOnly: true
+        solicitacao_troca:
+          type: object
+          additionalProperties: {}
+          nullable: true
+          readOnly: true
         created_at:
           type: string
           format: date-time
@@ -9467,8 +9968,10 @@ components:
       - created_at
       - id
       - itens
+      - origem_conta_coletiva
       - responsavel
       - retirada_em
+      - solicitacao_troca
       - solicitante
     EmprestimoRecursoResumo:
       type: object
@@ -9487,6 +9990,50 @@ components:
       - id
       - tipo
       - tipo_display
+    EmprestimoSolicitacaoTroca:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        retirada_em:
+          type: string
+          format: date-time
+        ativo:
+          type: boolean
+          readOnly: true
+        atrasado:
+          type: boolean
+          readOnly: true
+        observacao:
+          type: string
+          title: Observação
+        solicitante:
+          allOf:
+          - $ref: '#/components/schemas/SolicitacaoTrocaUsuarioResumo'
+          readOnly: true
+        responsavel:
+          allOf:
+          - $ref: '#/components/schemas/SolicitacaoTrocaUsuarioResumo'
+          readOnly: true
+        origem_conta_coletiva:
+          type: string
+          readOnly: true
+          nullable: true
+        itens:
+          type: array
+          items:
+            $ref: '#/components/schemas/ItemEmprestimo'
+          readOnly: true
+      required:
+      - ativo
+      - atrasado
+      - id
+      - itens
+      - origem_conta_coletiva
+      - responsavel
+      - retirada_em
+      - solicitante
     EmprestimoUsuarioResumo:
       type: object
       properties:
@@ -10220,7 +10767,7 @@ components:
         tipo_conta_coletiva:
           type: string
           nullable: true
-          description: 'Finalidade da conta coletiva (ex.: guarita).'
+          description: 'Finalidade da conta coletiva: guarita ou codis.'
         permissoes:
           description: 'Dicionário de permissões por módulo (ex: {"cortex": "EDITAR_EU"}).'
       required:
@@ -10786,6 +11333,29 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/SetorVinculo'
+    PaginatedSolicitacaoTrocaTitularList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/SolicitacaoTrocaTitular'
     PaginatedStatusImportacaoLoteInfraestruturaList:
       type: object
       required:
@@ -11333,9 +11903,10 @@ components:
           nullable: true
           title: Tipo de conta coletiva
           description: |-
-            Finalidade da conta compartilhada. Ex.: guarita.
+            Finalidade da conta compartilhada. Ex.: guarita ou CODIS.
 
             * `guarita` - Guarita
+            * `codis` - CODIS
           oneOf:
           - $ref: '#/components/schemas/TipoContaColetivaEnum'
           - $ref: '#/components/schemas/BlankEnum'
@@ -12064,6 +12635,99 @@ components:
         * `3` - Formado
         * `4` - Desistente
         * `5` - Transferido
+    SolicitacaoTrocaTitular:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        status:
+          allOf:
+          - $ref: '#/components/schemas/SolicitacaoTrocaTitularStatusEnum'
+          minimum: -2147483648
+          maximum: 2147483647
+        status_display:
+          type: string
+          readOnly: true
+        observacao:
+          type: string
+          title: Observação
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+        respondido_em:
+          type: string
+          format: date-time
+          nullable: true
+        pode_aceitar:
+          type: boolean
+          readOnly: true
+        pode_recusar:
+          type: boolean
+          readOnly: true
+        pode_cancelar:
+          type: boolean
+          readOnly: true
+        direcao:
+          type: string
+          nullable: true
+          readOnly: true
+        solicitante:
+          allOf:
+          - $ref: '#/components/schemas/SolicitacaoTrocaUsuarioResumo'
+          readOnly: true
+        destinatario:
+          allOf:
+          - $ref: '#/components/schemas/SolicitacaoTrocaUsuarioResumo'
+          readOnly: true
+        emprestimo:
+          allOf:
+          - $ref: '#/components/schemas/EmprestimoSolicitacaoTroca'
+          readOnly: true
+        novo_emprestimo_id:
+          type: integer
+          readOnly: true
+          nullable: true
+      required:
+      - created_at
+      - destinatario
+      - direcao
+      - emprestimo
+      - id
+      - novo_emprestimo_id
+      - pode_aceitar
+      - pode_cancelar
+      - pode_recusar
+      - solicitante
+      - status_display
+      - updated_at
+    SolicitacaoTrocaTitularStatusEnum:
+      enum:
+      - 1
+      - 2
+      - 3
+      - 4
+      type: integer
+      description: |-
+        * `1` - Pendente
+        * `2` - Aceita
+        * `3` - Recusada
+        * `4` - Cancelada
+    SolicitacaoTrocaUsuarioResumo:
+      type: object
+      properties:
+        id:
+          type: integer
+        nome:
+          type: string
+      required:
+      - id
+      - nome
     StatusExecucaoRotaEnum:
       enum:
       - 1
@@ -12383,8 +13047,11 @@ components:
     TipoContaColetivaEnum:
       enum:
       - guarita
+      - codis
       type: string
-      description: '* `guarita` - Guarita'
+      description: |-
+        * `guarita` - Guarita
+        * `codis` - CODIS
     TipoRecursoEnum:
       enum:
       - chave
@@ -12494,9 +13161,10 @@ components:
           nullable: true
           title: Tipo de conta coletiva
           description: |-
-            Finalidade da conta compartilhada. Ex.: guarita.
+            Finalidade da conta compartilhada. Ex.: guarita ou CODIS.
 
             * `guarita` - Guarita
+            * `codis` - CODIS
           oneOf:
           - $ref: '#/components/schemas/TipoContaColetivaEnum'
           - $ref: '#/components/schemas/BlankEnum'
