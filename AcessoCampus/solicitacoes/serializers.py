@@ -128,9 +128,11 @@ class SolicitacaoAcessoDetalheSerializer(SolicitacaoAcessoSerializer):
         return obj.helper.montar_historico()
 
     def get_liberado_por(self, obj):
-        if obj.liberado_por_id is None:
+        evento = getattr(obj, 'evento', None)
+        registro = getattr(evento, 'registro', None) if evento else None
+        if registro is None:
             return None
-        return UsuarioResumoSerializer(obj.liberado_por).data
+        return UsuarioResumoSerializer(registro.registrado_por).data
 
     def get_aluno(self, obj):
         usuario = obj.aluno.usuario

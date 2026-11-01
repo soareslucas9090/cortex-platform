@@ -42,6 +42,7 @@ class SolicitacaoAcessoBusiness(ModelInstanceBusiness):
         turma=None,
     ):
         try:
+            from AcessoCampus.eventos.models import EventoAcesso
             from .models import SolicitacaoAcesso
 
             self._validar_escopo_de_escrita(usuario)
@@ -51,6 +52,7 @@ class SolicitacaoAcessoBusiness(ModelInstanceBusiness):
             agora = timezone.now()
             lote_id = uuid.uuid4()
             turma_origem = turma or ''
+            grupo_portaria_id = uuid.uuid4() if turma else None
             criadas = []
             with transaction.atomic():
                 aluno_ids = [vinculo.aluno_id for vinculo in vinculos]
@@ -61,27 +63,30 @@ class SolicitacaoAcessoBusiness(ModelInstanceBusiness):
                 )
                 self.object_instance.rules.validar_autorizacao_aceita_unica(aluno_ids, ja_existe)
                 for vinculo in vinculos:
-                    criadas.append(
-                        SolicitacaoAcesso.objects.create(
-                            aluno_id=vinculo.aluno_id,
-                            aluno_curso=vinculo,
-                            origem=OrigemSolicitacaoAcesso.GESTAO,
-                            tipo=tipo,
-                            status=StatusSolicitacaoAcesso.ACEITA,
-                            data_acesso=data_acesso,
-                            hora_solicitada=None,
-                            hora_autorizada=hora_autorizada,
-                            motivo=motivo,
-                            justificativa='',
-                            observacao_avaliacao=observacao or '',
-                            avaliada_por=usuario,
-                            avaliada_em=agora,
-                            lote_id=lote_id,
-                            turma_origem=turma_origem,
-                            aluno_nome=vinculo.aluno.usuario.nome,
-                            curso_nome=vinculo.curso.nome,
-                            matricula=vinculo.matricula or '',
-                        )
+                    solicitacao = SolicitacaoAcesso.objects.create(
+                        aluno_id=vinculo.aluno_id,
+                        aluno_curso=vinculo,
+                        origem=OrigemSolicitacaoAcesso.GESTAO,
+                        tipo=tipo,
+                        status=StatusSolicitacaoAcesso.ACEITA,
+                        data_acesso=data_acesso,
+                        hora_solicitada=None,
+                        hora_autorizada=hora_autorizada,
+                        motivo=motivo,
+                        justificativa='',
+                        observacao_avaliacao=observacao or '',
+                        avaliada_por=usuario,
+                        avaliada_em=agora,
+                        lote_id=lote_id,
+                        turma_origem=turma_origem,
+                        aluno_nome=vinculo.aluno.usuario.nome,
+                        curso_nome=vinculo.curso.nome,
+                        matricula=vinculo.matricula or '',
+                    )
+                    criadas.append(solicitacao)
+                    EventoAcesso().business.materializar_para_solicitacao(
+                        solicitacao,
+                        grupo_portaria_id=grupo_portaria_id,
                     )
             return criadas
         except IntegrityError as exc:
@@ -93,6 +98,7 @@ class SolicitacaoAcessoBusiness(ModelInstanceBusiness):
 
     def aceitar(self, usuario, hora_autorizada=None, observacao=''):
         try:
+            from AcessoCampus.eventos.models import EventoAcesso
             from .models import SolicitacaoAcesso
 
             with transaction.atomic():
@@ -117,6 +123,7 @@ class SolicitacaoAcessoBusiness(ModelInstanceBusiness):
                 solicitacao.avaliada_por = usuario
                 solicitacao.avaliada_em = timezone.now()
                 solicitacao.save()
+                EventoAcesso().business.materializar_para_solicitacao(solicitacao)
             self.object_instance = solicitacao
             return solicitacao
         except IntegrityError as exc:

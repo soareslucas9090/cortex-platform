@@ -845,6 +845,193 @@ paths:
               schema:
                 description: Sem analisar_solicitacoes ou sem curso sob coordenação.
           description: ''
+  /cortex/acesso-campus/portaria/eventos/:
+    get:
+      operationId: acesso_campus_portaria_eventos_list
+      summary: Listar autorizações da portaria
+      parameters:
+      - in: query
+        name: busca
+        schema:
+          type: string
+      - in: query
+        name: data_autorizada
+        schema:
+          type: string
+          format: date
+      - in: query
+        name: hora_fim
+        schema:
+          type: string
+          format: time
+      - in: query
+        name: hora_inicio
+        schema:
+          type: string
+          format: time
+      - in: query
+        name: ordenacao
+        schema:
+          type: string
+      - name: page
+        required: false
+        in: query
+        description: Um número de página dentro do conjunto de resultados paginado.
+        schema:
+          type: integer
+      - in: query
+        name: paginacao
+        schema:
+          type: integer
+        description: Quantidade por página, entre 1 e 100.
+      - in: query
+        name: status
+        schema:
+          type: array
+          items:
+            type: string
+      - in: query
+        name: tipo_beneficiario
+        schema:
+          type: string
+      - in: query
+        name: tipo_movimento
+        schema:
+          type: string
+      tags:
+      - AcessoCampus - Portaria
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedEventoAcessoList'
+          description: ''
+  /cortex/acesso-campus/portaria/eventos/{grupo_portaria_id}/:
+    get:
+      operationId: acesso_campus_portaria_eventos_retrieve
+      summary: Detalhar autorização da portaria
+      parameters:
+      - in: path
+        name: grupo_portaria_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - AcessoCampus - Portaria
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EventoAcessoDetalhe'
+          description: ''
+  /cortex/acesso-campus/portaria/eventos/{grupo_portaria_id}/alunos/:
+    get:
+      operationId: acesso_campus_portaria_eventos_alunos_list
+      summary: Listar alunos para conferência
+      parameters:
+      - in: query
+        name: busca
+        schema:
+          type: string
+      - in: path
+        name: grupo_portaria_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      - name: page
+        required: false
+        in: query
+        description: Um número de página dentro do conjunto de resultados paginado.
+        schema:
+          type: integer
+      - in: query
+        name: paginacao
+        schema:
+          type: integer
+        description: Quantidade por página, entre 1 e 100.
+      tags:
+      - AcessoCampus - Portaria
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedAlunoEventoAcessoList'
+          description: ''
+  /cortex/acesso-campus/portaria/eventos/{grupo_portaria_id}/registrar/:
+    post:
+      operationId: acesso_campus_portaria_eventos_registrar_create
+      summary: Registrar entrada ou saída
+      parameters:
+      - in: path
+        name: grupo_portaria_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - AcessoCampus - Portaria
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegistrarEventoAcesso'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/RegistrarEventoAcesso'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/RegistrarEventoAcesso'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EventoAcessoDetalhe'
+          description: ''
+  /cortex/acesso-campus/portaria/eventos/responsaveis-elegiveis/:
+    get:
+      operationId: acesso_campus_portaria_eventos_responsaveis_elegiveis_list
+      summary: Listar responsáveis elegíveis
+      parameters:
+      - in: query
+        name: busca
+        schema:
+          type: string
+      - name: page
+        required: false
+        in: query
+        description: Um número de página dentro do conjunto de resultados paginado.
+        schema:
+          type: integer
+      - in: query
+        name: paginacao
+        schema:
+          type: integer
+        description: Quantidade por página, entre 1 e 100.
+      tags:
+      - AcessoCampus - Portaria
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedResponsavelElegivelList'
+          description: ''
   /cortex/acesso-campus/solicitacoes/:
     get:
       operationId: acesso_campus_solicitacoes_list
@@ -9294,6 +9481,34 @@ components:
       - id
       - nome
       - tem_deficiencia
+    AlunoEventoAcesso:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        aluno:
+          type: string
+          readOnly: true
+        status:
+          type: string
+          readOnly: true
+        liberado_por:
+          type: string
+          readOnly: true
+        liberado_em:
+          type: string
+          readOnly: true
+        pode_liberar:
+          type: string
+          readOnly: true
+      required:
+      - aluno
+      - id
+      - liberado_em
+      - liberado_por
+      - pode_liberar
+      - status
     AlunoHistoricoConferencia:
       type: object
       properties:
@@ -10637,6 +10852,140 @@ components:
       - data_hora_entrada
       - execucao_rota
       - id
+    EventoAcesso:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        tipo_beneficiario:
+          type: string
+          readOnly: true
+        beneficiario:
+          type: string
+          readOnly: true
+        tipo_movimento:
+          type: string
+          readOnly: true
+        autorizado_por:
+          type: string
+          readOnly: true
+        data_autorizada:
+          type: string
+          format: date
+          readOnly: true
+        hora_autorizada:
+          type: string
+          format: time
+          readOnly: true
+        expira_em:
+          type: string
+          readOnly: true
+        status:
+          type: string
+          readOnly: true
+        responsavel_liberacao:
+          type: string
+          readOnly: true
+        concluida_em:
+          type: string
+          readOnly: true
+        expirada_em:
+          type: string
+          readOnly: true
+        progresso:
+          type: string
+          readOnly: true
+        acoes:
+          type: string
+          readOnly: true
+      required:
+      - acoes
+      - autorizado_por
+      - beneficiario
+      - concluida_em
+      - data_autorizada
+      - expira_em
+      - expirada_em
+      - hora_autorizada
+      - id
+      - progresso
+      - responsavel_liberacao
+      - status
+      - tipo_beneficiario
+      - tipo_movimento
+    EventoAcessoDetalhe:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        tipo_beneficiario:
+          type: string
+          readOnly: true
+        beneficiario:
+          type: string
+          readOnly: true
+        tipo_movimento:
+          type: string
+          readOnly: true
+        autorizado_por:
+          type: string
+          readOnly: true
+        data_autorizada:
+          type: string
+          format: date
+          readOnly: true
+        hora_autorizada:
+          type: string
+          format: time
+          readOnly: true
+        expira_em:
+          type: string
+          readOnly: true
+        status:
+          type: string
+          readOnly: true
+        responsavel_liberacao:
+          type: string
+          readOnly: true
+        concluida_em:
+          type: string
+          readOnly: true
+        expirada_em:
+          type: string
+          readOnly: true
+        progresso:
+          type: string
+          readOnly: true
+        acoes:
+          type: string
+          readOnly: true
+        motivo:
+          type: string
+          readOnly: true
+        observacao:
+          type: string
+          readOnly: true
+      required:
+      - acoes
+      - autorizado_por
+      - beneficiario
+      - concluida_em
+      - data_autorizada
+      - expira_em
+      - expirada_em
+      - hora_autorizada
+      - id
+      - motivo
+      - observacao
+      - progresso
+      - responsavel_liberacao
+      - status
+      - tipo_beneficiario
+      - tipo_movimento
     ExecucaoRota:
       type: object
       properties:
@@ -11319,6 +11668,29 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/AlunoElegivel'
+    PaginatedAlunoEventoAcessoList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/AlunoEventoAcesso'
     PaginatedAlunoList:
       type: object
       required:
@@ -11549,6 +11921,29 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/EmprestimoUsuarioResumo'
+    PaginatedEventoAcessoList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/EventoAcesso'
     PaginatedExecucaoRotaList:
       type: object
       required:
@@ -11710,6 +12105,29 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Recurso'
+    PaginatedResponsavelElegivelList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/ResponsavelElegivel'
     PaginatedRotaList:
       type: object
       required:
@@ -12602,6 +13020,18 @@ components:
           maxLength: 14
       required:
       - cpf
+    RegistrarEventoAcesso:
+      type: object
+      properties:
+        responsavel_liberacao_id:
+          type: integer
+        aluno_ids:
+          type: array
+          items:
+            type: integer
+        observacao:
+          type: string
+          default: ''
     RelatorioAlunoDetalhe:
       type: object
       properties:
@@ -12754,6 +13184,29 @@ components:
       - em_espera
       - presentes
       - sem_ticket
+    ResponsavelElegivel:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        nome:
+          type: string
+          maxLength: 255
+        cpf:
+          type: string
+          readOnly: true
+        foto:
+          type: string
+          format: uri
+          nullable: true
+          title: Foto primária
+          description: URL pública da foto vinda de sistemas externos.
+          maxLength: 500
+      required:
+      - cpf
+      - id
+      - nome
     ResultadoAusenciaTicket:
       type: object
       properties:
