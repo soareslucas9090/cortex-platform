@@ -50,3 +50,8 @@ class SolicitacaoAcessoRules(ModelInstanceRules):
         if len(set(aluno_ids)) != len(list(aluno_ids)) or ja_existe:
             self.return_exception(MENSAGEM_AUTORIZACAO_JA_ACEITA)
         return True
+
+    def validar_tipo_ativo(self, tipo) -> bool:
+        if tipo is None or not tipo.ativo:
+            self.return_exception('Não é possível autorizar com um tipo inativo.')
+        return True

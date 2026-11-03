@@ -8,11 +8,6 @@ class OrigemSolicitacaoAcesso(models.IntegerChoices):
     GESTAO = 2, 'Gestão'
 
 
-class TipoSolicitacaoAcesso(models.IntegerChoices):
-    ENTRADA = 1, 'Entrada'
-    SAIDA = 2, 'Saída'
-
-
 class StatusSolicitacaoAcesso(models.IntegerChoices):
     PENDENTE = 1, 'Pendente'
     ACEITA = 2, 'Aceito'

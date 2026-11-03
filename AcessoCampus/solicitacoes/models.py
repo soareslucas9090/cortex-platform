@@ -6,7 +6,7 @@ from AppCore.core.business.business_mixin import ModelBusinessMixin
 from AppCore.core.helpers.helpers_mixin import ModelHelperMixin
 from AppCore.core.rules.rules_mixin import ModelRulesMixin
 
-from .choices import OrigemSolicitacaoAcesso, StatusSolicitacaoAcesso, TipoSolicitacaoAcesso
+from .choices import OrigemSolicitacaoAcesso, StatusSolicitacaoAcesso
 
 
 class SolicitacaoAcesso(ModelHelperMixin, ModelBusinessMixin, ModelRulesMixin, BasicModel):
@@ -31,7 +31,12 @@ class SolicitacaoAcesso(ModelHelperMixin, ModelBusinessMixin, ModelRulesMixin, B
         verbose_name='Vínculo aluno-curso',
     )
     origem = models.IntegerField('Origem', choices=OrigemSolicitacaoAcesso.choices)
-    tipo = models.IntegerField('Tipo', choices=TipoSolicitacaoAcesso.choices)
+    tipo = models.ForeignKey(
+        'acesso_campus_tipos.TipoAutorizacaoAcesso',
+        on_delete=models.PROTECT,
+        related_name='solicitacoes_acesso',
+        verbose_name='Tipo',
+    )
     status = models.IntegerField(
         'Status',
         choices=StatusSolicitacaoAcesso.choices,
@@ -79,4 +84,4 @@ class SolicitacaoAcesso(ModelHelperMixin, ModelBusinessMixin, ModelRulesMixin, B
         ]
 
     def __str__(self):
-        return f'{self.aluno_nome} — {self.get_tipo_display()} ({self.get_status_display()})'
+        return f'{self.aluno_nome} — {self.tipo} ({self.get_status_display()})'

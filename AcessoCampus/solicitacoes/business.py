@@ -46,6 +46,7 @@ class SolicitacaoAcessoBusiness(ModelInstanceBusiness):
             from .models import SolicitacaoAcesso
 
             self._validar_escopo_de_escrita(usuario)
+            self.object_instance.rules.validar_tipo_ativo(tipo)
             self.object_instance.rules.validar_alvo_autorizacao(aluno_curso_ids, curso_id, turma)
             self.object_instance.rules.validar_data_nao_passada(data_acesso)
             vinculos = self._vinculos_para_autorizar(usuario, aluno_curso_ids, curso_id, turma)

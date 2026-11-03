@@ -13,11 +13,12 @@ from Academico.cursos.models import Curso
 from AcessoCampus.solicitacoes.choices import (
     OrigemSolicitacaoAcesso,
     StatusSolicitacaoAcesso,
-    TipoSolicitacaoAcesso,
 )
 from AcessoCampus.solicitacoes.helpers import FUSO_FORTALEZA
 from AcessoCampus.solicitacoes.models import SolicitacaoAcesso
 from AcessoCampus.eventos.models import EventoAcesso
+from AcessoCampus.tipos.choices import NOME_TIPO_ENTRADA_CAMPUS, NOME_TIPO_SAIDA_CAMPUS
+from AcessoCampus.tipos.models import TipoAutorizacaoAcesso
 from Identidade.usuarios.models import Usuario
 from Organizacional.funcoes.models import Funcao
 from Organizacional.setores.models import Setor
@@ -54,6 +55,8 @@ class GestaoAcessoCampusTest(APITestCase):
         self.vinculo_superior = self._criar_vinculo('20000000004', 'Davi Rocha', '1A', self.outro_curso)
         self.hoje = timezone.now().astimezone(FUSO_FORTALEZA).date()
         self.amanha = self.hoje + timedelta(days=1)
+        self.tipo_entrada = TipoAutorizacaoAcesso.objects.get(nome=NOME_TIPO_ENTRADA_CAMPUS)
+        self.tipo_saida = TipoAutorizacaoAcesso.objects.get(nome=NOME_TIPO_SAIDA_CAMPUS)
 
         self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {token(self.gestor)}')
 
@@ -90,7 +93,7 @@ class GestaoAcessoCampusTest(APITestCase):
         resposta = self.client.post(
             url,
             {
-                'tipo': TipoSolicitacaoAcesso.ENTRADA,
+                'tipo': self.tipo_entrada.pk,
                 'data_acesso': self.amanha.isoformat(),
                 'hora_autorizada': '07:30',
                 'motivo': 'Consulta',
@@ -115,7 +118,7 @@ class GestaoAcessoCampusTest(APITestCase):
         turma = self.client.post(
             url,
             {
-                'tipo': TipoSolicitacaoAcesso.SAIDA,
+                'tipo': self.tipo_saida.pk,
                 'data_acesso': (self.amanha + timedelta(days=1)).isoformat(),
                 'hora_autorizada': '11:00',
                 'motivo': 'Evento',
@@ -138,7 +141,7 @@ class GestaoAcessoCampusTest(APITestCase):
         resposta = self.client.post(
             url,
             {
-                'tipo': TipoSolicitacaoAcesso.ENTRADA,
+                'tipo': self.tipo_entrada.pk,
                 'data_acesso': self.amanha.isoformat(),
                 'hora_autorizada': '08:00',
                 'motivo': 'Teste',
@@ -151,7 +154,7 @@ class GestaoAcessoCampusTest(APITestCase):
     def test_sem_papel_retorna_403_e_l3_autoriza(self):
         url = reverse('acesso_campus:autorizacao-criar')
         payload = {
-            'tipo': TipoSolicitacaoAcesso.ENTRADA,
+            'tipo': self.tipo_entrada.pk,
             'data_acesso': self.amanha.isoformat(),
             'hora_autorizada': '08:00',
             'motivo': 'Teste',
@@ -168,7 +171,7 @@ class GestaoAcessoCampusTest(APITestCase):
             aluno=self.vinculo_a.aluno,
             aluno_curso=self.vinculo_a,
             origem=OrigemSolicitacaoAcesso.ALUNO,
-            tipo=TipoSolicitacaoAcesso.ENTRADA,
+            tipo=self.tipo_entrada,
             status=StatusSolicitacaoAcesso.PENDENTE,
             data_acesso=self.amanha,
             hora_solicitada=time(7, 0),
@@ -194,7 +197,7 @@ class GestaoAcessoCampusTest(APITestCase):
             aluno=self.vinculo_b.aluno,
             aluno_curso=self.vinculo_b,
             origem=OrigemSolicitacaoAcesso.ALUNO,
-            tipo=TipoSolicitacaoAcesso.SAIDA,
+            tipo=self.tipo_saida,
             status=StatusSolicitacaoAcesso.PENDENTE,
             data_acesso=self.amanha,
             hora_solicitada=time(10, 0),
@@ -223,7 +226,7 @@ class GestaoAcessoCampusTest(APITestCase):
 
     def _payload(self, **extra):
         dados = {
-            'tipo': TipoSolicitacaoAcesso.ENTRADA,
+            'tipo': self.tipo_entrada.pk,
             'data_acesso': self.amanha.isoformat(),
             'hora_autorizada': '08:00',
             'motivo': 'Consulta',
@@ -275,7 +278,7 @@ class GestaoAcessoCampusTest(APITestCase):
         self.assertEqual(
             SolicitacaoAcesso.objects.filter(
                 aluno=self.vinculo_a.aluno,
-                tipo=TipoSolicitacaoAcesso.ENTRADA,
+                tipo=self.tipo_entrada,
                 status=StatusSolicitacaoAcesso.ACEITA,
             ).count(),
             1,
@@ -283,12 +286,12 @@ class GestaoAcessoCampusTest(APITestCase):
 
         saida = self.client.post(
             url,
-            self._payload(tipo=TipoSolicitacaoAcesso.SAIDA, aluno_curso_ids=[self.vinculo_a.pk]),
+            self._payload(tipo=self.tipo_saida.pk, aluno_curso_ids=[self.vinculo_a.pk]),
             format='json',
         )
         self.assertEqual(saida.status_code, status.HTTP_201_CREATED)
 
-        pendente = self._pendente(self.vinculo_a, TipoSolicitacaoAcesso.ENTRADA, self.amanha)
+        pendente = self._pendente(self.vinculo_a, self.tipo_entrada, self.amanha)
         aceitar = self.client.post(
             reverse('acesso_campus:solicitacao-aceitar', kwargs={'pk': pendente.pk}),
             {},
@@ -303,7 +306,7 @@ class GestaoAcessoCampusTest(APITestCase):
 
         atrasada = self._pendente(
             self.vinculo_b,
-            TipoSolicitacaoAcesso.ENTRADA,
+            self.tipo_entrada,
             self.hoje - timedelta(days=1),
         )
         self.assertEqual(
@@ -400,3 +403,24 @@ class GestaoAcessoCampusTest(APITestCase):
         self.assertEqual(propria.status_code, status.HTTP_201_CREATED)
         alheia = self.client.post(url, self._payload(aluno_curso_ids=[outro_vinculo.pk]), format='json')
         self.assertEqual(alheia.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_autoriza_tipo_customizado_e_recusa_inativo(self):
+        extra = TipoAutorizacaoAcesso.objects.create(nome='Prova externa')
+        inativo = TipoAutorizacaoAcesso.objects.create(nome='Visita técnica', ativo=False)
+        url = reverse('acesso_campus:autorizacao-criar')
+
+        criada = self.client.post(
+            url,
+            self._payload(tipo=extra.pk, aluno_curso_ids=[self.vinculo_a.pk]),
+            format='json',
+        )
+        self.assertEqual(criada.status_code, status.HTTP_201_CREATED, criada.data)
+        self.assertEqual(criada.data['dados'][0]['tipo'], extra.pk)
+        self.assertEqual(criada.data['dados'][0]['tipo_display'], 'Prova externa')
+
+        recusada = self.client.post(
+            url,
+            self._payload(tipo=inativo.pk, aluno_curso_ids=[self.vinculo_b.pk]),
+            format='json',
+        )
+        self.assertEqual(recusada.status_code, status.HTTP_400_BAD_REQUEST)

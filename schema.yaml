@@ -1247,6 +1247,89 @@ paths:
               schema:
                 description: Solicitação inexistente ou fora do escopo.
           description: ''
+  /cortex/acesso-campus/tipos/:
+    get:
+      operationId: acesso_campus_tipos_list
+      description: "\n    Lista os tipos de autorização cadastrados. Entrada no campus
+        e Saída do campus são tipos-base.\n\n    \n    **Permissões:** Qualquer usuário
+        autenticado (catálogo de referência). Cadastro apenas no Django Admin.\n    \n
+        \   "
+      summary: Listar tipos de autorização
+      parameters:
+      - in: query
+        name: ativo
+        schema:
+          type: boolean
+        description: Filtra por ativo (true) ou inativo (false).
+      - in: query
+        name: nome
+        schema:
+          type: string
+        description: Parte do nome, sem diferenciar acento.
+      - name: page
+        required: false
+        in: query
+        description: Um número de página dentro do conjunto de resultados paginado.
+        schema:
+          type: integer
+      - in: query
+        name: paginacao
+        schema:
+          type: integer
+        description: Tamanho da página (1–100, padrão 10).
+      tags:
+      - AcessoCampus
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedTipoAutorizacaoAcessoList'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                description: Não autenticado.
+          description: ''
+  /cortex/acesso-campus/tipos/{id}/:
+    get:
+      operationId: acesso_campus_tipos_retrieve
+      description: "\n    Retorna os dados de um tipo específico.\n\n    \n    **Permissões:**
+        Qualquer usuário autenticado (catálogo de referência). Cadastro apenas no
+        Django Admin.\n    \n    "
+      summary: Detalhar tipo de autorização
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - AcessoCampus
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TipoAutorizacaoAcesso'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                description: Não autenticado.
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                description: Tipo não encontrado.
+          description: ''
   /cortex/acesso-campus/turmas/:
     get:
       operationId: acesso_campus_turmas_list
@@ -9653,7 +9736,7 @@ components:
       type: object
       properties:
         tipo:
-          $ref: '#/components/schemas/Tipo87dEnum'
+          type: integer
         data_acesso:
           type: string
           format: date
@@ -12427,6 +12510,29 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Ticket'
+    PaginatedTipoAutorizacaoAcessoList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/TipoAutorizacaoAcesso'
     PaginatedTurmaElegivelList:
       type: object
       required:
@@ -13668,10 +13774,7 @@ components:
           minimum: -2147483648
           maximum: 2147483647
         tipo:
-          allOf:
-          - $ref: '#/components/schemas/Tipo87dEnum'
-          minimum: -2147483648
-          maximum: 2147483647
+          type: integer
         tipo_display:
           type: string
           readOnly: true
@@ -13750,10 +13853,7 @@ components:
           minimum: -2147483648
           maximum: 2147483647
         tipo:
-          allOf:
-          - $ref: '#/components/schemas/Tipo87dEnum'
-          minimum: -2147483648
-          maximum: 2147483647
+          type: integer
         tipo_display:
           type: string
           readOnly: true
@@ -14274,14 +14374,37 @@ components:
       - posicao_fila
       - status
       - status_display
-    Tipo87dEnum:
-      enum:
-      - 1
-      - 2
-      type: integer
-      description: |-
-        * `1` - Entrada
-        * `2` - Saída
+    TipoAutorizacaoAcesso:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        nome:
+          type: string
+          readOnly: true
+        ativo:
+          type: boolean
+          readOnly: true
+        eh_base:
+          type: boolean
+          readOnly: true
+          title: Tipo-base
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - ativo
+      - created_at
+      - eh_base
+      - id
+      - nome
+      - updated_at
     TipoContaColetivaEnum:
       enum:
       - guarita

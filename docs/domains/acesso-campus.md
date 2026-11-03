@@ -1,6 +1,6 @@
 # Diretrizes do Domínio: AcessoCampus
 
-> **Status:** cortes da **gestão** e da **portaria** implementados em `PROJECT_APPS`. A gestão cria ou aceita autorizações e materializa `EventoAcesso`; a portaria lista grupos individuais ou de turma e grava `RegistroAcesso`. Turmas aceitam conferência parcial em entrada e saída. Conta guarita escolhe o vigilante físico no pool; L3 registra como ele próprio. Pedido criado pelo aluno e os seis tipos de programação continuam **planejados** neste arquivo.
+> **Status:** cortes da **gestão** e da **portaria** implementados em `PROJECT_APPS`. A gestão lista alunos e turmas, cria ou aceita autorizações e materializa `EventoAcesso`. O tipo da autorização é catálogo (`TipoAutorizacaoAcesso`): Entrada no campus e Saída do campus são tipos-base semeados; novos tipos são administrados pelo Django Admin e a API apenas os lista. A portaria lista grupos individuais ou de turma e grava `RegistroAcesso`, com conferência parcial em entrada e saída. Conta guarita escolhe o vigilante físico no pool; L3 registra como ele próprio. Pedido criado pelo aluno e os seis tipos de programação continuam **planejados** neste arquivo.
 
 Este arquivo é a **especificação funcional canônica** do bounded context **AcessoCampus** (circulação e autorizações de alunos de Ensino Médio na portaria).
 
@@ -32,14 +32,19 @@ O domínio **AcessoCampus** digitaliza o fluxo institucional em que o aluno de *
 AcessoCampus/
 ├── __init__.py
 ├── urls.py                    # app_name = 'acesso_campus'
-├── solicitacoes/              # SolicitacaoAcesso
-├── programacoes/                # ProgramacaoAcesso (planejado)
-├── eventos/                     # EventoAcesso (implementado)
-├── registros/                   # RegistroAcesso (implementado)
-└── permissoes/                  # PermissaoFuncaoAcessoCampus, PermissaoUsuarioAcessoCampus (sem urls HTTP)
+├── tipos/                     # TipoAutorizacaoAcesso (implementado)
+├── solicitacoes/              # SolicitacaoAcesso (implementado)
+├── permissoes/                # PermissaoFuncaoAcessoCampus, PermissaoUsuarioAcessoCampus (sem urls HTTP)
+├── programacoes/              # ProgramacaoAcesso (planejado)
+├── eventos/                   # EventoAcesso (implementado)
+└── registros/                 # RegistroAcesso (implementado)
 ```
 
 Camadas por app: `models`, `choices`, `rules`, `helpers`, `business`, `serializers`, `views`, `urls`. **`state.py` não é necessário.**
+
+### Tipos de autorização (implementado)
+
+`TipoAutorizacaoAcesso` é catálogo (`nome` unique, `ativo`, `eh_base`). Seed de **Entrada no campus** e **Saída do campus** (`eh_base=True`); esses não podem ser desativados nem ter o nome alterado. Novos tipos só no Django Admin. `GET /cortex/acesso-campus/tipos/` é leitura autenticada. `SolicitacaoAcesso.tipo` aponta para esse catálogo. Isto **não** cria entidade `Autorizacao` — a solicitação aceita continua sendo a autorização.
 
 ---
 
