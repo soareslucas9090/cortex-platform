@@ -280,6 +280,9 @@ PROJECT_APPS = [
     'Academico.cursos',
     'Academico.alunos',
     'Academico.aluno_cursos',
+    'AcessoCampus.tipos',
+    'AcessoCampus.solicitacoes',
+    'AcessoCampus.permissoes',
     'Infraestrutura.blocos',
     'Infraestrutura.salas',
     'Infraestrutura.recursos',
@@ -304,6 +307,7 @@ PROJECT_APPS = [
 
 Apps internos sem rotas HTTP próprias permanecem em `PROJECT_APPS`, mas não entram no `urls.py` agregador do domínio:
 
+- `AcessoCampus.permissoes` — capacidades de acesso ao campus por função e por usuário
 - `Infraestrutura.permissoes` — capacidades por função e por usuário
 - `Transporte.permissoes` — capacidades de Transporte por função e por usuário
 - `Transporte.motoristas` — perfil `Motorista`; endpoints operacionais expostos via `rotas/` e `execucoes_rotas/`
@@ -448,35 +452,34 @@ Transporte/
 
 ---
 
-## PLANEJADO — `AcessoCampus/`
+## `AcessoCampus/` (corte da gestão implementado)
 
-> **Não** existe pasta `AcessoCampus/` no repositório hoje. **Não** consta em `PROJECT_APPS` nem no exemplo de `urlpatterns` abaixo. Estrutura **futura** conforme ADR-003 e [milestone AcessoCampus](../planning/milestone-acesso-campus.md).
-
-Prefixo HTTP planejado: **`/cortex/acesso-campus/`** (`app_name` **`acesso_campus`**). Quando implementado, incluir em `Cortex/urls.py`:
+Prefixo HTTP: **`/cortex/acesso-campus/`** (`app_name` **`acesso_campus`**). Em `Cortex/urls.py`:
 
 ```python
 path('cortex/acesso-campus/', include('AcessoCampus.urls')),
 ```
 
-#### Estrutura futura (referência)
+#### Estrutura atual
 
-```text name=acesso-campus-module-tree-planned.txt
+```text
 AcessoCampus/
 ├── __init__.py
 ├── urls.py                    # app_name = 'acesso_campus'
+├── tipos/                     # TipoAutorizacaoAcesso
 ├── solicitacoes/              # SolicitacaoAcesso
-├── programacoes/              # ProgramacaoAcesso
-├── eventos/                   # EventoAcesso
-├── registros/                 # RegistroAcesso
 └── permissoes/                # PermissaoFuncaoAcessoCampus, PermissaoUsuarioAcessoCampus
 ```
 
-#### Responsabilidades (planejadas)
+#### Responsabilidades (implementadas)
 
-- `solicitacoes/`, `programacoes/`, `eventos/`, `registros/` — fluxo HTTP conforme `docs/api/acesso-campus.md`
-- `permissoes/` — capacidades `solicitar`, `analisar_solicitacoes`, `operar_portaria`, `visualizar_historico` (**sem rotas HTTP** no agregador)
+- `tipos/` — catálogo de tipos de autorização; GET autenticado; escrita só no Django Admin; seed Entrada no campus e Saída do campus
+- `solicitacoes/` — gestão: listar alunos/turmas, autorizar, listar/detalhar, aceitar/recusar
+- `permissoes/` — capacidades `solicitar`, `analisar_solicitacoes`, `operar_portaria`, `visualizar_historico` (**sem rotas HTTP**)
 
-Registro futuro em `PROJECT_APPS` (ordem sugerida): `AcessoCampus.solicitacoes`, `programacoes`, `eventos`, `registros`, `permissoes`.
+`PROJECT_APPS`: `AcessoCampus.tipos`, `AcessoCampus.solicitacoes`, `AcessoCampus.permissoes`.
+
+Ainda **planejados** (ADR-003 / milestone): `programacoes/`, `eventos/`, `registros/`.
 
 ---
 
@@ -491,6 +494,6 @@ O Cortex atualmente adota:
 - roteamento global por domínio;
 - registro de apps no `settings.py` por app interno.
 
-O sétimo módulo **AcessoCampus** está **documentado como planejado** (seção acima) e **não** faz parte da árvore física atual.
+O sétimo módulo **AcessoCampus** tem o corte de gestão na árvore física (`tipos`, `solicitacoes`, `permissoes`); programações, eventos e portaria permanecem planejados.
 
 Essa estrutura substitui a visão anterior em que cada domínio era tratado como um único app principal.

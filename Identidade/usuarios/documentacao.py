@@ -929,8 +929,9 @@ class PermissaoDocumentacao:
             'chave': 'acesso_campus',
             'titulo': 'Acesso ao campus',
             'resumo': (
-                'Gestão autoriza entrada ou saída de alunos do Ensino Médio e avalia '
-                'pedidos. A solicitação do aluno e a portaria ficam para um corte seguinte.'
+                'Gestão autoriza alunos do Ensino Médio em qualquer tipo cadastrado '
+                '(Entrada no campus e Saída do campus são tipos-base; demais tipos só no Django Admin) '
+                'e avalia pedidos. A solicitação do aluno e a portaria ficam para um corte seguinte.'
             ),
             'capacidades': [
                 {

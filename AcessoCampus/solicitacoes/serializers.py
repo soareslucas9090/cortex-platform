@@ -1,8 +1,9 @@
 from rest_framework import serializers
 
+from AcessoCampus.tipos.models import TipoAutorizacaoAcesso
 from Identidade.usuarios.constantes import ANEXO_FOTO_SECUNDARIA
 
-from .choices import RESULTADO_AVALIACAO, TipoSolicitacaoAcesso
+from .choices import RESULTADO_AVALIACAO
 from .helpers import FUSO_FORTALEZA
 from .models import SolicitacaoAcesso
 
@@ -38,7 +39,9 @@ class UsuarioResumoSerializer(serializers.Serializer):
 
 
 class AutorizarAcessoSerializer(serializers.Serializer):
-    tipo = serializers.ChoiceField(choices=TipoSolicitacaoAcesso.choices)
+    tipo = serializers.PrimaryKeyRelatedField(
+        queryset=TipoAutorizacaoAcesso.objects.filter(ativo=True),
+    )
     data_acesso = serializers.DateField()
     hora_autorizada = serializers.TimeField()
     motivo = serializers.CharField(max_length=255)
@@ -62,7 +65,7 @@ class RecusarSolicitacaoSerializer(serializers.Serializer):
 
 
 class SolicitacaoAcessoSerializer(serializers.ModelSerializer):
-    tipo_display = serializers.CharField(source='get_tipo_display', read_only=True)
+    tipo_display = serializers.CharField(source='tipo.nome', read_only=True)
     status_display = serializers.CharField(source='get_status_display', read_only=True)
     resultado_avaliacao = serializers.SerializerMethodField()
     avaliada_por = serializers.SerializerMethodField()

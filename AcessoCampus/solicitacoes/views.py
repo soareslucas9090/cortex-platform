@@ -33,7 +33,7 @@ PERMISSOES = '''
 def _solicitacoes_no_escopo(usuario):
     return SolicitacaoAcesso.objects.filter(
         aluno_curso__in=vinculos_no_escopo(usuario),
-    ).select_related('avaliada_por', 'liberado_por', 'aluno__usuario', 'aluno_curso')
+    ).select_related('avaliada_por', 'liberado_por', 'aluno__usuario', 'aluno_curso', 'tipo')
 
 
 @extend_schema(

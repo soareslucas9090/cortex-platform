@@ -1,6 +1,6 @@
 # AcessoCampus — modelagem de dados (planejada)
 
-> **Status:** PLANEJADO — models **não** existem no código; este DER descreve a implementação futura do módulo **AcessoCampus/**.
+> **Status:** corte da **gestão** existe: `TipoAutorizacaoAcesso` (catálogo) e `SolicitacaoAcesso.tipo` como FK. O DER abaixo, com programações, eventos e registros, continua **planejado**. Não existe entidade `Autorizacao` separada.
 
 Timezone de datas/horas operacionais: **America/Fortaleza**.
 
@@ -12,6 +12,7 @@ Pré-requisito Acadêmico: `Curso.nivel_ensino` (`NivelEnsino`: `ENSINO_MEDIO=1`
 
 ```mermaid
 erDiagram
+    TipoAutorizacaoAcesso ||--o{ SolicitacaoAcesso : classifica
     Aluno ||--o{ SolicitacaoAcesso : solicita
     AlunoCurso ||--o{ SolicitacaoAcesso : vinculo
     SolicitacaoAcesso ||--|{ ProgramacaoAcesso : contem
@@ -33,6 +34,23 @@ Cardinalidades operacionais:
 - `ProgramacaoAcesso` 1 — N `EventoAcesso` (após aprovação).
 - `EventoAcesso` 1 — 0..1 `RegistroAcesso` (`OneToOne`).
 - `EventoAcesso` 0..1 — 0..1 `EventoAcesso` (`evento_relacionado`, simétrico para `SAIDA_COM_RETORNO`).
+
+---
+
+## Catálogo de tipos (implementado)
+
+App: `AcessoCampus/tipos/`. Herda `BasicModel` (+ `history`).
+
+| Campo | Tipo | Descrição |
+|-------|------|-----------|
+| `id` | PK | |
+| `nome` | `CharField` unique | Rótulo exibido |
+| `ativo` | `BooleanField` | Só tipo ativo pode ser usado em `POST autorizacoes/` |
+| `eh_base` | `BooleanField` | `True` só no seed; não editável no admin |
+
+Seed: **Entrada no campus** e **Saída do campus** (`eh_base=True`). Novos tipos só no Django Admin. Identidade no código por `nome`, nunca por PK.
+
+`SolicitacaoAcesso.tipo` (corte de gestão) é FK `PROTECT` para `TipoAutorizacaoAcesso`. Unique aceita: `(aluno, data_acesso, tipo)` com `status=ACEITA`.
 
 ---
 
