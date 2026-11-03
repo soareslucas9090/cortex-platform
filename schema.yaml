@@ -9056,7 +9056,6 @@ components:
           format: time
         observacao:
           type: string
-
     AceitarSolicitacaoTrocaTitularResposta:
       type: object
       properties:
@@ -11850,7 +11849,6 @@ components:
           items:
             $ref: '#/components/schemas/SetorVinculo'
     PaginatedSolicitacaoAcessoList:
-    PaginatedSolicitacaoTrocaTitularList:
       type: object
       required:
       - count
@@ -11873,6 +11871,28 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/SolicitacaoAcesso'
+    PaginatedSolicitacaoTrocaTitularList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
             $ref: '#/components/schemas/SolicitacaoTrocaTitular'
     PaginatedStatusImportacaoLoteInfraestruturaList:
       type: object
@@ -13184,7 +13204,6 @@ components:
         * `4` - Desistente
         * `5` - Transferido
     SolicitacaoAcesso:
-    SolicitacaoTrocaTitular:
       type: object
       properties:
         id:
@@ -13206,9 +13225,6 @@ components:
         status:
           allOf:
           - $ref: '#/components/schemas/Status0a9Enum'
-        status:
-          allOf:
-          - $ref: '#/components/schemas/SolicitacaoTrocaTitularStatusEnum'
           minimum: -2147483648
           maximum: 2147483647
         status_display:
@@ -13250,9 +13266,6 @@ components:
           type: string
           title: Matrícula
           maxLength: 50
-        observacao:
-          type: string
-          title: Observação
         created_at:
           type: string
           format: date-time
@@ -13389,7 +13402,27 @@ components:
       - status_display
       - tipo
       - tipo_display
-    Status0a9Enum:
+    SolicitacaoTrocaTitular:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        status:
+          allOf:
+          - $ref: '#/components/schemas/SolicitacaoTrocaTitularStatusEnum'
+          minimum: -2147483648
+          maximum: 2147483647
+        status_display:
+          type: string
+          readOnly: true
+        observacao:
+          type: string
+          title: Observação
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
         updated_at:
           type: string
           format: date-time
@@ -13445,11 +13478,6 @@ components:
       - 1
       - 2
       - 3
-      type: integer
-      description: |-
-        * `1` - Pendente
-        * `2` - Aceito
-        * `3` - Recusado
       - 4
       type: integer
       description: |-
@@ -13467,6 +13495,16 @@ components:
       required:
       - id
       - nome
+    Status0a9Enum:
+      enum:
+      - 1
+      - 2
+      - 3
+      type: integer
+      description: |-
+        * `1` - Pendente
+        * `2` - Aceito
+        * `3` - Recusado
     StatusExecucaoRotaEnum:
       enum:
       - 1
