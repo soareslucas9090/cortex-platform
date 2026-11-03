@@ -6,7 +6,7 @@ Este arquivo contém as regras, modelos e convenções específicas para o domí
 
 O módulo **Infraestrutura** substitui o Chameco legado (levantamento anteriormente chamado Sigec). Está **implementado e operacional** na v1: cadastro de blocos, salas, recursos, autorizações, empréstimos multi-item e importação assíncrona via Celery.
 
-- **Foco v1:** operação do guarda (retirada, devolução, consulta, troca de titular).
+- **Foco v1:** operação do guarda (retirada, devolução, consulta, troca de titular) e solicitação pessoal assíncrona de troca.
 - **Reservas:** fazem parte do domínio de negócio, mas **não existem** no código (sem app `reservas`); não implementar na v1.
 - **Não criar** módulo ou pasta `Sigec`; o agregador canônico é `Infraestrutura/` na raiz do projeto (ADR-001).
 
@@ -32,6 +32,7 @@ Referências complementares (não substituem este arquivo para agentes):
 - **Sala** ↔ **Setor** via **SalaSetor** (M:N; unicidade `sala` + `setor`).
 - **Recurso** (código de negócio único; tipos chave / mídia / material didático).
 - **Emprestimo** + **ItemEmprestimo** (multi-item; devolução parcial; encerramento quando todos os itens têm `devolvido_em`).
+- **SolicitacaoTrocaTitular** (pedido pessoal, com aceite/recusa/cancelamento e vínculo ao novo empréstimo).
 - **Autorizacao** (beneficiário; alvo XOR `sala` ou `recurso`; vigência e revogação).
 - **PermissaoFuncaoInfraestrutura** / **PermissaoUsuarioInfraestrutura** (capacidades do módulo; **sem HTTP** — admin Django e compilação em login).
 - **ImportacaoLote** (carga assíncrona; status e progresso).
@@ -48,7 +49,7 @@ Infraestrutura/
 ├── salas/            # Sala, SalaSetor
 ├── recursos/         # Recurso (+ foto S3)
 ├── autorizacoes/     # Autorizacao
-├── emprestimos/      # Emprestimo, ItemEmprestimo
+├── emprestimos/      # Emprestimo, ItemEmprestimo, SolicitacaoTrocaTitular
 ├── permissoes/       # PermissaoFuncaoInfraestrutura, PermissaoUsuarioInfraestrutura (sem urls)
 └── importacoes/      # ImportacaoLote + tasks Celery
 ```
@@ -75,10 +76,10 @@ Condicionam **escopo de leitura** em empréstimos e o papel típico do usuário:
 
 | Nível | Empréstimos (sem `operar`) |
 | ----- | --------------------------- |
-| **L1** | Lista e detalhe apenas empréstimos **ativos** em que o usuário é **solicitante** |
+| **L1** | Lista e detalhe de empréstimos em que é **solicitante**, pendentes ou concluídos, e daqueles com solicitação de troca pendente em que é **destinatário**; a listagem aceita o filtro `ativo` |
 | **L2+** | Mesmo escopo restrito **até** receber capacidade `operar` |
 
-Quem tem **`operar`** (ou `is_admin` / superuser) consulta empréstimos abertos e encerrados com filtros amplos.
+Quem tem **`operar`** (ou `is_admin` / superuser) consulta empréstimos abertos e encerrados com filtros amplos. Sem `operar`, `ativo=true` limita os registros autorizados aos pendentes, `ativo=false` aos concluídos e a ausência do parâmetro retorna ambos.
 
 ### Capacidades Infraestrutura (`user.permissoes['infraestrutura']`)
 
@@ -89,7 +90,7 @@ Compiladas em `UsuarioPermissions.permissoes_infraestrutura()` — **união OR**
 
 | Capacidade | Libera (views) |
 | ---------- | ---------------- |
-| `operar` | POST empréstimo, devolução, troca de titular; listagens `solicitantes-elegiveis` / `responsaveis-elegiveis` |
+| `operar` | POST empréstimo, devolução, troca de titular; consulta administrativa em `solicitantes-elegiveis` / `responsaveis-elegiveis` |
 | `cadastrar` | CRUD blocos, salas, salas-setores, recursos, fotos; importação em lote |
 | `autorizar` | Listar, conceder, revogar e reativar autorizações |
 | `retirada_irrestrita` | Solicitante pode retirar **qualquer** recurso (regra de elegibilidade, não substitui `operar` na guarita) |
@@ -135,9 +136,34 @@ Implementação de autorização vigente: `EmprestimoHelpers._usuario_tem_autori
 - **Responsável:** quem registra a entrega na retirada.
   - Conta **não coletiva:** responsável = usuário autenticado (não informar outro).
   - Conta **`usuario_coletivo`:** obrigatório `responsavel_id` do pool (`Identidade` + `GET .../emprestimos/responsaveis-elegiveis/`).
+- **Origem coletiva congelada:** `Emprestimo.origem_conta_coletiva` recebe `guarita`
+  ou `codis` exclusivamente a partir da conta autenticada; operações de contas comuns
+  recebem `null`. O campo é somente leitura na API e não muda se o tipo da conta for
+  alterado posteriormente.
+- **Escopo por origem:** contas coletivas listam, consultam e operam somente empréstimos
+  da própria origem. Administradores e superusuários veem todas as origens; operadores
+  não coletivos e usuários comuns preservam o escopo anterior.
+- **Legados:** registros anteriores ao campo permanecem com origem `null`, pois
+  `solicitante` e `responsavel` não identificam com segurança a conta coletiva que
+  realizou a operação. Eles ficam ocultos para guarita/CODIS e seguem visíveis conforme
+  as regras anteriores para administradores, operadores comuns e solicitantes.
 - Conta coletiva **não** pode ser solicitante nem responsável (`UsuarioRules` / `EmprestimoRules`).
 - **Troca de titular:** devolve itens em aberto e abre novo empréstimo (sem vínculo entre registros).
+- **Solicitação de troca:** o titular pessoal pode convidar outro servidor ativo e elegível; somente o destinatário aceita/recusa e somente o solicitante cancela. O aceite vincula a solicitação ao novo empréstimo.
+- Enquanto estiver pendente, a solicitação concede ao destinatário visibilidade do empréstimo original. Recusa ou cancelamento removem esse acesso; no aceite, o original deixa de aparecer e o novo empréstimo passa a ser próprio do destinatário.
+- A listagem prioriza, antes da paginação: solicitação pendente relacionada ao usuário, empréstimo aberto, retirada mais recente e ID como desempate estável.
+- Na seleção do destinatário, uma conta pessoal pode usar `solicitantes-elegiveis` somente para recursos abertos de empréstimo próprio; nesse caso são retornados apenas servidores ativos, excluindo o próprio usuário.
 - **Atraso UI:** empréstimo ativo há mais de 24 h (`HORAS_ALERTA_ATRASO`).
+- **Consulta antes da paginação:** a listagem aplica busca, filtros e ordenação somente
+  depois do escopo autorizado. Datas e horários usam `America/Sao_Paulo`; intervalos
+  com hora inicial maior que a final são inválidos. Em empréstimos ainda abertos,
+  busca e filtros por recurso, sala e tipo consideram somente itens não devolvidos;
+  em concluídos, consideram todo o histórico.
+- **Ordenação da consulta:** sem parâmetro, preserva solicitação pendente relacionada,
+  aberto, retirada mais recente e ID. Com ordenação explícita, preserva somente a
+  prioridade da solicitação pendente e usa ID ascendente como desempate. Sala usa a
+  menor chave normalizada bloco + sala; recurso usa o menor código normalizado com
+  descrição como desempate; devolução usa o maior `devolvido_em` dos itens.
 
 ### Recursos
 
@@ -203,6 +229,9 @@ Paths relativos ao prefixo `/cortex/infraestrutura/`.
 | GET | `emprestimos/{pk}/` |
 | POST | `emprestimos/{pk}/devolver/` |
 | POST | `emprestimos/{pk}/trocar-titular/` |
+| POST | `emprestimos/{pk}/solicitacoes-troca/` |
+| GET | `solicitacoes-troca/` |
+| POST | `solicitacoes-troca/{pk}/aceitar/`, `solicitacoes-troca/{pk}/recusar/`, `solicitacoes-troca/{pk}/cancelar/` |
 
 ### Importação
 

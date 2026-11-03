@@ -25,7 +25,7 @@
 - Um empréstimo pode conter vários recursos.
 - Cada item pode ser devolvido separadamente; o empréstimo termina quando todos forem devolvidos.
 - Deve ser possível consultar e filtrar empréstimos abertos ou concluídos por recurso, tipo, retirada, devolução, solicitante e responsável (consulta ampla só para operadores).
-- A listagem padrão ordena **abertos primeiro** (por data de retirada, mais recentes primeiro) e em seguida os **fechados** (mesma ordenação por data).
+- A listagem padrão ordena solicitações pendentes relacionadas ao usuário primeiro, depois empréstimos **abertos**, data de retirada mais recente e ID como desempate. Essa ordem é aplicada antes da paginação.
 - Recursos e usuários devem ser encontrados por nome/código e nome/matrícula.
 - Empréstimos abertos há mais de 24 horas devem ser **sinalizados na interface** (sem e-mail ou outro canal na v1).
 - A interface deve permanecer simples, concentrar operação e consulta e permitir criar empréstimos em até quatro cliques.
@@ -41,13 +41,21 @@
 - Conta **`usuario_coletivo`** (ex.: login da guarita) autentica a sessão; o responsável é escolhido no pool associado (empresas, cargos, funções, setores) via `GET emprestimos/responsaveis-elegiveis/`.
 - Em conta não coletiva, o responsável é o próprio usuário autenticado.
 - Conta coletiva não pode ser solicitante nem responsável de empréstimo.
+- `Emprestimo.origem_conta_coletiva` congela `guarita` ou `codis` conforme a conta
+  autenticada no momento da operação; contas comuns gravam `null` e o cliente não pode
+  definir esse valor.
+- Guarita e CODIS enxergam e operam apenas a própria origem. Administradores e
+  superusuários enxergam todas; os demais usuários mantêm o escopo anterior.
+- Empréstimos legados permanecem com origem `null` e não são inferidos pelo recurso ou
+  pelo responsável. Contas coletivas não os enxergam; administradores, operadores
+  comuns e solicitantes continuam sujeitos às regras anteriores.
 - A flag `usuario_coletivo` é definida na criação/edição do usuário; o pool é mantido em endpoints separados de Identidade (`/usuarios/{pk}/coletivo/`).
 
 ### Níveis Cortex × módulo (L1 < L2 < L3)
 
 | Nível | Papel no módulo |
 |-------|-----------------|
-| **L1** | Solicitante comum: vê apenas empréstimos **ativos** no próprio nome; sem histórico; não opera |
+| **L1** | Solicitante comum: vê empréstimos próprios, pendentes ou concluídos, e empréstimos com solicitação de troca pendente recebida; pode filtrá-los por `ativo`; não opera |
 | **L2** | Operação do dia a dia (guardas, auxiliares): emprestar, devolver, trocar titular e consultar (`operar`) |
 | **L3** | Autorizar/desautorizar (`autorizar`); tipicamente também cadastra estrutura e opera |
 
@@ -88,7 +96,7 @@ O domínio agregador é `Infraestrutura/`, registrado em `PROJECT_APPS` e rotead
 - `blocos`: `Bloco`;
 - `salas`: `Sala` e `SalaSetor`;
 - `recursos`: `Recurso`;
-- `emprestimos`: `Emprestimo` e `ItemEmprestimo`;
+- `emprestimos`: `Emprestimo`, `ItemEmprestimo` e `SolicitacaoTrocaTitular`;
 - `autorizacoes`: autorizações por sala ou recurso;
 - `permissoes`: capacidades de Infraestrutura por função e por usuário;
 - `importacoes`: importação em lote de blocos/salas/recursos (`ImportacaoLote`, Celery);
@@ -108,6 +116,9 @@ erDiagram
     Usuario ||--o{ Emprestimo : registra
     Emprestimo ||--|{ ItemEmprestimo : contem
     Recurso ||--o{ ItemEmprestimo : participa
+    Emprestimo ||--o{ SolicitacaoTrocaTitular : origina
+    Usuario ||--o{ SolicitacaoTrocaTitular : solicita
+    Usuario ||--o{ SolicitacaoTrocaTitular : recebe
     Usuario ||--o{ Autorizacao : recebe
     Sala ||--o{ Autorizacao : pode_abranger
     Recurso ||--o{ Autorizacao : pode_abranger
@@ -129,6 +140,8 @@ erDiagram
 - Retirada e devolução são transacionais; impede dois empréstimos abertos para o mesmo recurso.
 - Empréstimo: observação/descrição opcional no cabeçalho; encerrado = derivado (todos os `ItemEmprestimo.devolvido_em` preenchidos); sem `status` explícito.
 - Troca de titular: uma ação que, por baixo, devolve e abre novo empréstimo com as **mesmas regras**; sem vínculo entre o registro antigo e o novo.
+- Solicitação pessoal de troca: no máximo uma pendente por empréstimo; o destinatário deve ser servidor ativo e elegível para todos os itens abertos. Aceite, recusa e cancelamento são finais, e o aceite registra o novo empréstimo criado.
+- Status da solicitação: `1 = Pendente`, `2 = Aceita`, `3 = Recusada`, `4 = Cancelada`.
 - `SalaSetor`: `sala` + `setor` com unicidade conjunta.
 - Autorização permanente: `data_fim` nula.
 - Implantação prevista **por campus** (instância dedicada); sem FK de campus no módulo.

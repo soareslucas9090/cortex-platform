@@ -69,6 +69,13 @@ Aplicar a cada arquivo gerado ou modificado **antes de considerar a implementaç
 - [ ] Sub-apps **não** declaram `app_name` — namespace gerenciado pelo domínio pai
 - [ ] Testes de API usam `reverse('<namespace>:<name>')`, nunca paths hardcoded
 
+### Contrato OpenAPI do frontend
+
+- [ ] `schema.yaml` não foi editado manualmente — ele é sempre gerado pelo backend
+- [ ] Depois da implementação, dos testes e das validações, foi executado
+  `python manage.py spectacular --file schema.yaml`
+- [ ] O diff do `schema.yaml` foi conferido antes de commit ou push
+
 ---
 
 ## Componentes do AppCore

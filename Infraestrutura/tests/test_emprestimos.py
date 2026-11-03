@@ -4,7 +4,7 @@ from django.utils import timezone
 from rest_framework.test import APITestCase
 
 from AppCore.core.exceptions.exceptions import BusinessRuleException
-from Identidade.usuarios.models import Usuario
+from Identidade.usuarios.models import TipoContaColetiva, Usuario
 from Infraestrutura.autorizacoes.models import Autorizacao
 from Infraestrutura.blocos.models import Bloco
 from Infraestrutura.emprestimos.choices import HORAS_ALERTA_ATRASO
@@ -43,15 +43,8 @@ class EmprestimoElegibilidadeTest(APITestCase):
         self.solicitante = criar_usuario('16161616161', nome='Solicitante')
         self.bloco = Bloco.objects.create(nome='Bloco Emp')
         self.sala = Sala.objects.create(bloco=self.bloco, nome='Sala Emp')
-        self.chave = Recurso.objects.create(
-            codigo='CHV-EMP',
-            tipo=TipoRecurso.CHAVE,
-            sala=self.sala,
-        )
-        self.midia = Recurso.objects.create(
-            codigo='MID-EMP',
-            tipo=TipoRecurso.MIDIA,
-        )
+        self.chave = Recurso.objects.create(codigo='CHV-EMP', tipo=TipoRecurso.CHAVE, sala=self.sala)
+        self.midia = Recurso.objects.create(codigo='MID-EMP', tipo=TipoRecurso.MIDIA)
 
     def test_chave_via_sala_setor(self):
         setor = Setor.objects.create(sigla='SET', nome='Setor Sala')
@@ -59,18 +52,14 @@ class EmprestimoElegibilidadeTest(APITestCase):
         SetorVinculo.objects.create(usuario=self.solicitante, setor=setor, funcao=None)
 
         emprestimo = Emprestimo().business.realizar_emprestimo(
-            solicitante_id=self.solicitante.pk,
-            conta_autenticada=self.operador,
-            recurso_ids=[self.chave.pk],
+            solicitante_id=self.solicitante.pk, conta_autenticada=self.operador, recurso_ids=[self.chave.pk]
         )
         self.assertEqual(emprestimo.solicitante, self.solicitante)
 
     def test_midia_exige_autorizacao(self):
         with self.assertRaises(Exception):
             Emprestimo().business.realizar_emprestimo(
-                solicitante_id=self.solicitante.pk,
-                conta_autenticada=self.operador,
-                recurso_ids=[self.midia.pk],
+                solicitante_id=self.solicitante.pk, conta_autenticada=self.operador, recurso_ids=[self.midia.pk]
             )
 
     def test_midia_com_autorizacao(self):
@@ -88,9 +77,7 @@ class EmprestimoElegibilidadeTest(APITestCase):
         )
 
         emprestimo = Emprestimo().business.realizar_emprestimo(
-            solicitante_id=self.solicitante.pk,
-            conta_autenticada=self.operador,
-            recurso_ids=[self.midia.pk],
+            solicitante_id=self.solicitante.pk, conta_autenticada=self.operador, recurso_ids=[self.midia.pk]
         )
         self.assertEqual(emprestimo.itens.count(), 1)
 
@@ -129,9 +116,7 @@ class EmprestimoElegibilidadeTest(APITestCase):
         apenas_chave = criar_usuario('17171717172', nome='Apenas Chave')
         SetorVinculo.objects.create(usuario=apenas_chave, setor=setor, funcao=None)
 
-        elegiveis = Emprestimo().helper.listar_solicitantes_elegiveis_para_recursos(
-            [self.chave, self.midia],
-        )
+        elegiveis = Emprestimo().helper.listar_solicitantes_elegiveis_para_recursos([self.chave, self.midia])
         ids = set(elegiveis.values_list('pk', flat=True))
         self.assertIn(self.solicitante.pk, ids)
         self.assertNotIn(apenas_chave.pk, ids)
@@ -141,22 +126,13 @@ class EmprestimoElegibilidadeTest(APITestCase):
         cargo = Cargo.objects.create(nome='AUXILIAR DE SERVICOS GERAIS', ativo=True)
         terceirizado_user = criar_usuario('19191919191', nome='Terceirizado Chave')
         Terceirizado().business.criar_terceirizado(
-            usuario_pk=terceirizado_user.pk,
-            empresa_pk=empresa.pk,
-            cargo_pk=cargo.pk,
-            data_inicio=datetime.date.today(),
+            usuario_pk=terceirizado_user.pk, empresa_pk=empresa.pk, cargo_pk=cargo.pk, data_inicio=datetime.date.today()
         )
         outra_sala = Sala.objects.create(bloco=self.bloco, nome='Sala Outra')
-        outra_chave = Recurso.objects.create(
-            codigo='CHV-OUT',
-            tipo=TipoRecurso.CHAVE,
-            sala=outra_sala,
-        )
+        outra_chave = Recurso.objects.create(codigo='CHV-OUT', tipo=TipoRecurso.CHAVE, sala=outra_sala)
 
         emprestimo = Emprestimo().business.realizar_emprestimo(
-            solicitante_id=terceirizado_user.pk,
-            conta_autenticada=self.operador,
-            recurso_ids=[outra_chave.pk],
+            solicitante_id=terceirizado_user.pk, conta_autenticada=self.operador, recurso_ids=[outra_chave.pk]
         )
         self.assertEqual(emprestimo.solicitante, terceirizado_user)
 
@@ -165,41 +141,27 @@ class EmprestimoElegibilidadeTest(APITestCase):
         cargo = Cargo.objects.create(nome='PORTEIRO', ativo=True)
         terceirizado_user = criar_usuario('19191919192', nome='Terceirizado Midia')
         Terceirizado().business.criar_terceirizado(
-            usuario_pk=terceirizado_user.pk,
-            empresa_pk=empresa.pk,
-            cargo_pk=cargo.pk,
-            data_inicio=datetime.date.today(),
+            usuario_pk=terceirizado_user.pk, empresa_pk=empresa.pk, cargo_pk=cargo.pk, data_inicio=datetime.date.today()
         )
         with self.assertRaises(Exception):
             Emprestimo().business.realizar_emprestimo(
-                solicitante_id=terceirizado_user.pk,
-                conta_autenticada=self.operador,
-                recurso_ids=[self.midia.pk],
+                solicitante_id=terceirizado_user.pk, conta_autenticada=self.operador, recurso_ids=[self.midia.pk]
             )
 
     def test_servidor_retira_chave_e_midia_sem_autorizacao(self):
-        cargo, _ = Cargo.objects.get_or_create(
-            nome='ASSISTENTE EM ADMINISTRACAO',
-            defaults={'ativo': True},
-        )
+        cargo, _ = Cargo.objects.get_or_create(nome='ASSISTENTE EM ADMINISTRACAO', defaults={'ativo': True})
         servidor_user = criar_usuario('19191919193', nome='Servidor Livre')
         Servidor().business.criar_servidor(
-            usuario_pk=servidor_user.pk,
-            cargo_pk=cargo.pk,
-            categoria=CategoriaServidor.TECNICO_ADMINISTRATIVO,
+            usuario_pk=servidor_user.pk, cargo_pk=cargo.pk, categoria=CategoriaServidor.TECNICO_ADMINISTRATIVO
         )
 
         emprestimo_chave = Emprestimo().business.realizar_emprestimo(
-            solicitante_id=servidor_user.pk,
-            conta_autenticada=self.operador,
-            recurso_ids=[self.chave.pk],
+            solicitante_id=servidor_user.pk, conta_autenticada=self.operador, recurso_ids=[self.chave.pk]
         )
         self.assertEqual(emprestimo_chave.solicitante, servidor_user)
 
         emprestimo_midia = Emprestimo().business.realizar_emprestimo(
-            solicitante_id=servidor_user.pk,
-            conta_autenticada=self.operador,
-            recurso_ids=[self.midia.pk],
+            solicitante_id=servidor_user.pk, conta_autenticada=self.operador, recurso_ids=[self.midia.pk]
         )
         self.assertEqual(emprestimo_midia.solicitante, servidor_user)
 
@@ -209,9 +171,7 @@ class EmprestimoElegibilidadeTest(APITestCase):
 
         with self.assertRaises(Exception):
             Emprestimo().business.realizar_emprestimo(
-                solicitante_id=aluno_user.pk,
-                conta_autenticada=self.operador,
-                recurso_ids=[self.chave.pk],
+                solicitante_id=aluno_user.pk, conta_autenticada=self.operador, recurso_ids=[self.chave.pk]
             )
 
         autorizador = conceder_capacidade_operar(criar_usuario('18181818183', nome='Autorizador Aluno'))
@@ -228,9 +188,7 @@ class EmprestimoElegibilidadeTest(APITestCase):
         )
 
         emprestimo = Emprestimo().business.realizar_emprestimo(
-            solicitante_id=aluno_user.pk,
-            conta_autenticada=self.operador,
-            recurso_ids=[self.chave.pk],
+            solicitante_id=aluno_user.pk, conta_autenticada=self.operador, recurso_ids=[self.chave.pk]
         )
         self.assertEqual(emprestimo.solicitante, aluno_user)
 
@@ -247,28 +205,16 @@ class EmprestimoOperacoesTest(APITestCase):
         SalaSetor.objects.create(sala=self.sala, setor=setor)
         SetorVinculo.objects.create(usuario=self.solicitante, setor=setor, funcao=None)
         SetorVinculo.objects.create(usuario=self.novo_solicitante, setor=setor, funcao=None)
-        self.chave1 = Recurso.objects.create(
-            codigo='CHV-OP1',
-            tipo=TipoRecurso.CHAVE,
-            sala=self.sala,
-        )
-        self.chave2 = Recurso.objects.create(
-            codigo='CHV-OP2',
-            tipo=TipoRecurso.CHAVE,
-            sala=self.sala,
-        )
+        self.chave1 = Recurso.objects.create(codigo='CHV-OP1', tipo=TipoRecurso.CHAVE, sala=self.sala)
+        self.chave2 = Recurso.objects.create(codigo='CHV-OP2', tipo=TipoRecurso.CHAVE, sala=self.sala)
 
     def test_nao_permite_segundo_emprestimo_aberto_no_recurso(self):
         Emprestimo().business.realizar_emprestimo(
-            solicitante_id=self.solicitante.pk,
-            conta_autenticada=self.operador,
-            recurso_ids=[self.chave1.pk],
+            solicitante_id=self.solicitante.pk, conta_autenticada=self.operador, recurso_ids=[self.chave1.pk]
         )
         with self.assertRaises(BusinessRuleException) as ctx:
             Emprestimo().business.realizar_emprestimo(
-                solicitante_id=self.solicitante.pk,
-                conta_autenticada=self.operador,
-                recurso_ids=[self.chave1.pk],
+                solicitante_id=self.solicitante.pk, conta_autenticada=self.operador, recurso_ids=[self.chave1.pk]
             )
         self.assertIn('empréstimo em aberto', str(ctx.exception).lower())
         self.assertNotIn(self.chave1.codigo, str(ctx.exception))
@@ -276,25 +222,15 @@ class EmprestimoOperacoesTest(APITestCase):
         self.assertIn(self.bloco.nome, str(ctx.exception))
 
     def test_recurso_sem_sala_usa_codigo_na_mensagem_de_emprestimo_aberto(self):
-        recurso_sem_sala = Recurso.objects.create(
-            codigo='MID-SEM-SALA',
-            tipo=TipoRecurso.MIDIA,
-        )
+        recurso_sem_sala = Recurso.objects.create(codigo='MID-SEM-SALA', tipo=TipoRecurso.MIDIA)
         emprestimo_aberto = Emprestimo.objects.create(
-            solicitante=self.solicitante,
-            responsavel=self.operador,
-            retirada_em=timezone.now(),
+            solicitante=self.solicitante, responsavel=self.operador, retirada_em=timezone.now()
         )
-        ItemEmprestimo.objects.create(
-            emprestimo=emprestimo_aberto,
-            recurso=recurso_sem_sala,
-        )
+        ItemEmprestimo.objects.create(emprestimo=emprestimo_aberto, recurso=recurso_sem_sala)
 
         with self.assertRaises(BusinessRuleException) as ctx:
             Emprestimo().business.realizar_emprestimo(
-                solicitante_id=self.solicitante.pk,
-                conta_autenticada=self.operador,
-                recurso_ids=[recurso_sem_sala.pk],
+                solicitante_id=self.solicitante.pk, conta_autenticada=self.operador, recurso_ids=[recurso_sem_sala.pk]
             )
 
         self.assertIn(recurso_sem_sala.codigo, str(ctx.exception))
@@ -311,9 +247,7 @@ class EmprestimoOperacoesTest(APITestCase):
 
     def test_rejeita_item_ids_duplicados_na_devolucao(self):
         emprestimo = Emprestimo().business.realizar_emprestimo(
-            solicitante_id=self.solicitante.pk,
-            conta_autenticada=self.operador,
-            recurso_ids=[self.chave1.pk],
+            solicitante_id=self.solicitante.pk, conta_autenticada=self.operador, recurso_ids=[self.chave1.pk]
         )
         item_id = emprestimo.itens.first().pk
         with self.assertRaises(BusinessRuleException) as ctx:
@@ -333,9 +267,7 @@ class EmprestimoOperacoesTest(APITestCase):
 
     def test_devolucao_total_encerra_emprestimo(self):
         emprestimo = Emprestimo().business.realizar_emprestimo(
-            solicitante_id=self.solicitante.pk,
-            conta_autenticada=self.operador,
-            recurso_ids=[self.chave1.pk],
+            solicitante_id=self.solicitante.pk, conta_autenticada=self.operador, recurso_ids=[self.chave1.pk]
         )
         item_id = emprestimo.itens.first().pk
         emprestimo.business.devolver_itens(self.operador, [item_id])
@@ -344,13 +276,10 @@ class EmprestimoOperacoesTest(APITestCase):
 
     def test_trocar_titular_abre_novo_emprestimo(self):
         emprestimo = Emprestimo().business.realizar_emprestimo(
-            solicitante_id=self.solicitante.pk,
-            conta_autenticada=self.operador,
-            recurso_ids=[self.chave1.pk],
+            solicitante_id=self.solicitante.pk, conta_autenticada=self.operador, recurso_ids=[self.chave1.pk]
         )
         novo = emprestimo.business.trocar_titular(
-            conta_autenticada=self.operador,
-            novo_solicitante_id=self.novo_solicitante.pk,
+            conta_autenticada=self.operador, novo_solicitante_id=self.novo_solicitante.pk
         )
         emprestimo.refresh_from_db()
         self.assertFalse(emprestimo.ativo)
@@ -379,21 +308,9 @@ class EmprestimoListagemOrdenacaoTest(APITestCase):
         setor = Setor.objects.create(sigla='ORD', nome='Setor Ord')
         SalaSetor.objects.create(sala=sala, setor=setor)
         SetorVinculo.objects.create(usuario=self.solicitante, setor=setor, funcao=None)
-        self.chave1 = Recurso.objects.create(
-            codigo='CHV-ORD1',
-            tipo=TipoRecurso.CHAVE,
-            sala=sala,
-        )
-        self.chave2 = Recurso.objects.create(
-            codigo='CHV-ORD2',
-            tipo=TipoRecurso.CHAVE,
-            sala=sala,
-        )
-        self.chave3 = Recurso.objects.create(
-            codigo='CHV-ORD3',
-            tipo=TipoRecurso.CHAVE,
-            sala=sala,
-        )
+        self.chave1 = Recurso.objects.create(codigo='CHV-ORD1', tipo=TipoRecurso.CHAVE, sala=sala)
+        self.chave2 = Recurso.objects.create(codigo='CHV-ORD2', tipo=TipoRecurso.CHAVE, sala=sala)
+        self.chave3 = Recurso.objects.create(codigo='CHV-ORD3', tipo=TipoRecurso.CHAVE, sala=sala)
 
     def test_lista_abertos_antes_de_fechados_por_data(self):
         agora = timezone.now()
@@ -403,10 +320,7 @@ class EmprestimoListagemOrdenacaoTest(APITestCase):
             recurso_ids=[self.chave1.pk],
             retirada_em=agora - datetime.timedelta(hours=1),
         )
-        fechado_recente.business.devolver_itens(
-            self.operador,
-            [fechado_recente.itens.first().pk],
-        )
+        fechado_recente.business.devolver_itens(self.operador, [fechado_recente.itens.first().pk])
 
         aberto_antigo = Emprestimo().business.realizar_emprestimo(
             solicitante_id=self.solicitante.pk,
@@ -421,9 +335,7 @@ class EmprestimoListagemOrdenacaoTest(APITestCase):
             retirada_em=agora - datetime.timedelta(minutes=30),
         )
 
-        ids = list(
-            Emprestimo().helper.listar_para_usuario(self.operador).values_list('pk', flat=True),
-        )
+        ids = list(Emprestimo().helper.listar_para_usuario(self.operador).values_list('pk', flat=True))
         self.assertEqual(ids[:2], [aberto_recente.pk, aberto_antigo.pk])
         self.assertEqual(ids[2], fechado_recente.pk)
 
@@ -434,7 +346,8 @@ class EmprestimoUsuarioColetivoTest(APITestCase):
         self.guardinha = criar_usuario('32323232323', nome='Seu Zé Unit')
         self.conta_coletiva = criar_usuario('33333333333', nome='Guarita Unit')
         self.conta_coletiva.usuario_coletivo = True
-        self.conta_coletiva.save()
+        self.conta_coletiva.tipo_conta_coletiva = TipoContaColetiva.GUARITA
+        self.conta_coletiva.save(update_fields=['usuario_coletivo', 'tipo_conta_coletiva'])
         conceder_capacidade_operar(self.conta_coletiva)
 
         self.solicitante = criar_usuario('34343434343', nome='Solicitante Unit')
@@ -446,11 +359,7 @@ class EmprestimoUsuarioColetivoTest(APITestCase):
         sala = Sala.objects.create(bloco=bloco, nome='Sala Unit')
         SalaSetor.objects.create(sala=sala, setor=setor)
         SetorVinculo.objects.create(usuario=self.solicitante, setor=setor, funcao=None)
-        self.chave = Recurso.objects.create(
-            codigo='CHV-UNIT',
-            tipo=TipoRecurso.CHAVE,
-            sala=sala,
-        )
+        self.chave = Recurso.objects.create(codigo='CHV-UNIT', tipo=TipoRecurso.CHAVE, sala=sala)
 
     def test_conta_coletiva_grava_responsavel_escolhido(self):
         emprestimo = Emprestimo().business.realizar_emprestimo(
@@ -460,6 +369,7 @@ class EmprestimoUsuarioColetivoTest(APITestCase):
             recurso_ids=[self.chave.pk],
         )
         self.assertEqual(emprestimo.responsavel, self.guardinha)
+        self.assertEqual(emprestimo.origem_conta_coletiva, TipoContaColetiva.GUARITA)
 
     def test_solicitantes_elegiveis_excluem_conta_coletiva(self):
         self.conta_coletiva.setor_vinculos.all().delete()

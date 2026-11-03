@@ -1,24 +1,78 @@
 from datetime import date, timedelta
+from zoneinfo import ZoneInfo
 
 from django.apps import apps
-from django.db.models import Exists, OuterRef, Q
+from django.db.models import CharField, Count, Exists, F, Func, OuterRef, Prefetch, Q, Subquery, Value
+from django.db.models.functions import Coalesce, Concat, Lower, TruncDate, TruncTime
 from django.utils import timezone
 
 from AppCore.core.helpers.helpers import ModelInstanceHelpers
 
-from Infraestrutura.permissoes.access import usuario_pode_operar_infraestrutura
+from Infraestrutura.permissoes.access import usuario_pode_operar_infraestrutura, usuario_tem_acesso_total_infraestrutura
 from Infraestrutura.recursos.choices import TipoRecurso
 
-from .choices import HORAS_ALERTA_ATRASO
+from .choices import HORAS_ALERTA_ATRASO, OrigemContaColetiva
+
+FUSO_HORARIO_EMPRESTIMOS = ZoneInfo('America/Sao_Paulo')
 
 
 class EmprestimoHelpers(ModelInstanceHelpers):
+
+    def extrair_ids_recursos(self, *grupos_valores) -> list[int]:
+        ids: list[int] = []
+        for valores in grupos_valores:
+            for valor in valores:
+                for parte in str(valor).split(','):
+                    parte = parte.strip()
+                    if parte.isdigit():
+                        ids.append(int(parte))
+        return list(dict.fromkeys(ids))
+
+    def recursos_pertencem_a_emprestimo_aberto_do_usuario(self, usuario, recurso_ids: list[int]) -> bool:
+        from .models import ItemEmprestimo
+
+        if not recurso_ids:
+            return False
+        quantidade_recursos = len(set(recurso_ids))
+        return (
+            ItemEmprestimo.objects.filter(
+                emprestimo__solicitante=usuario, devolvido_em__isnull=True, recurso_id__in=recurso_ids
+            )
+            .values('emprestimo_id')
+            .annotate(quantidade=Count('recurso_id', distinct=True))
+            .filter(quantidade=quantidade_recursos)
+            .exists()
+        )
+
+    def listar_detalhados(self, usuario=None):
+        from .models import Emprestimo, ItemEmprestimo
+
+        itens_abertos = ItemEmprestimo.objects.filter(emprestimo_id=OuterRef('pk'), devolvido_em__isnull=True)
+        qs = (
+            Emprestimo.objects.select_related('solicitante', 'responsavel')
+            .prefetch_related('itens__recurso__sala__bloco')
+            .annotate(_aberto=Exists(itens_abertos))
+        )
+        if usuario is not None:
+            qs = qs.prefetch_related(
+                Prefetch(
+                    'solicitacoes_troca_titular',
+                    queryset=self._listar_solicitacoes_pendentes_relacionadas(usuario),
+                    to_attr='_solicitacoes_troca_usuario',
+                )
+            )
+        return qs
+
+    def obter_detalhado(self, emprestimo_id: int):
+        return self.listar_detalhados().get(pk=emprestimo_id)
 
     def esta_ativo(self) -> bool:
         """Verifica se o empréstimo possui itens em aberto."""
         emprestimo = self.object_instance
         if emprestimo.pk is None:
             return False
+        if hasattr(emprestimo, '_aberto'):
+            return emprestimo._aberto
         return emprestimo.itens.filter(devolvido_em__isnull=True).exists()
 
     def esta_atrasado(self) -> bool:
@@ -48,18 +102,9 @@ class EmprestimoHelpers(ModelInstanceHelpers):
     def recurso_esta_emprestado(self, recurso) -> bool:
         from .models import ItemEmprestimo
 
-        return ItemEmprestimo.objects.filter(
-            recurso=recurso,
-            devolvido_em__isnull=True,
-        ).exists()
+        return ItemEmprestimo.objects.filter(recurso=recurso, devolvido_em__isnull=True).exists()
 
-    def listar_solicitantes_elegiveis_para_recurso(
-        self,
-        recurso,
-        *,
-        nome=None,
-        ativo=True,
-    ):
+    def listar_solicitantes_elegiveis_para_recurso(self, recurso, *, nome=None, ativo=True):
         """
         Retorna usuários ativos elegíveis a retirar o recurso informado.
         Espelha as regras de solicitante_pode_retirar_recurso em nível de queryset.
@@ -81,8 +126,7 @@ class EmprestimoHelpers(ModelInstanceHelpers):
             elegiveis |= Q(terceirizado__ativo=True)
             if recurso.sala_id:
                 elegiveis |= Q(
-                    setor_vinculos__setor__ativo=True,
-                    setor_vinculos__setor__salas_vinculadas__sala_id=recurso.sala_id,
+                    setor_vinculos__setor__ativo=True, setor_vinculos__setor__salas_vinculadas__sala_id=recurso.sala_id
                 )
 
         filtro_vigencia = Q(
@@ -92,13 +136,9 @@ class EmprestimoHelpers(ModelInstanceHelpers):
             Q(autorizacoes_infraestrutura__data_fim__isnull=True)
             | Q(autorizacoes_infraestrutura__data_fim__gte=referencia)
         )
-        elegiveis |= Q(
-            autorizacoes_infraestrutura__recurso_id=recurso.pk,
-        ) & filtro_vigencia
+        elegiveis |= Q(autorizacoes_infraestrutura__recurso_id=recurso.pk) & filtro_vigencia
         if recurso.sala_id:
-            elegiveis |= Q(
-                autorizacoes_infraestrutura__sala_id=recurso.sala_id,
-            ) & filtro_vigencia
+            elegiveis |= Q(autorizacoes_infraestrutura__sala_id=recurso.sala_id) & filtro_vigencia
 
         qs = Usuario.objects.filter(elegiveis, usuario_coletivo=False)
         if ativo is not None:
@@ -107,13 +147,7 @@ class EmprestimoHelpers(ModelInstanceHelpers):
             qs = qs.filter(nome__unaccent__icontains=nome)
         return qs.distinct().order_by('nome')
 
-    def listar_solicitantes_elegiveis_para_recursos(
-        self,
-        recursos,
-        *,
-        nome=None,
-        ativo=True,
-    ):
+    def listar_solicitantes_elegiveis_para_recursos(self, recursos, *, nome=None, ativo=True):
         """
         Retorna usuários elegíveis a retirar todos os recursos informados (interseção).
         """
@@ -139,20 +173,38 @@ class EmprestimoHelpers(ModelInstanceHelpers):
         solicitante_id=None,
         responsavel_id=None,
         recurso_id=None,
+        sala_id=None,
         tipo_recurso=None,
         atrasado=None,
+        busca=None,
+        retirada_data=None,
+        retirada_hora_inicio=None,
+        retirada_hora_fim=None,
+        devolucao_data=None,
+        devolucao_hora_inicio=None,
+        devolucao_hora_fim=None,
+        ordenacao=None,
     ):
-        """L2 (`operar`): consulta ampla. L1: apenas empréstimos ativos próprios."""
-        from .models import Emprestimo, ItemEmprestimo
+        """L2 (`operar`): consulta ampla. L1: próprios e pendências recebidas."""
+        from .choices import StatusSolicitacaoTrocaTitular
+        from .models import Emprestimo, ItemEmprestimo, SolicitacaoTrocaTitular
 
-        qs = Emprestimo.objects.select_related(
-            'solicitante',
-            'responsavel',
-        ).prefetch_related(
-            'itens__recurso__sala',
+        solicitacoes_usuario = self._listar_solicitacoes_pendentes_relacionadas(usuario)
+        solicitacoes_pendentes = SolicitacaoTrocaTitular.objects.filter(
+            emprestimo_id=OuterRef('pk'), status=StatusSolicitacaoTrocaTitular.PENDENTE
+        )
+        solicitacoes_pendentes_relacionadas = solicitacoes_pendentes.filter(
+            Q(solicitante=usuario) | Q(destinatario=usuario)
+        )
+        solicitacoes_pendentes_recebidas = solicitacoes_pendentes.filter(destinatario=usuario)
+
+        qs = Emprestimo.objects.annotate(
+            _solicitacao_pendente_relacionada=Exists(solicitacoes_pendentes_relacionadas),
+            _solicitacao_pendente_recebida=Exists(solicitacoes_pendentes_recebidas),
         )
 
         if usuario_pode_operar_infraestrutura(usuario):
+            qs = self.restringir_por_origem_conta_coletiva(qs, usuario)
             if solicitante_id is not None:
                 qs = qs.filter(solicitante_id=solicitante_id)
             if responsavel_id is not None:
@@ -160,42 +212,196 @@ class EmprestimoHelpers(ModelInstanceHelpers):
             if ativo is not None:
                 qs = self._filtrar_por_ativo(qs, ativo)
         else:
-            qs = qs.filter(solicitante=usuario)
-            qs = self._filtrar_por_ativo(qs, True)
+            qs = qs.filter(Q(solicitante=usuario) | Q(_solicitacao_pendente_recebida=True))
+            if ativo is not None:
+                qs = self._filtrar_por_ativo(qs, ativo)
 
+        filtros_item = Q()
         if recurso_id is not None:
-            qs = qs.filter(itens__recurso_id=recurso_id).distinct()
+            filtros_item &= Q(recurso_id=recurso_id)
+        if sala_id is not None:
+            filtros_item &= Q(recurso__sala_id=sala_id)
         if tipo_recurso is not None:
-            qs = qs.filter(itens__recurso__tipo=tipo_recurso).distinct()
+            filtros_item &= Q(recurso__tipo=tipo_recurso)
+        if filtros_item:
+            qs = qs.filter(Exists(self._itens_relevantes().filter(filtros_item)))
+
+        if busca:
+            busca = busca.strip()
+            if busca:
+                itens_encontrados = self._itens_relevantes().filter(
+                    Q(recurso__codigo__unaccent__icontains=busca)
+                    | Q(recurso__descricao__unaccent__icontains=busca)
+                    | Q(recurso__sala__nome__unaccent__icontains=busca)
+                    | Q(recurso__sala__bloco__nome__unaccent__icontains=busca)
+                )
+                qs = qs.annotate(_busca_em_item=Exists(itens_encontrados)).filter(
+                    Q(solicitante__nome__unaccent__icontains=busca)
+                    | Q(responsavel__nome__unaccent__icontains=busca)
+                    | Q(observacao__unaccent__icontains=busca)
+                    | Q(_busca_em_item=True)
+                )
+
+        if retirada_data is not None or retirada_hora_inicio is not None or retirada_hora_fim is not None:
+            qs = qs.annotate(
+                _retirada_data_local=TruncDate('retirada_em', tzinfo=FUSO_HORARIO_EMPRESTIMOS),
+                _retirada_hora_local=TruncTime('retirada_em', tzinfo=FUSO_HORARIO_EMPRESTIMOS),
+            )
+            if retirada_data is not None:
+                qs = qs.filter(_retirada_data_local=retirada_data)
+            if retirada_hora_inicio is not None:
+                qs = qs.filter(_retirada_hora_local__gte=retirada_hora_inicio)
+            if retirada_hora_fim is not None:
+                qs = qs.filter(_retirada_hora_local__lte=retirada_hora_fim)
+
+        if devolucao_data is not None or devolucao_hora_inicio is not None or devolucao_hora_fim is not None:
+            itens_devolvidos = ItemEmprestimo.objects.filter(
+                emprestimo_id=OuterRef('pk'), devolvido_em__isnull=False
+            ).annotate(
+                _devolucao_data_local=TruncDate('devolvido_em', tzinfo=FUSO_HORARIO_EMPRESTIMOS),
+                _devolucao_hora_local=TruncTime('devolvido_em', tzinfo=FUSO_HORARIO_EMPRESTIMOS),
+            )
+            if devolucao_data is not None:
+                itens_devolvidos = itens_devolvidos.filter(_devolucao_data_local=devolucao_data)
+            if devolucao_hora_inicio is not None:
+                itens_devolvidos = itens_devolvidos.filter(_devolucao_hora_local__gte=devolucao_hora_inicio)
+            if devolucao_hora_fim is not None:
+                itens_devolvidos = itens_devolvidos.filter(_devolucao_hora_local__lte=devolucao_hora_fim)
+            qs = qs.filter(Exists(itens_devolvidos))
+
         if atrasado is not None:
             qs = self._filtrar_por_atrasado(qs, atrasado)
 
-        # Abertos primeiro; dentro de cada grupo, mais recentes primeiro.
-        itens_abertos = ItemEmprestimo.objects.filter(
-            emprestimo_id=OuterRef('pk'),
-            devolvido_em__isnull=True,
-        )
-        return qs.annotate(_aberto=Exists(itens_abertos)).order_by(
-            '-_aberto',
-            '-retirada_em',
-            'pk',
+        itens_abertos = ItemEmprestimo.objects.filter(emprestimo_id=OuterRef('pk'), devolvido_em__isnull=True)
+        qs = qs.annotate(_aberto=Exists(itens_abertos))
+        qs = self._ordenar_emprestimos(qs, ordenacao)
+        return qs.select_related('solicitante', 'responsavel').prefetch_related(
+            'itens__recurso__sala__bloco',
+            Prefetch(
+                'solicitacoes_troca_titular', queryset=solicitacoes_usuario, to_attr='_solicitacoes_troca_usuario'
+            ),
         )
 
+    def _itens_relevantes(self):
+        """Em abertos considera itens ativos; em concluídos preserva todo o histórico."""
+        from .models import ItemEmprestimo
+
+        itens_abertos_do_emprestimo = ItemEmprestimo.objects.filter(
+            emprestimo_id=OuterRef('emprestimo_id'), devolvido_em__isnull=True
+        )
+        return (
+            ItemEmprestimo.objects.filter(emprestimo_id=OuterRef('pk'))
+            .annotate(_emprestimo_aberto=Exists(itens_abertos_do_emprestimo))
+            .filter(Q(_emprestimo_aberto=False) | Q(devolvido_em__isnull=True))
+        )
+
+    def _texto_normalizado(self, expressao):
+        return Lower(Func(expressao, function='UNACCENT', output_field=CharField()))
+
+    def _ordenar_emprestimos(self, qs, ordenacao):
+        from .models import ItemEmprestimo
+
+        if not ordenacao:
+            return qs.order_by('-_solicitacao_pendente_relacionada', '-_aberto', '-retirada_em', 'pk')
+
+        decrescente = ordenacao.startswith('-')
+        campo = ordenacao.removeprefix('-')
+        nome_anotacao = None
+
+        if campo == 'sala':
+            chave_sala = self._texto_normalizado(
+                Concat(
+                    Coalesce(F('recurso__sala__bloco__nome'), Value('')),
+                    Value('\x1f'),
+                    Coalesce(F('recurso__sala__nome'), Value('')),
+                )
+            )
+            salas = (
+                self._itens_relevantes()
+                .filter(recurso__sala__isnull=False)
+                .annotate(_chave=chave_sala)
+                .order_by('_chave')
+                .values('_chave')[:1]
+            )
+            nome_anotacao = '_ordem_sala'
+            qs = qs.annotate(**{nome_anotacao: Subquery(salas, output_field=CharField())})
+        elif campo == 'recurso':
+            chave_recurso = self._texto_normalizado(
+                Concat(
+                    F('recurso__codigo'),
+                    Value('\x1f'),
+                    Coalesce(F('recurso__descricao'), Value('')),
+                )
+            )
+            recursos = self._itens_relevantes().annotate(_chave=chave_recurso).order_by('_chave').values('_chave')[:1]
+            nome_anotacao = '_ordem_recurso'
+            qs = qs.annotate(**{nome_anotacao: Subquery(recursos, output_field=CharField())})
+        elif campo in ('solicitante', 'responsavel'):
+            nome_anotacao = f'_ordem_{campo}'
+            qs = qs.annotate(**{nome_anotacao: self._texto_normalizado(F(f'{campo}__nome'))})
+        elif campo == 'retirada_em':
+            nome_anotacao = 'retirada_em'
+        elif campo == 'devolucao_em':
+            ultima_devolucao = (
+                ItemEmprestimo.objects.filter(emprestimo_id=OuterRef('pk'), devolvido_em__isnull=False)
+                .order_by('-devolvido_em')
+                .values('devolvido_em')[:1]
+            )
+            nome_anotacao = '_ordem_devolucao_em'
+            qs = qs.annotate(**{nome_anotacao: Subquery(ultima_devolucao)})
+
+        expressao = F(nome_anotacao)
+        expressao = expressao.desc(nulls_last=True) if decrescente else expressao.asc(nulls_last=True)
+        return qs.order_by('-_solicitacao_pendente_relacionada', expressao, 'pk')
+
     def usuario_pode_consultar_emprestimo(self, usuario, emprestimo) -> bool:
-        """Operador consulta qualquer; L1 apenas empréstimos ativos próprios."""
-        if usuario_pode_operar_infraestrutura(usuario):
+        """Operador consulta conforme seu escopo; L1 consulta próprios e pendências recebidas."""
+        from .choices import StatusSolicitacaoTrocaTitular
+        from .models import SolicitacaoTrocaTitular
+
+        if usuario_tem_acesso_total_infraestrutura(usuario):
             return True
-        if emprestimo.solicitante_id != usuario.pk:
-            return False
-        return self._esta_ativo_por_pk(emprestimo.pk)
+        if usuario_pode_operar_infraestrutura(usuario):
+            if usuario.usuario_coletivo:
+                tipo = usuario.tipo_conta_coletiva
+                return tipo in OrigemContaColetiva.values and emprestimo.origem_conta_coletiva == tipo
+            return True
+        if emprestimo.solicitante_id == usuario.pk:
+            return True
+        return SolicitacaoTrocaTitular.objects.filter(
+            emprestimo=emprestimo, destinatario=usuario, status=StatusSolicitacaoTrocaTitular.PENDENTE
+        ).exists()
+
+    def _listar_solicitacoes_pendentes_relacionadas(self, usuario):
+        from .choices import StatusSolicitacaoTrocaTitular
+        from .models import ItemEmprestimo, SolicitacaoTrocaTitular
+
+        return (
+            SolicitacaoTrocaTitular.objects.filter(status=StatusSolicitacaoTrocaTitular.PENDENTE)
+            .filter(Q(solicitante=usuario) | Q(destinatario=usuario))
+            .select_related('solicitante', 'destinatario')
+            .annotate(
+                _emprestimo_aberto=Exists(
+                    ItemEmprestimo.objects.filter(emprestimo_id=OuterRef('emprestimo_id'), devolvido_em__isnull=True)
+                )
+            )
+        )
+
+    def restringir_por_origem_conta_coletiva(self, qs, usuario):
+        """Restringe contas coletivas sem afetar administradores ou contas comuns."""
+        if usuario_tem_acesso_total_infraestrutura(usuario):
+            return qs
+        if not usuario.usuario_coletivo:
+            return qs
+        tipo = usuario.tipo_conta_coletiva
+        if tipo not in OrigemContaColetiva.values:
+            return qs.none()
+        return qs.filter(origem_conta_coletiva=tipo)
 
     def _filtrar_por_ativo(self, qs, ativo: bool):
         from .models import ItemEmprestimo
 
-        itens_abertos = ItemEmprestimo.objects.filter(
-            emprestimo_id=OuterRef('pk'),
-            devolvido_em__isnull=True,
-        )
+        itens_abertos = ItemEmprestimo.objects.filter(emprestimo_id=OuterRef('pk'), devolvido_em__isnull=True)
         if ativo:
             return qs.filter(Exists(itens_abertos))
         return qs.exclude(Exists(itens_abertos))
@@ -205,10 +411,7 @@ class EmprestimoHelpers(ModelInstanceHelpers):
         from .models import ItemEmprestimo
 
         limite = timezone.now() - timedelta(hours=HORAS_ALERTA_ATRASO)
-        itens_abertos = ItemEmprestimo.objects.filter(
-            emprestimo_id=OuterRef('pk'),
-            devolvido_em__isnull=True,
-        )
+        itens_abertos = ItemEmprestimo.objects.filter(emprestimo_id=OuterRef('pk'), devolvido_em__isnull=True)
         if atrasado:
             return qs.filter(Exists(itens_abertos), retirada_em__lt=limite)
         return qs.exclude(Exists(itens_abertos), retirada_em__lt=limite)
@@ -216,10 +419,7 @@ class EmprestimoHelpers(ModelInstanceHelpers):
     def _esta_ativo_por_pk(self, emprestimo_id: int) -> bool:
         from .models import ItemEmprestimo
 
-        return ItemEmprestimo.objects.filter(
-            emprestimo_id=emprestimo_id,
-            devolvido_em__isnull=True,
-        ).exists()
+        return ItemEmprestimo.objects.filter(emprestimo_id=emprestimo_id, devolvido_em__isnull=True).exists()
 
     def _solicitante_tem_retirada_irrestrita(self, solicitante) -> bool:
         infraestrutura = getattr(solicitante, 'permissoes', {}).get('infraestrutura', {})
@@ -248,11 +448,7 @@ class EmprestimoHelpers(ModelInstanceHelpers):
         except LookupError:
             return False
         setor_ids = SalaSetor.objects.filter(sala_id=sala_id).values_list('setor_id', flat=True)
-        return SetorVinculo.objects.filter(
-            usuario=usuario,
-            setor_id__in=setor_ids,
-            setor__ativo=True,
-        ).exists()
+        return SetorVinculo.objects.filter(usuario=usuario, setor_id__in=setor_ids, setor__ativo=True).exists()
 
     def _usuario_tem_autorizacao_vigente(self, solicitante, recurso) -> bool:
         try:
@@ -260,3 +456,60 @@ class EmprestimoHelpers(ModelInstanceHelpers):
         except LookupError:
             return False
         return Autorizacao().helper.usuario_tem_autorizacao_vigente_para_recurso(solicitante, recurso)
+
+
+class SolicitacaoTrocaTitularHelpers(ModelInstanceHelpers):
+
+    def listar_para_usuario(self, usuario, *, status=None, direcao=None, emprestimo_id=None):
+        from .choices import StatusSolicitacaoTrocaTitular
+        from .models import ItemEmprestimo, SolicitacaoTrocaTitular
+
+        if not getattr(usuario, 'is_authenticated', False):
+            return SolicitacaoTrocaTitular.objects.none()
+
+        qs = (
+            SolicitacaoTrocaTitular.objects.filter(Q(solicitante=usuario) | Q(destinatario=usuario))
+            .select_related(
+                'solicitante', 'destinatario', 'novo_emprestimo', 'emprestimo__solicitante', 'emprestimo__responsavel'
+            )
+            .prefetch_related('emprestimo__itens__recurso__sala__bloco')
+            .annotate(
+                _emprestimo_aberto=Exists(
+                    ItemEmprestimo.objects.filter(emprestimo_id=OuterRef('emprestimo_id'), devolvido_em__isnull=True)
+                )
+            )
+        )
+
+        if isinstance(status, str):
+            status_normalizado = status.strip().upper()
+            status_por_nome = {escolha.name: escolha.value for escolha in StatusSolicitacaoTrocaTitular}
+            if status_normalizado.isdigit():
+                status = int(status_normalizado)
+            else:
+                status = status_por_nome.get(status_normalizado)
+        if status in StatusSolicitacaoTrocaTitular.values:
+            qs = qs.filter(status=status)
+        if direcao == 'recebidas':
+            qs = qs.filter(destinatario=usuario)
+        elif direcao == 'enviadas':
+            qs = qs.filter(solicitante=usuario)
+        if emprestimo_id is not None:
+            qs = qs.filter(emprestimo_id=emprestimo_id)
+        return qs.order_by('-created_at', '-pk')
+
+    def obter_detalhada(self, solicitacao_id: int):
+        return self.listar_detalhadas().get(pk=solicitacao_id)
+
+    def listar_detalhadas(self):
+        from .models import Emprestimo, ItemEmprestimo, SolicitacaoTrocaTitular
+
+        itens_abertos = ItemEmprestimo.objects.filter(emprestimo_id=OuterRef('pk'), devolvido_em__isnull=True)
+        emprestimos = (
+            Emprestimo.objects.select_related('solicitante', 'responsavel')
+            .prefetch_related('itens__recurso__sala__bloco')
+            .annotate(_aberto=Exists(itens_abertos))
+        )
+
+        return SolicitacaoTrocaTitular.objects.select_related(
+            'solicitante', 'destinatario', 'novo_emprestimo'
+        ).prefetch_related(Prefetch('emprestimo', queryset=emprestimos))
