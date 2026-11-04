@@ -53,7 +53,7 @@ Camadas por app: `models`, `choices`, `rules`, `helpers`, `business`, `serialize
 ### Entra
 
 - Solicitação, programação, materialização de eventos na aprovação, fila operacional da portaria, registro 0..1 por evento, histórico consultável, permissões OR função/usuário, confirmação derivada, snapshots na criação, auditoria `simple-history` + `*_por`/`*_em`.
-- Elegibilidade: aluno ativo, `Usuario` ativo, `SituacaoAluno.MATRICULADO`, `AlunoCurso.ativo` em `Curso` com `nivel_ensino=ENSINO_MEDIO` (`NivelEnsino.ENSINO_MEDIO=1`).
+- Elegibilidade: aluno ativo, `Usuario` ativo, `SituacaoAluno.MATRICULADO`, `AlunoCurso.ativo` em `Curso` com `nivel_ensino=ENSINO_MEDIO` (`NivelEnsino.ENSINO_MEDIO=1`). Outros níveis (`TECNICO` … `PREPARATORIO_VESTIBULAR`) não elegem EM; `modalidade` não altera elegibilidade.
 - Multi-curso: campo obrigatório `aluno_curso` na solicitação; deve pertencer ao `aluno`.
 - Timezone: `America/Fortaleza`.
 
