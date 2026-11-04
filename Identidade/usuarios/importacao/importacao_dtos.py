@@ -53,6 +53,8 @@ class LinhaCursoImportacaoDTO:
     nome: str
     codigo_curso: str
     ativo: bool = True
+    modalidade: str = ''
+    nivel_ensino: str = ''
 
 
 @dataclass

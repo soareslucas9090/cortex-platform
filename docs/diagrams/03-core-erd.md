@@ -372,9 +372,10 @@ Representa um curso institucional.
 - um `Curso` pertence a um `Setor` (N:1)
 - um `Setor` pode possuir muitos `Curso` (1:N)
 
-### Atributo planejado (pré-requisito AcessoCampus)
+### Atributo `nivel_ensino` e `modalidade` (pré-requisito AcessoCampus)
 
-- **`nivel_ensino`** — **PLANEJADO**, ainda **não** no model `Curso` no código. `IntegerChoices` **`NivelEnsino`**: `ENSINO_MEDIO=1`, `TECNICO=2`, `SUPERIOR=3`, `POS_GRADUACAO=4`. Elegibilidade EM em AcessoCampus exige `ENSINO_MEDIO`; **proibido** inferir EM pelo nome do curso.
+- **`nivel_ensino`** — implementado no model `Curso`. `IntegerChoices` **`NivelEnsino`**: `ENSINO_MEDIO=1`, `TECNICO=2`, `SUPERIOR=3`, `POS_GRADUACAO=4`, `FORMACAO_PROFISSIONAL=5`, `MESTRADO=6`, `PREPARATORIO_VESTIBULAR=7`. Elegibilidade EM em AcessoCampus exige `ENSINO_MEDIO`; **proibido** inferir EM pelo nome do curso.
+- **`modalidade`** — implementado (`IntegerChoices` **`Modalidade`**, 1–13). Opcional (`null=True`); preenchida na importação ou edição quando informada.
 
 ---
 

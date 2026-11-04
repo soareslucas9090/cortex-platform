@@ -72,6 +72,12 @@ def permissoes_esperadas(
             'faltas': faltas,
             'bloqueios': bloqueios,
         },
+        'acesso_campus': {
+            'solicitar': cortex_nivel == PERMISSAO_CORTEX_EDITAR_TUDO,
+            'analisar_solicitacoes': cortex_nivel == PERMISSAO_CORTEX_EDITAR_TUDO,
+            'operar_portaria': cortex_nivel == PERMISSAO_CORTEX_EDITAR_TUDO,
+            'visualizar_historico': cortex_nivel == PERMISSAO_CORTEX_EDITAR_TUDO,
+        },
     }
 
 
@@ -626,8 +632,16 @@ class ImportacaoUsuariosParserTests(TestCase):
                 [1, '12345678901', 'Usuário Teste', '', True, None, False],
             ],
             'Curso': [
-                ['curso_id(int, PK)', 'setor_id(int, FK)', 'nome(String)', 'codigo_curso(String)', 'ativo(boolean)', 'modalidade(string)'],
-                [10, 3, 'TADS', '14TADS', True, 'presencial'],
+                [
+                    'curso_id(int, PK)',
+                    'setor_id(int, FK)',
+                    'nome(String)',
+                    'codigo_curso(String)',
+                    'ativo(boolean)',
+                    'modalidade(string)',
+                    'nivel_ensino(string)',
+                ],
+                [10, 3, 'TADS', '14TADS', True, 'Tecnologia', 'Superior'],
             ],
         }
 
@@ -637,6 +651,8 @@ class ImportacaoUsuariosParserTests(TestCase):
         self.assertEqual(resultado.cursos[0].curso_id_planilha, 10)
         self.assertEqual(resultado.cursos[0].setor_id_planilha, 3)
         self.assertEqual(resultado.cursos[0].codigo_curso, '14TADS')
+        self.assertEqual(resultado.cursos[0].modalidade, 'Tecnologia')
+        self.assertEqual(resultado.cursos[0].nivel_ensino, 'Superior')
         self.assertEqual(resultado.referencias.mapa_curso_id_para_codigo[10], '14TADS')
 
     @patch('Identidade.usuarios.importacao.importacao_parser.get_data')
@@ -1209,6 +1225,7 @@ class ImportacaoUsuariosBusinessImportacaoTests(TestCase):
 
     @patch('Identidade.usuarios.business.ImportacaoUsuariosParser.parse')
     def test_deve_importar_curso_com_setor(self, mock_parse):
+        from Academico.cursos.choices import Modalidade, NivelEnsino
         from Academico.cursos.models import Curso
         from Identidade.usuarios.importacao.importacao_dtos import (
             LinhaCursoImportacaoDTO,
@@ -1239,6 +1256,8 @@ class ImportacaoUsuariosBusinessImportacaoTests(TestCase):
                     nome='Curso Importado',
                     codigo_curso='IMP-01',
                     ativo=True,
+                    nivel_ensino='Superior',
+                    modalidade='Tecnologia',
                 )
             ],
         )
@@ -1253,9 +1272,12 @@ class ImportacaoUsuariosBusinessImportacaoTests(TestCase):
         curso = Curso.objects.get(codigo_curso='IMP-01')
         self.assertEqual(curso.setor_id, setor.pk)
         self.assertEqual(curso.nome, 'Curso Importado')
+        self.assertEqual(curso.nivel_ensino, NivelEnsino.SUPERIOR)
+        self.assertEqual(curso.modalidade, Modalidade.TECNOLOGIA)
 
     @patch('Identidade.usuarios.business.ImportacaoUsuariosParser.parse')
     def test_deve_atualizar_setor_do_curso_existente(self, mock_parse):
+        from Academico.cursos.choices import Modalidade, NivelEnsino
         from Academico.cursos.models import Curso
         from Identidade.usuarios.importacao.importacao_dtos import (
             LinhaCursoImportacaoDTO,
@@ -1287,6 +1309,8 @@ class ImportacaoUsuariosBusinessImportacaoTests(TestCase):
                     nome='Curso Atualizado',
                     codigo_curso='IMP-02',
                     ativo=True,
+                    nivel_ensino='Superior',
+                    modalidade='Tecnologia',
                 )
             ],
         )
@@ -1301,6 +1325,152 @@ class ImportacaoUsuariosBusinessImportacaoTests(TestCase):
         curso = Curso.objects.get(codigo_curso='IMP-02')
         self.assertEqual(curso.setor_id, setor.pk)
         self.assertEqual(curso.nome, 'Curso Atualizado')
+        self.assertEqual(curso.nivel_ensino, NivelEnsino.SUPERIOR)
+        self.assertEqual(curso.modalidade, Modalidade.TECNOLOGIA)
+
+    @patch('Identidade.usuarios.business.ImportacaoUsuariosParser.parse')
+    def test_deve_rejeitar_nivel_ensino_invalido_na_importacao(self, mock_parse):
+        from Identidade.usuarios.importacao.importacao_dtos import (
+            LinhaCursoImportacaoDTO,
+            ReferenciasImportacaoDTO,
+        )
+        from Organizacional.setores.models import Setor
+
+        Setor.objects.create(sigla='CURNV', nome='Setor Nivel Invalido')
+        estrutura = ArquivoImportacaoUsuariosDTO(
+            referencias=ReferenciasImportacaoDTO(
+                mapa_setor_id_para_sigla={1: 'CURNV'},
+                mapa_curso_id_para_codigo={10: 'IMP-NV'},
+            ),
+            usuarios=[
+                LinhaUsuarioImportacaoDTO(
+                    numero_linha=2,
+                    usuario_id_planilha=1,
+                    cpf='12345678901',
+                    nome='Usuario Nivel Invalido',
+                    ativo=True,
+                )
+            ],
+            cursos=[
+                LinhaCursoImportacaoDTO(
+                    numero_linha=2,
+                    curso_id_planilha=10,
+                    setor_id_planilha=1,
+                    nome='Curso Nivel Invalido',
+                    codigo_curso='IMP-NV',
+                    ativo=True,
+                    nivel_ensino='presencial',
+                )
+            ],
+        )
+        mock_parse.return_value = estrutura
+
+        resultado = Usuario().business.importar_usuarios_em_lote(
+            importacao_lote=self._criar_importacao_lote(),
+        )
+
+        self.assertFalse(resultado.sucesso)
+        self.assertTrue(
+            any(e.campo == 'nivel_ensino' for e in resultado.erros),
+            resultado.erros,
+        )
+
+    @patch('Identidade.usuarios.business.ImportacaoUsuariosParser.parse')
+    def test_deve_rejeitar_modalidade_invalida_na_importacao(self, mock_parse):
+        from Identidade.usuarios.importacao.importacao_dtos import (
+            LinhaCursoImportacaoDTO,
+            ReferenciasImportacaoDTO,
+        )
+        from Organizacional.setores.models import Setor
+
+        Setor.objects.create(sigla='CURMD', nome='Setor Modalidade Invalida')
+        estrutura = ArquivoImportacaoUsuariosDTO(
+            referencias=ReferenciasImportacaoDTO(
+                mapa_setor_id_para_sigla={1: 'CURMD'},
+                mapa_curso_id_para_codigo={10: 'IMP-MD'},
+            ),
+            usuarios=[
+                LinhaUsuarioImportacaoDTO(
+                    numero_linha=2,
+                    usuario_id_planilha=1,
+                    cpf='12345678901',
+                    nome='Usuario Modalidade Invalida',
+                    ativo=True,
+                )
+            ],
+            cursos=[
+                LinhaCursoImportacaoDTO(
+                    numero_linha=2,
+                    curso_id_planilha=10,
+                    setor_id_planilha=1,
+                    nome='Curso Modalidade Invalida',
+                    codigo_curso='IMP-MD',
+                    ativo=True,
+                    nivel_ensino='Superior',
+                    modalidade='presencial',
+                )
+            ],
+        )
+        mock_parse.return_value = estrutura
+
+        resultado = Usuario().business.importar_usuarios_em_lote(
+            importacao_lote=self._criar_importacao_lote(),
+        )
+
+        self.assertFalse(resultado.sucesso)
+        self.assertTrue(
+            any(e.campo == 'modalidade' for e in resultado.erros),
+            resultado.erros,
+        )
+
+    @patch('Identidade.usuarios.business.ImportacaoUsuariosParser.parse')
+    def test_deve_importar_curso_sem_nivel_e_modalidade_como_nulo(self, mock_parse):
+        from Academico.cursos.models import Curso
+        from Identidade.usuarios.importacao.importacao_dtos import (
+            LinhaCursoImportacaoDTO,
+            ReferenciasImportacaoDTO,
+        )
+        from Organizacional.setores.models import Setor
+
+        setor = Setor.objects.create(sigla='CURNL', nome='Setor Sem Nivel')
+        estrutura = ArquivoImportacaoUsuariosDTO(
+            referencias=ReferenciasImportacaoDTO(
+                mapa_setor_id_para_sigla={1: 'CURNL'},
+                mapa_curso_id_para_codigo={10: 'IMP-NL'},
+            ),
+            usuarios=[
+                LinhaUsuarioImportacaoDTO(
+                    numero_linha=2,
+                    usuario_id_planilha=1,
+                    cpf='12345678901',
+                    nome='Usuario Sem Nivel Modalidade',
+                    ativo=True,
+                )
+            ],
+            cursos=[
+                LinhaCursoImportacaoDTO(
+                    numero_linha=2,
+                    curso_id_planilha=10,
+                    setor_id_planilha=1,
+                    nome='Curso Sem Classificacao',
+                    codigo_curso='IMP-NL',
+                    ativo=True,
+                    nivel_ensino='',
+                    modalidade='',
+                )
+            ],
+        )
+        mock_parse.return_value = estrutura
+
+        resultado = Usuario().business.importar_usuarios_em_lote(
+            importacao_lote=self._criar_importacao_lote(),
+        )
+
+        self.assertTrue(resultado.sucesso, resultado.erros)
+        curso = Curso.objects.get(codigo_curso='IMP-NL')
+        self.assertEqual(curso.setor_id, setor.pk)
+        self.assertIsNone(curso.nivel_ensino)
+        self.assertIsNone(curso.modalidade)
 
     @patch('Identidade.usuarios.business.ImportacaoUsuariosParser.parse')
     def test_deve_rejeitar_curso_sem_setor_na_importacao(self, mock_parse):
@@ -1956,9 +2126,9 @@ class DocumentarPermissoesViewTest(APITestCase):
         resposta = self.client.get(self.url)
         self.assertEqual(resposta.status_code, status.HTTP_200_OK)
         modulos = resposta.data['dados']['modulos']
-        self.assertEqual(len(modulos), 3)
+        self.assertEqual(len(modulos), 4)
         chaves = {modulo['chave'] for modulo in modulos}
-        self.assertEqual(chaves, {'cortex', 'infraestrutura', 'transporte'})
+        self.assertEqual(chaves, {'acesso_campus', 'cortex', 'infraestrutura', 'transporte'})
 
         cortex = next(modulo for modulo in modulos if modulo['chave'] == 'cortex')
         self.assertEqual(len(cortex['niveis']), 3)

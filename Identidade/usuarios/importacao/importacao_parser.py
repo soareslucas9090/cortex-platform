@@ -387,6 +387,8 @@ class ImportacaoUsuariosParser:
                     nome=self._to_str(linha.get('nome')),
                     codigo_curso=codigo,
                     ativo=self._to_bool(linha.get('ativo'), default=True),
+                    modalidade=self._to_str(linha.get('modalidade')),
+                    nivel_ensino=self._to_str(linha.get('nivel_ensino')),
                 )
             )
         return cursos

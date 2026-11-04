@@ -924,11 +924,25 @@ class UsuarioBusiness(ModelInstanceBusiness):
                             )
                             continue
 
+                        helper = Curso().helper
+                        campo_erro = 'nivel_ensino'
+                        valor_erro = linha.nivel_ensino
+                        nivel_resolvido = helper.resolver_nivel_ensino(linha.nivel_ensino)
+                        if not helper.texto_choice_vazio(linha.nivel_ensino) and nivel_resolvido is None:
+                            raise ValidationException('Informe um nível de ensino válido.')
+                        campo_erro = 'modalidade'
+                        valor_erro = linha.modalidade
+                        modalidade_resolvida = helper.resolver_modalidade(linha.modalidade)
+                        if not helper.texto_choice_vazio(linha.modalidade) and modalidade_resolvida is None:
+                            raise ValidationException('Informe uma modalidade válida.')
+
                         curso, criado = Curso().business.importar_curso(
                             codigo_curso=linha.codigo_curso,
                             nome=linha.nome,
                             setor=setor,
                             ativo=linha.ativo,
+                            nivel_ensino=nivel_resolvido,
+                            modalidade=modalidade_resolvida,
                         )
                         resolver_referencias.registrar_curso(linha.codigo_curso, curso)
                         if criado:

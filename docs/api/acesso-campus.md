@@ -1,8 +1,17 @@
 # API — AcessoCampus (contrato planejado)
 
-> **Status:** PLANEJADO — endpoints **não** existem no código. Prefixo base: **`/cortex/acesso-campus/`**. Namespace URL: **`acesso_campus`**. Envelope e paginação: padrão **AppCore** (`PaginacaoCustomizada`).
+> **Status:** corte da **gestão** existe em `/cortex/acesso-campus/` (`acesso_campus`): `GET tipos/`, `GET tipos/{pk}/`, `GET alunos/`, `GET turmas/`, `POST autorizacoes/`, `GET solicitacoes/`, `GET solicitacoes/{pk}/`, `POST solicitacoes/{pk}/aceitar/`, `POST solicitacoes/{pk}/recusar/`. `tipo` nas autorizações é o id do catálogo (`TipoAutorizacaoAcesso`); Entrada no campus e Saída do campus são tipos-base; cadastro de tipo só no Django Admin. Os cinco papéis, quando são o responsável pelo setor, e o L3 alcançam qualquer Ensino Médio. O responsável pelo setor do curso alcança só esse curso. A listagem traz pedido do aluno e autorização da gestão. Criar ou aceitar recusa data passada e segunda autorização aceita do mesmo aluno, dia e tipo. O contrato abaixo, com programações, eventos e portaria, continua **planejado**.
 
 Autenticação: JWT/sessão padrão Cortex (401 se ausente). Permissões de módulo na chave **`acesso_campus`** do payload compilado. **L3** acessa todos os recursos.
+
+### Catálogo de tipos (implementado)
+
+| Método | Path | name | Permissão |
+|--------|------|------|-----------|
+| GET | `tipos/` | `tipo-autorizacao-list` | Autenticado (catálogo de referência) |
+| GET | `tipos/{pk}/` | `tipo-autorizacao-detail` | Autenticado (catálogo de referência) |
+
+Filtros da lista: `ativo`, `nome`, `paginacao`. Sem POST/PATCH/desativar na API — cadastro só no Django Admin. `POST autorizacoes/` recebe `tipo` como **id** do catálogo (somente tipos ativos). Entrada no campus e Saída do campus são tipos-base (`eh_base`); não podem ser desativados.
 
 Exceções: `ValidationException`, `BusinessRuleException` → **400**; `AuthorizationException` → **403**; `NotFoundException` → **404**.
 

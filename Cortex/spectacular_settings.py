@@ -21,5 +21,6 @@ SPECTACULAR_SETTINGS = {
         'StatusTicketEnum': 'Transporte.tickets.choices.StatusTicket',
         'StatusStrikeEnum': 'Transporte.strikes.choices.StatusStrike',
         'StatusJustificativaEnum': 'Transporte.justificativas.choices.StatusJustificativa',
+        'StatusSolicitacaoAcessoEnum': 'AcessoCampus.solicitacoes.choices.StatusSolicitacaoAcesso',
     },
 }

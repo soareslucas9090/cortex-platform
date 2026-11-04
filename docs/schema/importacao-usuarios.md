@@ -210,12 +210,12 @@ Campos opcionais, se presentes no arquivo, também são lidos: `cep`, `complemen
 - `nome (String)`
 - `codigo_curso (String)` — chave natural para criar ou atualizar o registro no banco (`codigo_curso` normalizado)
 - `ativo (boolean)`
-
-A coluna `modalidade` pode existir no arquivo por compatibilidade com o layout legado, mas **não** é lida nem persistida (não faz parte do model `Curso`).
+- `modalidade (String)` — normalizada para `Modalidade`; vazio → `null`; valor inválido → erro de linha
+- `nivel_ensino (String)` — normalizado para `NivelEnsino`; vazio → `null`; valor inválido → erro de linha
 
 ### Regras
 - `setor_id` é obrigatório em cada linha; o setor deve existir na aba `Setor`, ter sido criado na fase de catálogo da mesma importação ou no seed;
-- a importação **cria** ou **atualiza** `Curso` pelo `codigo_curso` normalizado (única aba de catálogo/acadêmica que atualiza registro existente: nome, setor e ativo);
+- a importação **cria** ou **atualiza** `Curso` pelo `codigo_curso` normalizado (única aba de catálogo/acadêmica que atualiza registro existente: nome, setor, ativo, `nivel_ensino` e `modalidade`);
 - não é permitido deixar curso sem setor (linhas sem `setor_id` válido falham);
 - `curso_id` da planilha alimenta o mapa interno usado pela aba `Aluno_Curso`.
 

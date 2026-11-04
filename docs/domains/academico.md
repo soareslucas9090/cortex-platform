@@ -14,9 +14,23 @@ O domínio `Academico` gerencia **alunos**, **cursos** e **vínculos aluno–cur
 - **Curso**: catálogo de cursos ofertados; relação **N:1** com **Setor** (`Organizacional`).
 - **AlunoCurso**: associação aluno ↔ curso; **`matricula` opcional com unicidade global** quando preenchida; campo **`ativo`** no vínculo.
 
-### Atributo planejado em `Curso` (pré-requisito AcessoCampus)
+### `Curso.nivel_ensino` e `Curso.modalidade` (AC.1)
 
-**`nivel_ensino`** — **PLANEJADO**, ainda **não** no model no código. `IntegerChoices` **`NivelEnsino`**: `ENSINO_MEDIO=1`, `TECNICO=2`, `SUPERIOR=3`, `POS_GRADUACAO=4`. Entrega prevista na etapa AC.1 do [milestone AcessoCampus](../planning/milestone-acesso-campus.md). Elegibilidade de solicitação na portaria EM usará `nivel_ensino=ENSINO_MEDIO` — **proibido** inferir ensino médio pelo **nome** do curso.
+**`nivel_ensino`** está no model. `IntegerChoices` **`NivelEnsino`**:
+
+| Valor | Rótulo |
+|------:|--------|
+| 1 | Ensino Médio |
+| 2 | Técnico |
+| 3 | Superior |
+| 4 | Pós-graduação |
+| 5 | Formação profissional |
+| 6 | Mestrado |
+| 7 | Preparatório vestibular |
+
+**`modalidade`** é opcional (`null=True`). `IntegerChoices` **`Modalidade`**: FIC, Qualificação Profissional, Curso Livre, modalidades técnicas (integrado, EJA, subsequente e variantes EaD), Licenciatura, Bacharelado, Tecnologia, Especialização e Mestrado (inteiros 1–13 conforme `Academico/cursos/choices.py`).
+
+O campo **`nivel_ensino`** aceita nulo: **nulo significa não classificado** e não é Ensino Médio. Cursos já gravados, inclusive o seed, permanecem com `nivel_ensino` e `modalidade` nulos até edição explícita ou importação com valores válidos na planilha — a carga **não** infere nível ou modalidade pelo nome do curso. Criação pela API exige um inteiro de **`NivelEnsino`**; **`modalidade`** é opcional na API. Elegibilidade de solicitação na portaria EM usará `nivel_ensino=ENSINO_MEDIO`.
 
 ### Fronteira com AcessoCampus (**planejado**)
 
@@ -77,7 +91,7 @@ No banco, `Curso.setor` é **nullable** (`null=True`, `blank=True`) por compatib
 
 - **Criar** curso (API ou importação): `setor` / `setor_id` **obrigatório** — não é permitido criar sem setor.
 - **Editar** curso: **não** é permitido remover o setor (PATCH que deixaria o curso sem setor é rejeitado).
-- **Importação de usuários** (aba `Curso`): cria ou atualiza cursos por `codigo_curso` normalizado (caixa, acentos e espaços); `setor_id` obrigatório em cada linha — o setor pode ter sido criado na fase de catálogo da mesma importação (ver `docs/schema/importacao-usuarios.md`).
+- **Importação de usuários** (aba `Curso`): cria ou atualiza cursos por `codigo_curso` normalizado (caixa, acentos e espaços); `setor_id` obrigatório em cada linha — o setor pode ter sido criado na fase de catálogo da mesma importação (ver `docs/schema/importacao-usuarios.md`). `nivel_ensino` e `modalidade` são lidos, normalizados para as choices e gravados na criação e na atualização; célula vazia persiste nulo; valor inválido gera erro de linha.
 - **Cursos legados** (data migration `cursos.0004`): associa o setor de cada curso semeado conforme as abas `Curso`/`Setor` de `docs/seeds/import/modelo-importacao-usuarios.ods`. A migration **nunca aborta o deploy**: sigla de setor ausente no banco gera apenas log de aviso e o curso permanece com `setor` NULL; só cursos ainda sem setor são atualizados (associação existente nunca é sobrescrita). Curso legado com `setor` NULL precisa receber setor para ser editado (PATCH). O curso `14JOPC` não consta no `.ods` atual, mas é preservado (setor `DEPENTE`) por já existir em bancos implantados.
 
 ### `AlunoCurso.matricula`
@@ -117,7 +131,7 @@ Paths relativos a `/cortex/academico/`.
 | GET, PATCH | `cursos/{pk}/` |
 | POST | `cursos/{pk}/desativar/`, `cursos/{pk}/reativar/` |
 
-**Listagem** (`GET cursos/`): filtro opcional por query param `setor_id`. Os query params apenas reduzem o conjunto de resultados — nunca expandem o acesso.
+**Listagem** (`GET cursos/`): filtros opcionais por query param `setor_id`, `nivel_ensino` e `modalidade`. Os query params apenas reduzem o conjunto de resultados — nunca expandem o acesso.
 
 ### Alunos
 
@@ -145,5 +159,5 @@ Paths relativos a `/cortex/academico/`.
 - **Não** alterar `faltas` / `is_bloqueado` / `quantidade_bloqueios` em business de Aluno sem coordenar com Transporte.
 - **Não** inventar endpoints fora dos `urls.py` existentes.
 - **Não** tratar choices como strings na API persistida sem alinhar aos inteiros do model.
-- **Não** inferir Ensino Médio pelo nome do curso — usar **`nivel_ensino`** quando implementado.
+- **Não** inferir Ensino Médio pelo nome do curso — usar **`nivel_ensino`**. Nulo não é Ensino Médio.
 - **Não** implementar fluxo de circulação/portaria (solicitação, eventos, registro na guarita) no Academico — bounded context **AcessoCampus** ([domains/acesso-campus.md](acesso-campus.md), ADR-003).

@@ -134,6 +134,8 @@ COLUNAS_ABA_CURSO_REFERENCIA = [
     'nome',
     'codigo_curso',
     'ativo',
+    'modalidade',
+    'nivel_ensino',
 ]
 
 COLUNAS_ABA_EMPRESA_INSTITUICAO_REFERENCIA = [

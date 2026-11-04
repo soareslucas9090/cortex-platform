@@ -435,6 +435,22 @@ paths:
           type: string
         description: Filtra por parte do código do curso.
       - in: query
+        name: modalidade
+        schema:
+          type: integer
+        description: 'Filtra pela modalidade: 1 = FIC, 2 = Qualificação Profissional,
+          3 = Curso Livre, 4 = Técnico Integrado, 5 = Técnico Integrado EJA, 6 = Técnico
+          Subsequente, 7 = Técnico Subsequente/Concomitante, 8 = Técnico Subsequente/Concomitante/EaD,
+          9 = Licenciatura, 10 = Bacharelado, 11 = Tecnologia, 12 = Especialização,
+          13 = Mestrado.'
+      - in: query
+        name: nivel_ensino
+        schema:
+          type: integer
+        description: 'Filtra pelo nível: 1 = Ensino Médio, 2 = Técnico, 3 = Superior,
+          4 = Pós-graduação, 5 = Formação profissional, 6 = Mestrado, 7 = Preparatório
+          vestibular.'
+      - in: query
         name: nome
         schema:
           type: string
@@ -480,9 +496,10 @@ paths:
           description: ''
     post:
       operationId: academico_cursos_create
-      description: "\n    Cria um novo curso. O campo `setor_id` é obrigatório.\n\n
-        \   **Permissões:** Qualquer usuário autenticado (catálogo de referência).
-        Escrita apenas L3 (EDITAR_TUDO).\n    "
+      description: "\n    Cria um novo curso. Os campos `setor_id` e `nivel_ensino`
+        são obrigatórios; `modalidade` é opcional.\n\n    **Permissões:** Qualquer
+        usuário autenticado (catálogo de referência). Escrita apenas L3 (EDITAR_TUDO).\n
+        \   "
       summary: Criar curso
       tags:
       - Cursos
@@ -511,7 +528,8 @@ paths:
           content:
             application/json:
               schema:
-                description: Dados inválidos, código de curso já em uso ou setor ausente.
+                description: Dados inválidos, código de curso já em uso, setor ausente
+                  ou nível de ensino inválido.
           description: ''
         '401':
           content:
@@ -721,6 +739,467 @@ paths:
             application/json:
               schema:
                 description: Curso não encontrado.
+          description: ''
+  /cortex/acesso-campus/alunos/:
+    get:
+      operationId: acesso_campus_alunos_list
+      description: "\n    Lista vínculos de Ensino Médio que a gestão pode autorizar.\n\n
+        \   \n    **Permissões:** `analisar_solicitacoes` ou L3 (EDITAR_TUDO).\n\n
+        \   **Filtros:** os query params apenas reduzem o conjunto — nunca expandem
+        o acesso além do escopo.\n    \n    "
+      summary: Listar alunos elegíveis
+      parameters:
+      - in: query
+        name: cpf
+        schema:
+          type: string
+        description: Parte do CPF.
+      - in: query
+        name: nome
+        schema:
+          type: string
+        description: Parte do nome, sem diferenciar acento.
+      - name: page
+        required: false
+        in: query
+        description: Um número de página dentro do conjunto de resultados paginado.
+        schema:
+          type: integer
+      - in: query
+        name: paginacao
+        schema:
+          type: integer
+        description: Tamanho da página (1–100, padrão 10).
+      tags:
+      - AcessoCampus
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedAlunoElegivelList'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                description: Não autenticado.
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                description: Sem analisar_solicitacoes.
+          description: ''
+  /cortex/acesso-campus/autorizacoes/:
+    post:
+      operationId: acesso_campus_autorizacoes_create
+      description: "\n    Cria uma autorização já aceita para os alunos informados
+        ou para a turma do curso.\n\n    \n    **Permissões:** `analisar_solicitacoes`
+        ou L3 (EDITAR_TUDO).\n\n    **Filtros:** os query params apenas reduzem o
+        conjunto — nunca expandem o acesso além do escopo.\n    \n    "
+      summary: Autorizar acesso
+      parameters:
+      - name: page
+        required: false
+        in: query
+        description: Um número de página dentro do conjunto de resultados paginado.
+        schema:
+          type: integer
+      - name: paginacao
+        required: false
+        in: query
+        description: Número de resultados a serem retornados por página.
+        schema:
+          type: integer
+      tags:
+      - AcessoCampus
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AutorizarAcesso'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/AutorizarAcesso'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/AutorizarAcesso'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedSolicitacaoAcessoList'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                description: Alvo inválido, turma sem aluno, aluno fora do escopo,
+                  data anterior a hoje ou autorização aceita já existente.
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                description: Não autenticado.
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                description: Sem analisar_solicitacoes ou sem curso sob coordenação.
+          description: ''
+  /cortex/acesso-campus/solicitacoes/:
+    get:
+      operationId: acesso_campus_solicitacoes_list
+      description: "\n    Lista pedidos do aluno e autorizações da gestão no escopo.\n\n
+        \   \n    **Permissões:** `analisar_solicitacoes` ou L3 (EDITAR_TUDO).\n\n
+        \   **Filtros:** os query params apenas reduzem o conjunto — nunca expandem
+        o acesso além do escopo.\n    \n    "
+      summary: Listar solicitações de acesso
+      parameters:
+      - in: query
+        name: cpf
+        schema:
+          type: string
+      - name: page
+        required: false
+        in: query
+        description: Um número de página dentro do conjunto de resultados paginado.
+        schema:
+          type: integer
+      - in: query
+        name: paginacao
+        schema:
+          type: integer
+        description: Tamanho da página (1–100, padrão 10).
+      - in: query
+        name: status
+        schema:
+          type: integer
+      tags:
+      - AcessoCampus
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedSolicitacaoAcessoList'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                description: Não autenticado.
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                description: Sem analisar_solicitacoes.
+          description: ''
+  /cortex/acesso-campus/solicitacoes/{id}/:
+    get:
+      operationId: acesso_campus_solicitacoes_retrieve
+      description: "\n    Detalhe para avaliação, com histórico da própria solicitação.\n\n
+        \   \n    **Permissões:** `analisar_solicitacoes` ou L3 (EDITAR_TUDO).\n\n
+        \   **Filtros:** os query params apenas reduzem o conjunto — nunca expandem
+        o acesso além do escopo.\n    \n    "
+      summary: Detalhar solicitação de acesso
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - AcessoCampus
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SolicitacaoAcessoDetalhe'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                description: Não autenticado.
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                description: Sem analisar_solicitacoes.
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                description: Solicitação inexistente ou fora do escopo.
+          description: ''
+  /cortex/acesso-campus/solicitacoes/{id}/aceitar/:
+    post:
+      operationId: acesso_campus_solicitacoes_aceitar_create
+      description: "\n    Aceita uma solicitação pendente. Sem horário no corpo, grava
+        08:00.\n\n    \n    **Permissões:** `analisar_solicitacoes` ou L3 (EDITAR_TUDO).\n\n
+        \   **Filtros:** os query params apenas reduzem o conjunto — nunca expandem
+        o acesso além do escopo.\n    \n    "
+      summary: Aceitar solicitação de acesso
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - AcessoCampus
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AceitarSolicitacao'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/AceitarSolicitacao'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/AceitarSolicitacao'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SolicitacaoAcessoDetalhe'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                description: Solicitação não está pendente, a data já passou ou já
+                  existe autorização aceita.
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                description: Não autenticado.
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                description: Sem analisar_solicitacoes.
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                description: Solicitação inexistente ou fora do escopo.
+          description: ''
+  /cortex/acesso-campus/solicitacoes/{id}/recusar/:
+    post:
+      operationId: acesso_campus_solicitacoes_recusar_create
+      description: "\n    Recusa uma solicitação pendente. Não preenche o horário
+        autorizado.\n\n    \n    **Permissões:** `analisar_solicitacoes` ou L3 (EDITAR_TUDO).\n\n
+        \   **Filtros:** os query params apenas reduzem o conjunto — nunca expandem
+        o acesso além do escopo.\n    \n    "
+      summary: Recusar solicitação de acesso
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - AcessoCampus
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RecusarSolicitacao'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/RecusarSolicitacao'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/RecusarSolicitacao'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SolicitacaoAcessoDetalhe'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                description: Solicitação não está pendente.
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                description: Não autenticado.
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                description: Sem analisar_solicitacoes.
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                description: Solicitação inexistente ou fora do escopo.
+          description: ''
+  /cortex/acesso-campus/tipos/:
+    get:
+      operationId: acesso_campus_tipos_list
+      description: "\n    Lista os tipos de autorização cadastrados. Entrada no campus
+        e Saída do campus são tipos-base.\n\n    \n    **Permissões:** Qualquer usuário
+        autenticado (catálogo de referência). Cadastro apenas no Django Admin.\n    \n
+        \   "
+      summary: Listar tipos de autorização
+      parameters:
+      - in: query
+        name: ativo
+        schema:
+          type: boolean
+        description: Filtra por ativo (true) ou inativo (false).
+      - in: query
+        name: nome
+        schema:
+          type: string
+        description: Parte do nome, sem diferenciar acento.
+      - name: page
+        required: false
+        in: query
+        description: Um número de página dentro do conjunto de resultados paginado.
+        schema:
+          type: integer
+      - in: query
+        name: paginacao
+        schema:
+          type: integer
+        description: Tamanho da página (1–100, padrão 10).
+      tags:
+      - AcessoCampus
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedTipoAutorizacaoAcessoList'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                description: Não autenticado.
+          description: ''
+  /cortex/acesso-campus/tipos/{id}/:
+    get:
+      operationId: acesso_campus_tipos_retrieve
+      description: "\n    Retorna os dados de um tipo específico.\n\n    \n    **Permissões:**
+        Qualquer usuário autenticado (catálogo de referência). Cadastro apenas no
+        Django Admin.\n    \n    "
+      summary: Detalhar tipo de autorização
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - AcessoCampus
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TipoAutorizacaoAcesso'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                description: Não autenticado.
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                description: Tipo não encontrado.
+          description: ''
+  /cortex/acesso-campus/turmas/:
+    get:
+      operationId: acesso_campus_turmas_list
+      description: "\n    Lista pares de curso e turma com aluno elegível de Ensino
+        Médio no escopo.\n\n    \n    **Permissões:** `analisar_solicitacoes` ou L3
+        (EDITAR_TUDO).\n\n    **Filtros:** os query params apenas reduzem o conjunto
+        — nunca expandem o acesso além do escopo.\n    \n    "
+      summary: Listar turmas elegíveis
+      parameters:
+      - in: query
+        name: curso_id
+        schema:
+          type: integer
+      - name: page
+        required: false
+        in: query
+        description: Um número de página dentro do conjunto de resultados paginado.
+        schema:
+          type: integer
+      - in: query
+        name: paginacao
+        schema:
+          type: integer
+        description: Tamanho da página (1–100, padrão 10).
+      tags:
+      - AcessoCampus
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedTurmaElegivelList'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                description: Não autenticado.
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                description: Sem analisar_solicitacoes.
           description: ''
   /cortex/auth/token_jwt/:
     post:
@@ -8663,6 +9142,14 @@ paths:
           description: ''
 components:
   schemas:
+    AceitarSolicitacao:
+      type: object
+      properties:
+        hora_autorizada:
+          type: string
+          format: time
+        observacao:
+          type: string
     AceitarSolicitacaoTrocaTitularResposta:
       type: object
       properties:
@@ -8842,6 +9329,40 @@ components:
       - curso_nome
       - id
       - updated_at
+    AlunoElegivel:
+      type: object
+      properties:
+        aluno_curso:
+          type: integer
+        nome:
+          type: string
+        cpf:
+          type: string
+          nullable: true
+        foto:
+          type: string
+          format: uri
+          nullable: true
+        foto_secundaria:
+          type: string
+          nullable: true
+          readOnly: true
+        curso_id:
+          type: integer
+        curso_nome:
+          type: string
+        turma:
+          type: string
+          nullable: true
+      required:
+      - aluno_curso
+      - cpf
+      - curso_id
+      - curso_nome
+      - foto
+      - foto_secundaria
+      - nome
+      - turma
     AlunoEntrada:
       type: object
       properties:
@@ -8888,6 +9409,22 @@ components:
       - id
       - nome
       - tem_deficiencia
+    AlunoSolicitacaoAcesso:
+      type: object
+      properties:
+        nome:
+          type: string
+        foto:
+          type: string
+          format: uri
+          nullable: true
+        foto_secundaria:
+          type: string
+          nullable: true
+      required:
+      - foto
+      - foto_secundaria
+      - nome
     AlunoTicket:
       type: object
       properties:
@@ -9008,6 +9545,36 @@ components:
       - cpf
       - id
       - nome
+    AutorizarAcesso:
+      type: object
+      properties:
+        tipo:
+          type: integer
+        data_acesso:
+          type: string
+          format: date
+        hora_autorizada:
+          type: string
+          format: time
+        motivo:
+          type: string
+          maxLength: 255
+        observacao:
+          type: string
+        aluno_curso_ids:
+          type: array
+          items:
+            type: integer
+        curso_id:
+          type: integer
+        turma:
+          type: string
+          maxLength: 50
+      required:
+      - data_acesso
+      - hora_autorizada
+      - motivo
+      - tipo
     BlankEnum:
       enum:
       - ''
@@ -9340,8 +9907,16 @@ components:
           maxLength: 50
         setor_id:
           type: integer
+        nivel_ensino:
+          $ref: '#/components/schemas/NivelEnsinoEnum'
+        modalidade:
+          nullable: true
+          oneOf:
+          - $ref: '#/components/schemas/ModalidadeEnum'
+          - $ref: '#/components/schemas/NullEnum'
       required:
       - codigo_curso
+      - nivel_ensino
       - nome
       - setor_id
     CriarEmpresaInstituicao:
@@ -9646,6 +10221,29 @@ components:
           type: string
           readOnly: true
           nullable: true
+        nivel_ensino:
+          nullable: true
+          title: Nível de ensino
+          minimum: -2147483648
+          maximum: 2147483647
+          oneOf:
+          - $ref: '#/components/schemas/NivelEnsinoEnum'
+          - $ref: '#/components/schemas/NullEnum'
+        nivel_ensino_display:
+          type: string
+          readOnly: true
+          nullable: true
+        modalidade:
+          nullable: true
+          minimum: -2147483648
+          maximum: 2147483647
+          oneOf:
+          - $ref: '#/components/schemas/ModalidadeEnum'
+          - $ref: '#/components/schemas/NullEnum'
+        modalidade_display:
+          type: string
+          readOnly: true
+          nullable: true
         ativo:
           type: boolean
         created_at:
@@ -9660,6 +10258,8 @@ components:
       - codigo_curso
       - created_at
       - id
+      - modalidade_display
+      - nivel_ensino_display
       - nome
       - setor_id
       - setor_nome
@@ -10385,6 +10985,20 @@ components:
       - rota_finalizada_em
       - rota_iniciada_em
       - sem_ticket
+    HistoricoSolicitacaoAcesso:
+      type: object
+      properties:
+        descricao:
+          type: string
+        em:
+          type: string
+          format: date-time
+        texto:
+          type: string
+      required:
+      - descricao
+      - em
+      - texto
     ImportacaoCausaErro:
       type: object
       properties:
@@ -10778,9 +11392,65 @@ components:
       - refresh
       - tem_perfil_aluno
       - usuario_coletivo
+    ModalidadeEnum:
+      enum:
+      - 1
+      - 2
+      - 3
+      - 4
+      - 5
+      - 6
+      - 7
+      - 8
+      - 9
+      - 10
+      - 11
+      - 12
+      - 13
+      type: integer
+      description: |-
+        * `1` - FIC
+        * `2` - Qualificação Profissional
+        * `3` - Curso Livre
+        * `4` - Técnico Integrado
+        * `5` - Técnico Integrado EJA
+        * `6` - Técnico Subsequente
+        * `7` - Técnico Subsequente/Concomitante
+        * `8` - Técnico Subsequente/Concomitante/EaD
+        * `9` - Licenciatura
+        * `10` - Bacharelado
+        * `11` - Tecnologia
+        * `12` - Especialização
+        * `13` - Mestrado
+    NivelEnsinoEnum:
+      enum:
+      - 1
+      - 2
+      - 3
+      - 4
+      - 5
+      - 6
+      - 7
+      type: integer
+      description: |-
+        * `1` - Ensino Médio
+        * `2` - Técnico
+        * `3` - Superior
+        * `4` - Pós-graduação
+        * `5` - Formação profissional
+        * `6` - Mestrado
+        * `7` - Preparatório vestibular
     NullEnum:
       enum:
       - null
+    OrigemEnum:
+      enum:
+      - 1
+      - 2
+      type: integer
+      description: |-
+        * `1` - Aluno
+        * `2` - Gestão
     PaginatedAlunoCursoList:
       type: object
       required:
@@ -10804,6 +11474,29 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/AlunoCurso'
+    PaginatedAlunoElegivelList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/AlunoElegivel'
     PaginatedAlunoList:
       type: object
       required:
@@ -11333,6 +12026,29 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/SetorVinculo'
+    PaginatedSolicitacaoAcessoList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/SolicitacaoAcesso'
     PaginatedSolicitacaoTrocaTitularList:
       type: object
       required:
@@ -11471,6 +12187,52 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Ticket'
+    PaginatedTipoAutorizacaoAcessoList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/TipoAutorizacaoAcesso'
+    PaginatedTurmaElegivelList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/TurmaElegivel'
     PaginatedUsuarioList:
       type: object
       required:
@@ -11563,6 +12325,13 @@ components:
           maxLength: 50
         setor_id:
           type: integer
+        nivel_ensino:
+          $ref: '#/components/schemas/NivelEnsinoEnum'
+        modalidade:
+          nullable: true
+          oneOf:
+          - $ref: '#/components/schemas/ModalidadeEnum'
+          - $ref: '#/components/schemas/NullEnum'
     PatchedAtualizarEmpresaInstituicao:
       type: object
       properties:
@@ -12026,6 +12795,11 @@ components:
       - bloco
       - id
       - nome
+    RecusarSolicitacao:
+      type: object
+      properties:
+        observacao:
+          type: string
     RegistrarEntradaSemTicket:
       type: object
       properties:
@@ -12635,6 +13409,212 @@ components:
         * `3` - Formado
         * `4` - Desistente
         * `5` - Transferido
+    SolicitacaoAcesso:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        origem:
+          allOf:
+          - $ref: '#/components/schemas/OrigemEnum'
+          minimum: -2147483648
+          maximum: 2147483647
+        tipo:
+          type: integer
+        tipo_display:
+          type: string
+          readOnly: true
+        status:
+          allOf:
+          - $ref: '#/components/schemas/StatusSolicitacaoAcessoEnum'
+          minimum: -2147483648
+          maximum: 2147483647
+        status_display:
+          type: string
+          readOnly: true
+        resultado_avaliacao:
+          type: string
+          readOnly: true
+        data_acesso:
+          type: string
+          format: date
+          title: Data da autorização de acesso
+        hora_autorizada:
+          type: string
+          format: time
+          nullable: true
+          title: Horário autorizado
+        data_solicitacao:
+          type: string
+          format: date
+          readOnly: true
+        hora_solicitacao:
+          type: string
+          format: time
+          readOnly: true
+        motivo:
+          type: string
+          maxLength: 255
+        avaliada_por:
+          allOf:
+          - $ref: '#/components/schemas/UsuarioResumo'
+          nullable: true
+          readOnly: true
+        aluno_nome:
+          type: string
+          title: Nome do aluno
+          maxLength: 255
+        curso_nome:
+          type: string
+          title: Nome do curso
+          maxLength: 255
+        matricula:
+          type: string
+          title: Matrícula
+          maxLength: 50
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - aluno_nome
+      - avaliada_por
+      - created_at
+      - curso_nome
+      - data_acesso
+      - data_solicitacao
+      - hora_solicitacao
+      - id
+      - motivo
+      - origem
+      - resultado_avaliacao
+      - status_display
+      - tipo
+      - tipo_display
+    SolicitacaoAcessoDetalhe:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        origem:
+          allOf:
+          - $ref: '#/components/schemas/OrigemEnum'
+          minimum: -2147483648
+          maximum: 2147483647
+        tipo:
+          type: integer
+        tipo_display:
+          type: string
+          readOnly: true
+        status:
+          allOf:
+          - $ref: '#/components/schemas/StatusSolicitacaoAcessoEnum'
+          minimum: -2147483648
+          maximum: 2147483647
+        status_display:
+          type: string
+          readOnly: true
+        resultado_avaliacao:
+          type: string
+          readOnly: true
+        data_acesso:
+          type: string
+          format: date
+          title: Data da autorização de acesso
+        hora_autorizada:
+          type: string
+          format: time
+          nullable: true
+          title: Horário autorizado
+        data_solicitacao:
+          type: string
+          format: date
+          readOnly: true
+        hora_solicitacao:
+          type: string
+          format: time
+          readOnly: true
+        motivo:
+          type: string
+          maxLength: 255
+        avaliada_por:
+          allOf:
+          - $ref: '#/components/schemas/UsuarioResumo'
+          nullable: true
+          readOnly: true
+        aluno_nome:
+          type: string
+          title: Nome do aluno
+          maxLength: 255
+        curso_nome:
+          type: string
+          title: Nome do curso
+          maxLength: 255
+        matricula:
+          type: string
+          title: Matrícula
+          maxLength: 50
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        hora_solicitada:
+          type: string
+          format: time
+          nullable: true
+          title: Horário solicitado
+        justificativa:
+          type: string
+        observacao_avaliacao:
+          type: string
+          title: Observação da avaliação
+        avaliada_em:
+          type: string
+          format: date-time
+          nullable: true
+        liberado_por:
+          allOf:
+          - $ref: '#/components/schemas/UsuarioResumo'
+          nullable: true
+          readOnly: true
+        aluno:
+          allOf:
+          - $ref: '#/components/schemas/AlunoSolicitacaoAcesso'
+          readOnly: true
+        historico:
+          type: array
+          items:
+            $ref: '#/components/schemas/HistoricoSolicitacaoAcesso'
+          readOnly: true
+        lote_id:
+          type: string
+          format: uuid
+          nullable: true
+          title: Lote
+        turma_origem:
+          type: string
+          title: Turma de origem
+          maxLength: 50
+      required:
+      - aluno
+      - aluno_nome
+      - avaliada_por
+      - created_at
+      - curso_nome
+      - data_acesso
+      - data_solicitacao
+      - historico
+      - hora_solicitacao
+      - id
+      - liberado_por
+      - motivo
+      - origem
+      - resultado_avaliacao
+      - status_display
+      - tipo
+      - tipo_display
     SolicitacaoTrocaTitular:
       type: object
       properties:
@@ -12842,6 +13822,16 @@ components:
         * `1` - Pendente
         * `2` - Aprovada
         * `3` - Rejeitada
+    StatusSolicitacaoAcessoEnum:
+      enum:
+      - 1
+      - 2
+      - 3
+      type: integer
+      description: |-
+        * `1` - Pendente
+        * `2` - Aceito
+        * `3` - Recusado
     StatusStrikeEnum:
       enum:
       - 1
@@ -13044,6 +14034,37 @@ components:
       - posicao_fila
       - status
       - status_display
+    TipoAutorizacaoAcesso:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        nome:
+          type: string
+          readOnly: true
+        ativo:
+          type: boolean
+          readOnly: true
+        eh_base:
+          type: boolean
+          readOnly: true
+          title: Tipo-base
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - ativo
+      - created_at
+      - eh_base
+      - id
+      - nome
+      - updated_at
     TipoContaColetivaEnum:
       enum:
       - guarita
@@ -13107,6 +14128,19 @@ components:
           nullable: true
       required:
       - novo_solicitante_id
+    TurmaElegivel:
+      type: object
+      properties:
+        curso_id:
+          type: integer
+        curso_nome:
+          type: string
+        turma:
+          type: string
+      required:
+      - curso_id
+      - curso_nome
+      - turma
     Usuario:
       type: object
       properties:
@@ -13264,6 +14298,16 @@ components:
       - usuario_coletivo
       - usuario_id
     UsuarioColetivoItem:
+      type: object
+      properties:
+        id:
+          type: integer
+        nome:
+          type: string
+      required:
+      - id
+      - nome
+    UsuarioResumo:
       type: object
       properties:
         id:
