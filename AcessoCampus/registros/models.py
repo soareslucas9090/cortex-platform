@@ -20,35 +20,35 @@ class RegistroAcesso(ModelHelperMixin, ModelBusinessMixin, ModelRulesMixin, Basi
     rules_class = RegistroAcessoRules
 
     evento = models.OneToOneField(
-        "acesso_campus_eventos.EventoAcesso",
+        'acesso_campus_eventos.EventoAcesso',
         on_delete=models.PROTECT,
-        related_name="registro",
-        verbose_name="Evento",
+        related_name='registro',
+        verbose_name='Evento',
     )
     resultado = models.IntegerField(
-        "Resultado",
+        'Resultado',
         choices=ResultadoRegistroAcesso.choices,
         default=ResultadoRegistroAcesso.REALIZADO,
     )
     registrado_por = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.PROTECT,
-        related_name="registros_acesso_como_responsavel",
-        verbose_name="Responsável físico",
+        related_name='registros_acesso_como_responsavel',
+        verbose_name='Responsável físico',
     )
     operado_por = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.PROTECT,
-        related_name="registros_acesso_operados",
-        verbose_name="Conta operadora",
+        related_name='registros_acesso_operados',
+        verbose_name='Conta operadora',
     )
-    registrado_em = models.DateTimeField("Registrado em", default=timezone.now)
-    observacao = models.TextField("Observação", blank=True)
+    registrado_em = models.DateTimeField('Registrado em', default=timezone.now)
+    observacao = models.TextField('Observação', blank=True)
 
     class Meta:
-        verbose_name = "Registro de acesso"
-        verbose_name_plural = "Registros de acesso"
-        ordering = ["-registrado_em"]
+        verbose_name = 'Registro de acesso'
+        verbose_name_plural = 'Registros de acesso'
+        ordering = ['-registrado_em']
 
     def __str__(self):
-        return f"{self.evento} — {self.get_resultado_display()}"
+        return f'{self.evento} — {self.get_resultado_display()}'

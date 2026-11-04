@@ -29,9 +29,11 @@ Exceções: `ValidationException`, `BusinessRuleException` → **400**; `Authori
 | `analise/solicitacoes/{pk}/aprovar/` | POST | `analise-solicitacao-aprovar` | `analisar_solicitacoes` ou L3 |
 | `analise/solicitacoes/{pk}/rejeitar/` | POST | `analise-solicitacao-rejeitar` | `analisar_solicitacoes` ou L3 |
 | `analise/solicitacoes/{pk}/cancelar/` | POST | `analise-solicitacao-cancelar` | `analisar_solicitacoes` ou L3 (só APROVADA) |
-| `portaria/eventos/` | GET | `portaria-evento-list` | `operar_portaria` ou L3 |
-| `portaria/eventos/{pk}/` | GET | `portaria-evento-detail` | `operar_portaria` ou L3 |
-| `portaria/eventos/{pk}/registrar/` | POST | `portaria-evento-registrar` | `operar_portaria` ou L3 |
+| `portaria/eventos/` | GET | `evento-acesso-list` | `operar_portaria` ou L3 |
+| `portaria/eventos/responsaveis-elegiveis/` | GET | `evento-acesso-responsaveis` | `operar_portaria` ou L3 |
+| `portaria/eventos/{grupo_portaria_id}/` | GET | `evento-acesso-detail` | `operar_portaria` ou L3 |
+| `portaria/eventos/{grupo_portaria_id}/alunos/` | GET | `evento-acesso-alunos` | `operar_portaria` ou L3 |
+| `portaria/eventos/{grupo_portaria_id}/registrar/` | POST | `evento-acesso-registrar` | `operar_portaria` ou L3 |
 | `historico/` | GET | `historico-list` | `visualizar_historico` ou `analisar_solicitacoes` ou L3 |
 | `historico/{pk}/` | GET | `historico-detail` | idem |
 
@@ -192,60 +194,79 @@ Detalhe completo para decisão (programações editáveis só refletidas enquant
 
 ### GET `/cortex/acesso-campus/portaria/eventos/`
 
-- **name:** `portaria-evento-list`
+- **name:** `evento-acesso-list`
 - **Permissões:** `operar_portaria` ou L3.
 
-**Filtros:** `data` (default **hoje** America/Fortaleza), busca, `tipo` (`TipoEventoAcesso`), `situacao_confirmacao`, `paginacao`.
+**Filtros:** `status` (múltiplo: `PENDENTE`, `CONCLUIDA`, `EXPIRADA`), `busca`,
+`tipo_movimento` (`ENTRADA`, `SAIDA`), `tipo_beneficiario` (`INDIVIDUAL`, `TURMA`),
+`data_autorizada`, `hora_inicio`, `hora_fim`, `ordenacao` e `paginacao`.
 
-**Escopo:** solicitação `APROVADA`, `cancelado_em` null, data no recorte. **Não** inclui fila de solicitações PENDENTES.
+Filtros inválidos são ignorados. Quando `CONCLUIDA` e `EXPIRADA` são solicitadas juntas sem
+ordenação explícita, a API usa data e hora autorizadas decrescentes, independentemente do status.
+
+**Escopo:** somente solicitações aceitas materializadas como evento. **Não** inclui solicitações pendentes.
+O GET deriva o status sem persistência; a task Celery grava `expirado_em` a cada minuto.
 
 **Item lista (exemplo):**
 
 ```json
 {
-  "id": 501,
-  "tipo": 1,
-  "tipo_display": "Entrada",
-  "data_hora_prevista": "2026-10-15T09:30:00-03:00",
-  "aluno_nome": "Maria Silva",
-  "matricula": "2026001",
-  "confirmacao": {
-    "situacao_confirmacao": "PENDENTE",
-    "situacao_confirmacao_display": "Pendente",
-    "exige_confirmacao": true,
-    "registro": null
-  }
+  "id": "7c067767-8c54-4a82-8b29-78fe444ddcf2",
+  "tipo_beneficiario": "INDIVIDUAL",
+  "beneficiario": {"id": 15, "tipo": "INDIVIDUAL", "nome": "Maria Silva"},
+  "tipo_movimento": "ENTRADA",
+  "autorizado_por": {"id": 4, "nome": "Coordenador"},
+  "data_autorizada": "2026-10-15",
+  "hora_autorizada": "09:30:00",
+  "status": "PENDENTE",
+  "progresso": {"total": 1, "liberados": 0, "pendentes": 1},
+  "acoes": {"pode_registrar": true, "pode_conferir_turma": false}
 }
 ```
 
 ---
 
-### GET `/cortex/acesso-campus/portaria/eventos/{pk}/`
+### GET `/cortex/acesso-campus/portaria/eventos/{grupo_portaria_id}/`
 
-- **name:** `portaria-evento-detail`
+- **name:** `evento-acesso-detail`
 
-Detalhe operacional + `confirmacao` + dados mínimos da solicitação.
+Detalhe operacional da autorização agrupada e dados mínimos da solicitação.
+
+### GET `/cortex/acesso-campus/portaria/eventos/{grupo_portaria_id}/alunos/`
+
+- **name:** `evento-acesso-alunos`
+
+Lista os alunos congelados na autorização de turma para conferência parcial.
+
+### GET `/cortex/acesso-campus/portaria/eventos/responsaveis-elegiveis/`
+
+- **name:** `evento-acesso-responsaveis`
+
+Lista o pool de vigilantes físicos da conta guarita. Aceita `busca`, `cpf` e `paginacao`.
 
 ---
 
-### POST `/cortex/acesso-campus/portaria/eventos/{pk}/registrar/`
+### POST `/cortex/acesso-campus/portaria/eventos/{grupo_portaria_id}/registrar/`
 
-- **name:** `portaria-evento-registrar`
+- **name:** `evento-acesso-registrar`
 
 **Body:**
 
 ```json
 {
-  "resultado": 1,
+  "responsavel_liberacao_id": 42,
+  "aluno_ids": [15, 18],
   "observacao": "Entrada registrada."
 }
 ```
 
-`resultado`: 1=REALIZADO, 2=DIVERGENCIA, 3=NAO_COMPARECEU, 4=IMPEDIDO.
+`responsavel_liberacao_id` é obrigatório para conta guarita. `aluno_ids` é obrigatório na
+conferência de turma e omitido na autorização individual.
 
-**Resposta 200:** evento com `confirmacao.situacao_confirmacao=RECEBIDA` e `registro` preenchido. Replay idempotente mesmo `resultado` → 200.
+**Resposta 200:** objetos `autorizacao` e `registro`, incluindo quantos alunos foram confirmados
+agora e quantos já estavam confirmados. Replay do mesmo registro é idempotente → 200.
 
-**Erros:** 400 evento inelegível, resultado inválido, ou **alteração** de resultado já gravado; 403 gestão sem `operar_portaria`.
+**Erros:** 400 autorização expirada ou payload inválido; 403 sem `operar_portaria`; 404 grupo inexistente.
 
 **Nota:** `registrado_por` vem do vigilante efetivo (conta coletiva usa pool — espelho Infraestrutura guarita); nunca persiste `usuario_coletivo` como `registrado_por`.
 

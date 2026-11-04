@@ -1,6 +1,6 @@
 # Diretrizes do Domínio: AcessoCampus
 
-> **Status:** cortes da **gestão** e da **portaria** implementados em `PROJECT_APPS`. A gestão lista alunos e turmas, cria ou aceita autorizações e materializa `EventoAcesso`. O tipo da autorização é catálogo (`TipoAutorizacaoAcesso`): Entrada no campus e Saída do campus são tipos-base semeados; novos tipos são administrados pelo Django Admin e a API apenas os lista. A portaria lista grupos individuais ou de turma e grava `RegistroAcesso`, com conferência parcial em entrada e saída. Conta guarita escolhe o vigilante físico no pool; L3 registra como ele próprio. Pedido criado pelo aluno e os seis tipos de programação continuam **planejados** neste arquivo.
+> **Status:** cortes da **gestão** e da **portaria** implementados em `PROJECT_APPS`. A gestão lista alunos (busca por nome e CPF) e turmas, cria ou aceita autorizações e materializa `EventoAcesso`. O tipo da autorização é catálogo (`TipoAutorizacaoAcesso`): Entrada no campus e Saída do campus são tipos-base semeados; novos tipos são administrados pelo Django Admin e a API apenas os lista. A portaria lista grupos individuais ou de turma e grava `RegistroAcesso`, com conferência parcial em entrada e saída. Conta guarita escolhe o vigilante físico no pool; L3 registra como ele próprio. Pedido criado pelo aluno e os seis tipos de programação continuam **planejados** neste arquivo.
 
 Este arquivo é a **especificação funcional canônica** do bounded context **AcessoCampus** (circulação e autorizações de alunos de Ensino Médio na portaria).
 
@@ -119,6 +119,7 @@ flowchart TD
 4. POST `registrar/` recebe `aluno_ids` na turma e `responsavel_liberacao_id` na conta guarita.
 5. `registrado_por` é o vigilante físico; `operado_por` preserva a conta autenticada. L3 usa a si próprio nos dois campos.
 6. O registro pode ser feito antes ou exatamente no horário autorizado; depois dele, o grupo incompleto expira.
+7. As consultas derivam a expiração sem alterar o banco; a task Celery persiste `expirado_em` a cada minuto.
 
 ### Histórico (`visualizar_historico` ou `analisar_solicitacoes` ou L3)
 
@@ -307,7 +308,7 @@ Filtros de listagem **nunca** expandem escopo além da capacidade.
 |----------|---------|
 | Aluno `solicitacoes/` | `status`, `paginacao` |
 | Análise | `status` (default `PENDENTE`), busca nome/cpf/matrícula, `curso_id`, `data`, `paginacao` |
-| Portaria | `data` (default hoje), busca, `tipo`, `situacao_confirmacao`, `paginacao` |
+| Portaria | `status` (múltiplo), `busca`, `tipo_movimento`, `tipo_beneficiario`, `data_autorizada`, `hora_inicio`, `hora_fim`, `ordenacao`, `paginacao` |
 | Histórico | `status`, `aluno_id`, `curso_id`, `data_inicio`, `data_fim`, busca, `paginacao` |
 
 ---

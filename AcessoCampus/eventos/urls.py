@@ -12,28 +12,28 @@ from .views import (
 
 urlpatterns = [
     path(
-        "eventos/",
+        'eventos/',
         roteador_por_metodo(GET=ListarEventosAcessoView),
-        name="evento-acesso-list",
+        name='evento-acesso-list',
     ),
     path(
-        "eventos/responsaveis-elegiveis/",
+        'eventos/responsaveis-elegiveis/',
         roteador_por_metodo(GET=ListarResponsaveisElegiveisView),
-        name="evento-acesso-responsaveis",
+        name='evento-acesso-responsaveis',
     ),
     path(
-        "eventos/<uuid:grupo_portaria_id>/",
+        'eventos/<uuid:grupo_portaria_id>/',
         roteador_por_metodo(GET=DetalharEventoAcessoView),
-        name="evento-acesso-detail",
+        name='evento-acesso-detail',
     ),
     path(
-        "eventos/<uuid:grupo_portaria_id>/alunos/",
+        'eventos/<uuid:grupo_portaria_id>/alunos/',
         roteador_por_metodo(GET=ListarAlunosEventoAcessoView),
-        name="evento-acesso-alunos",
+        name='evento-acesso-alunos',
     ),
     path(
-        "eventos/<uuid:grupo_portaria_id>/registrar/",
+        'eventos/<uuid:grupo_portaria_id>/registrar/',
         roteador_por_metodo(POST=RegistrarEventoAcessoView),
-        name="evento-acesso-registrar",
+        name='evento-acesso-registrar',
     ),
 ]

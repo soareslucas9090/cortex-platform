@@ -12,6 +12,7 @@ from Academico.alunos.models import Aluno
 from Academico.cursos.choices import NivelEnsino
 from Academico.cursos.models import Curso
 from AcessoCampus.eventos.models import EventoAcesso
+from AcessoCampus.eventos.serializers import EventoAcessoSerializer
 from AcessoCampus.permissoes.models import PermissaoUsuarioAcessoCampus
 from AcessoCampus.registros.models import RegistroAcesso
 from AcessoCampus.solicitacoes.choices import OrigemSolicitacaoAcesso, StatusSolicitacaoAcesso
@@ -31,33 +32,42 @@ def token(usuario):
 class PortariaAcessoCampusTest(APITestCase):
 
     def setUp(self):
-        self.admin = Usuario.objects.create_superuser(cpf="30000000001", password="Senha@123", nome="Admin Portaria")
-        self.sem_permissao = Usuario.objects.create_user(cpf="30000000002", password="Senha@123", nome="Sem Permissão")
+        self.admin = Usuario.objects.create_superuser(cpf='30000000001', password='Senha@123', nome='Admin Portaria')
+        self.sem_permissao = Usuario.objects.create_user(cpf='30000000002', password='Senha@123', nome='Sem Permissão')
         self.curso = Curso.objects.create(
-            nome="Ensino Médio Portaria", codigo_curso="EM-PORTARIA", nivel_ensino=NivelEnsino.ENSINO_MEDIO
+            nome='Ensino Médio Portaria', codigo_curso='EM-PORTARIA', nivel_ensino=NivelEnsino.ENSINO_MEDIO
         )
-        self.vinculo_a = self._criar_vinculo("31000000001", "Ana Portaria")
-        self.vinculo_b = self._criar_vinculo("31000000002", "Bruno Portaria")
+        self.vinculo_a = self._criar_vinculo('31000000001', 'Ana Portaria')
+        self.vinculo_b = self._criar_vinculo('31000000002', 'Bruno Portaria')
         self.tipo_entrada = TipoAutorizacaoAcesso.objects.get(nome=NOME_TIPO_ENTRADA_CAMPUS)
         self.hoje = timezone.localdate()
-        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {token(self.admin)}")
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {token(self.admin)}')
 
     def _criar_vinculo(self, cpf, nome):
-        usuario = Usuario.objects.create_user(cpf=cpf, password="Senha@123", nome=nome)
+        usuario = Usuario.objects.create_user(cpf=cpf, password='Senha@123', nome=nome)
         aluno = Aluno.objects.create(usuario=usuario)
-        return AlunoCurso.objects.create(aluno=aluno, curso=self.curso, turma="3A", matricula=cpf)
+        return AlunoCurso.objects.create(aluno=aluno, curso=self.curso, turma='3A', matricula=cpf)
 
-    def _criar_evento(self, vinculo, *, grupo=None, turma_origem="", data_acesso=None, hora_autorizada=None):
+    def _criar_evento(
+        self,
+        vinculo,
+        *,
+        grupo=None,
+        turma_origem='',
+        data_acesso=None,
+        hora_autorizada=None,
+        tipo=None,
+    ):
         horario_valido = timezone.localtime() + timedelta(minutes=5)
         solicitacao = SolicitacaoAcesso.objects.create(
             aluno=vinculo.aluno,
             aluno_curso=vinculo,
             origem=OrigemSolicitacaoAcesso.GESTAO,
-            tipo=self.tipo_entrada,
+            tipo=tipo or self.tipo_entrada,
             status=StatusSolicitacaoAcesso.ACEITA,
             data_acesso=data_acesso or horario_valido.date(),
             hora_autorizada=hora_autorizada or horario_valido.time().replace(tzinfo=None),
-            motivo="Teste da portaria",
+            motivo='Teste da portaria',
             avaliada_por=self.admin,
             avaliada_em=timezone.now(),
             lote_id=uuid.uuid4(),
@@ -70,40 +80,40 @@ class PortariaAcessoCampusTest(APITestCase):
 
     def test_admin_registra_individual_e_replay_e_idempotente(self):
         evento = self._criar_evento(self.vinculo_a)
-        url = reverse("acesso_campus:evento-acesso-registrar", kwargs={"grupo_portaria_id": evento.grupo_portaria_id})
+        url = reverse('acesso_campus:evento-acesso-registrar', kwargs={'grupo_portaria_id': evento.grupo_portaria_id})
 
-        primeira = self.client.post(url, {}, format="json")
+        primeira = self.client.post(url, {}, format='json')
         self.assertEqual(primeira.status_code, status.HTTP_200_OK, primeira.data)
-        self.assertEqual(primeira.data["dados"]["autorizacao"]["status"], "CONCLUIDA")
-        self.assertEqual(primeira.data["dados"]["registro"]["confirmados_agora"], 1)
+        self.assertEqual(primeira.data['dados']['autorizacao']['status'], 'CONCLUIDA')
+        self.assertEqual(primeira.data['dados']['registro']['confirmados_agora'], 1)
 
-        repetida = self.client.post(url, {}, format="json")
+        repetida = self.client.post(url, {}, format='json')
         self.assertEqual(repetida.status_code, status.HTTP_200_OK, repetida.data)
-        self.assertEqual(repetida.data["dados"]["registro"]["ja_confirmados"], 1)
+        self.assertEqual(repetida.data['dados']['registro']['ja_confirmados'], 1)
         self.assertEqual(RegistroAcesso.objects.filter(evento=evento).count(), 1)
 
     def test_turma_aceita_conferencia_parcial_em_entrada(self):
         grupo = uuid.uuid4()
-        evento_a = self._criar_evento(self.vinculo_a, grupo=grupo, turma_origem="3A")
-        evento_b = self._criar_evento(self.vinculo_b, grupo=grupo, turma_origem="3A")
-        url = reverse("acesso_campus:evento-acesso-registrar", kwargs={"grupo_portaria_id": grupo})
+        evento_a = self._criar_evento(self.vinculo_a, grupo=grupo, turma_origem='3A')
+        evento_b = self._criar_evento(self.vinculo_b, grupo=grupo, turma_origem='3A')
+        url = reverse('acesso_campus:evento-acesso-registrar', kwargs={'grupo_portaria_id': grupo})
 
-        parcial = self.client.post(url, {"aluno_ids": [evento_a.aluno_id]}, format="json")
+        parcial = self.client.post(url, {'aluno_ids': [evento_a.aluno_id]}, format='json')
         self.assertEqual(parcial.status_code, status.HTTP_200_OK, parcial.data)
-        self.assertEqual(parcial.data["dados"]["autorizacao"]["status"], "PENDENTE")
-        self.assertEqual(parcial.data["dados"]["autorizacao"]["progresso"]["liberados"], 1)
+        self.assertEqual(parcial.data['dados']['autorizacao']['status'], 'PENDENTE')
+        self.assertEqual(parcial.data['dados']['autorizacao']['progresso']['liberados'], 1)
 
-        final = self.client.post(url, {"aluno_ids": [evento_b.aluno_id]}, format="json")
+        final = self.client.post(url, {'aluno_ids': [evento_b.aluno_id]}, format='json')
         self.assertEqual(final.status_code, status.HTTP_200_OK, final.data)
-        self.assertEqual(final.data["dados"]["autorizacao"]["status"], "CONCLUIDA")
-        self.assertEqual(final.data["dados"]["autorizacao"]["progresso"]["pendentes"], 0)
+        self.assertEqual(final.data['dados']['autorizacao']['status'], 'CONCLUIDA')
+        self.assertEqual(final.data['dados']['autorizacao']['progresso']['pendentes'], 0)
 
     def test_evento_expirado_nao_pode_ser_registrado(self):
         evento = self._criar_evento(self.vinculo_a, data_acesso=self.hoje - timedelta(days=1))
         resposta = self.client.post(
-            reverse("acesso_campus:evento-acesso-registrar", kwargs={"grupo_portaria_id": evento.grupo_portaria_id}),
+            reverse('acesso_campus:evento-acesso-registrar', kwargs={'grupo_portaria_id': evento.grupo_portaria_id}),
             {},
-            format="json",
+            format='json',
         )
         self.assertEqual(resposta.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertFalse(RegistroAcesso.objects.filter(evento=evento).exists())
@@ -118,10 +128,10 @@ class PortariaAcessoCampusTest(APITestCase):
         )
         resposta_antes = self.client.post(
             reverse(
-                "acesso_campus:evento-acesso-registrar", kwargs={"grupo_portaria_id": evento_futuro.grupo_portaria_id}
+                'acesso_campus:evento-acesso-registrar', kwargs={'grupo_portaria_id': evento_futuro.grupo_portaria_id}
             ),
             {},
-            format="json",
+            format='json',
         )
         self.assertEqual(resposta_antes.status_code, status.HTTP_200_OK, resposta_antes.data)
         self.assertTrue(RegistroAcesso.objects.filter(evento=evento_futuro).exists())
@@ -138,10 +148,10 @@ class PortariaAcessoCampusTest(APITestCase):
 
         resposta_depois = self.client.post(
             reverse(
-                "acesso_campus:evento-acesso-registrar", kwargs={"grupo_portaria_id": evento_expirado.grupo_portaria_id}
+                'acesso_campus:evento-acesso-registrar', kwargs={'grupo_portaria_id': evento_expirado.grupo_portaria_id}
             ),
             {},
-            format="json",
+            format='json',
         )
         self.assertEqual(resposta_depois.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertFalse(RegistroAcesso.objects.filter(evento=evento_expirado).exists())
@@ -153,47 +163,47 @@ class PortariaAcessoCampusTest(APITestCase):
             self.vinculo_a, data_acesso=futuro.date(), hora_autorizada=futuro.time().replace(tzinfo=None)
         )
 
-        listagem = self.client.get(reverse("acesso_campus:evento-acesso-list"))
+        listagem = self.client.get(reverse('acesso_campus:evento-acesso-list'))
         self.assertEqual(listagem.status_code, status.HTTP_200_OK, listagem.data)
-        autorizacao = next(item for item in listagem.data["dados"] if item["id"] == str(evento.grupo_portaria_id))
-        self.assertTrue(autorizacao["acoes"]["pode_registrar"])
+        autorizacao = next(item for item in listagem.data['dados'] if item['id'] == str(evento.grupo_portaria_id))
+        self.assertTrue(autorizacao['acoes']['pode_registrar'])
 
         alunos = self.client.get(
-            reverse("acesso_campus:evento-acesso-alunos", kwargs={"grupo_portaria_id": evento.grupo_portaria_id})
+            reverse('acesso_campus:evento-acesso-alunos', kwargs={'grupo_portaria_id': evento.grupo_portaria_id})
         )
         self.assertEqual(alunos.status_code, status.HTTP_200_OK, alunos.data)
-        self.assertTrue(alunos.data["dados"][0]["pode_liberar"])
+        self.assertTrue(alunos.data['dados'][0]['pode_liberar'])
 
     def test_usuario_sem_permissao_recebe_403(self):
         self._criar_evento(self.vinculo_a)
-        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {token(self.sem_permissao)}")
-        resposta = self.client.get(reverse("acesso_campus:evento-acesso-list"))
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {token(self.sem_permissao)}')
+        resposta = self.client.get(reverse('acesso_campus:evento-acesso-list'))
         self.assertEqual(resposta.status_code, status.HTTP_403_FORBIDDEN)
 
     def test_guarita_exige_responsavel_do_pool(self):
         evento = self._criar_evento(self.vinculo_a)
         guarita = Usuario.objects.create_user(
-            cpf="30000000003",
-            password="Senha@123",
-            nome="Guarita",
+            cpf='30000000003',
+            password='Senha@123',
+            nome='Guarita',
             usuario_coletivo=True,
             tipo_conta_coletiva=TipoContaColetiva.GUARITA,
         )
-        vigilante = Usuario.objects.create_user(cpf="30000000004", password="Senha@123", nome="Vigilante Elegível")
-        funcao = Funcao.objects.create(papel_funcao="Vigilante teste", descricao="Vigilante")
-        setor = Setor.objects.create(nome="Segurança teste", sigla="SEGTEST")
+        vigilante = Usuario.objects.create_user(cpf='30000000004', password='Senha@123', nome='Vigilante Elegível')
+        funcao = Funcao.objects.create(papel_funcao='Vigilante teste', descricao='Vigilante')
+        setor = Setor.objects.create(nome='Segurança teste', sigla='SEGTEST')
         SetorVinculo.objects.create(usuario=vigilante, setor=setor, funcao=funcao)
         guarita.funcoes_coletivo.add(funcao)
         PermissaoUsuarioAcessoCampus.objects.create(usuario=guarita, operar_portaria=True)
-        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {token(guarita)}")
-        url = reverse("acesso_campus:evento-acesso-registrar", kwargs={"grupo_portaria_id": evento.grupo_portaria_id})
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {token(guarita)}')
+        url = reverse('acesso_campus:evento-acesso-registrar', kwargs={'grupo_portaria_id': evento.grupo_portaria_id})
 
-        sem_responsavel = self.client.post(url, {}, format="json")
+        sem_responsavel = self.client.post(url, {}, format='json')
         self.assertEqual(sem_responsavel.status_code, status.HTTP_400_BAD_REQUEST)
-        fora_pool = self.client.post(url, {"responsavel_liberacao_id": self.sem_permissao.pk}, format="json")
+        fora_pool = self.client.post(url, {'responsavel_liberacao_id': self.sem_permissao.pk}, format='json')
         self.assertEqual(fora_pool.status_code, status.HTTP_400_BAD_REQUEST)
 
-        sucesso = self.client.post(url, {"responsavel_liberacao_id": vigilante.pk}, format="json")
+        sucesso = self.client.post(url, {'responsavel_liberacao_id': vigilante.pk}, format='json')
         self.assertEqual(sucesso.status_code, status.HTTP_200_OK, sucesso.data)
         registro = RegistroAcesso.objects.get(evento=evento)
         self.assertEqual(registro.registrado_por, vigilante)
@@ -201,15 +211,134 @@ class PortariaAcessoCampusTest(APITestCase):
 
     def test_listagem_filtra_status_e_nao_expoe_cpf(self):
         evento = self._criar_evento(self.vinculo_a)
-        resposta = self.client.get(reverse("acesso_campus:evento-acesso-list"), {"status": "PENDENTE"})
+        resposta = self.client.get(reverse('acesso_campus:evento-acesso-list'), {'status': 'PENDENTE'})
         self.assertEqual(resposta.status_code, status.HTTP_200_OK, resposta.data)
-        self.assertEqual(resposta.data["count"], 1)
-        self.assertNotIn("cpf", str(resposta.data["dados"][0]).lower())
+        self.assertEqual(resposta.data['count'], 1)
+        self.assertNotIn('cpf', str(resposta.data['dados'][0]).lower())
 
         alunos = self.client.get(
-            reverse("acesso_campus:evento-acesso-alunos", kwargs={"grupo_portaria_id": evento.grupo_portaria_id})
+            reverse('acesso_campus:evento-acesso-alunos', kwargs={'grupo_portaria_id': evento.grupo_portaria_id})
         )
-        self.assertEqual(alunos.data["dados"][0]["aluno"]["cpf"], "310.000.000-01")
+        self.assertEqual(alunos.data['dados'][0]['aluno']['cpf'], '310.000.000-01')
 
-        responsaveis = self.client.get(reverse("acesso_campus:evento-acesso-responsaveis"))
-        self.assertEqual(responsaveis.data["dados"][0]["cpf"], "300.000.000-01")
+        responsaveis = self.client.get(reverse('acesso_campus:evento-acesso-responsaveis'))
+        self.assertEqual(responsaveis.data['dados'][0]['cpf'], '300.000.000-01')
+
+    def test_listagem_deriva_expiracao_sem_persistir_durante_get(self):
+        evento = self._criar_evento(self.vinculo_a, data_acesso=self.hoje - timedelta(days=1))
+
+        resposta = self.client.get(
+            reverse('acesso_campus:evento-acesso-list'),
+            {'status': 'EXPIRADA'},
+        )
+
+        self.assertEqual(resposta.status_code, status.HTTP_200_OK, resposta.data)
+        self.assertEqual(resposta.data['dados'][0]['status'], 'EXPIRADA')
+        evento.refresh_from_db()
+        self.assertIsNone(evento.expirado_em)
+
+    def test_listagem_ignora_filtros_invalidos(self):
+        evento = self._criar_evento(self.vinculo_a)
+
+        resposta = self.client.get(
+            reverse('acesso_campus:evento-acesso-list'),
+            {
+                'status': 'INVALIDO',
+                'data_autorizada': 'invalida',
+                'hora_inicio': 'invalida',
+                'hora_fim': 'invalida',
+            },
+        )
+
+        self.assertEqual(resposta.status_code, status.HTTP_200_OK, resposta.data)
+        self.assertEqual(resposta.data['count'], 1)
+        self.assertEqual(resposta.data['dados'][0]['id'], str(evento.grupo_portaria_id))
+
+    def test_listagem_apresenta_nome_real_de_tipo_personalizado(self):
+        tipo_personalizado = TipoAutorizacaoAcesso.objects.create(nome='Atividade externa')
+        evento = self._criar_evento(self.vinculo_a, tipo=tipo_personalizado)
+
+        resposta = self.client.get(reverse('acesso_campus:evento-acesso-list'))
+
+        self.assertEqual(resposta.status_code, status.HTTP_200_OK, resposta.data)
+        autorizacao = next(item for item in resposta.data['dados'] if item['id'] == str(evento.grupo_portaria_id))
+        self.assertEqual(autorizacao['tipo_movimento'], tipo_personalizado.nome)
+
+    def test_serializer_da_listagem_nao_faz_consulta_por_grupo(self):
+        grupo = uuid.uuid4()
+        self._criar_evento(self.vinculo_a, grupo=grupo, turma_origem='3A')
+        self._criar_evento(self.vinculo_b, grupo=grupo, turma_origem='3A')
+        queryset = EventoAcesso().business.listar_grupos()
+
+        with self.assertNumQueries(1):
+            dados = EventoAcessoSerializer(queryset, many=True).data
+
+        self.assertEqual(len(dados), 1)
+
+    def test_listagem_encerrada_ordena_por_data_independentemente_do_status(self):
+        grupo_concluido_mais_recente = uuid.uuid4()
+        evento_grupo_a = self._criar_evento(
+            self.vinculo_a,
+            grupo=grupo_concluido_mais_recente,
+            turma_origem='3A',
+            data_acesso=self.hoje + timedelta(days=4),
+        )
+        evento_grupo_b = self._criar_evento(
+            self.vinculo_b,
+            grupo=grupo_concluido_mais_recente,
+            turma_origem='3A',
+            data_acesso=self.hoje + timedelta(days=4),
+        )
+        evento_concluido_mais_antigo = self._criar_evento(
+            self.vinculo_a,
+            data_acesso=self.hoje + timedelta(days=2),
+        )
+        agora = timezone.now()
+        RegistroAcesso.objects.create(
+            evento=evento_grupo_a,
+            registrado_por=self.admin,
+            operado_por=self.admin,
+            registrado_em=agora - timedelta(minutes=20),
+        )
+        RegistroAcesso.objects.create(
+            evento=evento_grupo_b,
+            registrado_por=self.admin,
+            operado_por=self.admin,
+            registrado_em=agora,
+        )
+        RegistroAcesso.objects.create(
+            evento=evento_concluido_mais_antigo,
+            registrado_por=self.admin,
+            operado_por=self.admin,
+            registrado_em=agora - timedelta(minutes=10),
+        )
+        evento_expirado_mais_recente = self._criar_evento(
+            self.vinculo_a,
+            data_acesso=self.hoje + timedelta(days=3),
+        )
+        evento_expirado_mais_antigo = self._criar_evento(
+            self.vinculo_b,
+            data_acesso=self.hoje + timedelta(days=1),
+        )
+        EventoAcesso.objects.filter(pk=evento_expirado_mais_recente.pk).update(
+            expirado_em=agora - timedelta(minutes=5)
+        )
+        EventoAcesso.objects.filter(pk=evento_expirado_mais_antigo.pk).update(
+            expirado_em=agora - timedelta(minutes=15)
+        )
+
+        resposta = self.client.get(
+            reverse('acesso_campus:evento-acesso-list'),
+            {'status': ['EXPIRADA', 'CONCLUIDA']},
+        )
+
+        self.assertEqual(resposta.status_code, status.HTTP_200_OK, resposta.data)
+        self.assertEqual(
+            [item['id'] for item in resposta.data['dados']],
+            [
+                str(grupo_concluido_mais_recente),
+                str(evento_expirado_mais_recente.grupo_portaria_id),
+                str(evento_concluido_mais_antigo.grupo_portaria_id),
+                str(evento_expirado_mais_antigo.grupo_portaria_id),
+            ],
+        )
