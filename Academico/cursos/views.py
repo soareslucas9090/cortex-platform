@@ -48,7 +48,22 @@ from .serializers import CursoSerializer, CriarCursoSerializer, AtualizarCursoSe
         OpenApiParameter(
             'nivel_ensino', OpenApiTypes.INT, OpenApiParameter.QUERY,
             required=False,
-            description='Filtra pelo nível: 1 = Ensino Médio, 2 = Técnico, 3 = Superior, 4 = Pós-graduação.',
+            description=(
+                'Filtra pelo nível: 1 = Ensino Médio, 2 = Técnico, 3 = Superior, '
+                '4 = Pós-graduação, 5 = Formação profissional, 6 = Mestrado, '
+                '7 = Preparatório vestibular.'
+            ),
+        ),
+        OpenApiParameter(
+            'modalidade', OpenApiTypes.INT, OpenApiParameter.QUERY,
+            required=False,
+            description=(
+                'Filtra pela modalidade: 1 = FIC, 2 = Qualificação Profissional, '
+                '3 = Curso Livre, 4 = Técnico Integrado, 5 = Técnico Integrado EJA, '
+                '6 = Técnico Subsequente, 7 = Técnico Subsequente/Concomitante, '
+                '8 = Técnico Subsequente/Concomitante/EaD, 9 = Licenciatura, '
+                '10 = Bacharelado, 11 = Tecnologia, 12 = Especialização, 13 = Mestrado.'
+            ),
         ),
         OpenApiParameter(
             'paginacao', OpenApiTypes.INT, OpenApiParameter.QUERY,
@@ -92,6 +107,10 @@ class ListarCursosView(IsAuthenticatedMixin, BasicGetAPIView):
         if nivel_ensino is not None and nivel_ensino.isdigit():
             qs = qs.filter(nivel_ensino=int(nivel_ensino))
 
+        modalidade = self.request.query_params.get('modalidade')
+        if modalidade is not None and modalidade.isdigit():
+            qs = qs.filter(modalidade=int(modalidade))
+
         return qs
 
 
@@ -99,7 +118,7 @@ class ListarCursosView(IsAuthenticatedMixin, BasicGetAPIView):
     tags=['Cursos'],
     summary='Criar curso',
     description='''
-    Cria um novo curso. Os campos `setor_id` e `nivel_ensino` são obrigatórios.
+    Cria um novo curso. Os campos `setor_id` e `nivel_ensino` são obrigatórios; `modalidade` é opcional.
 
     **Permissões:** Qualquer usuário autenticado (catálogo de referência). Escrita apenas L3 (EDITAR_TUDO).
     ''',

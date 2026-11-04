@@ -6,7 +6,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from AppCore.core.exceptions.exceptions import BusinessRuleException
 from Identidade.usuarios.models import Usuario
 from Organizacional.setores.models import Setor
-from Academico.cursos.choices import NivelEnsino
+from Academico.cursos.choices import Modalidade, NivelEnsino
 from Academico.cursos.models import Curso
 
 
@@ -231,6 +231,111 @@ class CursoBusinessTestCase(APITestCase):
             curso.business.reativar()
 
 
+class CursoHelpersTestCase(APITestCase):
+
+    def setUp(self):
+        self.helper = Curso().helper
+
+    def test_resolver_nivel_ensino_ods(self):
+        casos = {
+            'Tecnico': NivelEnsino.TECNICO,
+            'Ensino_medio': NivelEnsino.ENSINO_MEDIO,
+            'Pos_graduacao': NivelEnsino.POS_GRADUACAO,
+            'Formacao_profissional': NivelEnsino.FORMACAO_PROFISSIONAL,
+            'preparatorio_vestibular': NivelEnsino.PREPARATORIO_VESTIBULAR,
+            'Mestrado': NivelEnsino.MESTRADO,
+        }
+        for texto, esperado in casos.items():
+            with self.subTest(texto=texto):
+                self.assertEqual(self.helper.resolver_nivel_ensino(texto), esperado)
+
+    def test_resolver_modalidade_ods(self):
+        self.assertEqual(
+            self.helper.resolver_modalidade('Técnico Subsequente\\Concomitante'),
+            Modalidade.TECNICO_SUBSEQUENTE_CONCOMITANTE,
+        )
+        self.assertEqual(
+            self.helper.resolver_modalidade('Técnico Subsequente\\Concomitante/Ead'),
+            Modalidade.TECNICO_SUBSEQUENTE_CONCOMITANTE_EAD,
+        )
+        self.assertEqual(self.helper.resolver_modalidade('FIC'), Modalidade.FIC)
+        self.assertEqual(self.helper.resolver_modalidade('Curso Livre'), Modalidade.CURSO_LIVRE)
+
+    def test_texto_choice_vazio_e_invalido(self):
+        for vazio in ('', '   ', '-', 'NULL', 'null', None):
+            with self.subTest(vazio=vazio):
+                self.assertTrue(self.helper.texto_choice_vazio(vazio))
+                self.assertIsNone(self.helper.resolver_nivel_ensino(vazio))
+                self.assertIsNone(self.helper.resolver_modalidade(vazio))
+        self.assertIsNone(self.helper.resolver_nivel_ensino('presencial'))
+        self.assertIsNone(self.helper.resolver_modalidade('presencial'))
+
+
+class CursoBusinessTestCaseNiveisNovos(APITestCase):
+
+    def setUp(self):
+        self.setor = criar_setor()
+
+    def test_criar_curso_niveis_novos(self):
+        for nivel in (
+            NivelEnsino.FORMACAO_PROFISSIONAL,
+            NivelEnsino.MESTRADO,
+            NivelEnsino.PREPARATORIO_VESTIBULAR,
+        ):
+            with self.subTest(nivel=nivel):
+                curso = Curso().business.criar_curso(
+                    nome=f'Curso {nivel}',
+                    codigo_curso=f'NV-{nivel}',
+                    setor_id=self.setor.pk,
+                    nivel_ensino=nivel,
+                )
+                self.assertEqual(curso.nivel_ensino, nivel)
+
+    def test_criar_curso_com_modalidade(self):
+        curso = Curso().business.criar_curso(
+            nome='TADS',
+            codigo_curso='14TADS-M',
+            setor_id=self.setor.pk,
+            nivel_ensino=NivelEnsino.SUPERIOR,
+            modalidade=Modalidade.TECNOLOGIA,
+        )
+        self.assertEqual(curso.modalidade, Modalidade.TECNOLOGIA)
+
+    def test_atualizar_modalidade(self):
+        curso = Curso().business.criar_curso(
+            nome='TADS',
+            codigo_curso='14TADS-U',
+            setor_id=self.setor.pk,
+            nivel_ensino=NivelEnsino.SUPERIOR,
+        )
+        curso.business.atualizar_dados({'modalidade': Modalidade.LICENCIATURA})
+        curso.refresh_from_db()
+        self.assertEqual(curso.modalidade, Modalidade.LICENCIATURA)
+
+    def test_atualizar_modalidade_invalida(self):
+        curso = Curso().business.criar_curso(
+            nome='TADS',
+            codigo_curso='14TADS-IV',
+            setor_id=self.setor.pk,
+            nivel_ensino=NivelEnsino.SUPERIOR,
+        )
+        with self.assertRaises(BusinessRuleException) as ctx:
+            curso.business.atualizar_dados({'modalidade': 99})
+        self.assertIn('modalidade válida', str(ctx.exception))
+
+    def test_atualizar_modalidade_para_nulo(self):
+        curso = Curso().business.criar_curso(
+            nome='TADS',
+            codigo_curso='14TADS-NULL',
+            setor_id=self.setor.pk,
+            nivel_ensino=NivelEnsino.SUPERIOR,
+            modalidade=Modalidade.TECNOLOGIA,
+        )
+        curso.business.atualizar_dados({'modalidade': None})
+        curso.refresh_from_db()
+        self.assertIsNone(curso.modalidade)
+
+
 class CursosAPITestCase(APITestCase):
 
     def setUp(self):
@@ -336,6 +441,47 @@ class CursosAPITestCase(APITestCase):
         self.assertEqual(len(response.data['dados']), 1)
         self.assertEqual(response.data['dados'][0]['codigo_curso'], 'EM-001')
 
+    def test_criar_curso_com_modalidade(self):
+        url = reverse('academico:curso-list')
+        payload = {
+            'nome': 'TADS',
+            'codigo_curso': '14TADS-API',
+            'setor_id': self.setor.pk,
+            'nivel_ensino': NivelEnsino.SUPERIOR,
+            'modalidade': Modalidade.TECNOLOGIA,
+        }
+        response = self.client.post(url, payload, format='json')
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.data['dados']['modalidade'], Modalidade.TECNOLOGIA)
+        self.assertEqual(response.data['dados']['modalidade_display'], 'Tecnologia')
+
+    def test_criar_curso_sem_modalidade_fica_nulo(self):
+        url = reverse('academico:curso-list')
+        payload = {
+            'nome': 'Sem Modalidade',
+            'codigo_curso': 'SM-001',
+            'setor_id': self.setor.pk,
+            'nivel_ensino': NivelEnsino.SUPERIOR,
+        }
+        response = self.client.post(url, payload, format='json')
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertIsNone(response.data['dados']['modalidade'])
+
+    def test_atualizar_modalidade_api(self):
+        url = reverse('academico:curso-detail', kwargs={'pk': self.curso.pk})
+        response = self.client.patch(url, {'modalidade': Modalidade.FIC}, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.curso.refresh_from_db()
+        self.assertEqual(self.curso.modalidade, Modalidade.FIC)
+
+    def test_listar_cursos_filtrar_modalidade(self):
+        self.curso.modalidade = Modalidade.FIC
+        self.curso.save(update_fields=['modalidade'])
+        url = reverse('academico:curso-list')
+        response = self.client.get(url, {'modalidade': Modalidade.FIC})
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data['dados']), 1)
+
     def test_criar_curso_codigo_duplicado(self):
         url = reverse('academico:curso-list')
         payload = {
@@ -422,3 +568,4 @@ class CursoSeedTestCase(APITestCase):
     def test_seed_permanece_sem_nivel(self):
         curso = Curso.objects.get(codigo_curso='14LMAT')
         self.assertIsNone(curso.nivel_ensino)
+        self.assertIsNone(curso.modalidade)

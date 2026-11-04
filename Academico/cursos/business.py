@@ -11,6 +11,7 @@ class CursoBusiness(ModelInstanceBusiness):
         try:
             from .models import Curso
             self.object_instance.rules.nivel_ensino_valido(kwargs.get('nivel_ensino'))
+            self.object_instance.rules.modalidade_valida(kwargs.get('modalidade'))
             self.object_instance.rules.codigo_unico(codigo_curso)
             self.object_instance.rules.validar_setor_obrigatorio(setor_id)
             return Curso.objects.create(
@@ -34,6 +35,8 @@ class CursoBusiness(ModelInstanceBusiness):
                 self.object_instance.rules.validar_setor_obrigatorio(dados['setor_id'])
             if 'nivel_ensino' in dados:
                 self.object_instance.rules.nivel_ensino_valido(dados.get('nivel_ensino'))
+            if 'modalidade' in dados:
+                self.object_instance.rules.modalidade_valida(dados.get('modalidade'))
             for attr, value in dados.items():
                 setattr(self.object_instance, attr, value)
             if not self.object_instance.setor_id:
@@ -42,7 +45,15 @@ class CursoBusiness(ModelInstanceBusiness):
         except Exception as e:
             self.relancar_ou_erro_sistema(e, 'Não foi possível atualizar o curso.', logger)
 
-    def importar_curso(self, codigo_curso: str, nome: str, setor, ativo: bool = True):
+    def importar_curso(
+        self,
+        codigo_curso: str,
+        nome: str,
+        setor,
+        ativo: bool = True,
+        nivel_ensino=None,
+        modalidade=None,
+    ):
         """Cria ou atualiza um curso pela chave natural codigo_curso, com setor obrigatório."""
         try:
             from .models import Curso
@@ -56,6 +67,8 @@ class CursoBusiness(ModelInstanceBusiness):
                 curso.nome = nome_gravar
                 curso.setor = setor
                 curso.ativo = ativo
+                curso.nivel_ensino = nivel_ensino
+                curso.modalidade = modalidade
                 curso.save()
                 return curso, False
 
@@ -65,6 +78,8 @@ class CursoBusiness(ModelInstanceBusiness):
                 codigo_curso=codigo_gravar,
                 setor=setor,
                 ativo=ativo,
+                nivel_ensino=nivel_ensino,
+                modalidade=modalidade,
             )
             return curso, True
         except Exception as e:

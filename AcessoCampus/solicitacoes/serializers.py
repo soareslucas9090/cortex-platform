@@ -1,3 +1,4 @@
+from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 
 from AcessoCampus.tipos.models import TipoAutorizacaoAcesso
@@ -18,6 +19,7 @@ class AlunoElegivelSerializer(serializers.Serializer):
     curso_nome = serializers.CharField(source='curso.nome')
     turma = serializers.CharField(allow_null=True)
 
+    @extend_schema_field(serializers.CharField(allow_null=True))
     def get_foto_secundaria(self, obj):
         usuario = obj.aluno.usuario
         return ANEXO_FOTO_SECUNDARIA.url_proxy(
@@ -36,6 +38,18 @@ class TurmaElegivelSerializer(serializers.Serializer):
 class UsuarioResumoSerializer(serializers.Serializer):
     id = serializers.IntegerField()
     nome = serializers.CharField()
+
+
+class AlunoSolicitacaoAcessoSerializer(serializers.Serializer):
+    nome = serializers.CharField()
+    foto = serializers.URLField(allow_null=True)
+    foto_secundaria = serializers.CharField(allow_null=True)
+
+
+class HistoricoSolicitacaoAcessoSerializer(serializers.Serializer):
+    descricao = serializers.CharField()
+    em = serializers.DateTimeField()
+    texto = serializers.CharField()
 
 
 class AutorizarAcessoSerializer(serializers.Serializer):
@@ -94,17 +108,21 @@ class SolicitacaoAcessoSerializer(serializers.ModelSerializer):
             'created_at',
         ]
 
+    @extend_schema_field(serializers.CharField())
     def get_resultado_avaliacao(self, obj):
         return RESULTADO_AVALIACAO[obj.status]
 
+    @extend_schema_field(UsuarioResumoSerializer(allow_null=True))
     def get_avaliada_por(self, obj):
         if obj.avaliada_por_id is None:
             return None
         return UsuarioResumoSerializer(obj.avaliada_por).data
 
+    @extend_schema_field(serializers.DateField())
     def get_data_solicitacao(self, obj):
         return obj.created_at.astimezone(FUSO_FORTALEZA).date()
 
+    @extend_schema_field(serializers.TimeField())
     def get_hora_solicitacao(self, obj):
         return obj.created_at.astimezone(FUSO_FORTALEZA).time().replace(microsecond=0)
 
@@ -127,9 +145,11 @@ class SolicitacaoAcessoDetalheSerializer(SolicitacaoAcessoSerializer):
             'turma_origem',
         ]
 
+    @extend_schema_field(HistoricoSolicitacaoAcessoSerializer(many=True))
     def get_historico(self, obj):
         return obj.helper.montar_historico()
 
+    @extend_schema_field(UsuarioResumoSerializer(allow_null=True))
     def get_liberado_por(self, obj):
         evento = getattr(obj, 'evento', None)
         registro = getattr(evento, 'registro', None) if evento else None
@@ -137,6 +157,7 @@ class SolicitacaoAcessoDetalheSerializer(SolicitacaoAcessoSerializer):
             return None
         return UsuarioResumoSerializer(registro.registrado_por).data
 
+    @extend_schema_field(AlunoSolicitacaoAcessoSerializer)
     def get_aluno(self, obj):
         usuario = obj.aluno.usuario
         return {

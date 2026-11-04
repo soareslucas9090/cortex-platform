@@ -269,11 +269,17 @@ boolean
 
 Indica se o curso está ativo
 
+nivel_ensino
+
+IntegerChoices (`NivelEnsino`, 1–7)
+
+Nível de ensino; valores da planilha ODS quando a coluna existir; seed permanece nulo até importação/edição
+
 modalidade
 
-String
+IntegerChoices (`Modalidade`, 1–13)
 
-Modalidade do curso (informativa na planilha; não persistida no model `Curso`)
+Modalidade do curso; valores únicos do layout ODS (ex.: FIC, Tecnologia); seed permanece nulo até importação/edição
 
 ### Dados raízes
 
@@ -320,7 +326,7 @@ Modalidade do curso (informativa na planilha; não persistida no model `Curso`)
 | 40 | 9 | Preparatório para o Ensino Médio - PARTIU IF | 14PIFPI | true |  |
 | 41 | 9 | Formação Inicial em Redator de Textos Técnicos | 14FRT | true | FIC |
 
-> Nota: o curso `14JOPC` (seed legado da migração `cursos.0001`) não consta no modelo atual, mas já existe em bancos implantados e é preservado (associado ao setor `DEPENTE` pela migração `cursos.0004`). A coluna `modalidade` é apenas informativa na planilha e não é persistida no model `Curso`.
+> Nota: o curso `14JOPC` (seed legado da migração `cursos.0001`) não consta no modelo atual, mas já existe em bancos implantados e é preservado (associado ao setor `DEPENTE` pela migração `cursos.0004`). As colunas `nivel_ensino` e `modalidade` da planilha são persistidas no model `Curso` quando a importação traz valores válidos; cursos do seed permanecem com esses campos nulos até importação ou edição.
 
 ----------
 

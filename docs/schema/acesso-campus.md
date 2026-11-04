@@ -4,7 +4,7 @@
 
 Timezone de datas/horas operacionais: **America/Fortaleza**.
 
-Pré-requisito Acadêmico: `Curso.nivel_ensino` (`NivelEnsino`: `ENSINO_MEDIO=1`, `TECNICO=2`, `SUPERIOR=3`, `POS_GRADUACAO=4`). Elegibilidade exige `ENSINO_MEDIO`.
+Pré-requisito Acadêmico: `Curso.nivel_ensino` (`NivelEnsino`: `ENSINO_MEDIO=1` … `PREPARATORIO_VESTIBULAR=7`) e `Curso.modalidade` opcional (`Modalidade` 1–13). Elegibilidade exige `ENSINO_MEDIO`.
 
 ---
 
