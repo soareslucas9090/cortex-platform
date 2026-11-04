@@ -435,11 +435,21 @@ paths:
           type: string
         description: Filtra por parte do código do curso.
       - in: query
+        name: modalidade
+        schema:
+          type: integer
+        description: 'Filtra pela modalidade: 1 = FIC, 2 = Qualificação Profissional,
+          3 = Curso Livre, 4 = Técnico Integrado, 5 = Técnico Integrado EJA, 6 = Técnico
+          Subsequente, 7 = Técnico Subsequente/Concomitante, 8 = Técnico Subsequente/Concomitante/EaD,
+          9 = Licenciatura, 10 = Bacharelado, 11 = Tecnologia, 12 = Especialização,
+          13 = Mestrado.'
+      - in: query
         name: nivel_ensino
         schema:
           type: integer
         description: 'Filtra pelo nível: 1 = Ensino Médio, 2 = Técnico, 3 = Superior,
-          4 = Pós-graduação.'
+          4 = Pós-graduação, 5 = Formação profissional, 6 = Mestrado, 7 = Preparatório
+          vestibular.'
       - in: query
         name: nome
         schema:
@@ -487,8 +497,9 @@ paths:
     post:
       operationId: academico_cursos_create
       description: "\n    Cria um novo curso. Os campos `setor_id` e `nivel_ensino`
-        são obrigatórios.\n\n    **Permissões:** Qualquer usuário autenticado (catálogo
-        de referência). Escrita apenas L3 (EDITAR_TUDO).\n    "
+        são obrigatórios; `modalidade` é opcional.\n\n    **Permissões:** Qualquer
+        usuário autenticado (catálogo de referência). Escrita apenas L3 (EDITAR_TUDO).\n
+        \   "
       summary: Criar curso
       tags:
       - Cursos
@@ -9334,6 +9345,7 @@ components:
           nullable: true
         foto_secundaria:
           type: string
+          nullable: true
           readOnly: true
         curso_id:
           type: integer
@@ -9397,6 +9409,22 @@ components:
       - id
       - nome
       - tem_deficiencia
+    AlunoSolicitacaoAcesso:
+      type: object
+      properties:
+        nome:
+          type: string
+        foto:
+          type: string
+          format: uri
+          nullable: true
+        foto_secundaria:
+          type: string
+          nullable: true
+      required:
+      - foto
+      - foto_secundaria
+      - nome
     AlunoTicket:
       type: object
       properties:
@@ -9881,6 +9909,11 @@ components:
           type: integer
         nivel_ensino:
           $ref: '#/components/schemas/NivelEnsinoEnum'
+        modalidade:
+          nullable: true
+          oneOf:
+          - $ref: '#/components/schemas/ModalidadeEnum'
+          - $ref: '#/components/schemas/NullEnum'
       required:
       - codigo_curso
       - nivel_ensino
@@ -10200,6 +10233,17 @@ components:
           type: string
           readOnly: true
           nullable: true
+        modalidade:
+          nullable: true
+          minimum: -2147483648
+          maximum: 2147483647
+          oneOf:
+          - $ref: '#/components/schemas/ModalidadeEnum'
+          - $ref: '#/components/schemas/NullEnum'
+        modalidade_display:
+          type: string
+          readOnly: true
+          nullable: true
         ativo:
           type: boolean
         created_at:
@@ -10214,6 +10258,7 @@ components:
       - codigo_curso
       - created_at
       - id
+      - modalidade_display
       - nivel_ensino_display
       - nome
       - setor_id
@@ -10940,6 +10985,20 @@ components:
       - rota_finalizada_em
       - rota_iniciada_em
       - sem_ticket
+    HistoricoSolicitacaoAcesso:
+      type: object
+      properties:
+        descricao:
+          type: string
+        em:
+          type: string
+          format: date-time
+        texto:
+          type: string
+      required:
+      - descricao
+      - em
+      - texto
     ImportacaoCausaErro:
       type: object
       properties:
@@ -11333,18 +11392,54 @@ components:
       - refresh
       - tem_perfil_aluno
       - usuario_coletivo
+    ModalidadeEnum:
+      enum:
+      - 1
+      - 2
+      - 3
+      - 4
+      - 5
+      - 6
+      - 7
+      - 8
+      - 9
+      - 10
+      - 11
+      - 12
+      - 13
+      type: integer
+      description: |-
+        * `1` - FIC
+        * `2` - Qualificação Profissional
+        * `3` - Curso Livre
+        * `4` - Técnico Integrado
+        * `5` - Técnico Integrado EJA
+        * `6` - Técnico Subsequente
+        * `7` - Técnico Subsequente/Concomitante
+        * `8` - Técnico Subsequente/Concomitante/EaD
+        * `9` - Licenciatura
+        * `10` - Bacharelado
+        * `11` - Tecnologia
+        * `12` - Especialização
+        * `13` - Mestrado
     NivelEnsinoEnum:
       enum:
       - 1
       - 2
       - 3
       - 4
+      - 5
+      - 6
+      - 7
       type: integer
       description: |-
         * `1` - Ensino Médio
         * `2` - Técnico
         * `3` - Superior
         * `4` - Pós-graduação
+        * `5` - Formação profissional
+        * `6` - Mestrado
+        * `7` - Preparatório vestibular
     NullEnum:
       enum:
       - null
@@ -12232,6 +12327,11 @@ components:
           type: integer
         nivel_ensino:
           $ref: '#/components/schemas/NivelEnsinoEnum'
+        modalidade:
+          nullable: true
+          oneOf:
+          - $ref: '#/components/schemas/ModalidadeEnum'
+          - $ref: '#/components/schemas/NullEnum'
     PatchedAtualizarEmpresaInstituicao:
       type: object
       properties:
@@ -13327,7 +13427,7 @@ components:
           readOnly: true
         status:
           allOf:
-          - $ref: '#/components/schemas/Status0a9Enum'
+          - $ref: '#/components/schemas/StatusSolicitacaoAcessoEnum'
           minimum: -2147483648
           maximum: 2147483647
         status_display:
@@ -13347,15 +13447,19 @@ components:
           title: Horário autorizado
         data_solicitacao:
           type: string
+          format: date
           readOnly: true
         hora_solicitacao:
           type: string
+          format: time
           readOnly: true
         motivo:
           type: string
           maxLength: 255
         avaliada_por:
-          type: string
+          allOf:
+          - $ref: '#/components/schemas/UsuarioResumo'
+          nullable: true
           readOnly: true
         aluno_nome:
           type: string
@@ -13406,7 +13510,7 @@ components:
           readOnly: true
         status:
           allOf:
-          - $ref: '#/components/schemas/Status0a9Enum'
+          - $ref: '#/components/schemas/StatusSolicitacaoAcessoEnum'
           minimum: -2147483648
           maximum: 2147483647
         status_display:
@@ -13426,15 +13530,19 @@ components:
           title: Horário autorizado
         data_solicitacao:
           type: string
+          format: date
           readOnly: true
         hora_solicitacao:
           type: string
+          format: time
           readOnly: true
         motivo:
           type: string
           maxLength: 255
         avaliada_por:
-          type: string
+          allOf:
+          - $ref: '#/components/schemas/UsuarioResumo'
+          nullable: true
           readOnly: true
         aluno_nome:
           type: string
@@ -13467,13 +13575,18 @@ components:
           format: date-time
           nullable: true
         liberado_por:
-          type: string
+          allOf:
+          - $ref: '#/components/schemas/UsuarioResumo'
+          nullable: true
           readOnly: true
         aluno:
-          type: string
+          allOf:
+          - $ref: '#/components/schemas/AlunoSolicitacaoAcesso'
           readOnly: true
         historico:
-          type: string
+          type: array
+          items:
+            $ref: '#/components/schemas/HistoricoSolicitacaoAcesso'
           readOnly: true
         lote_id:
           type: string
@@ -13595,16 +13708,6 @@ components:
       required:
       - id
       - nome
-    Status0a9Enum:
-      enum:
-      - 1
-      - 2
-      - 3
-      type: integer
-      description: |-
-        * `1` - Pendente
-        * `2` - Aceito
-        * `3` - Recusado
     StatusExecucaoRotaEnum:
       enum:
       - 1
@@ -13719,6 +13822,16 @@ components:
         * `1` - Pendente
         * `2` - Aprovada
         * `3` - Rejeitada
+    StatusSolicitacaoAcessoEnum:
+      enum:
+      - 1
+      - 2
+      - 3
+      type: integer
+      description: |-
+        * `1` - Pendente
+        * `2` - Aceito
+        * `3` - Recusado
     StatusStrikeEnum:
       enum:
       - 1
@@ -14185,6 +14298,16 @@ components:
       - usuario_coletivo
       - usuario_id
     UsuarioColetivoItem:
+      type: object
+      properties:
+        id:
+          type: integer
+        nome:
+          type: string
+      required:
+      - id
+      - nome
+    UsuarioResumo:
       type: object
       properties:
         id:
