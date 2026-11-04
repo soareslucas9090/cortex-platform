@@ -1,7 +1,7 @@
 from rest_framework import serializers
 
 from AppCore.common.util.util import formatar_cpf
-from AcessoCampus.solicitacoes.choices import TipoSolicitacaoAcesso
+from AcessoCampus.tipos.choices import NOME_TIPO_ENTRADA_CAMPUS
 from Identidade.usuarios.models import Usuario
 
 from .choices import StatusEventoAcesso
@@ -70,7 +70,7 @@ class EventoAcessoSerializer(serializers.ModelSerializer):
         return {"id": obj.aluno_id, "tipo": "INDIVIDUAL", "nome": obj.aluno_nome}
 
     def get_tipo_movimento(self, obj):
-        return "ENTRADA" if obj.tipo == TipoSolicitacaoAcesso.ENTRADA else "SAIDA"
+        return "ENTRADA" if obj.tipo.nome == NOME_TIPO_ENTRADA_CAMPUS else "SAIDA"
 
     def get_autorizado_por(self, obj):
         return _usuario_resumo(obj.solicitacao.avaliada_por)

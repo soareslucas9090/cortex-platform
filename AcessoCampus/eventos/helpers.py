@@ -28,7 +28,7 @@ class EventoAcessoHelpers(ModelInstanceHelpers):
         )
         return (
             EventoAcesso.objects.filter(id=Subquery(primeiro_id))
-            .select_related("solicitacao__avaliada_por", "aluno__usuario")
+            .select_related("solicitacao__avaliada_por", "aluno__usuario", "tipo")
             .annotate(
                 total_eventos=Subquery(totais, output_field=IntegerField()),
                 total_registrados=Subquery(registrados, output_field=IntegerField()),
@@ -40,7 +40,7 @@ class EventoAcessoHelpers(ModelInstanceHelpers):
         from .models import EventoAcesso
 
         qs = EventoAcesso.objects.filter(grupo_portaria_id=grupo_portaria_id).select_related(
-            "solicitacao__avaliada_por", "aluno__usuario", "registro__registrado_por", "registro__operado_por"
+            "solicitacao__avaliada_por", "aluno__usuario", "tipo", "registro__registrado_por", "registro__operado_por"
         )
         if bloquear:
             qs = qs.select_for_update(of=('self',))

@@ -159,14 +159,10 @@ Transições permitidas:
 
 `ProgramacaoAcesso` editável **somente** enquanto solicitação `PENDENTE`. Após `APROVADA`, eventos congelados.
 
-### TipoEventoAcesso
+### Tipo do evento de acesso
 
-| Constante | Valor |
-|-----------|-------|
-| `ENTRADA` | 1 |
-| `SAIDA` | 2 |
-| `RETORNO` | 3 |
-| `AUSENCIA` | 4 |
+`EventoAcesso.tipo` referencia o mesmo catálogo `TipoAutorizacaoAcesso` usado pela solicitação. A
+materialização congela essa referência no evento; não existe choice numérico paralelo na portaria.
 
 ### ResultadoRegistroAcesso
 

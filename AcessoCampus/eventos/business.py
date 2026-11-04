@@ -9,6 +9,7 @@ from AppCore.core.business.business import ModelInstanceBusiness
 from AppCore.core.exceptions.exceptions import NotFoundException
 from AcessoCampus.registros.choices import ResultadoRegistroAcesso
 from AcessoCampus.solicitacoes.choices import HORA_AUTORIZADA_PADRAO
+from AcessoCampus.tipos.choices import NOME_TIPO_ENTRADA_CAMPUS, NOME_TIPO_SAIDA_CAMPUS
 
 from .choices import StatusEventoAcesso
 
@@ -26,7 +27,7 @@ class EventoAcessoBusiness(ModelInstanceBusiness):
                 defaults={
                     "aluno_id": solicitacao.aluno_id,
                     "grupo_portaria_id": grupo_portaria_id or uuid.uuid4(),
-                    "tipo": solicitacao.tipo,
+                    "tipo_id": solicitacao.tipo_id,
                     "data_acesso": solicitacao.data_acesso,
                     "hora_prevista": solicitacao.hora_autorizada or HORA_AUTORIZADA_PADRAO,
                     "turma_origem": solicitacao.turma_origem,
@@ -64,7 +65,8 @@ class EventoAcessoBusiness(ModelInstanceBusiness):
                 )
             tipo_movimento = filtros.get("tipo_movimento")
             if tipo_movimento in ("ENTRADA", "SAIDA"):
-                qs = qs.filter(tipo=1 if tipo_movimento == "ENTRADA" else 2)
+                nome_tipo = NOME_TIPO_ENTRADA_CAMPUS if tipo_movimento == "ENTRADA" else NOME_TIPO_SAIDA_CAMPUS
+                qs = qs.filter(tipo__nome=nome_tipo)
             tipo_beneficiario = filtros.get("tipo_beneficiario")
             if tipo_beneficiario == "TURMA":
                 qs = qs.exclude(turma_origem="")
@@ -79,8 +81,8 @@ class EventoAcessoBusiness(ModelInstanceBusiness):
             ordenacoes = {
                 "nome": "aluno_nome",
                 "-nome": "-aluno_nome",
-                "tipo_movimento": "tipo",
-                "-tipo_movimento": "-tipo",
+                "tipo_movimento": "tipo__nome",
+                "-tipo_movimento": "-tipo__nome",
                 "autorizado_por": "solicitacao__avaliada_por__nome",
                 "-autorizado_por": "-solicitacao__avaliada_por__nome",
                 "data_autorizada": "data_acesso",

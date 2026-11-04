@@ -14,8 +14,10 @@ from Academico.cursos.models import Curso
 from AcessoCampus.eventos.models import EventoAcesso
 from AcessoCampus.permissoes.models import PermissaoUsuarioAcessoCampus
 from AcessoCampus.registros.models import RegistroAcesso
-from AcessoCampus.solicitacoes.choices import OrigemSolicitacaoAcesso, StatusSolicitacaoAcesso, TipoSolicitacaoAcesso
+from AcessoCampus.solicitacoes.choices import OrigemSolicitacaoAcesso, StatusSolicitacaoAcesso
 from AcessoCampus.solicitacoes.models import SolicitacaoAcesso
+from AcessoCampus.tipos.choices import NOME_TIPO_ENTRADA_CAMPUS
+from AcessoCampus.tipos.models import TipoAutorizacaoAcesso
 from Identidade.usuarios.models import TipoContaColetiva, Usuario
 from Organizacional.funcoes.models import Funcao
 from Organizacional.setores.models import Setor
@@ -36,6 +38,7 @@ class PortariaAcessoCampusTest(APITestCase):
         )
         self.vinculo_a = self._criar_vinculo("31000000001", "Ana Portaria")
         self.vinculo_b = self._criar_vinculo("31000000002", "Bruno Portaria")
+        self.tipo_entrada = TipoAutorizacaoAcesso.objects.get(nome=NOME_TIPO_ENTRADA_CAMPUS)
         self.hoje = timezone.localdate()
         self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {token(self.admin)}")
 
@@ -50,7 +53,7 @@ class PortariaAcessoCampusTest(APITestCase):
             aluno=vinculo.aluno,
             aluno_curso=vinculo,
             origem=OrigemSolicitacaoAcesso.GESTAO,
-            tipo=TipoSolicitacaoAcesso.ENTRADA,
+            tipo=self.tipo_entrada,
             status=StatusSolicitacaoAcesso.ACEITA,
             data_acesso=data_acesso or horario_valido.date(),
             hora_autorizada=hora_autorizada or horario_valido.time().replace(tzinfo=None),
