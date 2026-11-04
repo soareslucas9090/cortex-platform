@@ -27,3 +27,25 @@ class PodeAnalisarAcessoCampusPermission(BasePermission):
 
 class PodeAnalisarAcessoCampusMixin:
     permission_classes = [IsAuthenticated, PodeAnalisarAcessoCampusPermission]
+
+
+def usuario_pode_solicitar_acesso_campus(user) -> bool:
+    """Capacidade solicitar compilada em permissoes_acesso_campus() (aluno de Ensino Médio elegível)."""
+    if not user or not getattr(user, 'is_authenticated', False):
+        return False
+    acesso = getattr(user, 'permissoes', {}).get('acesso_campus', {})
+    return bool(acesso.get('solicitar'))
+
+
+class PodeSolicitarAcessoCampusPermission(BasePermission):
+    message = 'Você não tem permissão para solicitar autorização de acesso ao campus.'
+
+    def has_permission(self, request, view):
+        return usuario_pode_solicitar_acesso_campus(request.user)
+
+    def has_object_permission(self, request, view, obj):
+        return usuario_pode_solicitar_acesso_campus(request.user)
+
+
+class PodeSolicitarAcessoCampusMixin:
+    permission_classes = [IsAuthenticated, PodeSolicitarAcessoCampusPermission]

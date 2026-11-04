@@ -153,6 +153,8 @@ class UsuarioPermissions(UserModelPermission):
         analisar_solicitacoes exige ser o responsável pelo setor: um dos cinco
         papéis alcança qualquer Ensino Médio; o responsável do setor do curso,
         só esse curso. A marca da função, sozinha, não libera a tela.
+        solicitar é automático para o aluno elegível: usuário e aluno ativos,
+        matriculado e com vínculo ativo em curso ativo de Ensino Médio.
         """
         from AcessoCampus.permissoes.access import usuario_tem_acesso_total_acesso_campus
         from AcessoCampus.permissoes.choices import (
@@ -163,6 +165,7 @@ class UsuarioPermissions(UserModelPermission):
         from AcessoCampus.solicitacoes.escopo import (
             curso_ids_sob_coordenacao,
             usuario_tem_escopo_global,
+            vinculos_elegiveis,
         )
 
         user = self.object_instance
@@ -174,5 +177,8 @@ class UsuarioPermissions(UserModelPermission):
         compiladas = PermissaoFuncaoAcessoCampus().helper.compilar_do_usuario(user)
         compiladas['analisar_solicitacoes'] = bool(
             usuario_tem_escopo_global(user) or curso_ids_sob_coordenacao(user).exists()
+        )
+        compiladas['solicitar'] = bool(
+            compiladas['solicitar'] or vinculos_elegiveis().filter(aluno__usuario=user).exists()
         )
         return {'acesso_campus': compiladas}

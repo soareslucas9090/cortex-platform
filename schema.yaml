@@ -856,6 +856,167 @@ paths:
               schema:
                 description: Sem analisar_solicitacoes ou sem curso sob coordenação.
           description: ''
+  /cortex/acesso-campus/minhas-solicitacoes/:
+    get:
+      operationId: acesso_campus_minhas_solicitacoes_list
+      description: |-
+        Lista os pedidos do aluno autenticado e as autorizações que a gestão registrou para ele. Por padrão, das mais recentes para as mais antigas.
+
+        **Permissões:** Usuário autenticado (L1). Escopo restrito às solicitações do próprio aluno, inclusive as autorizações registradas pela gestão. Não exige `solicitar`, para que o aluno que deixou de ser elegível continue consultando o que já pediu.
+
+        **Segurança:** os query params apenas reduzem ou reordenam o conjunto do próprio aluno, nunca expandem o acesso; valores inválidos são ignorados.
+      summary: Listar minhas solicitações de acesso
+      parameters:
+      - in: query
+        name: busca
+        schema:
+          type: string
+        description: Busca no motivo e no nome de quem avaliou (ignora acentos).
+      - in: query
+        name: ordenacao
+        schema:
+          type: string
+          enum:
+          - -avaliado_por
+          - -data_liberacao
+          - -data_solicitacao
+          - -motivo
+          - -tipo
+          - avaliado_por
+          - data_liberacao
+          - data_solicitacao
+          - motivo
+          - tipo
+        description: Ordenação da lista; `-` inverte a direção. `data_liberacao` é
+          a data do acesso; `tipo` ordena pelo nome do tipo; sem avaliador fica no
+          fim em `avaliado_por`. Valor fora do enum usa o padrão (`-data_solicitacao`).
+      - name: page
+        required: false
+        in: query
+        description: Um número de página dentro do conjunto de resultados paginado.
+        schema:
+          type: integer
+      - in: query
+        name: paginacao
+        schema:
+          type: integer
+        description: Tamanho da página (1–100, padrão 10).
+      - in: query
+        name: status
+        schema:
+          type: integer
+          enum:
+          - 1
+          - 2
+          - 3
+        description: 1 = Pendente, 2 = Aceito, 3 = Recusado.
+      - in: query
+        name: tipo
+        schema:
+          type: integer
+        description: Id do tipo de autorização (catálogo `tipos/`).
+      tags:
+      - AcessoCampus
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedSolicitacaoAcessoDetalheList'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                description: Não autenticado.
+          description: ''
+    post:
+      operationId: acesso_campus_minhas_solicitacoes_create
+      description: |-
+        Registra um pedido PENDENTE de entrada ou saída para avaliação da gestão.
+
+        - `aluno_curso` deve ser um vínculo ativo do próprio aluno em curso de Ensino Médio.
+        - `tipo` é o id de um tipo-base do catálogo (`Entrada no campus` ou `Saída do campus`); os tipos criados pela gestão não são aceitos no pedido do aluno.
+        - Entrada para o próprio dia só pode ser pedida até 07:00 (America/Fortaleza).
+        - Datas passadas, horário já passado no próprio dia e pedido para dia e tipo em que o aluno já tem autorização aceita são recusados. Pedidos pendentes não bloqueiam.
+        - `anexo` (obrigatório): comprovante PDF, JPG ou PNG de até 5 MB, conferido pelo conteúdo. Envie `multipart/form-data`.
+
+        **Permissões:** Capacidade `solicitar` do AcessoCampus (aluno de Ensino Médio elegível, L1), compilada em `permissoes_acesso_campus()`.
+      summary: Solicitar autorização de acesso
+      tags:
+      - AcessoCampus
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/SolicitarAcessoAluno'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SolicitacaoAcessoDetalhe'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                description: Dados inválidos ou regra de negócio não atendida.
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                description: Não autenticado.
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                description: Sem a capacidade solicitar.
+          description: ''
+  /cortex/acesso-campus/minhas-solicitacoes/{id}/:
+    get:
+      operationId: acesso_campus_minhas_solicitacoes_retrieve
+      description: |-
+        Retorna a solicitação do próprio aluno com o histórico.
+
+        **Permissões:** Usuário autenticado (L1). Escopo restrito às solicitações do próprio aluno, inclusive as autorizações registradas pela gestão. Não exige `solicitar`, para que o aluno que deixou de ser elegível continue consultando o que já pediu.
+      summary: Detalhar minha solicitação de acesso
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - AcessoCampus
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SolicitacaoAcessoDetalhe'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                description: Não autenticado.
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                description: Solicitação inexistente ou de outro aluno.
+          description: ''
   /cortex/acesso-campus/solicitacoes/:
     get:
       operationId: acesso_campus_solicitacoes_list
@@ -1011,6 +1172,22 @@ paths:
               schema:
                 description: Solicitação inexistente ou fora do escopo.
           description: ''
+  /cortex/acesso-campus/solicitacoes/{id}/anexo/:
+    get:
+      operationId: acesso_campus_solicitacoes_anexo_retrieve
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - acesso-campus
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          description: No response body
   /cortex/acesso-campus/solicitacoes/{id}/recusar/:
     post:
       operationId: acesso_campus_solicitacoes_recusar_create
@@ -12026,6 +12203,29 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/SetorVinculo'
+    PaginatedSolicitacaoAcessoDetalheList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/SolicitacaoAcessoDetalhe'
     PaginatedSolicitacaoAcessoList:
       type: object
       required:
@@ -13597,9 +13797,14 @@ components:
           type: string
           title: Turma de origem
           maxLength: 50
+        anexo:
+          type: string
+          nullable: true
+          readOnly: true
       required:
       - aluno
       - aluno_nome
+      - anexo
       - avaliada_por
       - created_at
       - curso_nome
@@ -13708,6 +13913,39 @@ components:
       required:
       - id
       - nome
+    SolicitarAcessoAluno:
+      type: object
+      properties:
+        aluno_curso:
+          type: integer
+          minimum: 1
+        tipo:
+          type: integer
+          description: Id de um tipo-base do catálogo (Entrada no campus ou Saída
+            do campus).
+        data_acesso:
+          type: string
+          format: date
+        hora_solicitada:
+          type: string
+          format: time
+        motivo:
+          type: string
+          maxLength: 100
+        justificativa:
+          type: string
+          maxLength: 500
+        anexo:
+          type: string
+          format: uri
+      required:
+      - aluno_curso
+      - anexo
+      - data_acesso
+      - hora_solicitada
+      - justificativa
+      - motivo
+      - tipo
     StatusExecucaoRotaEnum:
       enum:
       - 1
