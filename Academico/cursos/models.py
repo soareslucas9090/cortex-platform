@@ -5,7 +5,7 @@ from AppCore.core.business.business_mixin import ModelBusinessMixin
 from AppCore.core.helpers.helpers_mixin import ModelHelperMixin
 from AppCore.core.rules.rules_mixin import ModelRulesMixin
 
-from .choices import NivelEnsino
+from .choices import Modalidade, NivelEnsino
 
 
 class Curso(ModelHelperMixin, ModelBusinessMixin, ModelRulesMixin, BasicModel):
@@ -30,6 +30,12 @@ class Curso(ModelHelperMixin, ModelBusinessMixin, ModelRulesMixin, BasicModel):
     nivel_ensino = models.IntegerField(
         'Nível de ensino',
         choices=NivelEnsino.choices,
+        null=True,
+        blank=True,
+    )
+    modalidade = models.IntegerField(
+        'Modalidade',
+        choices=Modalidade.choices,
         null=True,
         blank=True,
     )
