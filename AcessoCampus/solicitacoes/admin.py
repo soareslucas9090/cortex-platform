@@ -31,6 +31,7 @@ class SolicitacaoAcessoAdmin(admin.ModelAdmin):
         'avaliada_por',
         'avaliada_em',
         'liberado_por',
+        'anexo',
         'lote_id',
         'turma_origem',
         'aluno_nome',

@@ -16,6 +16,7 @@ from AcessoCampus.solicitacoes.choices import (
 )
 from AcessoCampus.solicitacoes.helpers import FUSO_FORTALEZA
 from AcessoCampus.solicitacoes.models import SolicitacaoAcesso
+from AcessoCampus.eventos.models import EventoAcesso
 from AcessoCampus.tipos.choices import NOME_TIPO_ENTRADA_CAMPUS, NOME_TIPO_SAIDA_CAMPUS
 from AcessoCampus.tipos.models import TipoAutorizacaoAcesso
 from Identidade.usuarios.models import Usuario
@@ -103,6 +104,9 @@ class GestaoAcessoCampusTest(APITestCase):
         self.assertEqual(resposta.status_code, status.HTTP_201_CREATED, resposta.data)
         self.assertEqual(resposta.data['dados'][0]['status'], StatusSolicitacaoAcesso.ACEITA)
         self.assertIsNone(resposta.data['dados'][0]['hora_solicitada'] if 'hora_solicitada' in resposta.data['dados'][0] else None)
+        self.assertTrue(
+            EventoAcesso.objects.filter(solicitacao_id=resposta.data['dados'][0]['id']).exists()
+        )
 
         detalhe = self.client.get(
             reverse('acesso_campus:solicitacao-detail', kwargs={'pk': resposta.data['dados'][0]['id']}),
@@ -125,6 +129,12 @@ class GestaoAcessoCampusTest(APITestCase):
         )
         self.assertEqual(turma.status_code, status.HTTP_201_CREATED)
         self.assertEqual(len(turma.data['dados']), 2)
+        grupos = set(
+            EventoAcesso.objects.filter(
+                solicitacao_id__in=[item['id'] for item in turma.data['dados']],
+            ).values_list('grupo_portaria_id', flat=True)
+        )
+        self.assertEqual(len(grupos), 1)
 
     def test_aluno_fora_do_ensino_medio_retorna_400(self):
         url = reverse('acesso_campus:autorizacao-criar')

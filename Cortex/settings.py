@@ -138,6 +138,8 @@ PROJECT_APPS = [
     'AcessoCampus.tipos',
     'AcessoCampus.solicitacoes',
     'AcessoCampus.permissoes',
+    'AcessoCampus.eventos',
+    'AcessoCampus.registros',
     'Infraestrutura.blocos',
     'Infraestrutura.salas',
     'Infraestrutura.recursos',
@@ -288,6 +290,10 @@ CELERY_BEAT_SCHEDULE = {
     'gerar-execucoes-rotas-pelo-calendario': {
         'task': 'Transporte.execucoes_rotas.tasks.gerar_execucoes_rotas_automaticas_task',
         'schedule': crontab(minute='*/5'),
+    },
+    'expirar-eventos-acesso': {
+        'task': 'AcessoCampus.eventos.tasks.expirar_eventos_acesso_task',
+        'schedule': crontab(minute='*'),
     },
 }
 

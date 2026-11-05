@@ -5,14 +5,20 @@ from django.db import IntegrityError, transaction
 from django.utils import timezone
 
 from AppCore.core.business.business import ModelInstanceBusiness
-from AppCore.core.exceptions.exceptions import AuthorizationException, BusinessRuleException
+from AppCore.core.exceptions.exceptions import (
+    AuthorizationException,
+    BusinessRuleException,
+    NotFoundException,
+)
 
 from .choices import (
     HORA_AUTORIZADA_PADRAO,
     OrigemSolicitacaoAcesso,
     StatusSolicitacaoAcesso,
 )
-from .escopo import usuario_tem_escopo_global, vinculos_no_escopo
+from .constantes import ANEXO_COMPROVANTE, EXTENSOES_ANEXO_POR_CONTENT_TYPE
+from .escopo import usuario_tem_escopo_global, vinculos_elegiveis, vinculos_no_escopo
+from .helpers import FUSO_FORTALEZA
 from .rules import MENSAGEM_AUTORIZACAO_JA_ACEITA
 
 logger = logging.getLogger(__name__)
@@ -42,6 +48,7 @@ class SolicitacaoAcessoBusiness(ModelInstanceBusiness):
         turma=None,
     ):
         try:
+            from AcessoCampus.eventos.models import EventoAcesso
             from .models import SolicitacaoAcesso
 
             self._validar_escopo_de_escrita(usuario)
@@ -52,6 +59,7 @@ class SolicitacaoAcessoBusiness(ModelInstanceBusiness):
             agora = timezone.now()
             lote_id = uuid.uuid4()
             turma_origem = turma or ''
+            grupo_portaria_id = uuid.uuid4() if turma else None
             criadas = []
             with transaction.atomic():
                 aluno_ids = [vinculo.aluno_id for vinculo in vinculos]
@@ -62,27 +70,30 @@ class SolicitacaoAcessoBusiness(ModelInstanceBusiness):
                 )
                 self.object_instance.rules.validar_autorizacao_aceita_unica(aluno_ids, ja_existe)
                 for vinculo in vinculos:
-                    criadas.append(
-                        SolicitacaoAcesso.objects.create(
-                            aluno_id=vinculo.aluno_id,
-                            aluno_curso=vinculo,
-                            origem=OrigemSolicitacaoAcesso.GESTAO,
-                            tipo=tipo,
-                            status=StatusSolicitacaoAcesso.ACEITA,
-                            data_acesso=data_acesso,
-                            hora_solicitada=None,
-                            hora_autorizada=hora_autorizada,
-                            motivo=motivo,
-                            justificativa='',
-                            observacao_avaliacao=observacao or '',
-                            avaliada_por=usuario,
-                            avaliada_em=agora,
-                            lote_id=lote_id,
-                            turma_origem=turma_origem,
-                            aluno_nome=vinculo.aluno.usuario.nome,
-                            curso_nome=vinculo.curso.nome,
-                            matricula=vinculo.matricula or '',
-                        )
+                    solicitacao = SolicitacaoAcesso.objects.create(
+                        aluno_id=vinculo.aluno_id,
+                        aluno_curso=vinculo,
+                        origem=OrigemSolicitacaoAcesso.GESTAO,
+                        tipo=tipo,
+                        status=StatusSolicitacaoAcesso.ACEITA,
+                        data_acesso=data_acesso,
+                        hora_solicitada=None,
+                        hora_autorizada=hora_autorizada,
+                        motivo=motivo,
+                        justificativa='',
+                        observacao_avaliacao=observacao or '',
+                        avaliada_por=usuario,
+                        avaliada_em=agora,
+                        lote_id=lote_id,
+                        turma_origem=turma_origem,
+                        aluno_nome=vinculo.aluno.usuario.nome,
+                        curso_nome=vinculo.curso.nome,
+                        matricula=vinculo.matricula or '',
+                    )
+                    criadas.append(solicitacao)
+                    EventoAcesso().business.materializar_para_solicitacao(
+                        solicitacao,
+                        grupo_portaria_id=grupo_portaria_id,
                     )
             return criadas
         except IntegrityError as exc:
@@ -94,6 +105,7 @@ class SolicitacaoAcessoBusiness(ModelInstanceBusiness):
 
     def aceitar(self, usuario, hora_autorizada=None, observacao=''):
         try:
+            from AcessoCampus.eventos.models import EventoAcesso
             from .models import SolicitacaoAcesso
 
             with transaction.atomic():
@@ -118,6 +130,7 @@ class SolicitacaoAcessoBusiness(ModelInstanceBusiness):
                 solicitacao.avaliada_por = usuario
                 solicitacao.avaliada_em = timezone.now()
                 solicitacao.save()
+                EventoAcesso().business.materializar_para_solicitacao(solicitacao)
             self.object_instance = solicitacao
             return solicitacao
         except IntegrityError as exc:
@@ -145,6 +158,110 @@ class SolicitacaoAcessoBusiness(ModelInstanceBusiness):
             return solicitacao
         except Exception as e:
             self.relancar_ou_erro_sistema(e, 'Não foi possível recusar a solicitação.', logger)
+
+    def listar_do_aluno(self, usuario, status=None, tipo=None, busca=None, ordenacao=None):
+        """Pedidos e autorizações do próprio aluno, com filtros e ordenação da tela."""
+        try:
+            return self.object_instance.helper.listar_do_aluno(
+                usuario,
+                status=status,
+                tipo=tipo,
+                busca=busca,
+                ordenacao=ordenacao,
+            )
+        except Exception as e:
+            self.relancar_ou_erro_sistema(e, 'Não foi possível listar as suas solicitações de acesso.', logger)
+
+    def listar_com_anexo_visivel(self, usuario):
+        """Solicitações cujo comprovante o usuário pode abrir (próprias ou do escopo da gestão)."""
+        try:
+            return self.object_instance.helper.listar_com_anexo_visivel(
+                usuario,
+                vinculos_no_escopo(usuario),
+            )
+        except Exception as e:
+            self.relancar_ou_erro_sistema(e, 'Não foi possível consultar o comprovante.', logger)
+
+    def solicitar(
+        self,
+        usuario,
+        aluno_curso: int,
+        tipo,
+        data_acesso,
+        hora_solicitada,
+        motivo: str,
+        justificativa: str,
+        anexo,
+    ):
+        """
+        Registra o pedido PENDENTE do aluno, com o comprovante obrigatório.
+        Snapshots de nome, curso e matrícula são gravados na criação e não mudam depois.
+
+        O comprovante só sobe ao S3 depois de todas as validações; se a criação falhar
+        depois do upload, o arquivo é removido.
+        """
+        chave_anexo = None
+        try:
+            from .models import SolicitacaoAcesso
+
+            helper = self.object_instance.helper
+            rules = self.object_instance.rules
+            agora = timezone.now().astimezone(FUSO_FORTALEZA)
+
+            rules.validar_usuario_aluno_ativo_matriculado(usuario)
+            vinculo = helper.obter_vinculo_elegivel(usuario.aluno, aluno_curso, vinculos_elegiveis())
+            rules.validar_vinculo_do_aluno(vinculo)
+            rules.validar_tipo_do_aluno(tipo)
+            rules.validar_data_do_aluno(data_acesso, agora)
+            rules.validar_prazo_entrada(tipo, data_acesso, agora)
+            rules.validar_horario_nao_passado(data_acesso, hora_solicitada, agora)
+            rules.validar_sem_autorizacao_aceita_do_aluno(
+                helper.existe_autorizacao_aceita([usuario.aluno.pk], data_acesso, tipo),
+            )
+
+            content_type_anexo = helper.detectar_tipo_anexo(anexo)
+            rules.validar_anexo(anexo, content_type_anexo)
+            chave_anexo = ANEXO_COMPROVANTE.enviar(
+                usuario.aluno.pk,
+                anexo,
+                extensao=EXTENSOES_ANEXO_POR_CONTENT_TYPE[content_type_anexo],
+                content_type=content_type_anexo,
+            )
+
+            return SolicitacaoAcesso.objects.create(
+                aluno=usuario.aluno,
+                aluno_curso=vinculo,
+                origem=OrigemSolicitacaoAcesso.ALUNO,
+                tipo=tipo,
+                status=StatusSolicitacaoAcesso.PENDENTE,
+                data_acesso=data_acesso,
+                hora_solicitada=hora_solicitada,
+                motivo=motivo,
+                justificativa=justificativa,
+                anexo=chave_anexo,
+                aluno_nome=usuario.nome,
+                curso_nome=vinculo.curso.nome,
+                matricula=vinculo.matricula or '',
+            )
+        except Exception as e:
+            if chave_anexo:
+                ANEXO_COMPROVANTE.remover(chave_anexo)
+            self.relancar_ou_erro_sistema(e, 'Não foi possível registrar a solicitação de acesso.', logger)
+
+    def obter_stream_anexo(self):
+        """Obtém o stream e o content-type do comprovante no S3."""
+        try:
+            from botocore.exceptions import ClientError
+
+            chave = ANEXO_COMPROVANTE.chave_normalizada(self.object_instance.anexo)
+            if not chave:
+                raise NotFoundException('Comprovante não encontrado.')
+            try:
+                return ANEXO_COMPROVANTE.iterar(chave, content_type_padrao='application/octet-stream')
+            except ClientError:
+                raise NotFoundException('Comprovante não encontrado.')
+        except Exception as e:
+            self.relancar_ou_erro_sistema(e, 'Não foi possível obter o comprovante.', logger)
 
     def _validar_escopo_de_escrita(self, usuario):
         from .escopo import curso_ids_sob_coordenacao

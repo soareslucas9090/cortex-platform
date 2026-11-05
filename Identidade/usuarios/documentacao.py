@@ -929,11 +929,28 @@ class PermissaoDocumentacao:
             'chave': 'acesso_campus',
             'titulo': 'Acesso ao campus',
             'resumo': (
-                'Gestão autoriza alunos do Ensino Médio em qualquer tipo cadastrado '
-                '(Entrada no campus e Saída do campus são tipos-base; demais tipos só no Django Admin) '
-                'e avalia pedidos. A solicitação do aluno e a portaria ficam para um corte seguinte.'
+                'Aluno do Ensino Médio pede entrada ou saída (tipos-base) com comprovante; '
+                'a gestão autoriza alunos em qualquer tipo cadastrado (Entrada no campus e Saída do campus '
+                'são tipos-base; demais tipos só no Django Admin) e avalia os pedidos. '
+                'A portaria fica para um corte seguinte.'
             ),
             'capacidades': [
+                {
+                    'codigo': 'solicitar',
+                    'nome': 'Solicitar',
+                    'quem_usa': 'Aluno do Ensino Médio',
+                    'pode': (
+                        'Pedir entrada ou saída do campus (com comprovante obrigatório) e '
+                        'listar e detalhar os próprios pedidos e as autorizações da gestão para ele.'
+                    ),
+                    'nao_sem_capacidade': (
+                        'Criar pedido. Consultar os próprios pedidos não exige a capacidade.'
+                    ),
+                    'descricao': (
+                        'Automática para o aluno elegível: usuário e aluno ativos, matriculado e com '
+                        'vínculo ativo em curso ativo de Ensino Médio (Curso.nivel_ensino).'
+                    ),
+                },
                 {
                     'codigo': 'analisar_solicitacoes',
                     'nome': 'Analisar solicitações',
@@ -961,10 +978,25 @@ class PermissaoDocumentacao:
                             'destaque': 'Cinco papéis',
                             'texto': 'analisar_solicitacoes só se o vínculo for o responsável pelo setor.',
                         },
+                        {
+                            'destaque': 'Aluno de Ensino Médio',
+                            'texto': 'solicitar é concedido automaticamente enquanto o aluno for elegível.',
+                        },
                     ],
                 },
             ],
             'exemplos': [
+                {
+                    'perfil': 'Aluno do Ensino Médio',
+                    'capacidades': {
+                        'solicitar': True,
+                        'analisar_solicitacoes': False,
+                        'operar_portaria': False,
+                        'visualizar_historico': False,
+                    },
+                    'pode': ['pedir entrada ou saída', 'acompanhar os próprios pedidos e autorizações'],
+                    'nao_pode': ['avaliar pedidos', 'ver pedidos de outros alunos'],
+                },
                 {
                     'perfil': 'Diretor(a) de Ensino',
                     'capacidades': {

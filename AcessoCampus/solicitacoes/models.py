@@ -65,6 +65,16 @@ class SolicitacaoAcesso(ModelHelperMixin, ModelBusinessMixin, ModelRulesMixin, B
         related_name='solicitacoes_acesso_liberadas',
         verbose_name='Liberado por',
     )
+    anexo = models.CharField(
+        'Comprovante',
+        max_length=500,
+        null=True,
+        blank=True,
+        help_text=(
+            'Chave S3 do comprovante enviado pelo aluno (servido via proxy autenticado). '
+            'Obrigatório no pedido do aluno; vazio nas autorizações da gestão.'
+        ),
+    )
     lote_id = models.UUIDField('Lote', null=True, blank=True)
     turma_origem = models.CharField('Turma de origem', max_length=50, blank=True)
     aluno_nome = models.CharField('Nome do aluno', max_length=255)

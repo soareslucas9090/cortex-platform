@@ -5,6 +5,11 @@ from AcessoCampus.tipos.models import TipoAutorizacaoAcesso
 from Identidade.usuarios.constantes import ANEXO_FOTO_SECUNDARIA
 
 from .choices import RESULTADO_AVALIACAO
+from .constantes import (
+    ANEXO_COMPROVANTE,
+    TAMANHO_MAXIMO_JUSTIFICATIVA_ALUNO,
+    TAMANHO_MAXIMO_MOTIVO_ALUNO,
+)
 from .helpers import FUSO_FORTALEZA
 from .models import SolicitacaoAcesso
 
@@ -78,6 +83,25 @@ class RecusarSolicitacaoSerializer(serializers.Serializer):
     observacao = serializers.CharField(required=False, allow_blank=True)
 
 
+class SolicitarAcessoAlunoSerializer(serializers.Serializer):
+    aluno_curso = serializers.IntegerField(min_value=1)
+    tipo = serializers.PrimaryKeyRelatedField(
+        queryset=TipoAutorizacaoAcesso.objects.all(),
+        help_text='Id de um tipo-base do catálogo (Entrada no campus ou Saída do campus).',
+    )
+    data_acesso = serializers.DateField()
+    hora_solicitada = serializers.TimeField()
+    motivo = serializers.CharField(max_length=TAMANHO_MAXIMO_MOTIVO_ALUNO)
+    justificativa = serializers.CharField(max_length=TAMANHO_MAXIMO_JUSTIFICATIVA_ALUNO)
+    anexo = serializers.FileField(
+        error_messages={'required': 'Anexe um comprovante da justificativa.'},
+    )
+
+
+class SerializerVazio(serializers.Serializer):
+    pass
+
+
 class SolicitacaoAcessoSerializer(serializers.ModelSerializer):
     tipo_display = serializers.CharField(source='tipo.nome', read_only=True)
     status_display = serializers.CharField(source='get_status_display', read_only=True)
@@ -131,6 +155,7 @@ class SolicitacaoAcessoDetalheSerializer(SolicitacaoAcessoSerializer):
     historico = serializers.SerializerMethodField()
     liberado_por = serializers.SerializerMethodField()
     aluno = serializers.SerializerMethodField()
+    anexo = serializers.SerializerMethodField()
 
     class Meta(SolicitacaoAcessoSerializer.Meta):
         fields = SolicitacaoAcessoSerializer.Meta.fields + [
@@ -143,7 +168,13 @@ class SolicitacaoAcessoDetalheSerializer(SolicitacaoAcessoSerializer):
             'historico',
             'lote_id',
             'turma_origem',
+            'anexo',
         ]
+
+    @extend_schema_field(serializers.CharField(allow_null=True))
+    def get_anexo(self, obj):
+        """URL do proxy autenticado do comprovante (nula nas autorizações da gestão)."""
+        return ANEXO_COMPROVANTE.url_proxy(obj.pk, obj.anexo, self.context.get('request'))
 
     @extend_schema_field(HistoricoSolicitacaoAcessoSerializer(many=True))
     def get_historico(self, obj):
@@ -151,9 +182,11 @@ class SolicitacaoAcessoDetalheSerializer(SolicitacaoAcessoSerializer):
 
     @extend_schema_field(UsuarioResumoSerializer(allow_null=True))
     def get_liberado_por(self, obj):
-        if obj.liberado_por_id is None:
+        evento = getattr(obj, 'evento', None)
+        registro = getattr(evento, 'registro', None) if evento else None
+        if registro is None:
             return None
-        return UsuarioResumoSerializer(obj.liberado_por).data
+        return UsuarioResumoSerializer(registro.registrado_por).data
 
     @extend_schema_field(AlunoSolicitacaoAcessoSerializer)
     def get_aluno(self, obj):
