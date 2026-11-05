@@ -1,6 +1,6 @@
 # Diretrizes do Domínio: AcessoCampus
 
-> **Status:** corte da **gestão** implementado em `PROJECT_APPS`. A gestão lista alunos (busca por nome e CPF) e turmas, cria autorização já aceita para alunos ou turma, lista, detalha, aceita e recusa. O tipo da autorização é catálogo (`TipoAutorizacaoAcesso`): Entrada no campus e Saída do campus são tipos-base semeados; novos tipos só no Django Admin; a API só lista. Os cinco papéis, quando são o responsável pelo setor, e o L3 alcançam qualquer Ensino Médio. O responsável pelo setor do curso alcança só esse curso. Quem está no setor sem ser o responsável não analisa. A lista mistura pedido do aluno e autorização da gestão. Não aceita data anterior a hoje nem segunda autorização aceita do mesmo aluno, no mesmo dia e no mesmo tipo. O **aluno** de Ensino Médio elegível (capacidade `solicitar` automática) pede entrada ou saída (só os tipos-base) com comprovante obrigatório e acompanha os próprios pedidos e as autorizações da gestão para ele; entrada para o próprio dia só até 07:00; não pede para dia e tipo em que já tem autorização aceita; não cancela neste corte. Portaria, seis tipos de programação e eventos continuam **planejados** neste arquivo — não tratar o restante como código existente.
+> **Status:** cortes da **gestão**, do **aluno** e da **portaria** implementados em `PROJECT_APPS`. A gestão lista alunos (busca por nome e CPF) e turmas, cria autorização já aceita para alunos ou turma, lista, detalha, aceita e recusa, e materializa `EventoAcesso`. O tipo da autorização é catálogo (`TipoAutorizacaoAcesso`): Entrada no campus e Saída do campus são tipos-base semeados; novos tipos só no Django Admin; a API só lista. Os cinco papéis, quando são o responsável pelo setor, e o L3 alcançam qualquer Ensino Médio. O responsável pelo setor do curso alcança só esse curso. Quem está no setor sem ser o responsável não analisa. A lista mistura pedido do aluno e autorização da gestão. Não aceita data anterior a hoje nem segunda autorização aceita do mesmo aluno, no mesmo dia e no mesmo tipo. O **aluno** de Ensino Médio elegível (capacidade `solicitar` automática) pede entrada ou saída (só os tipos-base) com comprovante obrigatório e acompanha os próprios pedidos e as autorizações da gestão para ele; entrada para o próprio dia só até 07:00; não pede para dia e tipo em que já tem autorização aceita; não cancela neste corte. A **portaria** lista grupos individuais ou de turma e grava `RegistroAcesso`, com conferência parcial em entrada e saída. Conta guarita escolhe o vigilante físico no pool; L3 registra como ele próprio. Os seis tipos de programação continuam **planejados** neste arquivo.
 
 Este arquivo é a **especificação funcional canônica** do bounded context **AcessoCampus** (circulação e autorizações de alunos de Ensino Médio na portaria).
 
@@ -36,8 +36,8 @@ AcessoCampus/
 ├── solicitacoes/              # SolicitacaoAcesso (implementado)
 ├── permissoes/                # PermissaoFuncaoAcessoCampus, PermissaoUsuarioAcessoCampus (sem urls HTTP)
 ├── programacoes/              # ProgramacaoAcesso (planejado)
-├── eventos/                   # EventoAcesso (planejado)
-└── registros/                 # RegistroAcesso (planejado)
+├── eventos/                   # EventoAcesso (implementado)
+└── registros/                 # RegistroAcesso (implementado)
 ```
 
 Camadas por app: `models`, `choices`, `rules`, `helpers`, `business`, `serializers`, `views`, `urls`. **`state.py` não é necessário.**
@@ -113,10 +113,13 @@ flowchart TD
 
 ### Portaria (`operar_portaria`)
 
-1. GET `portaria/eventos/?data=` (default hoje, Fortaleza).
-2. Só eventos de solicitação `APROVADA`, `cancelado_em` nulo, no recorte operacional.
-3. **Não** exibir solicitações `PENDENTE` na fila.
-4. POST `registrar/` com `resultado`, `observacao?`; `registrado_por` = vigilante físico (pool em conta coletiva, padrão Infraestrutura).
+1. GET `portaria/eventos/` projeta um item por `grupo_portaria_id` e deriva `PENDENTE`, `CONCLUIDA` ou `EXPIRADA`.
+2. GET `portaria/eventos/{grupo_portaria_id}/alunos/` fornece a conferência congelada da turma.
+3. **Não** exibir solicitações ainda não aceitas na fila.
+4. POST `registrar/` recebe `aluno_ids` na turma e `responsavel_liberacao_id` na conta guarita.
+5. `registrado_por` é o vigilante físico; `operado_por` preserva a conta autenticada. L3 usa a si próprio nos dois campos.
+6. O registro pode ser feito antes ou exatamente no horário autorizado; depois dele, o grupo incompleto expira.
+7. As consultas derivam a expiração sem alterar o banco; a task Celery persiste `expirado_em` a cada minuto.
 
 ### Histórico (`visualizar_historico` ou `analisar_solicitacoes` ou L3)
 
@@ -157,14 +160,10 @@ Transições permitidas:
 
 `ProgramacaoAcesso` editável **somente** enquanto solicitação `PENDENTE`. Após `APROVADA`, eventos congelados.
 
-### TipoEventoAcesso
+### Tipo do evento de acesso
 
-| Constante | Valor |
-|-----------|-------|
-| `ENTRADA` | 1 |
-| `SAIDA` | 2 |
-| `RETORNO` | 3 |
-| `AUSENCIA` | 4 |
+`EventoAcesso.tipo` referencia o mesmo catálogo `TipoAutorizacaoAcesso` usado pela solicitação. A
+materialização congela essa referência no evento; não existe choice numérico paralelo na portaria.
 
 ### ResultadoRegistroAcesso
 
@@ -250,6 +249,7 @@ Se houver registro:
 - Só eventos elegíveis na fila (APROVADA, não cancelado, data operacional).
 - Replay do **mesmo** `resultado` → 200 idempotente; **alterar** resultado já gravado → 400.
 - `registrado_por`: `Usuario` pessoa física; **nunca** `usuario_coletivo`.
+- Janela operacional: disponível antes ou exatamente no horário previsto; depois de `hora_prevista`, pendências expiram e não podem ser registradas.
 
 ### Concorrência
 
@@ -272,7 +272,7 @@ Compilação planejada: `permissoes_acesso_campus()` — OR entre `PermissaoFunc
 | `operar_portaria` | Fila de eventos e registrar |
 | `visualizar_historico` | Listagem/detalhe histórico ampliado |
 
-Mixins planejados em `AcessoCampus/permissoes/access.py`: `PodeAnalisarAcessoCampusMixin`, `PodeOperarPortariaAcessoCampusMixin`, `PodeVisualizarHistoricoAcessoCampusMixin`.
+Mixins existentes em `AcessoCampus/permissoes/access.py`: `PodeAnalisarAcessoCampusMixin`, `PodeSolicitarAcessoCampusMixin` e `PodeOperarPortariaMixin`. O mixin de histórico permanece planejado.
 
 Documentação viva: `documentacao_acesso_campus()` espelhando regras (ADR-002).
 
@@ -288,9 +288,11 @@ Documentação viva: `documentacao_acesso_campus()` espelhando regras (ADR-002).
 | `analise-solicitacao-aprovar` POST | — | sim | — | — | sim |
 | `analise-solicitacao-rejeitar` POST | — | sim | — | — | sim |
 | `analise-solicitacao-cancelar` POST | — | sim | — | — | sim |
-| `portaria-evento-list` GET | — | — | sim | — | sim |
-| `portaria-evento-detail` GET | — | — | sim | — | sim |
-| `portaria-evento-registrar` POST | — | — | sim | — | sim |
+| `evento-acesso-list` GET | — | — | sim | — | sim |
+| `evento-acesso-detail` GET | — | — | sim | — | sim |
+| `evento-acesso-alunos` GET | — | — | sim | — | sim |
+| `evento-acesso-registrar` POST | — | — | sim | — | sim |
+| `evento-acesso-responsaveis` GET | — | — | sim | — | sim |
 | `historico-list` GET | — | sim | — | sim | sim |
 | `historico-detail` GET | — | sim | — | sim | sim |
 
@@ -306,7 +308,7 @@ Filtros de listagem **nunca** expandem escopo além da capacidade.
 |----------|---------|
 | Aluno `solicitacoes/` | `status`, `paginacao` |
 | Análise | `status` (default `PENDENTE`), busca nome/cpf/matrícula, `curso_id`, `data`, `paginacao` |
-| Portaria | `data` (default hoje), busca, `tipo`, `situacao_confirmacao`, `paginacao` |
+| Portaria | `status` (múltiplo), `busca`, `tipo_movimento`, `tipo_beneficiario`, `data_autorizada`, `hora_inicio`, `hora_fim`, `ordenacao`, `paginacao` |
 | Histórico | `status`, `aluno_id`, `curso_id`, `data_inicio`, `data_fim`, busca, `paginacao` |
 
 ---
@@ -325,9 +327,11 @@ Prefixo: `/cortex/acesso-campus/`. Namespace: `acesso_campus:`.
 | POST | `analise/solicitacoes/{pk}/aprovar/` | `analise-solicitacao-aprovar` |
 | POST | `analise/solicitacoes/{pk}/rejeitar/` | `analise-solicitacao-rejeitar` |
 | POST | `analise/solicitacoes/{pk}/cancelar/` | `analise-solicitacao-cancelar` |
-| GET | `portaria/eventos/` | `portaria-evento-list` |
-| GET | `portaria/eventos/{pk}/` | `portaria-evento-detail` |
-| POST | `portaria/eventos/{pk}/registrar/` | `portaria-evento-registrar` |
+| GET | `portaria/eventos/` | `evento-acesso-list` |
+| GET | `portaria/eventos/responsaveis-elegiveis/` | `evento-acesso-responsaveis` |
+| GET | `portaria/eventos/{grupo_portaria_id}/` | `evento-acesso-detail` |
+| GET | `portaria/eventos/{grupo_portaria_id}/alunos/` | `evento-acesso-alunos` |
+| POST | `portaria/eventos/{grupo_portaria_id}/registrar/` | `evento-acesso-registrar` |
 | GET | `historico/` | `historico-list` |
 | GET | `historico/{pk}/` | `historico-detail` |
 
@@ -340,6 +344,7 @@ Contrato detalhado: [docs/api/acesso-campus.md](../api/acesso-campus.md).
 - `BasicModel` + `simple-history` nos models de negócio.
 - Campos: `analisada_por`, `analisada_em`, `observacao_analise`, `cancelada_por`, `cancelada_em`.
 - Snapshots na criação: `aluno_nome`, `curso_nome`, `matricula` — **não** mutáveis na análise.
+- A conferência da portaria exibe o CPF completo formatado de alunos e responsáveis elegíveis; o acesso permanece restrito a `operar_portaria` ou L3.
 - **Responsável legal:** fora do MVP; validação institucional/LGPD antes de produção envolvendo menores.
 
 ---
@@ -359,7 +364,6 @@ Contrato detalhado: [docs/api/acesso-campus.md](../api/acesso-campus.md).
 
 ## O que NÃO fazer
 
-- **Não** afirmar que o módulo já está em `PROJECT_APPS`.
 - **Não** criar `Campus`, `Autorizacao` separada, ou duplicar `Aluno`/`Usuario` vigilante.
 - **Não** inferir EM pelo nome do curso.
 - **Não** acoplar a Transporte ou `Infraestrutura.autorizacoes`.

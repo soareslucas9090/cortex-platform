@@ -1,5 +1,8 @@
 from rest_framework.permissions import BasePermission, IsAuthenticated
 
+from Identidade.usuarios.models import TipoContaColetiva
+
+
 def usuario_tem_acesso_total_acesso_campus(user) -> bool:
     if not user or not getattr(user, 'is_authenticated', False):
         return False
@@ -13,6 +16,17 @@ def usuario_pode_analisar_acesso_campus(user) -> bool:
         return True
     acesso = getattr(user, 'permissoes', {}).get('acesso_campus', {})
     return bool(acesso.get('analisar_solicitacoes'))
+
+
+def usuario_pode_operar_portaria(user) -> bool:
+    if not user or not getattr(user, 'is_authenticated', False):
+        return False
+    if usuario_tem_acesso_total_acesso_campus(user):
+        return True
+    if user.usuario_coletivo and user.tipo_conta_coletiva != TipoContaColetiva.GUARITA:
+        return False
+    acesso = getattr(user, 'permissoes', {}).get('acesso_campus', {})
+    return bool(acesso.get('operar_portaria'))
 
 
 class PodeAnalisarAcessoCampusPermission(BasePermission):
@@ -49,3 +63,17 @@ class PodeSolicitarAcessoCampusPermission(BasePermission):
 
 class PodeSolicitarAcessoCampusMixin:
     permission_classes = [IsAuthenticated, PodeSolicitarAcessoCampusPermission]
+
+
+class PodeOperarPortariaPermission(BasePermission):
+    message = 'Você não tem permissão para operar a portaria.'
+
+    def has_permission(self, request, view):
+        return usuario_pode_operar_portaria(request.user)
+
+    def has_object_permission(self, request, view, obj):
+        return usuario_pode_operar_portaria(request.user)
+
+
+class PodeOperarPortariaMixin:
+    permission_classes = [IsAuthenticated, PodeOperarPortariaPermission]

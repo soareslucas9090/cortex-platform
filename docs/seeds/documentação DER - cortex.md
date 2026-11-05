@@ -840,7 +840,7 @@ Ela pode possuir:
 ## Acadêmico
 
 -   `Aluno` possui relação N:N com `Curso` através de `Aluno_Curso`
-    
+
 -   `Curso` possui relação N:1 com `Setor` (`setor_id`)
     
 -   Cursos podem estar ativos ou inativos
