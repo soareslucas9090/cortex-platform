@@ -23,7 +23,7 @@ def materializar_solicitacoes_aceitas(apps, schema_editor):
             defaults={
                 "aluno_id": solicitacao.aluno_id,
                 "grupo_portaria_id": grupo_portaria_id,
-                "tipo": solicitacao.tipo,
+                "tipo": solicitacao.tipo.id,
                 "data_acesso": solicitacao.data_acesso,
                 "hora_prevista": solicitacao.hora_autorizada or time(8, 0),
                 "turma_origem": solicitacao.turma_origem,
