@@ -114,12 +114,13 @@ flowchart TD
 ### Portaria (`operar_portaria`)
 
 1. GET `portaria/eventos/` projeta um item por `grupo_portaria_id` e deriva `PENDENTE`, `CONCLUIDA` ou `EXPIRADA`.
-2. GET `portaria/eventos/{grupo_portaria_id}/alunos/` fornece a conferência congelada da turma.
-3. **Não** exibir solicitações ainda não aceitas na fila.
-4. POST `registrar/` recebe `aluno_ids` na turma e `responsavel_liberacao_id` na conta guarita.
-5. `registrado_por` é o vigilante físico; `operado_por` preserva a conta autenticada. L3 usa a si próprio nos dois campos.
-6. O registro pode ser feito antes ou exatamente no horário autorizado; depois dele, o grupo incompleto expira.
-7. As consultas derivam a expiração sem alterar o banco; a task Celery persiste `expirado_em` a cada minuto.
+2. No item individual, `beneficiario.foto` prioriza o proxy de `foto_secundaria` e usa `foto` como fallback; no item de turma, a chave é omitida.
+3. GET `portaria/eventos/{grupo_portaria_id}/alunos/` fornece a conferência congelada da turma, incluindo a foto preferencial de cada aluno pela mesma regra.
+4. **Não** exibir solicitações ainda não aceitas na fila.
+5. POST `registrar/` recebe `aluno_ids` na turma e `responsavel_liberacao_id` na conta guarita.
+6. `registrado_por` é o vigilante físico; `operado_por` preserva a conta autenticada. L3 usa a si próprio nos dois campos.
+7. O registro pode ser feito antes ou exatamente no horário autorizado; depois dele, o grupo incompleto expira.
+8. As consultas derivam a expiração sem alterar o banco; a task Celery persiste `expirado_em` a cada minuto.
 
 ### Histórico (`visualizar_historico` ou `analisar_solicitacoes` ou L3)
 

@@ -10143,6 +10143,10 @@ components:
           type: string
         nome:
           type: string
+        foto:
+          type: string
+          format: uri
+          nullable: true
       required:
       - id
       - nome
