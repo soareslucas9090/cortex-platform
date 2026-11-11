@@ -243,6 +243,8 @@ Serviços disponíveis:
 - Redis: `localhost:6379`
 - Swagger: `http://localhost:8000/cortex/api/schema/swagger/`
 
+Para publicar a API na VPS da Contabo (Docker, ao lado de outro projeto), siga [Implantação na Contabo](docs/project/implantacao-contabo.md). Esse caminho usa `docker/docker-compose-production.yml`, não o Compose de desenvolvimento acima.
+
 O worker sobe usando um comando customizado do Django que adiciona suporte a autoreload, já configurado no `docker/docker-compose.yml`:
 
 ```bash

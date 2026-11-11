@@ -1,10 +1,16 @@
 from django.conf import settings
 from django.contrib import admin
+from django.http import JsonResponse
 from django.urls import include, path
 from drf_spectacular.views import SpectacularAPIView, SpectacularRedocView, SpectacularSwaggerView
 
 
+def health(request):
+    return JsonResponse({'status': 'ok'})
+
+
 urlpatterns = [
+    path('health/', health, name='health'),
     path('cortex/api/schema/', SpectacularAPIView.as_view(), name='schema'),
     path('cortex/api/schema/swagger/', SpectacularSwaggerView.as_view(url_name='schema'), name='swagger-ui'),
     path('cortex/api/schema/redoc/', SpectacularRedocView.as_view(url_name='schema'), name='redoc'),

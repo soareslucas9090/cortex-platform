@@ -16,6 +16,15 @@ RUN pip install --no-cache-dir --upgrade pip \
 
 COPY . /app/
 
+# collectstatic não abre conexão com o banco. DEBUG fica ligado só neste passo.
+ENV DJANGO_SECRET_KEY=collectstatic-build-only
+ENV DJANGO_DEBUG=True
+RUN python manage.py collectstatic --noinput \
+    && chmod +x /app/docker/entrypoint-web.sh /app/docker/producao.sh
+
+ENV DJANGO_DEBUG=False
+ENV DJANGO_SECRET_KEY=TROQUE-ESTA-CHAVE-NO-ENV-ANTES-DE-SUBIR-PARA-PRODUCAO
+
 EXPOSE 8000
 
-CMD ["gunicorn", "Cortex.wsgi:application", "--bind", "0.0.0.0:8000", "--workers", "3"]
+CMD ["/app/docker/entrypoint-web.sh"]

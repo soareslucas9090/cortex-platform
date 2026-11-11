@@ -104,8 +104,9 @@ processo do Beat.
 
 ## Implantação
 
-Implante o Beat com exatamente uma réplica ativa. O serviço não recebe
-requisições HTTP e não precisa de domínio público.
+Na VPS da Contabo, o passo a passo da API, do worker, do Beat e do banco está
+em [Implantação na Contabo](implantacao-contabo.md). O Beat continua com uma
+única réplica e não recebe requisições HTTP.
 
 Após a inicialização, os logs devem indicar que o Celery Beat iniciou e carregou
 a agenda. A cada cinco minutos, deve aparecer no Beat uma mensagem semelhante a:

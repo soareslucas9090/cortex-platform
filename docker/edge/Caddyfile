@@ -1,0 +1,17 @@
+{
+	email {$ACME_EMAIL}
+}
+
+{$CORTEX_DOMAIN} {
+	encode gzip
+	reverse_proxy 127.0.0.1:{$CORTEX_HTTP_PORT}
+}
+
+# Segundo projeto nesta mesma VPS.
+# Publique a API dele só em 127.0.0.1, numa porta diferente (exemplo: 8020),
+# aponte o DNS para o mesmo IP e descomente o bloco.
+#
+# outro.seudominio.com {
+# 	encode gzip
+# 	reverse_proxy 127.0.0.1:8020
+# }

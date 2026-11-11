@@ -1,0 +1,33 @@
+# Porta de entrada da VPS. Um Caddy para todos os projetos.
+# Usa a rede do host para alcançar 127.0.0.1:8010 (Cortex) e a porta do outro projeto.
+#
+# Na VPS:
+#   cd docker/edge
+#   cp .env.example .env
+#   docker compose up -d
+
+name: contabo-edge
+
+services:
+  caddy:
+    image: caddy:2.10
+    container_name: contabo_caddy
+    restart: unless-stopped
+    network_mode: host
+    env_file:
+      - .env
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    logging:
+      driver: json-file
+      options:
+        max-size: '10m'
+        max-file: '5'
+
+volumes:
+  caddy_data:
+    name: contabo_caddy_data
+  caddy_config:
+    name: contabo_caddy_config

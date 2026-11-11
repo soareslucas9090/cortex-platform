@@ -39,6 +39,13 @@ if not DEBUG and (not ALLOWED_HOSTS or '*' in ALLOWED_HOSTS):
         'ALLOWED_HOSTS inválido em produção. Defina domínios explícitos (não use *).'
     )
 
+# A checagem interna do Docker (127.0.0.1) não passa pela internet.
+# A API só escuta em localhost na VPS; o domínio público entra pelo Caddy.
+if not DEBUG:
+    for _host_local in ('127.0.0.1', 'localhost'):
+        if _host_local not in ALLOWED_HOSTS:
+            ALLOWED_HOSTS.append(_host_local)
+
 csrf_origins = os.environ.get('CSRF_TRUSTED_ORIGINS', '')
 CSRF_TRUSTED_ORIGINS = [origin for origin in csrf_origins.split(',') if origin]
 
@@ -49,6 +56,19 @@ internal_ips = os.environ.get('INTERNAL_IPS', '')
 INTERNAL_IPS = [ip for ip in internal_ips.split(',') if ip]
 
 CORS_ALLOW_ALL_ORIGINS = os.environ.get('CORS_ALLOW_ALL_ORIGINS', 'False') == 'True'
+
+# Na VPS o Caddy termina o HTTPS e encaminha HTTP para o Gunicorn.
+# Sem estes dois ajustes o Django trata o admin e o CSRF como requisição insegura.
+BEHIND_PROXY = os.environ.get('DJANGO_BEHIND_PROXY', 'False') == 'True'
+
+if not DEBUG:
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    SECURE_CONTENT_TYPE_NOSNIFF = True
+
+if BEHIND_PROXY:
+    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+    USE_X_FORWARDED_HOST = True
 
 CORS_ALLOW_METHODS = [
     'DELETE',
@@ -270,7 +290,8 @@ USE_I18N = True
 USE_TZ = True
 
 STATIC_URL = 'static/'
-STATICFILES_DIRS = [BASE_DIR / "static"]
+_static_dir = BASE_DIR / "static"
+STATICFILES_DIRS = [_static_dir] if _static_dir.is_dir() else []
 STATIC_ROOT = BASE_DIR / "staticfiles"
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'

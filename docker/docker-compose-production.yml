@@ -1,90 +1,172 @@
+# Produção na VPS (Contabo), convivendo com outro projeto.
+# PostgreSQL e Redis não publicam porta no host.
+# A API só escuta em 127.0.0.1. O HTTPS fica no Caddy em docker/edge/.
+#
+# Subir sempre pelo atalho, para o Compose ler docker/.env.docker:
+#   sh docker/producao.sh up -d --build
+
+name: cortex
+
 services:
   db:
     image: postgres:16
     container_name: cortex_db
-    environment:
-      POSTGRES_DB: ${DATABASE_NAME:-cortex}
-      POSTGRES_USER: ${DATABASE_USER:-cortex}
-      POSTGRES_PASSWORD: ${DATABASE_PASSWORD:-cortex}
+    restart: unless-stopped
+    env_file:
+      - .env.docker
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: [ 'CMD-SHELL', 'pg_isready -U ${DATABASE_USER:-cortex} -d ${DATABASE_NAME:-cortex}' ]
+      test: ['CMD-SHELL', 'pg_isready -U "$$POSTGRES_USER" -d "$$POSTGRES_DB"']
       interval: 10s
       timeout: 5s
       retries: 5
+      start_period: 20s
+    networks:
+      - internal
+    logging:
+      driver: json-file
+      options:
+        max-size: '10m'
+        max-file: '5'
 
   redis:
     image: redis:7-alpine
     container_name: cortex_redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes
     volumes:
       - redis_data:/data
     healthcheck:
-      test: [ 'CMD', 'redis-cli', 'ping' ]
+      test: ['CMD', 'redis-cli', 'ping']
       interval: 10s
       timeout: 5s
       retries: 5
+    networks:
+      - internal
+    logging:
+      driver: json-file
+      options:
+        max-size: '10m'
+        max-file: '5'
 
   web:
     build:
       context: ..
       dockerfile: docker/Dockerfile
+    image: cortex-api:latest
+    pull_policy: build
     container_name: cortex_web
-    command: >
-      sh -c "python manage.py migrate && gunicorn Cortex.wsgi:application --bind 0.0.0.0:8000 --workers 3"
+    restart: unless-stopped
+    init: true
+    command: /app/docker/entrypoint-web.sh
     env_file:
       - .env.docker
     environment:
-      DJANGO_DEBUG: "False"
+      DJANGO_DEBUG: 'False'
+      DJANGO_BEHIND_PROXY: 'True'
       DATABASE_HOST: db
       CELERY_BROKER_URL: redis://redis:6379/0
       CELERY_RESULT_BACKEND: redis://redis:6379/0
     ports:
-      - '8000:8000'
+      - '127.0.0.1:${CORTEX_HTTP_PORT:-8010}:8000'
+    volumes:
+      - media_data:/app/media
     depends_on:
       db:
         condition: service_healthy
       redis:
         condition: service_healthy
+    healthcheck:
+      test:
+        [
+          'CMD',
+          'python',
+          '-c',
+          'import urllib.request; urllib.request.urlopen("http://127.0.0.1:8000/health/", timeout=5)',
+        ]
+      interval: 15s
+      timeout: 5s
+      retries: 8
+      start_period: 90s
+    networks:
+      - internal
+    logging:
+      driver: json-file
+      options:
+        max-size: '10m'
+        max-file: '5'
 
   worker:
     build:
       context: ..
       dockerfile: docker/Dockerfile
+    image: cortex-api:latest
+    pull_policy: build
     container_name: cortex_worker
-    command: celery -A Cortex worker -l INFO --pool=prefork --concurrency=${CELERY_CONCURRENCY:-4}
+    restart: unless-stopped
+    init: true
+    command: 'sh -c "exec celery -A Cortex worker -l INFO --pool=prefork --concurrency=$${CELERY_CONCURRENCY:-2}"'
     env_file:
       - .env.docker
     environment:
-      DJANGO_DEBUG: "False"
+      DJANGO_DEBUG: 'False'
       DATABASE_HOST: db
       CELERY_BROKER_URL: redis://redis:6379/0
       CELERY_RESULT_BACKEND: redis://redis:6379/0
+    volumes:
+      - media_data:/app/media
     depends_on:
-      db:
+      web:
         condition: service_healthy
-      redis:
-        condition: service_healthy
+    networks:
+      - internal
+    logging:
+      driver: json-file
+      options:
+        max-size: '10m'
+        max-file: '5'
 
   beat:
     build:
       context: ..
       dockerfile: docker/Dockerfile
+    image: cortex-api:latest
+    pull_policy: build
     container_name: cortex_beat
-    command: celery -A Cortex beat -l INFO
+    restart: unless-stopped
+    init: true
+    command: celery -A Cortex beat -l INFO --schedule=/var/lib/celery/celerybeat-schedule
     env_file:
       - .env.docker
     environment:
-      DJANGO_DEBUG: "False"
+      DJANGO_DEBUG: 'False'
       DATABASE_HOST: db
       CELERY_BROKER_URL: redis://redis:6379/0
       CELERY_RESULT_BACKEND: redis://redis:6379/0
+    volumes:
+      - beat_schedule:/var/lib/celery
     depends_on:
-      db:
+      web:
         condition: service_healthy
-      redis:
-        condition: service_healthy
+    networks:
+      - internal
+    logging:
+      driver: json-file
+      options:
+        max-size: '10m'
+        max-file: '5'
+
+networks:
+  internal:
+    name: cortex_internal
 
 volumes:
   postgres_data:
+    name: cortex_postgres_data
   redis_data:
+    name: cortex_redis_data
+  media_data:
+    name: cortex_media_data
+  beat_schedule:
+    name: cortex_beat_schedule
