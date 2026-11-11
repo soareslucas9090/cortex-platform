@@ -1,6 +1,6 @@
 services:
   db:
-    image: postgres:16
+    image: postgres:18
     container_name: cortex_db
     environment:
       POSTGRES_DB: ${DATABASE_NAME:-cortex}
