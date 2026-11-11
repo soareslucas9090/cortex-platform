@@ -214,6 +214,7 @@ class PortariaAcessoCampusTest(APITestCase):
         resposta = self.client.get(reverse('acesso_campus:evento-acesso-list'), {'status': 'PENDENTE'})
         self.assertEqual(resposta.status_code, status.HTTP_200_OK, resposta.data)
         self.assertEqual(resposta.data['count'], 1)
+        self.assertIsNone(resposta.data['dados'][0]['beneficiario']['foto'])
         self.assertNotIn('cpf', str(resposta.data['dados'][0]).lower())
 
         alunos = self.client.get(
@@ -223,6 +224,76 @@ class PortariaAcessoCampusTest(APITestCase):
 
         responsaveis = self.client.get(reverse('acesso_campus:evento-acesso-responsaveis'))
         self.assertEqual(responsaveis.data['dados'][0]['cpf'], '300.000.000-01')
+
+    def test_listagem_inclui_foto_no_beneficiario_individual_e_omite_na_turma(self):
+        usuario = self.vinculo_a.aluno.usuario
+        usuario.foto = 'https://servidor.test/fotos/ana.webp'
+        usuario.save(update_fields=['foto'])
+        evento_individual = self._criar_evento(self.vinculo_a)
+        grupo_turma = uuid.uuid4()
+        self._criar_evento(self.vinculo_b, grupo=grupo_turma, turma_origem='3A')
+
+        resposta = self.client.get(reverse('acesso_campus:evento-acesso-list'))
+
+        self.assertEqual(resposta.status_code, status.HTTP_200_OK, resposta.data)
+        individual = next(
+            item for item in resposta.data['dados'] if item['id'] == str(evento_individual.grupo_portaria_id)
+        )
+        turma = next(item for item in resposta.data['dados'] if item['id'] == str(grupo_turma))
+        self.assertEqual(individual['beneficiario']['foto'], usuario.foto)
+        self.assertNotIn('foto', turma['beneficiario'])
+
+        alunos = self.client.get(
+            reverse('acesso_campus:evento-acesso-alunos', kwargs={'grupo_portaria_id': grupo_turma})
+        )
+        self.assertEqual(alunos.status_code, status.HTTP_200_OK, alunos.data)
+        self.assertIn('foto', alunos.data['dados'][0]['aluno'])
+
+    def test_foto_secundaria_tem_prioridade_no_beneficiario_e_na_lista_de_alunos(self):
+        usuario_individual = self.vinculo_a.aluno.usuario
+        usuario_individual.foto = 'https://servidor.test/fotos/ana-primaria.webp'
+        usuario_individual.foto_secundaria = 'Cortex/usuarios/fotos/ana-secundaria.webp'
+        usuario_individual.save(update_fields=['foto', 'foto_secundaria'])
+        evento_individual = self._criar_evento(self.vinculo_a)
+
+        usuario_turma = self.vinculo_b.aluno.usuario
+        usuario_turma.foto = 'https://servidor.test/fotos/bruno-primaria.webp'
+        usuario_turma.foto_secundaria = 'Cortex/usuarios/fotos/bruno-secundaria.webp'
+        usuario_turma.save(update_fields=['foto', 'foto_secundaria'])
+        grupo_turma = uuid.uuid4()
+        self._criar_evento(self.vinculo_b, grupo=grupo_turma, turma_origem='3A')
+
+        foto_individual_path = reverse(
+            'identidade:usuario-foto-secundaria',
+            kwargs={'pk': usuario_individual.pk},
+        )
+        foto_individual_esperada = f'http://testserver{foto_individual_path}?v=ana-secundaria'
+        foto_turma_path = reverse(
+            'identidade:usuario-foto-secundaria',
+            kwargs={'pk': usuario_turma.pk},
+        )
+        foto_turma_esperada = f'http://testserver{foto_turma_path}?v=bruno-secundaria'
+
+        listagem = self.client.get(reverse('acesso_campus:evento-acesso-list'))
+        individual = next(
+            item for item in listagem.data['dados'] if item['id'] == str(evento_individual.grupo_portaria_id)
+        )
+        self.assertEqual(individual['beneficiario']['foto'], foto_individual_esperada)
+
+        alunos = self.client.get(
+            reverse('acesso_campus:evento-acesso-alunos', kwargs={'grupo_portaria_id': grupo_turma})
+        )
+        self.assertEqual(alunos.data['dados'][0]['aluno']['foto'], foto_turma_esperada)
+
+        registro = self.client.post(
+            reverse(
+                'acesso_campus:evento-acesso-registrar',
+                kwargs={'grupo_portaria_id': evento_individual.grupo_portaria_id},
+            ),
+            {},
+            format='json',
+        )
+        self.assertEqual(registro.data['dados']['autorizacao']['beneficiario']['foto'], foto_individual_esperada)
 
     def test_listagem_deriva_expiracao_sem_persistir_durante_get(self):
         evento = self._criar_evento(self.vinculo_a, data_acesso=self.hoje - timedelta(days=1))
@@ -266,7 +337,7 @@ class PortariaAcessoCampusTest(APITestCase):
 
     def test_serializer_da_listagem_nao_faz_consulta_por_grupo(self):
         grupo = uuid.uuid4()
-        self._criar_evento(self.vinculo_a, grupo=grupo, turma_origem='3A')
+        evento_a = self._criar_evento(self.vinculo_a, grupo=grupo, turma_origem='3A')
         self._criar_evento(self.vinculo_b, grupo=grupo, turma_origem='3A')
         queryset = EventoAcesso().business.listar_grupos()
 
@@ -274,6 +345,21 @@ class PortariaAcessoCampusTest(APITestCase):
             dados = EventoAcessoSerializer(queryset, many=True).data
 
         self.assertEqual(len(dados), 1)
+        self.assertEqual(dados[0]['id'], str(evento_a.grupo_portaria_id))
+
+    def test_serializer_individual_com_foto_nao_adiciona_consulta(self):
+        usuario = self.vinculo_a.aluno.usuario
+        usuario.foto = 'https://servidor.test/fotos/ana.webp'
+        usuario.save(update_fields=['foto'])
+        evento = self._criar_evento(self.vinculo_a)
+        queryset = EventoAcesso().business.listar_grupos()
+
+        with self.assertNumQueries(1):
+            dados = EventoAcessoSerializer(queryset, many=True).data
+
+        self.assertEqual(len(dados), 1)
+        self.assertEqual(dados[0]['id'], str(evento.grupo_portaria_id))
+        self.assertEqual(dados[0]['beneficiario']['foto'], usuario.foto)
 
     def test_listagem_encerrada_ordena_por_data_independentemente_do_status(self):
         grupo_concluido_mais_recente = uuid.uuid4()

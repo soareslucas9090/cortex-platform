@@ -176,7 +176,10 @@ class RegistrarEventoAcessoView(PodeOperarPortariaMixin, BasicPostAPIView):
         return {
             'mensagem': self.mensagem_sucesso,
             'dados': {
-                'autorizacao': EventoAcessoDetalheSerializer(eventos[0]).data,
+                'autorizacao': EventoAcessoDetalheSerializer(
+                    eventos[0],
+                    context={'request': request},
+                ).data,
                 'registro': resumo,
             },
             'status_code': status.HTTP_200_OK,

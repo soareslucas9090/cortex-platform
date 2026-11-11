@@ -6,6 +6,7 @@ from rest_framework import serializers
 
 from AppCore.common.util.util import formatar_cpf
 from AcessoCampus.tipos.choices import NOME_TIPO_ENTRADA_CAMPUS, NOME_TIPO_SAIDA_CAMPUS
+from Identidade.usuarios.constantes import ANEXO_FOTO_SECUNDARIA
 from Identidade.usuarios.models import Usuario
 
 from .choices import StatusEventoAcesso
@@ -23,6 +24,15 @@ def _cpf_completo(usuario):
     return formatar_cpf(cpf) if cpf else None
 
 
+def _foto_preferencial(usuario, request=None):
+    foto_secundaria = ANEXO_FOTO_SECUNDARIA.url_proxy(
+        usuario.pk,
+        usuario.foto_secundaria,
+        request,
+    )
+    return foto_secundaria or usuario.foto
+
+
 class UsuarioResumoPortariaSerializer(serializers.Serializer):
     id = serializers.IntegerField()
     nome = serializers.CharField()
@@ -32,6 +42,7 @@ class BeneficiarioEventoAcessoSerializer(serializers.Serializer):
     id = serializers.CharField()
     tipo = serializers.CharField()
     nome = serializers.CharField()
+    foto = serializers.URLField(required=False, allow_null=True)
 
 
 class ProgressoEventoAcessoSerializer(serializers.Serializer):
@@ -98,7 +109,12 @@ class EventoAcessoSerializer(serializers.ModelSerializer):
     def get_beneficiario(self, obj):
         if obj.turma_origem:
             return {'id': str(obj.grupo_portaria_id), 'tipo': 'TURMA', 'nome': f'Turma {obj.turma_origem}'}
-        return {'id': obj.aluno_id, 'tipo': 'INDIVIDUAL', 'nome': obj.aluno_nome}
+        return {
+            'id': obj.aluno_id,
+            'tipo': 'INDIVIDUAL',
+            'nome': obj.aluno_nome,
+            'foto': _foto_preferencial(obj.aluno.usuario, self.context.get('request')),
+        }
 
     @extend_schema_field(serializers.CharField())
     def get_tipo_movimento(self, obj):
@@ -206,7 +222,12 @@ class AlunoEventoAcessoSerializer(serializers.ModelSerializer):
     @extend_schema_field(AlunoResumoEventoAcessoSerializer)
     def get_aluno(self, obj):
         usuario = obj.aluno.usuario
-        return {'id': obj.aluno_id, 'nome': obj.aluno_nome, 'cpf': _cpf_completo(usuario), 'foto': usuario.foto}
+        return {
+            'id': obj.aluno_id,
+            'nome': obj.aluno_nome,
+            'cpf': _cpf_completo(usuario),
+            'foto': _foto_preferencial(usuario, self.context.get('request')),
+        }
 
     @extend_schema_field(serializers.CharField())
     def get_status(self, obj):

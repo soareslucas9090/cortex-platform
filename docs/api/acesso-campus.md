@@ -213,7 +213,12 @@ O GET deriva o status sem persistência; a task Celery grava `expirado_em` a cad
 {
   "id": "7c067767-8c54-4a82-8b29-78fe444ddcf2",
   "tipo_beneficiario": "INDIVIDUAL",
-  "beneficiario": {"id": 15, "tipo": "INDIVIDUAL", "nome": "Maria Silva"},
+  "beneficiario": {
+    "id": 15,
+    "tipo": "INDIVIDUAL",
+    "nome": "Maria Silva",
+    "foto": "https://servidor/cortex/identidade/usuarios/15/foto-secundaria/?v=arquivo"
+  },
   "tipo_movimento": "ENTRADA",
   "autorizado_por": {"id": 4, "nome": "Coordenador"},
   "data_autorizada": "2026-10-15",
@@ -223,6 +228,11 @@ O GET deriva o status sem persistência; a task Celery grava `expirado_em` a cad
   "acoes": {"pode_registrar": true, "pode_conferir_turma": false}
 }
 ```
+
+Para beneficiário `INDIVIDUAL`, `foto` prioriza a URL do proxy de `foto_secundaria` quando
+ela estiver preenchida; caso contrário, usa a URL externa de `foto` ou retorna `null`.
+Para `TURMA`, a chave `foto` não é retornada no objeto `beneficiario`; as fotos dos alunos
+continuam disponíveis em `portaria/eventos/{grupo_portaria_id}/alunos/`, com a mesma prioridade.
 
 ---
 
