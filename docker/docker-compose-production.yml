@@ -15,7 +15,8 @@ services:
     env_file:
       - .env.docker
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      # Postgres 18+ recusa volume em /var/lib/postgresql/data e o container reinicia.
+      - postgres_data:/var/lib/postgresql
     healthcheck:
       test: ['CMD-SHELL', 'pg_isready -U "$$POSTGRES_USER" -d "$$POSTGRES_DB"']
       interval: 10s
