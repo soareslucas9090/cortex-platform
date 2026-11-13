@@ -65,17 +65,40 @@ def obter_cliente_s3():
         return None, None
 
 
+def sem_prefixo_de_bucket(chave: str | None, bucket_name: str | None = None) -> str | None:
+    '''
+    Remove o nome do bucket do início da chave.
+
+    O bucket não é uma pasta. ``Cortex/usuarios/fotos/1/arquivo.jpg`` no bucket
+    ``Cortex`` é o objeto ``usuarios/fotos/1/arquivo.jpg``.
+    '''
+    if not chave:
+        return chave
+
+    nome = (bucket_name if bucket_name is not None else getattr(
+        settings, 'AWS_STORAGE_BUCKET_NAME', ''
+    )).strip('/')
+    if not nome:
+        return chave
+
+    marcador = f'{nome}/'
+    if chave.startswith(marcador):
+        return chave[len(marcador):]
+    return chave
+
+
 def normalizar_chave_s3(valor: str | None, prefixo: str | None = None) -> str | None:
     '''
     Aceita chave S3 pura ou URL e retorna a chave do objeto.
-    Se ``prefixo`` for informado, remove o bucket quando ele aparecer no path.
+    O nome do bucket no início do caminho é removido: ele não é pasta.
     '''
     if not valor:
         return None
 
     valor = valor.strip()
+    bucket_name = getattr(settings, 'AWS_STORAGE_BUCKET_NAME', '')
     if not valor.startswith(('http://', 'https://')):
-        return valor
+        return sem_prefixo_de_bucket(valor, bucket_name)
 
     parsed = urlparse(valor)
     if not parsed.path:
@@ -83,13 +106,12 @@ def normalizar_chave_s3(valor: str | None, prefixo: str | None = None) -> str | 
 
     path = parsed.path.lstrip('/')
     if prefixo and path.startswith(f'{prefixo}/'):
-        return path
+        return sem_prefixo_de_bucket(path, bucket_name)
 
-    bucket_name = getattr(settings, 'AWS_STORAGE_BUCKET_NAME', '')
     if prefixo and bucket_name and path.startswith(f'{bucket_name}/{prefixo}/'):
         return path[len(bucket_name) + 1:]
 
-    return path
+    return sem_prefixo_de_bucket(path, bucket_name)
 
 
 def montar_url_proxy_arquivo(
@@ -132,7 +154,7 @@ def enviar_arquivo_s3(
 ) -> str:
     '''
     Envia o arquivo para o bucket e retorna a chave do objeto.
-    A chave segue ``{prefixo}/{objeto_id}/{uuid}.{extensao}``.
+    A chave segue ``{prefixo}/{objeto_id}/{uuid}.{extensao}``, sem o nome do bucket.
     '''
     s3_client, bucket_name = obter_cliente_s3()
     if not s3_client:
@@ -143,7 +165,10 @@ def enviar_arquivo_s3(
         raise ValidationException(MENSAGEM_FORMATO_IMAGEM_NAO_SUPORTADO)
 
     content_type = content_type or content_type_por_extensao(extensao)
-    s3_key = f'{prefixo}/{objeto_id}/{uuid.uuid4().hex}.{extensao}'
+    s3_key = sem_prefixo_de_bucket(
+        f'{prefixo}/{objeto_id}/{uuid.uuid4().hex}.{extensao}',
+        bucket_name,
+    )
 
     if hasattr(arquivo, 'seek'):
         arquivo.seek(0)

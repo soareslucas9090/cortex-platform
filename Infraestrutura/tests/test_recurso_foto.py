@@ -77,7 +77,7 @@ class RecursoFotoViewTest(APITestCase):
         self.url_list = reverse('infraestrutura:recursos-list')
         self.url_detail = reverse('infraestrutura:recurso-detail', kwargs={'pk': self.recurso.pk})
         self.url_foto = reverse('infraestrutura:recurso-foto', kwargs={'pk': self.recurso.pk})
-        self.s3_key = f'Cortex/infraestrutura/recursos/fotos/{self.recurso.pk}/abc123.jpg'
+        self.s3_key = f'infraestrutura/recursos/fotos/{self.recurso.pk}/abc123.jpg'
 
     def _url_proxy_esperada(self, recurso_id=None, versao='abc123'):
         pk = recurso_id or self.recurso.pk
@@ -85,7 +85,7 @@ class RecursoFotoViewTest(APITestCase):
         return f'http://testserver{path}?v={versao}'
 
     def _mock_upload(self, prefixo, objeto_id, arquivo, **kwargs):
-        return f'Cortex/infraestrutura/recursos/fotos/{objeto_id}/abc123.jpg'
+        return f'infraestrutura/recursos/fotos/{objeto_id}/abc123.jpg'
 
     def test_criar_recurso_com_foto_paisagem_nao_persiste(self):
         self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token_cadastrador}')
@@ -120,7 +120,7 @@ class RecursoFotoViewTest(APITestCase):
         recurso_id = resposta.data['dados']['id']
         self.assertEqual(resposta.data['dados']['foto'], self._url_proxy_esperada(recurso_id))
         recurso = Recurso.objects.get(pk=recurso_id)
-        self.assertEqual(recurso.foto, f'Cortex/infraestrutura/recursos/fotos/{recurso_id}/abc123.jpg')
+        self.assertEqual(recurso.foto, f'infraestrutura/recursos/fotos/{recurso_id}/abc123.jpg')
         mock_upload.assert_called_once()
 
     @patch('AppCore.common.storage.s3.enviar_arquivo_s3')
@@ -144,7 +144,7 @@ class RecursoFotoViewTest(APITestCase):
     @patch('AppCore.common.storage.s3.remover_objeto_s3')
     @patch('AppCore.common.storage.s3.enviar_arquivo_s3')
     def test_criar_recurso_save_falha_remove_objeto_s3(self, mock_upload, mock_remover):
-        nova_chave = 'Cortex/infraestrutura/recursos/fotos/1/compensar.jpg'
+        nova_chave = 'infraestrutura/recursos/fotos/1/compensar.jpg'
         mock_upload.return_value = nova_chave
         original_save = Recurso.save
 
@@ -169,7 +169,7 @@ class RecursoFotoViewTest(APITestCase):
         self.assertFalse(Recurso.objects.filter(codigo=codigo).exists())
         mock_remover.assert_called_once_with(
             nova_chave,
-            prefixo='Cortex/infraestrutura/recursos/fotos',
+            prefixo='infraestrutura/recursos/fotos',
         )
 
     def test_paisagem_retorna_400(self):
@@ -340,7 +340,7 @@ class RecursoFotoViewTest(APITestCase):
         self.recurso.refresh_from_db()
         self.assertEqual(self.recurso.foto, self.s3_key)
 
-        chave_nova = f'Cortex/infraestrutura/recursos/fotos/{self.recurso.pk}/def456.jpg'
+        chave_nova = f'infraestrutura/recursos/fotos/{self.recurso.pk}/def456.jpg'
         mock_upload.side_effect = lambda prefixo, objeto_id, arquivo, **kwargs: chave_nova
         resposta = self.client.post(
             self.url_foto,
@@ -350,7 +350,7 @@ class RecursoFotoViewTest(APITestCase):
         self.assertEqual(resposta.status_code, status.HTTP_200_OK)
         mock_remover.assert_called_once_with(
             self.s3_key,
-            prefixo='Cortex/infraestrutura/recursos/fotos',
+            prefixo='infraestrutura/recursos/fotos',
         )
         self.recurso.refresh_from_db()
         self.assertEqual(self.recurso.foto, chave_nova)
@@ -361,7 +361,7 @@ class RecursoFotoViewTest(APITestCase):
         self.assertIsNone(self.recurso.foto)
         mock_remover.assert_called_with(
             chave_nova,
-            prefixo='Cortex/infraestrutura/recursos/fotos',
+            prefixo='infraestrutura/recursos/fotos',
         )
 
     @patch('AppCore.common.storage.s3.iterar_objeto_s3')

@@ -65,7 +65,7 @@ class EmprestimosViewsTest(APITestCase):
 
     def test_operador_lista_solicitantes_elegiveis_por_recurso(self):
         self.solicitante.foto = 'https://sistema-externo.example/fotos/solicitante.jpg'
-        self.solicitante.foto_secundaria = f'Cortex/usuarios/fotos/{self.solicitante.pk}/avatar.jpg'
+        self.solicitante.foto_secundaria = f'usuarios/fotos/{self.solicitante.pk}/avatar.jpg'
         self.solicitante.save(update_fields=['foto', 'foto_secundaria'])
         self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token_operador}')
         resposta = self.client.get(self.url_solicitantes, {'recurso_id': self.chave.pk})

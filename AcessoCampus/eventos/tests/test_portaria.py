@@ -252,13 +252,13 @@ class PortariaAcessoCampusTest(APITestCase):
     def test_foto_secundaria_tem_prioridade_no_beneficiario_e_na_lista_de_alunos(self):
         usuario_individual = self.vinculo_a.aluno.usuario
         usuario_individual.foto = 'https://servidor.test/fotos/ana-primaria.webp'
-        usuario_individual.foto_secundaria = 'Cortex/usuarios/fotos/ana-secundaria.webp'
+        usuario_individual.foto_secundaria = 'usuarios/fotos/ana-secundaria.webp'
         usuario_individual.save(update_fields=['foto', 'foto_secundaria'])
         evento_individual = self._criar_evento(self.vinculo_a)
 
         usuario_turma = self.vinculo_b.aluno.usuario
         usuario_turma.foto = 'https://servidor.test/fotos/bruno-primaria.webp'
-        usuario_turma.foto_secundaria = 'Cortex/usuarios/fotos/bruno-secundaria.webp'
+        usuario_turma.foto_secundaria = 'usuarios/fotos/bruno-secundaria.webp'
         usuario_turma.save(update_fields=['foto', 'foto_secundaria'])
         grupo_turma = uuid.uuid4()
         self._criar_evento(self.vinculo_b, grupo=grupo_turma, turma_origem='3A')

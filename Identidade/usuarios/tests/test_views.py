@@ -2258,7 +2258,7 @@ class AtualizarFotoSecundariaViewTest(APITestCase):
         self.token_outro = obter_tokens(self.outro)
         self.url = reverse('identidade:usuario-foto-secundaria', kwargs={'pk': self.usuario.pk})
         self.url_primaria = 'https://sistema-externo.example/fotos/usuario.jpg'
-        self.s3_key = f'Cortex/usuarios/fotos/{self.usuario.pk}/abc.jpg'
+        self.s3_key = f'usuarios/fotos/{self.usuario.pk}/abc.jpg'
         self.arquivo_imagem = criar_arquivo_imagem_teste()
 
     def _url_proxy_esperada(self):
@@ -2281,7 +2281,7 @@ class AtualizarFotoSecundariaViewTest(APITestCase):
 
     @patch('AppCore.common.storage.s3.enviar_arquivo_s3')
     def test_png_com_nome_jpg_envia_extensao_png(self, mock_upload):
-        mock_upload.return_value = f'Cortex/usuarios/fotos/{self.usuario.pk}/abc.png'
+        mock_upload.return_value = f'usuarios/fotos/{self.usuario.pk}/abc.png'
         arquivo = criar_arquivo_imagem_teste(nome='foto.jpg')
         self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token_usuario}')
         resposta = self.client.post(self.url, {'foto': arquivo}, format='multipart')
@@ -2346,7 +2346,7 @@ class AtualizarFotoSecundariaViewTest(APITestCase):
         self.assertEqual(resposta.status_code, status.HTTP_204_NO_CONTENT)
         self.usuario.refresh_from_db()
         self.assertIsNone(self.usuario.foto_secundaria)
-        mock_remover.assert_called_once_with(self.s3_key, prefixo='Cortex/usuarios/fotos')
+        mock_remover.assert_called_once_with(self.s3_key, prefixo='usuarios/fotos')
 
     def test_get_detalhe_retorna_ambas_fotos(self):
         self.usuario.foto = self.url_primaria
