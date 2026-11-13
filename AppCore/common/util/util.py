@@ -2,7 +2,8 @@ import logging
 import re
 import unicodedata
 
-from django.core.mail import EmailMultiAlternatives
+import resend
+from django.conf import settings
 
 from AppCore.core.exceptions.exceptions import SystemErrorException, ValidationException
 
@@ -11,16 +12,13 @@ logger = logging.getLogger(__name__)
 
 def enviar_email_simples(subject, simple_text, from_email, to_emails, html_content):
     try:
-        email = EmailMultiAlternatives(
-            subject,
-            simple_text,
-            from_email,
-            to_emails,
-        )
-
-        email.attach_alternative(html_content, "text/html")
-
-        email.send()
+        resend.api_key = settings.RESEND_API_KEY
+        resend.Emails.send({
+            'from': from_email,
+            'to': to_emails,
+            'subject': subject,
+            'html': html_content,
+        })
     except Exception as err:
         logger.exception('Erro ao enviar email: %s', err)
         raise SystemErrorException('Erro ao enviar email.')

@@ -199,14 +199,12 @@ CORS_ORIGIN_WHITELIST=https://meudominio.com
 # Hosts permitidos
 ALLOWED_HOSTS=localhost,127.0.0.1
 
-# E-mail (SMTP Gmail por padrão)
-DEFAULT_FROM_EMAIL=noreply@meudominio.com
-EMAIL_HOST_USER=seu@gmail.com
-EMAIL_HOST_PASSWORD=senha-de-app
-EMAIL_HOST=smtp.gmail.com
+# E-mail (Resend; o worker Celery envia)
+RESEND_API_KEY=
+FROM_EMAIL_NOREPLY=noreply@meudominio.com
 ```
 
-> **Em produção:** `DJANGO_SECRET_KEY` é obrigatória. O servidor recusará inicializar sem ela quando `DJANGO_DEBUG=False`.
+> **Em produção:** `DJANGO_SECRET_KEY` e `RESEND_API_KEY` são obrigatórias. O servidor recusará inicializar sem elas quando `DJANGO_DEBUG=False`.
 
 ---
 

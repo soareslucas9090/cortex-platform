@@ -548,7 +548,7 @@ AppNome/
     - `update`
 - **Nomenclatura em Português (Pastas e Utils)**:
   - Estruturas de pastas: `AppCore/common/textos/` (emails, mensagens), `AppCore/common/storage/` (S3 e imagens)
-  - Funções utilitárias: `enviar_email_simples()` (não `send_simple_email()`), `enviar_arquivo_s3()` (não `upload_file_to_s3()`)
+  - Funções utilitárias: `enviar_email_simples()` (não `send_simple_email()`), `enviar_arquivo_s3()` (não `upload_file_to_s3()`). O ponto de entrada público do restante do app é `enviar_email()` em `AppCore.common.envio_email`, que apenas enfileira o envio. A tarefa Celery mantém o nome em inglês `send_simple_email_task` por decisão explícita (paridade com o projeto de referência).
 
 ### Armazenamento de arquivos (S3)
 
@@ -556,6 +556,15 @@ Upload, download, remoção e URL de proxy de arquivos no bucket do projeto fica
 
 O cliente S3 (`obter_cliente_s3`) é o ponto único de configuração (`AWS_S3_ENDPOINT_URL`, `AWS_STORAGE_BUCKET_NAME`, `AWS_S3_REGION_NAME` / `AWS_REGION`, chaves). No Tigris a região é `auto`; checksums do boto3 ficam em `when_required` para o GetObject do proxy não falhar. A chave do objeto não inclui o nome do bucket: `enviar_arquivo_s3` grava e devolve o caminho interno (`usuarios/fotos/...`, `infraestrutura/recursos/fotos/...`). Fluxos específicos (ex.: planilha de importação) podem continuar no app, mas reutilizam esse cliente.
 
+### Envio de e-mail
+
+Variáveis: `RESEND_API_KEY` (obrigatória com `DEBUG=False`; ausência gera `ImproperlyConfigured`) e `FROM_EMAIL_NOREPLY` (remetente padrão).
+
+Fluxo: qualquer código chama `enviar_email(destinatarios, assunto, html, texto='', remetente=None)` em `AppCore.common.envio_email`. Isso apenas invoca `send_simple_email_task.delay(assunto, texto, remetente, destinatarios, html)`. No worker, `enviar_email_simples` define `resend.api_key` e chama `resend.Emails.send` com `from`, `to` (lista), `subject` e `html`. O parâmetro `texto` permanece na assinatura e **não** é enviado ao Resend.
+
+Em falha de envio, a tarefa registra o erro e chama `self.retry(exc=exc, countdown=30)` com `max_retries=4`.
+
+Não use `django.core.mail.send_mail` nem o backend SMTP do Django. Código de negócio **não** deve enviar e-mail dentro da request; apenas enfileira.
 
 ### Localização
 
@@ -599,7 +608,7 @@ cd NomeApp
 - **Database**: PostgreSQL
 - **Docs API**: drf-spectacular (Swagger/ReDoc em `/cortex/api/schema/swagger/`)
 - **Auditoria**: django-simple-history (histórico automático em models)
-- **Email**: SMTP (padrão Gmail, configurável via env)
+- **Email**: Resend (API), disparado de forma assíncrona pelo Celery
 
 ## Segurança (comportamentos obrigatórios)
 

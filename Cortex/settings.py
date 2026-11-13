@@ -100,18 +100,11 @@ if 'test' in sys.argv:
         'PORT': '5432',
     }
 
-DEFAULT_FROM_EMAIL = os.environ.get("DEFAULT_FROM_EMAIL")
+RESEND_API_KEY = os.environ.get('RESEND_API_KEY', '')
+if not DEBUG and not RESEND_API_KEY:
+    raise ImproperlyConfigured('Defina RESEND_API_KEY em produção.')
 
-EMAIL_HOST_USER = os.environ.get("EMAIL_HOST_USER")
-
-EMAIL_HOST_PASSWORD = os.environ.get("EMAIL_HOST_PASSWORD")
-
-# As configurações padrões são para o serviço de email do Google, mas podem ser alteradas
-EMAIL_HOST = os.environ.get("EMAIL_HOST", "smtp.gmail.com")
-EMAIL_PORT = os.environ.get("EMAIL_PORT", 587)
-EMAIL_USE_TLS = os.environ.get("EMAIL_USE_TLS", True)
-
-EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+FROM_EMAIL_NOREPLY = os.environ.get('FROM_EMAIL_NOREPLY', '')
 
 DEFAULT_ROOT_APPS = [
     'django.contrib.admin',
@@ -301,6 +294,7 @@ MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
 # Configurações do Celery
+CELERY_IMPORTS = ['AppCore.common.tasks']
 CELERY_BROKER_URL = os.environ.get('CELERY_BROKER_URL', 'redis://localhost:6379/0')
 CELERY_RESULT_BACKEND = os.environ.get('CELERY_RESULT_BACKEND', 'redis://localhost:6379/0')
 CELERY_ACCEPT_CONTENT = ['json']
