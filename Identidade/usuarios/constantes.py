@@ -8,7 +8,7 @@ e path de fallback). Usado no upload/remoção (business), na URL pública
 esses valores pelas camadas nem criar um arquivo só para a foto.
 '''
 ANEXO_FOTO_SECUNDARIA = AnexoS3(
-    prefixo='Cortex/usuarios/fotos',
+    prefixo='usuarios/fotos',
     nome_url='identidade:usuario-foto-secundaria',
     caminho_fallback='/cortex/identidade/usuarios/{id}/foto-secundaria/',
 )

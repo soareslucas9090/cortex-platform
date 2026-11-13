@@ -8,7 +8,7 @@ stream do GET. Centraliza prefixo e rota para o próximo anexo não ganhar um
 arquivo próprio.
 '''
 ANEXO_FOTO = AnexoS3(
-    prefixo='Cortex/infraestrutura/recursos/fotos',
+    prefixo='infraestrutura/recursos/fotos',
     nome_url='infraestrutura:recurso-foto',
     caminho_fallback='/cortex/infraestrutura/recursos/{id}/foto/',
 )
