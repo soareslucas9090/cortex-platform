@@ -51,6 +51,13 @@ from .serializers import (
         OpenApiParameter('codigo', OpenApiTypes.STR, OpenApiParameter.QUERY, required=False),
         OpenApiParameter('tipo', OpenApiTypes.STR, OpenApiParameter.QUERY, required=False),
         OpenApiParameter('sala_id', OpenApiTypes.INT, OpenApiParameter.QUERY, required=False),
+        OpenApiParameter(
+            'disponivel_para_emprestimo',
+            OpenApiTypes.BOOL,
+            OpenApiParameter.QUERY,
+            required=False,
+            description='Quando verdadeiro, retorna somente recursos ativos, sem avaria e sem empréstimo em aberto.',
+        ),
         OpenApiParameter('paginacao', OpenApiTypes.INT, OpenApiParameter.QUERY, required=False),
     ],
     responses={
@@ -84,6 +91,12 @@ class ListarRecursosView(IsAuthenticatedMixin, BasicGetAPIView):
         sala_id = self.request.query_params.get('sala_id')
         if sala_id and sala_id.isdigit():
             filtros['sala_id'] = int(sala_id)
+        disponivel_para_emprestimo = self.request.query_params.get('disponivel_para_emprestimo')
+        if (
+            disponivel_para_emprestimo is not None
+            and disponivel_para_emprestimo.lower() in ('true', 'false')
+        ):
+            filtros['disponivel_para_emprestimo'] = disponivel_para_emprestimo.lower() == 'true'
         return Recurso().business.listar_recursos(**filtros)
 
 

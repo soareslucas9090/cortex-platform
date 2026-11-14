@@ -1,4 +1,5 @@
 from django.urls import reverse
+from django.utils import timezone
 
 from rest_framework import status
 from rest_framework.test import APITestCase
@@ -6,7 +7,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 
 from Identidade.usuarios.models import Usuario
 from Infraestrutura.blocos.models import Bloco
-from Infraestrutura.emprestimos.models import Emprestimo
+from Infraestrutura.emprestimos.models import Emprestimo, ItemEmprestimo
 from Infraestrutura.permissoes.models import PermissaoFuncaoInfraestrutura
 from Infraestrutura.recursos.choices import TipoRecurso
 from Infraestrutura.recursos.models import Recurso
@@ -184,6 +185,52 @@ class CadastroRecursosValidacaoTest(APITestCase):
         self.assertEqual(resposta.status_code, status.HTTP_200_OK)
         codigos = [item['codigo'] for item in resposta.data['dados']]
         self.assertEqual(codigos, ['MID-COD-UNICO'])
+
+    def test_listar_disponiveis_para_emprestimo_exclui_indisponiveis(self):
+        recurso_livre = Recurso.objects.create(codigo='MID-LIVRE', tipo=TipoRecurso.MIDIA)
+        recurso_emprestado = Recurso.objects.create(codigo='MID-EMPRESTADO', tipo=TipoRecurso.MIDIA)
+        recurso_devolvido = Recurso.objects.create(codigo='MID-DEVOLVIDO', tipo=TipoRecurso.MIDIA)
+        recurso_inativo = Recurso.objects.create(codigo='MID-INATIVO', tipo=TipoRecurso.MIDIA, ativo=False)
+        recurso_em_avaria = Recurso.objects.create(codigo='MID-AVARIA', tipo=TipoRecurso.MIDIA, em_avaria=True)
+        emprestimo = Emprestimo.objects.create(
+            solicitante=self.usuario,
+            responsavel=self.usuario,
+            retirada_em=timezone.now(),
+        )
+        ItemEmprestimo.objects.create(emprestimo=emprestimo, recurso=recurso_emprestado)
+        ItemEmprestimo.objects.create(
+            emprestimo=emprestimo,
+            recurso=recurso_devolvido,
+            devolvido_em=timezone.now(),
+        )
+
+        resposta = self.client.get(
+            self.url_recursos,
+            {'disponivel_para_emprestimo': 'true', 'paginacao': 100},
+        )
+
+        self.assertEqual(resposta.status_code, status.HTTP_200_OK)
+        ids = {item['id'] for item in resposta.data['dados']}
+        self.assertIn(recurso_livre.pk, ids)
+        self.assertIn(recurso_devolvido.pk, ids)
+        self.assertNotIn(recurso_emprestado.pk, ids)
+        self.assertNotIn(recurso_inativo.pk, ids)
+        self.assertNotIn(recurso_em_avaria.pk, ids)
+
+    def test_listar_sem_filtro_mantem_catalogo_completo(self):
+        recurso_emprestado = Recurso.objects.create(codigo='MID-CATALOGO', tipo=TipoRecurso.MIDIA)
+        emprestimo = Emprestimo.objects.create(
+            solicitante=self.usuario,
+            responsavel=self.usuario,
+            retirada_em=timezone.now(),
+        )
+        ItemEmprestimo.objects.create(emprestimo=emprestimo, recurso=recurso_emprestado)
+
+        resposta = self.client.get(self.url_recursos, {'paginacao': 100})
+
+        self.assertEqual(resposta.status_code, status.HTTP_200_OK)
+        ids = {item['id'] for item in resposta.data['dados']}
+        self.assertIn(recurso_emprestado.pk, ids)
 
     def test_nao_desativa_recurso_com_emprestimo_em_aberto(self):
         solicitante = criar_usuario('44444444444', nome='Solicitante Emp')

@@ -109,6 +109,15 @@ class SolicitacaoTrocaTitular(ModelStateMixin, ModelHelperMixin, ModelBusinessMi
         related_name='solicitacoes_troca_titular',
         verbose_name='Empréstimo original',
     )
+    item_emprestimo = models.ForeignKey(
+        'emprestimos.ItemEmprestimo',
+        on_delete=models.PROTECT,
+        related_name='solicitacoes_troca_titular',
+        verbose_name='Item do empréstimo',
+        null=True,
+        blank=True,
+        help_text='Nulo somente para solicitações legadas que abrangiam todos os itens abertos.',
+    )
     solicitante = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.PROTECT,
@@ -141,9 +150,12 @@ class SolicitacaoTrocaTitular(ModelStateMixin, ModelHelperMixin, ModelBusinessMi
         ordering = ['-created_at', '-pk']
         constraints = [
             models.UniqueConstraint(
-                fields=['emprestimo'],
-                condition=models.Q(status=StatusSolicitacaoTrocaTitular.PENDENTE),
-                name='soltroca_pendente_unica_emprestimo',
+                fields=['item_emprestimo'],
+                condition=models.Q(
+                    status=StatusSolicitacaoTrocaTitular.PENDENTE,
+                    item_emprestimo__isnull=False,
+                ),
+                name='soltroca_pendente_unica_item',
             )
         ]
         indexes = [
