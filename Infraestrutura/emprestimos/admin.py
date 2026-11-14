@@ -22,8 +22,8 @@ class EmprestimoAdmin(admin.ModelAdmin):
 
 @admin.register(SolicitacaoTrocaTitular)
 class SolicitacaoTrocaTitularAdmin(admin.ModelAdmin):
-    list_display = ('id', 'emprestimo', 'solicitante', 'destinatario', 'status', 'created_at')
+    list_display = ('id', 'emprestimo', 'item_emprestimo', 'solicitante', 'destinatario', 'status', 'created_at')
     list_filter = ('status', 'created_at')
     search_fields = ('solicitante__nome', 'destinatario__nome', 'observacao')
-    raw_id_fields = ('emprestimo', 'solicitante', 'destinatario', 'novo_emprestimo')
+    raw_id_fields = ('emprestimo', 'item_emprestimo', 'solicitante', 'destinatario', 'novo_emprestimo')
     readonly_fields = ('respondido_em',)

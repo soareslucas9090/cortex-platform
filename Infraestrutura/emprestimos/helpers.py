@@ -379,7 +379,7 @@ class EmprestimoHelpers(ModelInstanceHelpers):
         return (
             SolicitacaoTrocaTitular.objects.filter(status=StatusSolicitacaoTrocaTitular.PENDENTE)
             .filter(Q(solicitante=usuario) | Q(destinatario=usuario))
-            .select_related('solicitante', 'destinatario')
+            .select_related('solicitante', 'destinatario', 'item_emprestimo__recurso__sala__bloco')
             .annotate(
                 _emprestimo_aberto=Exists(
                     ItemEmprestimo.objects.filter(emprestimo_id=OuterRef('emprestimo_id'), devolvido_em__isnull=True)
@@ -470,7 +470,12 @@ class SolicitacaoTrocaTitularHelpers(ModelInstanceHelpers):
         qs = (
             SolicitacaoTrocaTitular.objects.filter(Q(solicitante=usuario) | Q(destinatario=usuario))
             .select_related(
-                'solicitante', 'destinatario', 'novo_emprestimo', 'emprestimo__solicitante', 'emprestimo__responsavel'
+                'solicitante',
+                'destinatario',
+                'novo_emprestimo',
+                'item_emprestimo__recurso__sala__bloco',
+                'emprestimo__solicitante',
+                'emprestimo__responsavel',
             )
             .prefetch_related('emprestimo__itens__recurso__sala__bloco')
             .annotate(
@@ -511,5 +516,5 @@ class SolicitacaoTrocaTitularHelpers(ModelInstanceHelpers):
         )
 
         return SolicitacaoTrocaTitular.objects.select_related(
-            'solicitante', 'destinatario', 'novo_emprestimo'
+            'solicitante', 'destinatario', 'novo_emprestimo', 'item_emprestimo__recurso__sala__bloco'
         ).prefetch_related(Prefetch('emprestimo', queryset=emprestimos))

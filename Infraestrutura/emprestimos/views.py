@@ -386,8 +386,9 @@ class DevolverItensEmprestimoView(PodeOperarInfraestruturaMixin, BasicPostAPIVie
     tags=['Infraestrutura · Empréstimos'],
     summary='Trocar titular',
     description='''
-    Devolve itens em aberto e registra novo empréstimo para outro solicitante
-    (encerra o atual e abre outro).
+    Devolve somente o item informado em `item_id` e registra um novo empréstimo
+    desse recurso para outro solicitante. Os demais itens permanecem com o titular atual.
+    O novo solicitante deve ser diferente do titular atual.
 
     - Conta não coletiva: o responsável do novo empréstimo é o próprio usuário autenticado.
     - Conta coletiva: informe `responsavel_id` com um usuário do pool elegível
@@ -426,7 +427,8 @@ class TrocarTitularEmprestimoView(PodeOperarInfraestruturaMixin, BasicPostAPIVie
     tags=['Infraestrutura · Solicitações de troca'],
     summary='Criar solicitação de troca de titular',
     description='''
-    Solicita que outro servidor assuma os itens abertos do empréstimo.
+    Solicita que outro servidor assuma somente o item informado em `item_id`.
+    Recursos diferentes do mesmo empréstimo podem ter solicitações simultâneas.
 
     **Permissões:** Qualquer usuário autenticado (L1–L3) que seja o titular atual.
     Contas coletivas não podem utilizar este fluxo.
@@ -502,8 +504,9 @@ class ListarSolicitacoesTrocaTitularView(IsAuthenticatedMixin, BasicGetAPIView):
     tags=['Infraestrutura · Solicitações de troca'],
     summary='Aceitar solicitação de troca de titular',
     description='''
-    Encerra os itens abertos do empréstimo original e cria um novo empréstimo
-    para o destinatário.
+    Encerra o item relacionado à solicitação e cria um novo empréstimo
+    desse recurso para o destinatário. Solicitações legadas sem item preservam
+    o comportamento anterior de transferir todos os itens abertos.
 
     **Permissões:** Somente o destinatário autenticado da solicitação pendente.
     ''',
