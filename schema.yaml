@@ -3854,9 +3854,11 @@ paths:
   /cortex/infraestrutura/emprestimos/{emprestimo_id}/solicitacoes-troca/:
     post:
       operationId: infraestrutura_emprestimos_solicitacoes_troca_create
-      description: "\n    Solicita que outro servidor assuma os itens abertos do empréstimo.\n\n
-        \   **Permissões:** Qualquer usuário autenticado (L1–L3) que seja o titular
-        atual.\n    Contas coletivas não podem utilizar este fluxo.\n    "
+      description: "\n    Solicita que outro servidor assuma somente o item informado
+        em `item_id`.\n    Recursos diferentes do mesmo empréstimo podem ter solicitações
+        simultâneas.\n\n    **Permissões:** Qualquer usuário autenticado (L1–L3) que
+        seja o titular atual.\n    Contas coletivas não podem utilizar este fluxo.\n
+        \   "
       summary: Criar solicitação de troca de titular
       parameters:
       - in: path
@@ -4020,13 +4022,14 @@ paths:
   /cortex/infraestrutura/emprestimos/{id}/trocar-titular/:
     post:
       operationId: infraestrutura_emprestimos_trocar_titular_create
-      description: "\n    Devolve itens em aberto e registra novo empréstimo para
-        outro solicitante\n    (encerra o atual e abre outro).\n\n    - Conta não
-        coletiva: o responsável do novo empréstimo é o próprio usuário autenticado.\n
-        \   - Conta coletiva: informe `responsavel_id` com um usuário do pool elegível\n
-        \     (mesma regra do realizar empréstimo).\n    - A nova origem é determinada
-        exclusivamente pela conta autenticada.\n\n    **Permissões:** Capacidade `operar`
-        em Infraestrutura.\n    "
+      description: "\n    Devolve somente o item informado em `item_id` e registra
+        um novo empréstimo\n    desse recurso para outro solicitante. Os demais itens
+        permanecem com o titular atual.\n    O novo solicitante deve ser diferente
+        do titular atual.\n\n    - Conta não coletiva: o responsável do novo empréstimo
+        é o próprio usuário autenticado.\n    - Conta coletiva: informe `responsavel_id`
+        com um usuário do pool elegível\n      (mesma regra do realizar empréstimo).\n
+        \   - A nova origem é determinada exclusivamente pela conta autenticada.\n\n
+        \   **Permissões:** Capacidade `operar` em Infraestrutura.\n    "
       summary: Trocar titular
       parameters:
       - in: path
@@ -4497,6 +4500,12 @@ paths:
         name: codigo
         schema:
           type: string
+      - in: query
+        name: disponivel_para_emprestimo
+        schema:
+          type: boolean
+        description: Quando verdadeiro, retorna somente recursos ativos, sem avaria
+          e sem empréstimo em aberto.
       - name: page
         required: false
         in: query
@@ -5126,9 +5135,11 @@ paths:
   /cortex/infraestrutura/solicitacoes-troca/{id}/aceitar/:
     post:
       operationId: infraestrutura_solicitacoes_troca_aceitar_create
-      description: "\n    Encerra os itens abertos do empréstimo original e cria um
-        novo empréstimo\n    para o destinatário.\n\n    **Permissões:** Somente o
-        destinatário autenticado da solicitação pendente.\n    "
+      description: "\n    Encerra o item relacionado à solicitação e cria um novo
+        empréstimo\n    desse recurso para o destinatário. Solicitações legadas sem
+        item preservam\n    o comportamento anterior de transferir todos os itens
+        abertos.\n\n    **Permissões:** Somente o destinatário autenticado da solicitação
+        pendente.\n    "
       summary: Aceitar solicitação de troca de titular
       parameters:
       - in: path
@@ -10669,6 +10680,8 @@ components:
     CriarSolicitacaoTrocaTitular:
       type: object
       properties:
+        item_id:
+          type: integer
         destinatario_id:
           type: integer
         observacao:
@@ -10676,6 +10689,7 @@ components:
           default: ''
       required:
       - destinatario_id
+      - item_id
     CriarTerceirizado:
       type: object
       properties:
@@ -11134,6 +11148,12 @@ components:
           additionalProperties: {}
           nullable: true
           readOnly: true
+        solicitacoes_troca:
+          type: array
+          items:
+            type: object
+            additionalProperties: {}
+          readOnly: true
         created_at:
           type: string
           format: date-time
@@ -11148,6 +11168,7 @@ components:
       - responsavel
       - retirada_em
       - solicitacao_troca
+      - solicitacoes_troca
       - solicitante
     EmprestimoRecursoResumo:
       type: object
@@ -14560,6 +14581,15 @@ components:
           type: string
           nullable: true
           readOnly: true
+        item_id:
+          type: integer
+          readOnly: true
+          nullable: true
+        item:
+          allOf:
+          - $ref: '#/components/schemas/ItemEmprestimo'
+          readOnly: true
+          nullable: true
         solicitante:
           allOf:
           - $ref: '#/components/schemas/SolicitacaoTrocaUsuarioResumo'
@@ -14582,6 +14612,8 @@ components:
       - direcao
       - emprestimo
       - id
+      - item
+      - item_id
       - novo_emprestimo_id
       - pode_aceitar
       - pode_cancelar
@@ -15054,6 +15086,8 @@ components:
     TrocarTitular:
       type: object
       properties:
+        item_id:
+          type: integer
         novo_solicitante_id:
           type: integer
         observacao:
@@ -15063,6 +15097,7 @@ components:
           type: integer
           nullable: true
       required:
+      - item_id
       - novo_solicitante_id
     TurmaElegivel:
       type: object

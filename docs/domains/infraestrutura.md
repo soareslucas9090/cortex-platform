@@ -32,7 +32,7 @@ Referências complementares (não substituem este arquivo para agentes):
 - **Sala** ↔ **Setor** via **SalaSetor** (M:N; unicidade `sala` + `setor`).
 - **Recurso** (código de negócio único; tipos chave / mídia / material didático).
 - **Emprestimo** + **ItemEmprestimo** (multi-item; devolução parcial; encerramento quando todos os itens têm `devolvido_em`).
-- **SolicitacaoTrocaTitular** (pedido pessoal, com aceite/recusa/cancelamento e vínculo ao novo empréstimo).
+- **SolicitacaoTrocaTitular** (pedido pessoal por item, com aceite/recusa/cancelamento e vínculo ao novo empréstimo).
 - **Autorizacao** (beneficiário; alvo XOR `sala` ou `recurso`; vigência e revogação).
 - **PermissaoFuncaoInfraestrutura** / **PermissaoUsuarioInfraestrutura** (capacidades do módulo; **sem HTTP** — admin Django e compilação em login).
 - **ImportacaoLote** (carga assíncrona; status e progresso).
@@ -148,8 +148,11 @@ Implementação de autorização vigente: `EmprestimoHelpers._usuario_tem_autori
   realizou a operação. Eles ficam ocultos para guarita/CODIS e seguem visíveis conforme
   as regras anteriores para administradores, operadores comuns e solicitantes.
 - Conta coletiva **não** pode ser solicitante nem responsável (`UsuarioRules` / `EmprestimoRules`).
-- **Troca de titular:** devolve itens em aberto e abre novo empréstimo (sem vínculo entre registros).
-- **Solicitação de troca:** o titular pessoal pode convidar outro servidor ativo e elegível; somente o destinatário aceita/recusa e somente o solicitante cancela. O aceite vincula a solicitação ao novo empréstimo.
+- **Troca de titular:** recebe um `item_id`, exige novo solicitante diferente do titular atual, devolve somente esse item e abre novo empréstimo com o recurso selecionado (sem vínculo entre os registros na troca administrativa). Os demais itens permanecem no empréstimo original.
+- **Solicitação de troca:** o titular pessoal seleciona um item e convida outro servidor ativo e elegível para aquele recurso; somente o destinatário aceita/recusa e somente o solicitante cancela. O aceite vincula a solicitação ao novo empréstimo.
+- No aceite pessoal, apenas o `solicitante` muda: o novo empréstimo preserva o `responsavel` que registrou a entrega e a `origem_conta_coletiva` do empréstimo anterior, mantendo a devolução no escopo da guarita ou CODIS de origem.
+- Recursos diferentes do mesmo empréstimo podem ter solicitações pendentes simultâneas, mas cada item pode ter no máximo uma pendência. Devolução ou troca administrativa do item cancela sua solicitação pendente.
+- Solicitações legadas sem item associado preservam o comportamento anterior de abranger todos os itens abertos.
 - Enquanto estiver pendente, a solicitação concede ao destinatário visibilidade do empréstimo original. Recusa ou cancelamento removem esse acesso; no aceite, o original deixa de aparecer e o novo empréstimo passa a ser próprio do destinatário.
 - A listagem prioriza, antes da paginação: solicitação pendente relacionada ao usuário, empréstimo aberto, retirada mais recente e ID como desempate estável.
 - Na seleção do destinatário, uma conta pessoal pode usar `solicitantes-elegiveis` somente para recursos abertos de empréstimo próprio; nesse caso são retornados apenas servidores ativos, excluindo o próprio usuário.
@@ -210,6 +213,11 @@ Paths relativos ao prefixo `/cortex/infraestrutura/`.
 | GET, PATCH | `recursos/{pk}/` |
 | GET, POST, DELETE | `recursos/{pk}/foto/` |
 | POST | `recursos/{pk}/desativar/`, `recursos/{pk}/reativar/` |
+
+Na listagem de recursos, o filtro opcional `disponivel_para_emprestimo=true`
+restringe o resultado a recursos ativos, sem avaria e sem item de empréstimo
+em aberto. Sem esse filtro, a listagem permanece como catálogo administrativo
+completo.
 
 ### Autorizações
 

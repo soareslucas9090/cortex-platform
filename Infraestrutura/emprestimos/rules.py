@@ -113,6 +113,18 @@ class EmprestimoRules(ModelInstanceRules):
             self.return_exception('Não há itens em aberto para troca de titular.')
         return True
 
+    def validar_item_para_troca(self, item, item_id: int) -> bool:
+        if item is None or item.pk != item_id or item.emprestimo_id != self.object_instance.pk:
+            self.return_exception('O item informado não pertence a este empréstimo.')
+        if item.devolvido_em is not None:
+            self.return_exception(f'O item do recurso {item.recurso.codigo} já foi devolvido.')
+        return True
+
+    def validar_novo_solicitante_diferente(self, novo_solicitante_id: int) -> bool:
+        if novo_solicitante_id == self.object_instance.solicitante_id:
+            self.return_exception('O novo solicitante deve ser diferente do titular atual.')
+        return True
+
     def validar_consulta(self, permitido: bool) -> bool:
         if not permitido:
             self.return_not_allowed('Você não tem permissão para consultar este empréstimo.')
@@ -153,7 +165,14 @@ class SolicitacaoTrocaTitularRules(ModelInstanceRules):
 
     def validar_sem_solicitacao_pendente(self, possui_pendente: bool) -> bool:
         if possui_pendente:
-            self.return_exception('Já existe uma solicitação de troca pendente para o empréstimo.')
+            self.return_exception('Já existe uma solicitação de troca pendente para este item.')
+        return True
+
+    def validar_item(self, item, item_id: int, emprestimo) -> bool:
+        if item is None or item.pk != item_id or item.emprestimo_id != emprestimo.pk:
+            self.return_exception('O item informado não pertence a este empréstimo.')
+        if item.devolvido_em is not None:
+            self.return_exception(f'O item do recurso {item.recurso.codigo} já foi devolvido.')
         return True
 
     def validar_elegibilidade_destinatario(self, elegivel: bool, codigo_recurso: str) -> bool:

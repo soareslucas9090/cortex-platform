@@ -699,13 +699,22 @@ class EmprestimoUsuarioColetivoViewsTest(APITestCase):
             },
         )
         emprestimo_id = criado.data['dados']['id']
+        item_id = criado.data['dados']['itens'][0]['id']
         url_trocar = reverse('infraestrutura:emprestimo-trocar-titular', kwargs={'pk': emprestimo_id})
 
-        sem_responsavel = self.client.post(url_trocar, {'novo_solicitante_id': novo_solicitante.pk})
+        sem_responsavel = self.client.post(
+            url_trocar,
+            {'item_id': item_id, 'novo_solicitante_id': novo_solicitante.pk},
+        )
         self.assertEqual(sem_responsavel.status_code, status.HTTP_400_BAD_REQUEST)
 
         com_responsavel = self.client.post(
-            url_trocar, {'novo_solicitante_id': novo_solicitante.pk, 'responsavel_id': self.guardinha.pk}
+            url_trocar,
+            {
+                'item_id': item_id,
+                'novo_solicitante_id': novo_solicitante.pk,
+                'responsavel_id': self.guardinha.pk,
+            },
         )
         self.assertEqual(com_responsavel.status_code, status.HTTP_201_CREATED)
         self.assertEqual(com_responsavel.data['dados']['solicitante']['id'], novo_solicitante.pk)
@@ -850,7 +859,11 @@ class EmprestimoOrigemContaColetivaViewsTest(APITestCase):
         )
         resposta_troca = self.client.post(
             reverse('infraestrutura:emprestimo-trocar-titular', kwargs={'pk': emprestimo_codis.pk}),
-            {'novo_solicitante_id': self.solicitante.pk, 'responsavel_id': self.responsavel.pk},
+            {
+                'item_id': item.pk,
+                'novo_solicitante_id': self.solicitante.pk,
+                'responsavel_id': self.responsavel.pk,
+            },
             format='json',
         )
 

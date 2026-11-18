@@ -1,5 +1,6 @@
 from datetime import timedelta
 from types import SimpleNamespace
+from unittest.mock import patch
 
 from django.db import IntegrityError, connection, transaction
 from django.test.utils import CaptureQueriesContext
@@ -9,7 +10,8 @@ from django.utils import timezone
 from rest_framework import status
 from rest_framework.test import APITestCase
 
-from Identidade.usuarios.models import Usuario
+from AppCore.core.exceptions.exceptions import BusinessRuleException
+from Identidade.usuarios.models import TipoContaColetiva, Usuario
 from Infraestrutura.blocos.models import Bloco
 from Infraestrutura.emprestimos.choices import StatusSolicitacaoTrocaTitular
 from Infraestrutura.emprestimos.models import (
@@ -18,6 +20,7 @@ from Infraestrutura.emprestimos.models import (
     SolicitacaoTrocaTitular,
 )
 from Infraestrutura.emprestimos.serializers import EmprestimoSerializer
+from Infraestrutura.permissoes.models import PermissaoUsuarioInfraestrutura
 from Infraestrutura.recursos.choices import TipoRecurso
 from Infraestrutura.recursos.models import Recurso
 from Infraestrutura.salas.models import Sala
@@ -73,11 +76,14 @@ class SolicitacaoTrocaTitularTest(APITestCase):
         )
         return usuario
 
-    def _criar_solicitacao(self):
+    def _criar_solicitacao(self, item=None, destinatario=None):
+        item = item or self.item
+        destinatario = destinatario or self.destinatario
         return SolicitacaoTrocaTitular().business.criar_solicitacao(
             emprestimo_id=self.emprestimo.pk,
             solicitante=self.titular,
-            destinatario_id=self.destinatario.pk,
+            destinatario_id=destinatario.pk,
+            item_id=item.pk,
             observacao='Assuma este empréstimo',
         )
 
@@ -123,38 +129,56 @@ class SolicitacaoTrocaTitularTest(APITestCase):
 
     def test_titular_cria_solicitacao_valida(self):
         self.client.force_authenticate(self.titular)
-        resposta = self.client.post(self.url_criar, {
-            'destinatario_id': self.destinatario.pk,
-            'observacao': 'Assuma este empréstimo',
-        })
+        resposta = self.client.post(
+            self.url_criar,
+            {
+                'item_id': self.item.pk,
+                'destinatario_id': self.destinatario.pk,
+                'observacao': 'Assuma este empréstimo',
+            },
+        )
 
         self.assertEqual(resposta.status_code, status.HTTP_201_CREATED)
         self.assertEqual(resposta.data['dados']['status'], StatusSolicitacaoTrocaTitular.PENDENTE)
         self.assertIsInstance(resposta.data['dados']['status'], int)
         self.assertEqual(resposta.data['dados']['direcao'], 'ENVIADA')
+        self.assertEqual(resposta.data['dados']['item_id'], self.item.pk)
+        self.assertEqual(resposta.data['dados']['item']['recurso']['id'], self.recurso.pk)
         self.assertTrue(resposta.data['dados']['pode_cancelar'])
 
     def test_usuario_que_nao_e_titular_nao_cria(self):
         self.client.force_authenticate(self.terceiro)
-        resposta = self.client.post(self.url_criar, {
-            'destinatario_id': self.destinatario.pk,
-        })
+        resposta = self.client.post(
+            self.url_criar,
+            {
+                'item_id': self.item.pk,
+                'destinatario_id': self.destinatario.pk,
+            },
+        )
         self.assertEqual(resposta.status_code, status.HTTP_403_FORBIDDEN)
 
     def test_conta_coletiva_nao_cria(self):
         self.titular.usuario_coletivo = True
         self.titular.save(update_fields=['usuario_coletivo'])
         self.client.force_authenticate(self.titular)
-        resposta = self.client.post(self.url_criar, {
-            'destinatario_id': self.destinatario.pk,
-        })
+        resposta = self.client.post(
+            self.url_criar,
+            {
+                'item_id': self.item.pk,
+                'destinatario_id': self.destinatario.pk,
+            },
+        )
         self.assertEqual(resposta.status_code, status.HTTP_400_BAD_REQUEST)
 
     def test_nao_permite_destinatario_igual_ao_titular(self):
         self.client.force_authenticate(self.titular)
-        resposta = self.client.post(self.url_criar, {
-            'destinatario_id': self.titular.pk,
-        })
+        resposta = self.client.post(
+            self.url_criar,
+            {
+                'item_id': self.item.pk,
+                'destinatario_id': self.titular.pk,
+            },
+        )
         self.assertEqual(resposta.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn('si mesmo', str(resposta.data))
 
@@ -162,26 +186,54 @@ class SolicitacaoTrocaTitularTest(APITestCase):
         self.item.devolvido_em = timezone.now()
         self.item.save(update_fields=['devolvido_em'])
         self.client.force_authenticate(self.titular)
-        resposta = self.client.post(self.url_criar, {
-            'destinatario_id': self.destinatario.pk,
-        })
+        resposta = self.client.post(
+            self.url_criar,
+            {
+                'item_id': self.item.pk,
+                'destinatario_id': self.destinatario.pk,
+            },
+        )
         self.assertEqual(resposta.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_nao_permite_item_de_outro_emprestimo(self):
+        outro_emprestimo = self._criar_emprestimo(self.titular, 'CH-TROCA-OUTRO-EMPRESTIMO')
+        outro_item = outro_emprestimo.itens.get()
+        self.client.force_authenticate(self.titular)
+
+        resposta = self.client.post(
+            self.url_criar,
+            {
+                'item_id': outro_item.pk,
+                'destinatario_id': self.destinatario.pk,
+            },
+        )
+
+        self.assertEqual(resposta.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('não pertence', str(resposta.data))
 
     def test_destinatario_precisa_ser_servidor_ativo(self):
         usuario_comum = criar_usuario('41000000004', 'Usuário comum')
         self.client.force_authenticate(self.titular)
-        resposta = self.client.post(self.url_criar, {
-            'destinatario_id': usuario_comum.pk,
-        })
+        resposta = self.client.post(
+            self.url_criar,
+            {
+                'item_id': self.item.pk,
+                'destinatario_id': usuario_comum.pk,
+            },
+        )
         self.assertEqual(resposta.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn('servidor ativo', str(resposta.data))
 
     def test_business_rejeita_segunda_solicitacao_pendente(self):
         self._criar_solicitacao()
         self.client.force_authenticate(self.titular)
-        resposta = self.client.post(self.url_criar, {
-            'destinatario_id': self.terceiro.pk,
-        })
+        resposta = self.client.post(
+            self.url_criar,
+            {
+                'item_id': self.item.pk,
+                'destinatario_id': self.terceiro.pk,
+            },
+        )
         self.assertEqual(resposta.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn('pendente', str(resposta.data).lower())
 
@@ -191,9 +243,119 @@ class SolicitacaoTrocaTitularTest(APITestCase):
             with transaction.atomic():
                 SolicitacaoTrocaTitular.objects.create(
                     emprestimo=self.emprestimo,
+                    item_emprestimo=self.item,
                     solicitante=self.titular,
                     destinatario=self.terceiro,
                 )
+
+    def test_permite_solicitacoes_pendentes_para_itens_diferentes(self):
+        outro_recurso = Recurso.objects.create(
+            codigo='CH-TROCA-PARCIAL',
+            tipo=TipoRecurso.CHAVE,
+            sala=self.recurso.sala,
+        )
+        outro_item = ItemEmprestimo.objects.create(
+            emprestimo=self.emprestimo,
+            recurso=outro_recurso,
+        )
+
+        primeira = self._criar_solicitacao()
+        segunda = self._criar_solicitacao(item=outro_item, destinatario=self.terceiro)
+
+        self.assertEqual(primeira.item_emprestimo, self.item)
+        self.assertEqual(segunda.item_emprestimo, outro_item)
+        self.assertEqual(
+            SolicitacaoTrocaTitular.objects.filter(
+                emprestimo=self.emprestimo,
+                status=StatusSolicitacaoTrocaTitular.PENDENTE,
+            ).count(),
+            2,
+        )
+
+    def test_aceite_transfere_um_item_e_preserva_outra_solicitacao(self):
+        outro_recurso = Recurso.objects.create(
+            codigo='CH-TROCA-OUTRO-DEST',
+            tipo=TipoRecurso.CHAVE,
+            sala=self.recurso.sala,
+        )
+        outro_item = ItemEmprestimo.objects.create(
+            emprestimo=self.emprestimo,
+            recurso=outro_recurso,
+        )
+        primeira = self._criar_solicitacao()
+        segunda = self._criar_solicitacao(item=outro_item, destinatario=self.terceiro)
+
+        self.client.force_authenticate(self.destinatario)
+        resposta = self.client.post(
+            reverse('infraestrutura:solicitacao-troca-aceitar', kwargs={'pk': primeira.pk}),
+            {},
+        )
+
+        self.item.refresh_from_db()
+        outro_item.refresh_from_db()
+        primeira.refresh_from_db()
+        segunda.refresh_from_db()
+        self.assertEqual(resposta.status_code, status.HTTP_201_CREATED)
+        self.assertIsNotNone(self.item.devolvido_em)
+        self.assertIsNone(outro_item.devolvido_em)
+        self.assertEqual(segunda.status, StatusSolicitacaoTrocaTitular.PENDENTE)
+        self.assertEqual(
+            list(primeira.novo_emprestimo.itens.values_list('recurso_id', flat=True)),
+            [self.recurso.pk],
+        )
+
+    def test_devolucao_do_item_cancela_solicitacao_pendente(self):
+        solicitacao = self._criar_solicitacao()
+        operador = criar_usuario('41000000005', 'Operador de devolução')
+        PermissaoUsuarioInfraestrutura.objects.create(usuario=operador, operar=True)
+
+        self.emprestimo.business.devolver_itens(operador, [self.item.pk])
+
+        solicitacao.refresh_from_db()
+        self.assertEqual(solicitacao.status, StatusSolicitacaoTrocaTitular.CANCELADA)
+        self.assertIsNotNone(solicitacao.respondido_em)
+
+    def test_troca_administrativa_do_item_cancela_solicitacao_pendente(self):
+        solicitacao = self._criar_solicitacao()
+        operador = criar_usuario('41000000006', 'Operador de troca')
+        PermissaoUsuarioInfraestrutura.objects.create(usuario=operador, operar=True)
+
+        self.emprestimo.business.trocar_titular(
+            conta_autenticada=operador,
+            novo_solicitante_id=self.terceiro.pk,
+            item_id=self.item.pk,
+        )
+
+        solicitacao.refresh_from_db()
+        self.assertEqual(solicitacao.status, StatusSolicitacaoTrocaTitular.CANCELADA)
+        self.assertIsNotNone(solicitacao.respondido_em)
+
+    def test_troca_administrativa_reverte_todas_as_alteracoes_se_criacao_falhar(self):
+        solicitacao = self._criar_solicitacao()
+        operador = criar_usuario('41000000008', 'Operador de rollback')
+        PermissaoUsuarioInfraestrutura.objects.create(usuario=operador, operar=True)
+        self.client.force_authenticate(operador)
+        url = reverse('infraestrutura:emprestimo-trocar-titular', kwargs={'pk': self.emprestimo.pk})
+
+        with patch(
+            'Infraestrutura.emprestimos.business.EmprestimoBusiness.criar_emprestimo_validado',
+            side_effect=BusinessRuleException('Falha simulada na criação.'),
+        ):
+            resposta = self.client.post(
+                url,
+                {
+                    'item_id': self.item.pk,
+                    'novo_solicitante_id': self.terceiro.pk,
+                },
+            )
+
+        self.item.refresh_from_db()
+        solicitacao.refresh_from_db()
+        self.assertEqual(resposta.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIsNone(self.item.devolvido_em)
+        self.assertEqual(solicitacao.status, StatusSolicitacaoTrocaTitular.PENDENTE)
+        self.assertIsNone(solicitacao.respondido_em)
+        self.assertEqual(Emprestimo.objects.count(), 1)
 
     def test_listagem_respeita_relacao_e_direcao(self):
         solicitacao = self._criar_solicitacao()
@@ -264,9 +426,40 @@ class SolicitacaoTrocaTitularTest(APITestCase):
         self.assertIsNotNone(self.item.devolvido_em)
         novo = solicitacao.novo_emprestimo
         self.assertEqual(novo.solicitante, self.destinatario)
-        self.assertEqual(novo.responsavel, self.destinatario)
+        self.assertEqual(novo.responsavel, self.titular)
         self.assertEqual(novo.observacao, 'Assuma este empréstimo')
         self.assertEqual(list(novo.itens.values_list('recurso_id', flat=True)), [self.recurso.pk])
+
+    def test_aceite_preserva_responsavel_e_origem_para_devolucao_pela_guarita(self):
+        self.emprestimo.responsavel = self.terceiro
+        self.emprestimo.origem_conta_coletiva = TipoContaColetiva.GUARITA
+        self.emprestimo.save(update_fields=['responsavel', 'origem_conta_coletiva'])
+        solicitacao = self._criar_solicitacao()
+        self.client.force_authenticate(self.destinatario)
+
+        resposta = self.client.post(
+            reverse('infraestrutura:solicitacao-troca-aceitar', kwargs={'pk': solicitacao.pk}),
+            {},
+        )
+
+        solicitacao.refresh_from_db()
+        novo = solicitacao.novo_emprestimo
+        self.assertEqual(resposta.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(novo.solicitante, self.destinatario)
+        self.assertEqual(novo.responsavel, self.terceiro)
+        self.assertEqual(novo.origem_conta_coletiva, TipoContaColetiva.GUARITA)
+
+        guarita = criar_usuario('41000000007', 'Conta coletiva da guarita')
+        guarita.usuario_coletivo = True
+        guarita.tipo_conta_coletiva = TipoContaColetiva.GUARITA
+        guarita.save(update_fields=['usuario_coletivo', 'tipo_conta_coletiva'])
+        PermissaoUsuarioInfraestrutura.objects.create(usuario=guarita, operar=True)
+        novo_item = novo.itens.get()
+
+        novo.business.devolver_itens(guarita, [novo_item.pk])
+
+        novo_item.refresh_from_db()
+        self.assertIsNotNone(novo_item.devolvido_em)
 
     def test_aceite_revalida_servidor_ativo(self):
         solicitacao = self._criar_solicitacao()
@@ -309,6 +502,40 @@ class SolicitacaoTrocaTitularTest(APITestCase):
         item_devolvido.refresh_from_db()
         self.assertIsNotNone(item_devolvido.devolvido_em)
 
+    def test_aceite_de_solicitacao_legada_transfere_todos_os_itens_abertos(self):
+        outro_recurso = Recurso.objects.create(
+            codigo='CH-TROCA-LEGADA',
+            tipo=TipoRecurso.CHAVE,
+            sala=self.recurso.sala,
+        )
+        outro_item = ItemEmprestimo.objects.create(
+            emprestimo=self.emprestimo,
+            recurso=outro_recurso,
+        )
+        solicitacao = SolicitacaoTrocaTitular.objects.create(
+            emprestimo=self.emprestimo,
+            solicitante=self.titular,
+            destinatario=self.destinatario,
+            observacao='Solicitação legada',
+        )
+        self.client.force_authenticate(self.destinatario)
+
+        resposta = self.client.post(
+            reverse('infraestrutura:solicitacao-troca-aceitar', kwargs={'pk': solicitacao.pk}),
+            {},
+        )
+
+        solicitacao.refresh_from_db()
+        self.item.refresh_from_db()
+        outro_item.refresh_from_db()
+        self.assertEqual(resposta.status_code, status.HTTP_201_CREATED)
+        self.assertIsNotNone(self.item.devolvido_em)
+        self.assertIsNotNone(outro_item.devolvido_em)
+        self.assertEqual(
+            set(solicitacao.novo_emprestimo.itens.values_list('recurso_id', flat=True)),
+            {self.recurso.pk, outro_recurso.pk},
+        )
+
     def test_listagem_de_emprestimos_expoe_solicitacao_pendente(self):
         solicitacao = self._criar_solicitacao()
         self.client.force_authenticate(self.titular)
@@ -322,15 +549,17 @@ class SolicitacaoTrocaTitularTest(APITestCase):
             resposta.data['dados'][0]['solicitacao_troca']['direcao'],
             'ENVIADA',
         )
+        self.assertEqual(
+            [item['id'] for item in resposta.data['dados'][0]['solicitacoes_troca']],
+            [solicitacao.pk],
+        )
 
     def test_destinatario_l1_visualiza_emprestimo_recebido_na_lista_e_no_detalhe(self):
         solicitacao = self._criar_solicitacao()
         self.client.force_authenticate(self.destinatario)
 
         listagem = self.client.get(self.url_emprestimos)
-        detalhe = self.client.get(
-            reverse('infraestrutura:emprestimo-detail', kwargs={'pk': self.emprestimo.pk})
-        )
+        detalhe = self.client.get(reverse('infraestrutura:emprestimo-detail', kwargs={'pk': self.emprestimo.pk}))
 
         self.assertEqual(listagem.status_code, status.HTTP_200_OK)
         self.assertEqual([item['id'] for item in listagem.data['dados']], [self.emprestimo.pk])
@@ -349,9 +578,7 @@ class SolicitacaoTrocaTitularTest(APITestCase):
             self.url_emprestimos,
             {'ativo': 'true', 'recurso_id': self.recurso.pk, 'tipo_recurso': TipoRecurso.CHAVE},
         )
-        detalhe = self.client.get(
-            reverse('infraestrutura:emprestimo-detail', kwargs={'pk': self.emprestimo.pk})
-        )
+        detalhe = self.client.get(reverse('infraestrutura:emprestimo-detail', kwargs={'pk': self.emprestimo.pk}))
 
         self.assertEqual(listagem.status_code, status.HTTP_200_OK)
         self.assertNotIn(self.emprestimo.pk, [item['id'] for item in listagem.data['dados']])
@@ -360,9 +587,7 @@ class SolicitacaoTrocaTitularTest(APITestCase):
 
     def test_solicitacao_pendente_e_priorizada_antes_da_paginacao(self):
         proprio = self._criar_emprestimo(self.destinatario, 'CH-TROCA-PRIORIDADE')
-        Emprestimo.objects.filter(pk=self.emprestimo.pk).update(
-            retirada_em=timezone.now() - timedelta(days=1)
-        )
+        Emprestimo.objects.filter(pk=self.emprestimo.pk).update(retirada_em=timezone.now() - timedelta(days=1))
         self._criar_solicitacao()
         self.client.force_authenticate(self.destinatario)
 
@@ -389,9 +614,7 @@ class SolicitacaoTrocaTitularTest(APITestCase):
             reverse('infraestrutura:solicitacao-troca-recusar', kwargs={'pk': solicitacao.pk}), {}
         )
         depois = self.client.get(self.url_emprestimos)
-        detalhe = self.client.get(
-            reverse('infraestrutura:emprestimo-detail', kwargs={'pk': self.emprestimo.pk})
-        )
+        detalhe = self.client.get(reverse('infraestrutura:emprestimo-detail', kwargs={'pk': self.emprestimo.pk}))
 
         self.assertIn(self.emprestimo.pk, [item['id'] for item in antes.data['dados']])
         self.assertEqual(resposta.status_code, status.HTTP_200_OK)
@@ -407,9 +630,7 @@ class SolicitacaoTrocaTitularTest(APITestCase):
 
         self.client.force_authenticate(self.destinatario)
         depois = self.client.get(self.url_emprestimos)
-        detalhe = self.client.get(
-            reverse('infraestrutura:emprestimo-detail', kwargs={'pk': self.emprestimo.pk})
-        )
+        detalhe = self.client.get(reverse('infraestrutura:emprestimo-detail', kwargs={'pk': self.emprestimo.pk}))
 
         self.assertEqual(resposta.status_code, status.HTTP_200_OK)
         self.assertNotIn(self.emprestimo.pk, [item['id'] for item in depois.data['dados']])
@@ -455,11 +676,12 @@ class SolicitacaoTrocaTitularTest(APITestCase):
             responsavel=self.titular,
             retirada_em=timezone.now(),
         )
-        ItemEmprestimo.objects.create(emprestimo=emprestimo_dois, recurso=recurso_dois)
+        item_dois = ItemEmprestimo.objects.create(emprestimo=emprestimo_dois, recurso=recurso_dois)
         SolicitacaoTrocaTitular().business.criar_solicitacao(
             emprestimo_id=emprestimo_dois.pk,
             solicitante=self.titular,
             destinatario_id=self.terceiro.pk,
+            item_id=item_dois.pk,
         )
         queryset_dois = Emprestimo().business.listar_para_usuario(self.titular)
         with CaptureQueriesContext(connection) as queries_dois:
