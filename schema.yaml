@@ -9748,8 +9748,8 @@ components:
           allOf:
           - $ref: '#/components/schemas/SituacaoAlunoEnum'
           title: Situação
-          minimum: -9223372036854775808
-          maximum: 9223372036854775807
+          minimum: -2147483648
+          maximum: 2147483647
         situacao_display:
           type: string
           readOnly: true
@@ -9757,8 +9757,8 @@ components:
           allOf:
           - $ref: '#/components/schemas/FormaIngressoEnum'
           title: Forma de Ingresso
-          minimum: -9223372036854775808
-          maximum: 9223372036854775807
+          minimum: -2147483648
+          maximum: 2147483647
         forma_ingresso_display:
           type: string
           readOnly: true
@@ -9807,9 +9807,8 @@ components:
           maxLength: 50
         ano_conclusao:
           type: integer
-          maximum: 9223372036854775807
-          minimum: -9223372036854775808
-          format: int64
+          maximum: 2147483647
+          minimum: -2147483648
           nullable: true
           title: Ano de Conclusão
         ira:
@@ -10815,8 +10814,8 @@ components:
         nivel_ensino:
           nullable: true
           title: Nível de ensino
-          minimum: -9223372036854775808
-          maximum: 9223372036854775807
+          minimum: -2147483648
+          maximum: 2147483647
           oneOf:
           - $ref: '#/components/schemas/NivelEnsinoEnum'
           - $ref: '#/components/schemas/NullEnum'
@@ -10826,8 +10825,8 @@ components:
           nullable: true
         modalidade:
           nullable: true
-          minimum: -9223372036854775808
-          maximum: 9223372036854775807
+          minimum: -2147483648
+          maximum: 2147483647
           oneOf:
           - $ref: '#/components/schemas/ModalidadeEnum'
           - $ref: '#/components/schemas/NullEnum'
@@ -11545,9 +11544,8 @@ components:
           title: Data e hora de saída
         quantidade_vagas:
           type: integer
-          maximum: 9223372036854775807
+          maximum: 2147483647
           minimum: 0
-          format: int64
           title: Quantidade de vagas
         vagas_ocupadas:
           type: integer
@@ -11615,8 +11613,8 @@ components:
         status:
           allOf:
           - $ref: '#/components/schemas/StatusExecucaoRotaEnum'
-          minimum: -9223372036854775808
-          maximum: 9223372036854775807
+          minimum: -2147483648
+          maximum: 2147483647
         status_display:
           type: string
           readOnly: true
@@ -11984,8 +11982,8 @@ components:
         status:
           allOf:
           - $ref: '#/components/schemas/StatusJustificativaEnum'
-          minimum: -9223372036854775808
-          maximum: 9223372036854775807
+          minimum: -2147483648
+          maximum: 2147483647
         status_display:
           type: string
           readOnly: true
@@ -12032,8 +12030,8 @@ components:
         status:
           allOf:
           - $ref: '#/components/schemas/StatusJustificativaEnum'
-          minimum: -9223372036854775808
-          maximum: 9223372036854775807
+          minimum: -2147483648
+          maximum: 2147483647
         status_display:
           type: string
           readOnly: true
@@ -12074,8 +12072,8 @@ components:
         status:
           allOf:
           - $ref: '#/components/schemas/StatusJustificativaEnum'
-          minimum: -9223372036854775808
-          maximum: 9223372036854775807
+          minimum: -2147483648
+          maximum: 2147483647
         status_display:
           type: string
           readOnly: true
@@ -14054,9 +14052,8 @@ components:
           readOnly: true
         quantidade_vagas:
           type: integer
-          maximum: 9223372036854775807
+          maximum: 2147483647
           minimum: 0
-          format: int64
           title: Quantidade de vagas
         ativo:
           type: boolean
@@ -14212,8 +14209,8 @@ components:
         categoria:
           allOf:
           - $ref: '#/components/schemas/CategoriaServidorEnum'
-          minimum: -9223372036854775808
-          maximum: 9223372036854775807
+          minimum: -2147483648
+          maximum: 2147483647
         categoria_display:
           type: string
           readOnly: true
@@ -14340,8 +14337,8 @@ components:
         origem:
           allOf:
           - $ref: '#/components/schemas/OrigemEnum'
-          minimum: -9223372036854775808
-          maximum: 9223372036854775807
+          minimum: -2147483648
+          maximum: 2147483647
         tipo:
           type: integer
         tipo_display:
@@ -14350,8 +14347,8 @@ components:
         status:
           allOf:
           - $ref: '#/components/schemas/StatusSolicitacaoAcessoEnum'
-          minimum: -9223372036854775808
-          maximum: 9223372036854775807
+          minimum: -2147483648
+          maximum: 2147483647
         status_display:
           type: string
           readOnly: true
@@ -14423,8 +14420,8 @@ components:
         origem:
           allOf:
           - $ref: '#/components/schemas/OrigemEnum'
-          minimum: -9223372036854775808
-          maximum: 9223372036854775807
+          minimum: -2147483648
+          maximum: 2147483647
         tipo:
           type: integer
         tipo_display:
@@ -14433,8 +14430,8 @@ components:
         status:
           allOf:
           - $ref: '#/components/schemas/StatusSolicitacaoAcessoEnum'
-          minimum: -9223372036854775808
-          maximum: 9223372036854775807
+          minimum: -2147483648
+          maximum: 2147483647
         status_display:
           type: string
           readOnly: true
@@ -14551,8 +14548,8 @@ components:
         status:
           allOf:
           - $ref: '#/components/schemas/SolicitacaoTrocaTitularStatusEnum'
-          minimum: -9223372036854775808
-          maximum: 9223372036854775807
+          minimum: -2147483648
+          maximum: 2147483647
         status_display:
           type: string
           readOnly: true
@@ -14717,15 +14714,13 @@ components:
           $ref: '#/components/schemas/StatusImportacaoEnum'
         total_linhas:
           type: integer
-          maximum: 9223372036854775807
-          minimum: -9223372036854775808
-          format: int64
+          maximum: 2147483647
+          minimum: -2147483648
           title: Total de Linhas
         linhas_processadas:
           type: integer
-          maximum: 9223372036854775807
-          minimum: -9223372036854775808
-          format: int64
+          maximum: 2147483647
+          minimum: -2147483648
         porcentagem:
           type: number
           format: double
@@ -14757,15 +14752,13 @@ components:
           $ref: '#/components/schemas/StatusImportacaoEnum'
         total_linhas:
           type: integer
-          maximum: 9223372036854775807
-          minimum: -9223372036854775808
-          format: int64
+          maximum: 2147483647
+          minimum: -2147483648
           title: Total de Linhas
         linhas_processadas:
           type: integer
-          maximum: 9223372036854775807
-          minimum: -9223372036854775808
-          format: int64
+          maximum: 2147483647
+          minimum: -2147483648
         porcentagem:
           type: number
           format: double
@@ -14844,8 +14837,8 @@ components:
         status:
           allOf:
           - $ref: '#/components/schemas/StatusStrikeEnum'
-          minimum: -9223372036854775808
-          maximum: 9223372036854775807
+          minimum: -2147483648
+          maximum: 2147483647
         status_display:
           type: string
           readOnly: true
@@ -14960,8 +14953,8 @@ components:
         status:
           allOf:
           - $ref: '#/components/schemas/StatusTicketEnum'
-          minimum: -9223372036854775808
-          maximum: 9223372036854775807
+          minimum: -2147483648
+          maximum: 2147483647
         status_display:
           type: string
           readOnly: true
