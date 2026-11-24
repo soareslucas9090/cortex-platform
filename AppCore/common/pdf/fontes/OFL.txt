@@ -1,0 +1,9 @@
+Cópias das fontes Nunito e Poppins para embutir em documentos PDF do MeuIF.
+
+Ambas as famílias são distribuídas sob a SIL Open Font License 1.1 (OFL).
+
+Arquivos incluídos:
+- Nunito-Regular.ttf, Nunito-Bold.ttf (família Nunito)
+- Poppins-SemiBold.ttf (família Poppins)
+
+Subset Latin obtido via Fontsource / jsDelivr, adequado a acentuação em português.

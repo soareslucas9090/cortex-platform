@@ -50,6 +50,7 @@ Infraestrutura/
 ├── recursos/         # Recurso (+ foto S3)
 ├── autorizacoes/     # Autorizacao
 ├── emprestimos/      # Emprestimo, ItemEmprestimo, SolicitacaoTrocaTitular
+├── relatorios_emprestimos/  # RelatorioEmprestimos (objeto sem tabela; PDF sob demanda)
 ├── permissoes/       # PermissaoFuncaoInfraestrutura, PermissaoUsuarioInfraestrutura (sem urls)
 └── importacoes/      # ImportacaoLote + tasks Celery
 ```
@@ -240,6 +241,15 @@ completo.
 | POST | `emprestimos/{pk}/solicitacoes-troca/` |
 | GET | `solicitacoes-troca/` |
 | POST | `solicitacoes-troca/{pk}/aceitar/`, `solicitacoes-troca/{pk}/recusar/`, `solicitacoes-troca/{pk}/cancelar/` |
+| GET | `emprestimos/relatorio/pdf/` |
+| GET | `emprestimos/relatorio/pessoas/` |
+
+O relatório PDF é gerado sob demanda, sem persistência e sem S3. Período obrigatório sobre
+`retirada_em` em America/Sao_Paulo, diferença máxima de 30 dias. Filtros opcionais: solicitante,
+responsável, tipo de recurso, sala e bloco; filtros de item restringem os itens impressos
+(histórico, inclusive devolvidos). Quando sala e bloco vêm juntos, a sala deve pertencer ao
+bloco. Limite de 3000 empréstimos por geração. Escopo de origem coletiva igual à listagem.
+Capacidade `operar`. Parâmetro de query inválido retorna 400.
 
 ### Importação
 

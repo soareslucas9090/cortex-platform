@@ -129,7 +129,9 @@ class PermissaoDocumentacao:
                 'quem_usa': 'Responsável no balcão',
                 'pode': (
                     'Realizar empréstimo, devolver itens, trocar titular; listar e filtrar '
-                    'empréstimos de qualquer pessoa.'
+                    'empréstimos de qualquer pessoa; gerar o relatório PDF de empréstimos '
+                    '(GET emprestimos/relatorio/pdf/) e buscar pessoas para filtros do relatório '
+                    '(GET emprestimos/relatorio/pessoas/).'
                 ),
                 'nao_sem_capacidade': (
                     'Registrar operações de terceiros; ver histórico amplo de empréstimos.'
