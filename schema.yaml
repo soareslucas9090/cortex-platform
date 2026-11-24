@@ -939,7 +939,7 @@ paths:
 
         - `aluno_curso` deve ser um vínculo ativo do próprio aluno em curso de Ensino Médio.
         - `tipo` é o id de um tipo-base do catálogo (`Entrada no campus` ou `Saída do campus`); os tipos criados pela gestão não são aceitos no pedido do aluno.
-        - Entrada para o próprio dia só pode ser pedida até 07:00 (America/Fortaleza).
+        - Entrada para o próprio dia só pode ser pedida até 07:15 (America/Fortaleza).
         - Datas passadas, horário já passado no próprio dia e pedido para dia e tipo em que o aluno já tem autorização aceita são recusados. Pedidos pendentes não bloqueiam.
         - `anexo` (obrigatório): comprovante PDF, JPG ou PNG de até 5 MB, conferido pelo conteúdo. Envie `multipart/form-data`.
 

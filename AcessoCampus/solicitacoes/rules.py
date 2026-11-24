@@ -100,7 +100,7 @@ class SolicitacaoAcessoRules(ModelInstanceRules):
         return True
 
     def validar_prazo_entrada(self, tipo, data_acesso, agora) -> bool:
-        """Entrada para o próprio dia só pode ser pedida até 07:00."""
+        """Entrada para o próprio dia só pode ser pedida até 07:15."""
         if (
             tipo.nome == NOME_TIPO_ENTRADA_CAMPUS
             and data_acesso == agora.date()
