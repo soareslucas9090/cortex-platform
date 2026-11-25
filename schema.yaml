@@ -4084,6 +4084,161 @@ paths:
               schema:
                 description: Empréstimo não encontrado.
           description: ''
+  /cortex/infraestrutura/emprestimos/relatorio/pdf/:
+    get:
+      operationId: infraestrutura_emprestimos_relatorio_pdf_retrieve
+      description: |2
+
+        Gera o relatório de empréstimos em PDF sob demanda, sem persistir o arquivo.
+
+        O período filtra `retirada_em` no fuso America/Sao_Paulo (inclusive 00:00 do dia inicial
+        até antes de 00:00 do dia seguinte ao final). A diferença máxima entre as datas é de 30 dias.
+        Inclui empréstimos com itens devolvidos e em aberto. Filtros de tipo de recurso, sala e bloco
+        restringem os **itens** impressos (histórico, inclusive devolvidos). Quando sala e bloco são
+        informados juntos, a sala deve pertencer ao bloco. O limite é de 3000 empréstimos por geração;
+        acima disso refine os filtros. O escopo de origem coletiva segue a mesma regra da listagem.
+
+        Diferente da listagem de empréstimos, parâmetros de query inválidos retornam 400 (não são
+        ignorados), pois um filtro ignorado alteraria o conteúdo do PDF.
+
+        **Permissões:** capacidade `operar` em Infraestrutura (administradores e superusuários incluídos pelo bypass de acesso total).
+      summary: Baixar relatório de empréstimos em PDF
+      parameters:
+      - in: query
+        name: bloco_id
+        schema:
+          type: integer
+        description: Filtra itens pelo bloco da sala do recurso.
+      - in: query
+        name: data_fim
+        schema:
+          type: string
+          format: date
+        description: Data final do período (AAAA-MM-DD), inclusiva em America/Sao_Paulo.
+        required: true
+      - in: query
+        name: data_inicio
+        schema:
+          type: string
+          format: date
+        description: Data inicial do período (AAAA-MM-DD), inclusiva em America/Sao_Paulo.
+        required: true
+      - in: query
+        name: responsavel_id
+        schema:
+          type: integer
+        description: Filtra por responsável que registrou a entrega.
+      - in: query
+        name: sala_id
+        schema:
+          type: integer
+        description: Filtra itens pela sala do recurso.
+      - in: query
+        name: solicitante_id
+        schema:
+          type: integer
+        description: Filtra por solicitante.
+      - in: query
+        name: tipo_recurso
+        schema:
+          type: string
+          enum:
+          - chave
+          - material_didatico
+          - midia
+        description: Filtra itens pelo tipo de recurso.
+      tags:
+      - Infraestrutura · Empréstimos
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                description: Arquivo PDF do relatório de empréstimos.
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                description: Parâmetros inválidos ou limite excedido.
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                description: Não autenticado.
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                description: Sem capacidade operar.
+          description: ''
+  /cortex/infraestrutura/emprestimos/relatorio/pessoas/:
+    get:
+      operationId: infraestrutura_emprestimos_relatorio_pessoas_list
+      description: "\n    Lista solicitantes ou responsáveis que já aparecem em empréstimos
+        no escopo do operador\n    (origem coletiva, quando aplicável), inclusive
+        usuários inativos. Os parâmetros apenas\n    reduzem o conjunto.\n\n    **Permissões:**
+        capacidade `operar` em Infraestrutura (administradores e superusuários incluídos
+        pelo bypass de acesso total).\n    "
+      summary: Listar pessoas do relatório de empréstimos
+      parameters:
+      - in: query
+        name: nome
+        schema:
+          type: string
+        description: Filtra por parte do nome (icontains).
+      - in: query
+        name: page
+        schema:
+          type: integer
+        description: Página solicitada.
+      - in: query
+        name: paginacao
+        schema:
+          type: integer
+        description: Itens por página.
+      - in: query
+        name: papel
+        schema:
+          type: string
+          enum:
+          - responsavel
+          - solicitante
+        description: Papel da pessoa no empréstimo.
+        required: true
+      tags:
+      - Infraestrutura · Empréstimos
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedPessoaRelatorioList'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                description: Parâmetros inválidos.
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                description: Não autenticado.
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                description: Sem capacidade operar.
+          description: ''
   /cortex/infraestrutura/emprestimos/responsaveis-elegiveis/:
     get:
       operationId: infraestrutura_emprestimos_responsaveis_elegiveis_list
@@ -12666,6 +12821,29 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Percurso'
+    PaginatedPessoaRelatorioList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/PessoaRelatorio'
     PaginatedRecursoList:
       type: object
       required:
@@ -13404,6 +13582,16 @@ components:
       required:
       - apelido
       - id
+    PessoaRelatorio:
+      type: object
+      properties:
+        id:
+          type: integer
+        nome:
+          type: string
+      required:
+      - id
+      - nome
     PosicaoTicket:
       type: object
       properties:
