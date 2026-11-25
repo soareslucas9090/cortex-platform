@@ -413,7 +413,7 @@ class ListarMinhasSolicitacoesAcessoView(IsAuthenticatedMixin, BasicGetAPIView):
         '- `aluno_curso` deve ser um vínculo ativo do próprio aluno em curso de Ensino Médio.\n'
         '- `tipo` é o id de um tipo-base do catálogo (`Entrada no campus` ou `Saída do campus`); '
         'os tipos criados pela gestão não são aceitos no pedido do aluno.\n'
-        '- Entrada para o próprio dia só pode ser pedida até 07:00 (America/Fortaleza).\n'
+        '- Entrada para o próprio dia só pode ser pedida até 07:15 (America/Fortaleza).\n'
         '- Datas passadas, horário já passado no próprio dia e pedido para dia e tipo em que o '
         'aluno já tem autorização aceita são recusados. Pedidos pendentes não bloqueiam.\n'
         '- `anexo` (obrigatório): comprovante PDF, JPG ou PNG de até 5 MB, conferido pelo '

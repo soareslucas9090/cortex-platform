@@ -27,9 +27,10 @@ from Organizacional.vinculos.models import SetorVinculo
 
 # 2030-03-11 é uma segunda-feira; horários interpretados em America/Fortaleza.
 HOJE = date(2030, 3, 11)
-ANTES_DAS_SETE = timezone.make_aware(datetime(2030, 3, 11, 6, 30))
-AS_SETE = timezone.make_aware(datetime(2030, 3, 11, 7, 0))
-DEPOIS_DAS_SETE = timezone.make_aware(datetime(2030, 3, 11, 9, 15))
+ANTES_DO_LIMITE = timezone.make_aware(datetime(2030, 3, 11, 6, 30))
+NO_LIMITE = timezone.make_aware(datetime(2030, 3, 11, 7, 15))
+LOGO_APOS_O_LIMITE = timezone.make_aware(datetime(2030, 3, 11, 7, 15, 1))
+DEPOIS_DO_LIMITE = timezone.make_aware(datetime(2030, 3, 11, 9, 15))
 
 PDF_MINIMO = b'%PDF-1.4\n%\xe2\xe3\xcf\xd3\n1 0 obj<<>>endobj\n%%EOF'
 
@@ -59,7 +60,7 @@ class SolicitacaoAlunoBaseTestCase(APITestCase):
         self.tipo_entrada = TipoAutorizacaoAcesso.objects.get(nome=NOME_TIPO_ENTRADA_CAMPUS)
         self.tipo_saida = TipoAutorizacaoAcesso.objects.get(nome=NOME_TIPO_SAIDA_CAMPUS)
 
-        patcher = patch('django.utils.timezone.now', return_value=ANTES_DAS_SETE)
+        patcher = patch('django.utils.timezone.now', return_value=ANTES_DO_LIMITE)
         self.mock_agora = patcher.start()
         self.addCleanup(patcher.stop)
 
@@ -196,28 +197,34 @@ class SolicitarAcessoAlunoTestCase(SolicitacaoAlunoBaseTestCase):
         resposta = self.solicitar(data_acesso=(HOJE - timedelta(days=1)).isoformat())
         self.assertEqual(resposta.status_code, status.HTTP_400_BAD_REQUEST)
 
-    def test_entrada_para_hoje_ate_as_sete(self):
-        self.mock_agora.return_value = AS_SETE
+    def test_entrada_para_hoje_ate_o_limite(self):
+        self.mock_agora.return_value = NO_LIMITE
         self.assertEqual(self.solicitar().status_code, status.HTTP_201_CREATED)
 
-    def test_entrada_para_hoje_depois_das_sete_retorna_400(self):
-        self.mock_agora.return_value = DEPOIS_DAS_SETE
+    def test_entrada_para_hoje_um_segundo_apos_o_limite_retorna_400(self):
+        self.mock_agora.return_value = LOGO_APOS_O_LIMITE
         resposta = self.solicitar(hora_solicitada='10:00')
         self.assertEqual(resposta.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertIn('07:00', resposta.data['detail'])
+        self.assertIn('07:15', resposta.data['detail'])
 
-    def test_entrada_para_amanha_depois_das_sete(self):
-        self.mock_agora.return_value = DEPOIS_DAS_SETE
+    def test_entrada_para_hoje_depois_do_limite_retorna_400(self):
+        self.mock_agora.return_value = DEPOIS_DO_LIMITE
+        resposta = self.solicitar(hora_solicitada='10:00')
+        self.assertEqual(resposta.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('07:15', resposta.data['detail'])
+
+    def test_entrada_para_amanha_depois_do_limite(self):
+        self.mock_agora.return_value = DEPOIS_DO_LIMITE
         resposta = self.solicitar(data_acesso=(HOJE + timedelta(days=1)).isoformat())
         self.assertEqual(resposta.status_code, status.HTTP_201_CREATED)
 
-    def test_saida_para_hoje_depois_das_sete(self):
-        self.mock_agora.return_value = DEPOIS_DAS_SETE
+    def test_saida_para_hoje_depois_do_limite(self):
+        self.mock_agora.return_value = DEPOIS_DO_LIMITE
         resposta = self.solicitar(tipo=self.tipo_saida.pk, hora_solicitada='14:00')
         self.assertEqual(resposta.status_code, status.HTTP_201_CREATED)
 
     def test_horario_que_ja_passou_retorna_400(self):
-        self.mock_agora.return_value = DEPOIS_DAS_SETE
+        self.mock_agora.return_value = DEPOIS_DO_LIMITE
         resposta = self.solicitar(tipo=self.tipo_saida.pk, hora_solicitada='09:00')
         self.assertEqual(resposta.status_code, status.HTTP_400_BAD_REQUEST)
 
