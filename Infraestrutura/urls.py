@@ -9,4 +9,5 @@ urlpatterns = [
     path('', include('Infraestrutura.autorizacoes.urls')),
     path('', include('Infraestrutura.emprestimos.urls')),
     path('', include('Infraestrutura.importacoes.urls')),
+    path('', include('Infraestrutura.relatorios_emprestimos.urls')),
 ]

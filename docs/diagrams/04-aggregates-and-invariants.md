@@ -541,7 +541,9 @@ Bloqueio para novas reservas/fila deriva de `Aluno.is_bloqueado` (três strikes 
 2. Cada `ItemEmprestimo` referencia recurso disponível (ativo, sem avaria, sem outro item aberto no mesmo recurso).
 3. Solicitante deve ser elegível por perfil, `SalaSetor`, `Autorizacao` ou `retirada_irrestrita` (`EmprestimoRules.validar_elegibilidade_solicitante_para_recurso`).
 4. Devolução parcial permitida; empréstimo encerra quando todos os itens têm `devolvido_em`.
-5. Troca de titular exige itens em aberto e reabre empréstimo sem vínculo com o anterior.
+5. Troca de titular exige item aberto e novo solicitante diferente do titular atual, encerra somente o item selecionado e reabre o recurso em novo empréstimo; os demais itens permanecem com o titular anterior.
+6. Cada item possui no máximo uma solicitação de troca pendente; itens diferentes do mesmo empréstimo podem ser destinados a usuários diferentes.
+7. O aceite de troca pessoal preserva `responsavel` e `origem_conta_coletiva`; somente o solicitante do recurso é alterado.
 
 ## Onde as regras devem morar
 

@@ -1,5 +1,5 @@
 from django.apps import apps
-from django.db.models import Q
+from django.db.models import Exists, OuterRef, Q
 
 from AppCore.core.helpers.helpers import ModelInstanceHelpers
 
@@ -16,6 +16,7 @@ class RecursoHelpers(ModelInstanceHelpers):
         busca=None,
         tipo=None,
         sala_id=None,
+        disponivel_para_emprestimo=None,
     ):
         """Lista recursos aplicando filtros opcionais sobre o catálogo autenticado."""
         from .models import Recurso
@@ -37,6 +38,13 @@ class RecursoHelpers(ModelInstanceHelpers):
             qs = qs.filter(tipo=tipo)
         if sala_id is not None:
             qs = qs.filter(sala_id=sala_id)
+        if disponivel_para_emprestimo is True:
+            ItemEmprestimo = apps.get_model('emprestimos', 'ItemEmprestimo')
+            emprestimo_aberto = ItemEmprestimo.objects.filter(
+                recurso_id=OuterRef('pk'),
+                devolvido_em__isnull=True,
+            )
+            qs = qs.filter(ativo=True, em_avaria=False).filter(~Exists(emprestimo_aberto))
         return qs
 
     def obter_estado_derivado(self) -> str:

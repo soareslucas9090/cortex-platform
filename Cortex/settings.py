@@ -160,6 +160,7 @@ PROJECT_APPS = [
     'Infraestrutura.autorizacoes',
     'Infraestrutura.emprestimos',
     'Infraestrutura.importacoes',
+    'Infraestrutura.relatorios_emprestimos',
     'Transporte.percursos',
     'Transporte.rotas',
     'Transporte.motoristas',

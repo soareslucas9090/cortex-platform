@@ -278,8 +278,11 @@ class EmprestimoOperacoesTest(APITestCase):
         emprestimo = Emprestimo().business.realizar_emprestimo(
             solicitante_id=self.solicitante.pk, conta_autenticada=self.operador, recurso_ids=[self.chave1.pk]
         )
+        item_id = emprestimo.itens.get(recurso=self.chave1).pk
         novo = emprestimo.business.trocar_titular(
-            conta_autenticada=self.operador, novo_solicitante_id=self.novo_solicitante.pk
+            conta_autenticada=self.operador,
+            novo_solicitante_id=self.novo_solicitante.pk,
+            item_id=item_id,
         )
         emprestimo.refresh_from_db()
         self.assertFalse(emprestimo.ativo)
@@ -287,6 +290,47 @@ class EmprestimoOperacoesTest(APITestCase):
         self.assertEqual(novo.solicitante, self.novo_solicitante)
         self.assertEqual(novo.responsavel, self.operador)
         self.assertTrue(novo.ativo)
+
+    def test_trocar_titular_transfere_somente_item_selecionado(self):
+        emprestimo = Emprestimo().business.realizar_emprestimo(
+            solicitante_id=self.solicitante.pk,
+            conta_autenticada=self.operador,
+            recurso_ids=[self.chave1.pk, self.chave2.pk],
+        )
+        item_chave1 = emprestimo.itens.get(recurso=self.chave1)
+        item_chave2 = emprestimo.itens.get(recurso=self.chave2)
+
+        novo = emprestimo.business.trocar_titular(
+            conta_autenticada=self.operador,
+            novo_solicitante_id=self.novo_solicitante.pk,
+            item_id=item_chave1.pk,
+        )
+
+        item_chave1.refresh_from_db()
+        item_chave2.refresh_from_db()
+        self.assertIsNotNone(item_chave1.devolvido_em)
+        self.assertIsNone(item_chave2.devolvido_em)
+        self.assertTrue(emprestimo.ativo)
+        self.assertEqual(list(novo.itens.values_list('recurso_id', flat=True)), [self.chave1.pk])
+
+    def test_trocar_titular_rejeita_o_titular_atual(self):
+        emprestimo = Emprestimo().business.realizar_emprestimo(
+            solicitante_id=self.solicitante.pk,
+            conta_autenticada=self.operador,
+            recurso_ids=[self.chave1.pk],
+        )
+        item = emprestimo.itens.get()
+
+        with self.assertRaises(BusinessRuleException):
+            emprestimo.business.trocar_titular(
+                conta_autenticada=self.operador,
+                novo_solicitante_id=self.solicitante.pk,
+                item_id=item.pk,
+            )
+
+        item.refresh_from_db()
+        self.assertIsNone(item.devolvido_em)
+        self.assertEqual(Emprestimo.objects.count(), 1)
 
     def test_atrasado_apos_24_horas(self):
         emprestimo = Emprestimo().business.realizar_emprestimo(

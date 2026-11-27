@@ -939,7 +939,7 @@ paths:
 
         - `aluno_curso` deve ser um vínculo ativo do próprio aluno em curso de Ensino Médio.
         - `tipo` é o id de um tipo-base do catálogo (`Entrada no campus` ou `Saída do campus`); os tipos criados pela gestão não são aceitos no pedido do aluno.
-        - Entrada para o próprio dia só pode ser pedida até 07:00 (America/Fortaleza).
+        - Entrada para o próprio dia só pode ser pedida até 07:15 (America/Fortaleza).
         - Datas passadas, horário já passado no próprio dia e pedido para dia e tipo em que o aluno já tem autorização aceita são recusados. Pedidos pendentes não bloqueiam.
         - `anexo` (obrigatório): comprovante PDF, JPG ou PNG de até 5 MB, conferido pelo conteúdo. Envie `multipart/form-data`.
 
@@ -3854,9 +3854,11 @@ paths:
   /cortex/infraestrutura/emprestimos/{emprestimo_id}/solicitacoes-troca/:
     post:
       operationId: infraestrutura_emprestimos_solicitacoes_troca_create
-      description: "\n    Solicita que outro servidor assuma os itens abertos do empréstimo.\n\n
-        \   **Permissões:** Qualquer usuário autenticado (L1–L3) que seja o titular
-        atual.\n    Contas coletivas não podem utilizar este fluxo.\n    "
+      description: "\n    Solicita que outro servidor assuma somente o item informado
+        em `item_id`.\n    Recursos diferentes do mesmo empréstimo podem ter solicitações
+        simultâneas.\n\n    **Permissões:** Qualquer usuário autenticado (L1–L3) que
+        seja o titular atual.\n    Contas coletivas não podem utilizar este fluxo.\n
+        \   "
       summary: Criar solicitação de troca de titular
       parameters:
       - in: path
@@ -4020,13 +4022,14 @@ paths:
   /cortex/infraestrutura/emprestimos/{id}/trocar-titular/:
     post:
       operationId: infraestrutura_emprestimos_trocar_titular_create
-      description: "\n    Devolve itens em aberto e registra novo empréstimo para
-        outro solicitante\n    (encerra o atual e abre outro).\n\n    - Conta não
-        coletiva: o responsável do novo empréstimo é o próprio usuário autenticado.\n
-        \   - Conta coletiva: informe `responsavel_id` com um usuário do pool elegível\n
-        \     (mesma regra do realizar empréstimo).\n    - A nova origem é determinada
-        exclusivamente pela conta autenticada.\n\n    **Permissões:** Capacidade `operar`
-        em Infraestrutura.\n    "
+      description: "\n    Devolve somente o item informado em `item_id` e registra
+        um novo empréstimo\n    desse recurso para outro solicitante. Os demais itens
+        permanecem com o titular atual.\n    O novo solicitante deve ser diferente
+        do titular atual.\n\n    - Conta não coletiva: o responsável do novo empréstimo
+        é o próprio usuário autenticado.\n    - Conta coletiva: informe `responsavel_id`
+        com um usuário do pool elegível\n      (mesma regra do realizar empréstimo).\n
+        \   - A nova origem é determinada exclusivamente pela conta autenticada.\n\n
+        \   **Permissões:** Capacidade `operar` em Infraestrutura.\n    "
       summary: Trocar titular
       parameters:
       - in: path
@@ -4080,6 +4083,161 @@ paths:
             application/json:
               schema:
                 description: Empréstimo não encontrado.
+          description: ''
+  /cortex/infraestrutura/emprestimos/relatorio/pdf/:
+    get:
+      operationId: infraestrutura_emprestimos_relatorio_pdf_retrieve
+      description: |2
+
+        Gera o relatório de empréstimos em PDF sob demanda, sem persistir o arquivo.
+
+        O período filtra `retirada_em` no fuso America/Sao_Paulo (inclusive 00:00 do dia inicial
+        até antes de 00:00 do dia seguinte ao final). A diferença máxima entre as datas é de 30 dias.
+        Inclui empréstimos com itens devolvidos e em aberto. Filtros de tipo de recurso, sala e bloco
+        restringem os **itens** impressos (histórico, inclusive devolvidos). Quando sala e bloco são
+        informados juntos, a sala deve pertencer ao bloco. O limite é de 3000 empréstimos por geração;
+        acima disso refine os filtros. O escopo de origem coletiva segue a mesma regra da listagem.
+
+        Diferente da listagem de empréstimos, parâmetros de query inválidos retornam 400 (não são
+        ignorados), pois um filtro ignorado alteraria o conteúdo do PDF.
+
+        **Permissões:** capacidade `operar` em Infraestrutura (administradores e superusuários incluídos pelo bypass de acesso total).
+      summary: Baixar relatório de empréstimos em PDF
+      parameters:
+      - in: query
+        name: bloco_id
+        schema:
+          type: integer
+        description: Filtra itens pelo bloco da sala do recurso.
+      - in: query
+        name: data_fim
+        schema:
+          type: string
+          format: date
+        description: Data final do período (AAAA-MM-DD), inclusiva em America/Sao_Paulo.
+        required: true
+      - in: query
+        name: data_inicio
+        schema:
+          type: string
+          format: date
+        description: Data inicial do período (AAAA-MM-DD), inclusiva em America/Sao_Paulo.
+        required: true
+      - in: query
+        name: responsavel_id
+        schema:
+          type: integer
+        description: Filtra por responsável que registrou a entrega.
+      - in: query
+        name: sala_id
+        schema:
+          type: integer
+        description: Filtra itens pela sala do recurso.
+      - in: query
+        name: solicitante_id
+        schema:
+          type: integer
+        description: Filtra por solicitante.
+      - in: query
+        name: tipo_recurso
+        schema:
+          type: string
+          enum:
+          - chave
+          - material_didatico
+          - midia
+        description: Filtra itens pelo tipo de recurso.
+      tags:
+      - Infraestrutura · Empréstimos
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                description: Arquivo PDF do relatório de empréstimos.
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                description: Parâmetros inválidos ou limite excedido.
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                description: Não autenticado.
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                description: Sem capacidade operar.
+          description: ''
+  /cortex/infraestrutura/emprestimos/relatorio/pessoas/:
+    get:
+      operationId: infraestrutura_emprestimos_relatorio_pessoas_list
+      description: "\n    Lista solicitantes ou responsáveis que já aparecem em empréstimos
+        no escopo do operador\n    (origem coletiva, quando aplicável), inclusive
+        usuários inativos. Os parâmetros apenas\n    reduzem o conjunto.\n\n    **Permissões:**
+        capacidade `operar` em Infraestrutura (administradores e superusuários incluídos
+        pelo bypass de acesso total).\n    "
+      summary: Listar pessoas do relatório de empréstimos
+      parameters:
+      - in: query
+        name: nome
+        schema:
+          type: string
+        description: Filtra por parte do nome (icontains).
+      - in: query
+        name: page
+        schema:
+          type: integer
+        description: Página solicitada.
+      - in: query
+        name: paginacao
+        schema:
+          type: integer
+        description: Itens por página.
+      - in: query
+        name: papel
+        schema:
+          type: string
+          enum:
+          - responsavel
+          - solicitante
+        description: Papel da pessoa no empréstimo.
+        required: true
+      tags:
+      - Infraestrutura · Empréstimos
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedPessoaRelatorioList'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                description: Parâmetros inválidos.
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                description: Não autenticado.
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                description: Sem capacidade operar.
           description: ''
   /cortex/infraestrutura/emprestimos/responsaveis-elegiveis/:
     get:
@@ -4497,6 +4655,12 @@ paths:
         name: codigo
         schema:
           type: string
+      - in: query
+        name: disponivel_para_emprestimo
+        schema:
+          type: boolean
+        description: Quando verdadeiro, retorna somente recursos ativos, sem avaria
+          e sem empréstimo em aberto.
       - name: page
         required: false
         in: query
@@ -5126,9 +5290,11 @@ paths:
   /cortex/infraestrutura/solicitacoes-troca/{id}/aceitar/:
     post:
       operationId: infraestrutura_solicitacoes_troca_aceitar_create
-      description: "\n    Encerra os itens abertos do empréstimo original e cria um
-        novo empréstimo\n    para o destinatário.\n\n    **Permissões:** Somente o
-        destinatário autenticado da solicitação pendente.\n    "
+      description: "\n    Encerra o item relacionado à solicitação e cria um novo
+        empréstimo\n    desse recurso para o destinatário. Solicitações legadas sem
+        item preservam\n    o comportamento anterior de transferir todos os itens
+        abertos.\n\n    **Permissões:** Somente o destinatário autenticado da solicitação
+        pendente.\n    "
       summary: Aceitar solicitação de troca de titular
       parameters:
       - in: path
@@ -10669,6 +10835,8 @@ components:
     CriarSolicitacaoTrocaTitular:
       type: object
       properties:
+        item_id:
+          type: integer
         destinatario_id:
           type: integer
         observacao:
@@ -10676,6 +10844,7 @@ components:
           default: ''
       required:
       - destinatario_id
+      - item_id
     CriarTerceirizado:
       type: object
       properties:
@@ -11134,6 +11303,12 @@ components:
           additionalProperties: {}
           nullable: true
           readOnly: true
+        solicitacoes_troca:
+          type: array
+          items:
+            type: object
+            additionalProperties: {}
+          readOnly: true
         created_at:
           type: string
           format: date-time
@@ -11148,6 +11323,7 @@ components:
       - responsavel
       - retirada_em
       - solicitacao_troca
+      - solicitacoes_troca
       - solicitante
     EmprestimoRecursoResumo:
       type: object
@@ -12645,6 +12821,29 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Percurso'
+    PaginatedPessoaRelatorioList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/PessoaRelatorio'
     PaginatedRecursoList:
       type: object
       required:
@@ -13383,6 +13582,16 @@ components:
       required:
       - apelido
       - id
+    PessoaRelatorio:
+      type: object
+      properties:
+        id:
+          type: integer
+        nome:
+          type: string
+      required:
+      - id
+      - nome
     PosicaoTicket:
       type: object
       properties:
@@ -14560,6 +14769,15 @@ components:
           type: string
           nullable: true
           readOnly: true
+        item_id:
+          type: integer
+          readOnly: true
+          nullable: true
+        item:
+          allOf:
+          - $ref: '#/components/schemas/ItemEmprestimo'
+          readOnly: true
+          nullable: true
         solicitante:
           allOf:
           - $ref: '#/components/schemas/SolicitacaoTrocaUsuarioResumo'
@@ -14582,6 +14800,8 @@ components:
       - direcao
       - emprestimo
       - id
+      - item
+      - item_id
       - novo_emprestimo_id
       - pode_aceitar
       - pode_cancelar
@@ -15054,6 +15274,8 @@ components:
     TrocarTitular:
       type: object
       properties:
+        item_id:
+          type: integer
         novo_solicitante_id:
           type: integer
         observacao:
@@ -15063,6 +15285,7 @@ components:
           type: integer
           nullable: true
       required:
+      - item_id
       - novo_solicitante_id
     TurmaElegivel:
       type: object

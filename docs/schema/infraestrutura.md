@@ -117,6 +117,7 @@ erDiagram
     Emprestimo ||--|{ ItemEmprestimo : contem
     Recurso ||--o{ ItemEmprestimo : participa
     Emprestimo ||--o{ SolicitacaoTrocaTitular : origina
+    ItemEmprestimo ||--o{ SolicitacaoTrocaTitular : seleciona
     Usuario ||--o{ SolicitacaoTrocaTitular : solicita
     Usuario ||--o{ SolicitacaoTrocaTitular : recebe
     Usuario ||--o{ Autorizacao : recebe
@@ -137,10 +138,13 @@ erDiagram
 - Sem distinção principal/reserva; eventual detalhe na descrição.
 - Sem campo de patrimônio/tombo separado na v1 (usar descrição se necessário).
 - Estado exibido do recurso: **avaria → emprestado → reservado → disponível**. Avaria é **estado simples** na v1; “reservado” só passa a aplicar quando reservas existirem.
+- `GET /recursos/?disponivel_para_emprestimo=true` retorna somente recursos ativos, sem avaria e sem `ItemEmprestimo` aberto; sem o parâmetro, o endpoint mantém o catálogo administrativo completo.
 - Retirada e devolução são transacionais; impede dois empréstimos abertos para o mesmo recurso.
 - Empréstimo: observação/descrição opcional no cabeçalho; encerrado = derivado (todos os `ItemEmprestimo.devolvido_em` preenchidos); sem `status` explícito.
-- Troca de titular: uma ação que, por baixo, devolve e abre novo empréstimo com as **mesmas regras**; sem vínculo entre o registro antigo e o novo.
-- Solicitação pessoal de troca: no máximo uma pendente por empréstimo; o destinatário deve ser servidor ativo e elegível para todos os itens abertos. Aceite, recusa e cancelamento são finais, e o aceite registra o novo empréstimo criado.
+- Troca de titular: recebe um item do empréstimo e um novo solicitante diferente do titular atual, devolve somente esse item e abre novo empréstimo para o mesmo recurso com as **mesmas regras**; sem vínculo entre o registro antigo e o novo no fluxo administrativo.
+- Solicitação pessoal de troca: no máximo uma pendente por item; o destinatário deve ser servidor ativo e elegível para o recurso selecionado. Itens diferentes do mesmo empréstimo podem ser destinados a pessoas diferentes. Aceite, recusa e cancelamento são finais, e o aceite registra o novo empréstimo criado.
+- O aceite pessoal altera somente o solicitante do recurso; o novo empréstimo preserva o responsável pela entrega e a origem coletiva congelada do anterior, para que guarita ou CODIS continuem autorizadas a concluir a devolução.
+- Solicitações anteriores à associação por item mantêm `item_emprestimo = null` e preservam o comportamento legado sobre todos os itens abertos.
 - Status da solicitação: `1 = Pendente`, `2 = Aceita`, `3 = Recusada`, `4 = Cancelada`.
 - `SalaSetor`: `sala` + `setor` com unicidade conjunta.
 - Autorização permanente: `data_fim` nula.

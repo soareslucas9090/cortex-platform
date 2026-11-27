@@ -48,10 +48,10 @@ Os tipos criados pela gestão servem apenas às autorizações registradas por e
 NOMES_TIPOS_DO_ALUNO = (NOME_TIPO_ENTRADA_CAMPUS, NOME_TIPO_SAIDA_CAMPUS)
 
 '''
-Prazo do pedido de entrada para o próprio dia: até 07:00 (America/Fortaleza).
+Prazo do pedido de entrada para o próprio dia: até 07:15 (America/Fortaleza).
 Datas futuras podem ser pedidas a qualquer horário; saída não tem prazo.
 '''
-LIMITE_SOLICITACAO_ENTRADA_MESMO_DIA = time(7, 0)
+LIMITE_SOLICITACAO_ENTRADA_MESMO_DIA = time(7, 15)
 
 '''
 Valores aceitos em ``ordenacao`` na listagem do aluno (colunas ordenáveis do MeuIF);

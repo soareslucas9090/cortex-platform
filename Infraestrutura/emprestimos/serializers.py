@@ -120,6 +120,7 @@ class EmprestimoSerializer(serializers.ModelSerializer):
     ativo = serializers.BooleanField(read_only=True)
     atrasado = serializers.BooleanField(read_only=True)
     solicitacao_troca = serializers.SerializerMethodField()
+    solicitacoes_troca = serializers.SerializerMethodField()
     origem_conta_coletiva = serializers.CharField(read_only=True, allow_null=True)
 
     def get_solicitacao_troca(self, obj) -> dict | None:
@@ -127,6 +128,10 @@ class EmprestimoSerializer(serializers.ModelSerializer):
         if not solicitacoes:
             return None
         return SolicitacaoTrocaTitularResumoSerializer(solicitacoes[0], context=self.context).data
+
+    def get_solicitacoes_troca(self, obj) -> list[dict]:
+        solicitacoes = getattr(obj, '_solicitacoes_troca_usuario', [])
+        return SolicitacaoTrocaTitularResumoSerializer(solicitacoes, many=True, context=self.context).data
 
     class Meta:
         model = Emprestimo
@@ -141,6 +146,7 @@ class EmprestimoSerializer(serializers.ModelSerializer):
             'ativo',
             'atrasado',
             'solicitacao_troca',
+            'solicitacoes_troca',
             'created_at',
         ]
 
@@ -157,6 +163,7 @@ class DevolverItensSerializer(serializers.Serializer):
 
 
 class TrocarTitularSerializer(serializers.Serializer):
+    item_id = serializers.IntegerField()
     novo_solicitante_id = serializers.IntegerField()
     observacao = serializers.CharField(required=False, allow_blank=True, default='')
     responsavel_id = serializers.IntegerField(required=False, allow_null=True)
@@ -167,6 +174,7 @@ class SerializerVazio(serializers.Serializer):
 
 
 class CriarSolicitacaoTrocaTitularSerializer(serializers.Serializer):
+    item_id = serializers.IntegerField()
     destinatario_id = serializers.IntegerField()
     observacao = serializers.CharField(required=False, allow_blank=True, default='')
 
@@ -179,6 +187,8 @@ class UsuarioSolicitacaoResumoSerializer(serializers.Serializer):
 
 class SolicitacaoTrocaTitularResumoSerializer(serializers.ModelSerializer):
     direcao = serializers.SerializerMethodField()
+    item_id = serializers.IntegerField(source='item_emprestimo_id', read_only=True, allow_null=True)
+    item = ItemEmprestimoSerializer(source='item_emprestimo', read_only=True, allow_null=True)
     solicitante = UsuarioSolicitacaoResumoSerializer(read_only=True)
     destinatario = UsuarioSolicitacaoResumoSerializer(read_only=True)
     pode_aceitar = serializers.SerializerMethodField()
@@ -191,6 +201,8 @@ class SolicitacaoTrocaTitularResumoSerializer(serializers.ModelSerializer):
             'id',
             'status',
             'direcao',
+            'item_id',
+            'item',
             'solicitante',
             'destinatario',
             'pode_aceitar',
@@ -267,6 +279,8 @@ class SolicitacaoTrocaTitularSerializer(SolicitacaoTrocaTitularResumoSerializer)
             'pode_recusar',
             'pode_cancelar',
             'direcao',
+            'item_id',
+            'item',
             'solicitante',
             'destinatario',
             'emprestimo',

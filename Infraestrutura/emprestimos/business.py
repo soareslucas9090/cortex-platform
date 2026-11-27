@@ -3,6 +3,7 @@ import logging
 from django.apps import apps
 from django.conf import settings
 from django.db import IntegrityError
+from django.db.models import Q
 from django.utils import timezone
 
 from AppCore.core.business.business import ModelInstanceBusiness
@@ -134,41 +135,41 @@ class EmprestimoBusiness(ModelInstanceBusiness):
 
     def devolver_itens(self, conta_autenticada, item_ids: list):
         try:
-            self.object_instance.rules.pode_operar(conta_autenticada)
-            permitido = self.object_instance.helper.usuario_pode_consultar_emprestimo(
-                conta_autenticada, self.object_instance
-            )
-            self.object_instance.rules.validar_consulta(permitido)
-            self.object_instance.rules.pode_devolver_itens()
+            from .models import Emprestimo, SolicitacaoTrocaTitular
+
+            emprestimo = Emprestimo.objects.select_for_update().get(pk=self.object_instance.pk)
+            emprestimo.rules.pode_operar(conta_autenticada)
+            permitido = emprestimo.helper.usuario_pode_consultar_emprestimo(conta_autenticada, emprestimo)
+            emprestimo.rules.validar_consulta(permitido)
+            emprestimo.rules.pode_devolver_itens()
             itens = list(
-                self.object_instance.itens.select_for_update().filter(pk__in=item_ids).select_related('recurso')
+                emprestimo.itens.select_for_update().filter(pk__in=item_ids).select_related('recurso')
             )
-            self.object_instance.rules.validar_itens_para_devolucao(itens, item_ids)
+            emprestimo.rules.validar_itens_para_devolucao(itens, item_ids)
+            SolicitacaoTrocaTitular().business.cancelar_pendentes_dos_itens(itens, emprestimo_ids=[emprestimo.pk])
             agora = timezone.now()
             for item in itens:
                 item.devolvido_em = agora
                 item.save(update_fields=['devolvido_em'])
-            return self.object_instance
+            return emprestimo
         except Exception as e:
             self.relancar_ou_erro_sistema(e, 'Não foi possível devolver os itens do empréstimo.', logger)
 
     def transferir_titular_autorizado(
-        self, novo_solicitante, responsavel, observacao: str = '', origem_conta_coletiva=None
+        self,
+        novo_solicitante,
+        responsavel,
+        itens,
+        observacao: str = '',
+        origem_conta_coletiva=None,
     ):
-        """Executa a troca após o fluxo chamador validar sua própria autorização."""
+        """Transfere itens já bloqueados e validados pelo fluxo chamador."""
         try:
             from .models import Emprestimo
 
-            emprestimo = Emprestimo.objects.select_for_update().get(pk=self.object_instance.pk)
-            emprestimo.rules.pode_trocar_titular()
-            itens_abertos = list(
-                emprestimo.itens.select_for_update(of=('self',))
-                .filter(devolvido_em__isnull=True)
-                .select_related('recurso')
-            )
-            recurso_ids = [item.recurso_id for item in itens_abertos]
+            recurso_ids = [item.recurso_id for item in itens]
             agora = timezone.now()
-            for item in itens_abertos:
+            for item in itens:
                 item.devolvido_em = agora
                 item.save(update_fields=['devolvido_em'])
             return Emprestimo().business.criar_emprestimo_validado(
@@ -182,22 +183,35 @@ class EmprestimoBusiness(ModelInstanceBusiness):
         except Exception as e:
             self.relancar_ou_erro_sistema(e, 'Não foi possível trocar o titular do empréstimo.', logger)
 
-    def trocar_titular(self, conta_autenticada, novo_solicitante_id: int, observacao: str = '', responsavel_id=None):
+    def trocar_titular(
+        self,
+        conta_autenticada,
+        novo_solicitante_id: int,
+        item_id: int,
+        observacao: str = '',
+        responsavel_id=None,
+    ):
         try:
-            from .models import Emprestimo
+            from .models import Emprestimo, SolicitacaoTrocaTitular
 
             Usuario = apps.get_model(settings.AUTH_USER_MODEL)
             emprestimo = Emprestimo.objects.select_for_update().get(pk=self.object_instance.pk)
             emprestimo.rules.pode_operar(conta_autenticada)
             permitido = emprestimo.helper.usuario_pode_consultar_emprestimo(conta_autenticada, emprestimo)
             emprestimo.rules.validar_consulta(permitido)
+            emprestimo.rules.pode_trocar_titular()
             responsavel = emprestimo.rules.resolver_responsavel(conta_autenticada, responsavel_id=responsavel_id)
             origem_conta_coletiva = emprestimo.rules.resolver_origem_conta_coletiva(conta_autenticada)
             emprestimo.rules.validar_solicitante_ativo(novo_solicitante_id)
+            emprestimo.rules.validar_novo_solicitante_diferente(novo_solicitante_id)
             novo_solicitante = Usuario.objects.get(pk=novo_solicitante_id)
+            item = emprestimo.itens.select_for_update(of=('self',)).filter(pk=item_id).select_related('recurso').first()
+            emprestimo.rules.validar_item_para_troca(item, item_id)
+            SolicitacaoTrocaTitular().business.cancelar_pendentes_dos_itens([item], emprestimo_ids=[emprestimo.pk])
             return emprestimo.business.transferir_titular_autorizado(
                 novo_solicitante=novo_solicitante,
                 responsavel=responsavel,
+                itens=[item],
                 observacao=observacao,
                 origem_conta_coletiva=origem_conta_coletiva,
             )
@@ -207,7 +221,14 @@ class EmprestimoBusiness(ModelInstanceBusiness):
 
 class SolicitacaoTrocaTitularBusiness(ModelInstanceBusiness):
 
-    def criar_solicitacao(self, emprestimo_id: int, solicitante, destinatario_id: int, observacao: str = ''):
+    def criar_solicitacao(
+        self,
+        emprestimo_id: int,
+        solicitante,
+        destinatario_id: int,
+        item_id: int,
+        observacao: str = '',
+    ):
         try:
             from .models import Emprestimo, SolicitacaoTrocaTitular
 
@@ -215,32 +236,54 @@ class SolicitacaoTrocaTitularBusiness(ModelInstanceBusiness):
             Servidor = apps.get_model('servidores', 'Servidor')
             emprestimo = Emprestimo.objects.select_for_update().get(pk=emprestimo_id)
             destinatario = Usuario.objects.filter(pk=destinatario_id).first()
-            itens_abertos = list(
+            item = (
                 emprestimo.itens.select_for_update(of=('self',))
-                .filter(devolvido_em__isnull=True)
+                .filter(pk=item_id)
                 .select_related('recurso', 'recurso__sala', 'recurso__sala__bloco')
+                .first()
             )
-            possui_pendente = SolicitacaoTrocaTitular.objects.filter(
-                emprestimo=emprestimo, status=StatusSolicitacaoTrocaTitular.PENDENTE
-            ).exists()
+            possui_pendente = (
+                SolicitacaoTrocaTitular.objects.filter(status=StatusSolicitacaoTrocaTitular.PENDENTE)
+                .filter(Q(item_emprestimo=item) | Q(item_emprestimo__isnull=True, emprestimo=emprestimo))
+                .exists()
+            )
             self.object_instance.rules.validar_solicitante(solicitante, emprestimo)
-            self.object_instance.rules.validar_emprestimo_aberto(bool(itens_abertos))
+            self.object_instance.rules.validar_item(item, item_id, emprestimo)
             self.object_instance.rules.validar_sem_solicitacao_pendente(possui_pendente)
-            servidor_ativo = bool(
-                destinatario and Servidor.objects.filter(usuario=destinatario, ativo=True).exists()
-            )
+            servidor_ativo = bool(destinatario and Servidor.objects.filter(usuario=destinatario, ativo=True).exists())
             self.object_instance.rules.validar_destinatario(destinatario, servidor_ativo)
             self.object_instance.rules.validar_destinatario_diferente(destinatario.pk, emprestimo.solicitante_id)
-            for item in itens_abertos:
-                elegivel = emprestimo.helper.solicitante_pode_retirar_recurso(destinatario, item.recurso)
-                self.object_instance.rules.validar_elegibilidade_destinatario(elegivel, item.recurso.codigo)
+            elegivel = emprestimo.helper.solicitante_pode_retirar_recurso(destinatario, item.recurso)
+            self.object_instance.rules.validar_elegibilidade_destinatario(elegivel, item.recurso.codigo)
             return SolicitacaoTrocaTitular.objects.create(
-                emprestimo=emprestimo, solicitante=solicitante, destinatario=destinatario, observacao=observacao
+                emprestimo=emprestimo,
+                item_emprestimo=item,
+                solicitante=solicitante,
+                destinatario=destinatario,
+                observacao=observacao,
             )
         except IntegrityError:
-            raise BusinessRuleException('Já existe uma solicitação de troca pendente para o empréstimo.')
+            raise BusinessRuleException('Já existe uma solicitação de troca pendente para este item.')
         except Exception as e:
             self.relancar_ou_erro_sistema(e, 'Não foi possível criar a solicitação.', logger)
+
+    def cancelar_pendentes_dos_itens(self, itens, emprestimo_ids=None):
+        try:
+            from .models import SolicitacaoTrocaTitular
+
+            item_ids = [item.pk for item in itens]
+            emprestimo_ids = emprestimo_ids or list({item.emprestimo_id for item in itens})
+            solicitacoes = SolicitacaoTrocaTitular.objects.select_for_update().filter(
+                Q(item_emprestimo_id__in=item_ids) | Q(item_emprestimo__isnull=True, emprestimo_id__in=emprestimo_ids),
+                status=StatusSolicitacaoTrocaTitular.PENDENTE,
+            )
+            agora = timezone.now()
+            for solicitacao in solicitacoes:
+                solicitacao.respondido_em = agora
+                solicitacao.set_state(StatusSolicitacaoTrocaTitular.CANCELADA)
+            return solicitacoes
+        except Exception as e:
+            self.relancar_ou_erro_sistema(e, 'Não foi possível cancelar as solicitações pendentes.', logger)
 
     def listar_para_usuario(self, usuario, **filtros):
         try:
@@ -259,31 +302,43 @@ class SolicitacaoTrocaTitularBusiness(ModelInstanceBusiness):
             from .models import Emprestimo, SolicitacaoTrocaTitular
 
             Servidor = apps.get_model('servidores', 'Servidor')
+            # A leitura inicial apenas localiza o agregado. A ordem global dos bloqueios é:
+            # empréstimo → itens → solicitação, evitando ciclos com devolução e troca administrativa.
+            referencia = SolicitacaoTrocaTitular.objects.only('emprestimo_id', 'item_emprestimo_id').get(
+                pk=solicitacao_id
+            )
+            emprestimo = Emprestimo.objects.select_for_update().get(pk=referencia.emprestimo_id)
+            itens_queryset = emprestimo.itens.select_for_update(of=('self',)).select_related(
+                'recurso', 'recurso__sala', 'recurso__sala__bloco'
+            )
+            if referencia.item_emprestimo_id is None:
+                itens_abertos = list(itens_queryset.filter(devolvido_em__isnull=True))
+            else:
+                item = itens_queryset.filter(pk=referencia.item_emprestimo_id).first()
+                itens_abertos = [item] if item is not None else []
             solicitacao = (
-                SolicitacaoTrocaTitular.objects.select_for_update()
-                .select_related('destinatario')
+                SolicitacaoTrocaTitular.objects.select_for_update(of=('self',))
+                .select_related('destinatario', 'item_emprestimo__recurso__sala__bloco')
                 .get(pk=solicitacao_id)
             )
             solicitacao.rules.pode_aceitar(usuario)
             solicitacao.rules.validar_pendente()
-            emprestimo = Emprestimo.objects.select_for_update().get(pk=solicitacao.emprestimo_id)
-            itens_abertos = list(
-                emprestimo.itens.select_for_update(of=('self',))
-                .filter(devolvido_em__isnull=True)
-                .select_related('recurso', 'recurso__sala', 'recurso__sala__bloco')
-            )
-            solicitacao.rules.validar_emprestimo_aberto(bool(itens_abertos))
+            if solicitacao.item_emprestimo_id is None:
+                solicitacao.rules.validar_emprestimo_aberto(bool(itens_abertos))
+            else:
+                item = itens_abertos[0] if itens_abertos else None
+                solicitacao.rules.validar_item(item, solicitacao.item_emprestimo_id, emprestimo)
             servidor_ativo = Servidor.objects.filter(usuario=solicitacao.destinatario, ativo=True).exists()
             solicitacao.rules.validar_destinatario(solicitacao.destinatario, servidor_ativo)
             for item in itens_abertos:
-                elegivel = emprestimo.helper.solicitante_pode_retirar_recurso(
-                    solicitacao.destinatario, item.recurso
-                )
+                elegivel = emprestimo.helper.solicitante_pode_retirar_recurso(solicitacao.destinatario, item.recurso)
                 solicitacao.rules.validar_elegibilidade_destinatario(elegivel, item.recurso.codigo)
             novo_emprestimo = emprestimo.business.transferir_titular_autorizado(
                 novo_solicitante=solicitacao.destinatario,
-                responsavel=solicitacao.destinatario,
+                responsavel=emprestimo.responsavel,
+                itens=itens_abertos,
                 observacao=solicitacao.observacao,
+                origem_conta_coletiva=emprestimo.origem_conta_coletiva,
             )
             solicitacao.novo_emprestimo = novo_emprestimo
             solicitacao.respondido_em = timezone.now()
