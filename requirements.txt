@@ -41,7 +41,7 @@ kombu==5.5.4
 lml==0.2.0
 lxml==6.1.1
 packaging==26.0
-pillow==12.2.0
+pillow==13.0.0
 prometheus_client==0.25.0
 prompt_toolkit==3.0.52
 psycopg2-binary==2.9.12
