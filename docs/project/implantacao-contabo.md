@@ -111,7 +111,7 @@ Ajuste:
 - `DATABASE_PASSWORD` e `POSTGRES_PASSWORD`: a mesma senha. Os dois nomes existem porque o Django lê um e a imagem do Postgres lê o outro.
 - `DATABASE_NAME`, `DATABASE_USER`, `POSTGRES_DB` e `POSTGRES_USER`: os quatro como `cortex`, a menos que todos mudem juntos.
 - `CORTEX_HTTP_PORT=8010`, para deixar `8020` livre para o outro projeto.
-- E-mail e `AWS_*`: os valores do armazenamento e do SMTP já usados pela API.
+- E-mail (`RESEND_API_KEY`, `FROM_EMAIL_NOREPLY`) e `AWS_*`: os valores do armazenamento e do Resend já usados pela API (o worker precisa das variáveis de e-mail; a API só enfileira).
 
 **Depois deste passo.** Existe `docker/.env.docker` só nesta máquina. Nenhum container subiu. A senha escrita aqui é a senha do Postgres que o container vai usar quando for criado pela primeira vez.
 

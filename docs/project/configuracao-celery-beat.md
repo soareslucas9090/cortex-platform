@@ -81,6 +81,9 @@ DATABASE_HOST
 DATABASE_PORT
 ```
 
+O worker também precisa de `RESEND_API_KEY` e `FROM_EMAIL_NOREPLY`, pois
+`send_simple_email_task` envia e-mail a partir do processo do worker (não da web).
+
 Beat e Worker devem usar exatamente a mesma URL de broker e o mesmo banco de
 dados. Em ambientes com múltiplos serviços, prefira variáveis de referência ou
 secrets compartilhados em vez de copiar valores manualmente.
